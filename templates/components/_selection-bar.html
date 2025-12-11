@@ -1,0 +1,142 @@
+<!-- Selection Bar Component (v0.9.0) -->
+<!-- 
+  Sub-header toolbar for batch operations
+  Shows up when isSelectionMode is true
+-->
+<transition
+  enter-active-class="transition-all duration-300 ease-out"
+  enter-from-class="h-0 opacity-0 overflow-hidden"
+  enter-to-class="h-16 opacity-100"
+  leave-active-class="transition-all duration-300 ease-in"
+  leave-from-class="h-16 opacity-100"
+  leave-to-class="h-0 opacity-0 overflow-hidden"
+>
+  <div
+    v-if="isSelectionMode"
+    class="bg-theme-surface border-b border-theme-default flex items-center justify-between px-6 shrink-0 shadow-md relative z-10"
+  >
+    <!-- Left: Status -->
+    <div class="flex items-center gap-4">
+      <span class="text-theme-primary font-medium flex items-center gap-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        {{ t('notes.selected', '已選') }} {{ selectedNoteIds.length }}
+      </span>
+      
+      <div class="h-6 w-px bg-theme-default/30 mx-2"></div>
+
+      <button
+        @click="selectAllNotes"
+        class="text-sm text-theme-secondary hover:text-theme-primary transition-colors flex items-center gap-1"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+        {{ t('common.selectAll', '全選') }}
+      </button>
+    </div>
+
+    <!-- Center: Actions -->
+    <div class="flex items-center gap-3">
+      <!-- Batch Change Type -->
+      <div class="relative">
+        <button
+          @click="batch_typeDropdown = !batch_typeDropdown"
+          :disabled="selectedNoteIds.length === 0"
+          class="px-4 py-2 text-sm bg-theme-elevated hover:bg-theme-hover border border-theme-default text-theme-primary rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+          {{ t('notes.changeType', '修改分類') }}
+        </button>
+        <!-- Dropdown -->
+        <div
+          v-if="batch_typeDropdown"
+          v-click-outside="() => batch_typeDropdown = false"
+          class="absolute top-full mt-2 left-0 bg-theme-elevated border border-theme-default rounded-lg shadow-xl z-50 min-w-40 py-1"
+        >
+          <button
+            v-for="type in types.filter(t => t !== 'all')"
+            :key="type"
+            @click="batch_changeType(type); batch_typeDropdown = false"
+            class="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-hover transition-colors flex items-center gap-2"
+          >
+            <span class="w-2 h-2 rounded-full" :class="getTypeColor(type)"></span>
+            {{ type }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Batch Add Tags -->
+      <div class="relative">
+        <button
+          @click="batch_tagsDropdown = !batch_tagsDropdown"
+          :disabled="selectedNoteIds.length === 0"
+          class="px-4 py-2 text-sm bg-theme-elevated hover:bg-theme-hover border border-theme-default text-theme-primary rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14"></path>
+          </svg>
+          {{ t('notes.addTags', '加標籤') }}
+        </button>
+        <!-- Dropdown -->
+        <div
+          v-if="batch_tagsDropdown"
+          v-click-outside="() => batch_tagsDropdown = false"
+          class="absolute top-full mt-2 left-0 bg-theme-elevated border border-theme-default rounded-lg shadow-xl z-50 min-w-48 max-h-64 overflow-y-auto py-1"
+        >
+          <div v-if="tags.length === 0" class="px-4 py-3 text-sm text-theme-muted text-center">
+            {{ t('common.noData', '無標籤') }}
+          </div>
+          <button
+            v-for="tag in tags"
+            :key="tag.id"
+            @click="batch_addTag(tag.name); batch_tagsDropdown = false"
+            class="w-full px-4 py-2 text-left text-sm text-theme-primary hover:bg-theme-hover transition-colors"
+          >
+            #{{ tag.name }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Export ZIP -->
+      <button
+        @click="exportSelectedNotes"
+        :disabled="selectedNoteIds.length === 0"
+        class="px-4 py-2 text-sm bg-theme-elevated hover:bg-theme-hover border border-theme-default text-theme-primary rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+      >
+        <svg class="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+        </svg>
+        {{ t('notes.export', '匯出 ZIP') }}
+      </button>
+
+      <!-- Delete -->
+      <button
+        @click="deleteSelectedNotes"
+        :disabled="selectedNoteIds.length === 0"
+        class="px-4 py-2 text-sm bg-red-900/20 hover:bg-red-900/40 border border-red-900/30 text-red-300 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+        </svg>
+        {{ t('common.delete') }}
+      </button>
+    </div>
+
+    <!-- Right: Cancel -->
+    <div>
+      <button
+        @click="toggleSelectionMode"
+        class="text-sm text-theme-secondary hover:text-white px-4 py-2 rounded transition-colors flex items-center gap-1"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        {{ t('common.cancel', '取消') }}
+      </button>
+    </div>
+  </div>
+</transition>

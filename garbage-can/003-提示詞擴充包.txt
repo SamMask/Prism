@@ -1,0 +1,334 @@
+這是兩個來源的建議，所以擴充內容會有重復，請注意
+
+]
+💡 R.C.S.D. 架構師給 RD 的建議 (Next Step)
+為了讓「隨機功能」更好玩，你可以建議 RD 實作一個 「混沌係數 (Chaos Factor)」 的邏輯：
+Level 1 (安全牌): 隨機組合 Photorealistic + Portrait + Normal Lighting。
+Level 2 (創意牌): 隨機組合 Cyberpunk + Watercolor + Neon Lighting。
+Level 3 (瘋狂牌): 強制組合衝突屬性，例如 Ancient Samurai (主體) + Glitch Art (風格) + Inside a computer motherboard (環境)。
+
+【功能增強：混沌係數隨機生成器】
+目標： 在不增加資料分類成本的前提下，透過演算法邏輯實現不同程度的隨機效果。
+實作邏輯： 請修改 Roll (隨機) 按鈕的邏輯，引入 Chaos Level 參數：
+Level 1 (Order):
+只隨機 Subject 和 Style。
+Style 限制只選 1 個。
+忽略 Action 和 Details 欄位。
+Level 2 (Balanced):
+隨機 Subject, Action, Environment。
+Style 和 Lighting 各選 1 個。
+Level 3 (Chaos):
+All-in: 所有欄位 (Subject...Details) 全部隨機填入。
+Double Style: Style 欄位隨機抽取 2 個不同選項並串接 (例如 "Cyberpunk, Watercolor")。
+Wildcard: 若有使用者自定義詞庫，大幅提高其被抽中機率。
+
+===================================================================
+1. wizard_options.json 擴充包 (靈感引導模式)
+這部分的重點是**「敘事性」與「畫面感」**。我加入了一些更有趣、甚至帶點荒謬或極具張力的選項，這樣隨機組合起來才會有化學反應。
+
+請開發 LLM 將以下陣列內容「追加」到對應的 options 欄位中：
+
+subject (主體) 追加：
+JSON
+
+"A weary time traveler checking their watch",
+"A giant Shiba Inu destroying a city",
+"A cyberpunk geisha with a robotic arm",
+"A skeleton jazz musician playing saxophone",
+"A tiny dragon sleeping in a teacup",
+"A futuristic racer on a hovering bike",
+"A medieval knight using a smartphone",
+"A ghost bride floating elegantly",
+"A cute robot watering plants",
+"An octopus chef cooking takoyaki",
+"A noir detective smoking a digital cigarette",
+"A capybara soaking in a hot spring",
+"A crystalline golem reflecting light",
+"A plague doctor holding a lantern",
+"A samurai fighting a mech robot"
+action (動作) 追加：
+JSON
+
+"fixing a broken neon sign",
+"eating ramen aggressively",
+"teleporting through a glitch portal",
+"chasing a glowing butterfly",
+"playing video games on a holographic screen",
+"summoning a demon from a circle",
+"skateboarding down a steep hill",
+"painting graffiti on a wall",
+"looking at a map with confusion",
+"sipping tea while the world ends",
+"hacking into a mainframe terminal",
+"breaking through a glass window",
+"floating in a bubble",
+"casting a shadow that moves independently",
+"holding a sign that says 'Help'"
+environment (環境) 追加：
+JSON
+
+"inside a giant washing machine",
+"on a floating island made of candy",
+"in a submerged underwater city",
+"at a busy night market in Taiwan",
+"inside the matrix code stream",
+"on the roof of a moving train",
+"in a library where books are flying",
+"inside a bio-luminescent mushroom cave",
+"at a 1950s American diner",
+"in a room full of mirrors",
+"on a bridge connecting two planets",
+"inside a clockwork mechanism gear",
+"in a foggy graveyard at midnight",
+"at a hacker's cluttered workstation",
+"in a field of sunflowers under a black sun"
+details (細節) 追加：
+JSON
+
+"with glitch art distortion effects",
+"wearing cool sunglasses reflection",
+"surrounded by floating data code",
+"with water droplets frozen in air",
+"bathed in divine god rays",
+"with smoke forming skulls",
+"wearing a traditional kimono with sneakers",
+"with glowing runes on skin",
+"surrounded by cute ghosts",
+"with a cinematic lens flare",
+"drenched in colorful paint",
+"with pixelated edges",
+"holding a red balloon",
+"with steam punk gears turning",
+"under a double rainbow"
+2. prompt_options.json 擴充包 (主編輯器)
+這部分的重點是**「專業度」與「風格多樣性」**。我補強了目前缺少的特殊攝影技巧、更具體的藝術流派（如吉卜力、故障藝術）以及特殊材質。
+
+請開發 LLM 將以下物件「追加」到對應的 options 陣列中：
+
+style (藝術風格) 追加：
+JSON
+
+{ "key": "ghibli", "display": "吉卜力風格", "output": "Studio Ghibli style, anime style, detailed background" },
+{ "key": "pixar", "display": "皮克斯風格", "output": "Pixar style, 3d animation, cute, vibrant" },
+{ "key": "vaporwave", "display": "蒸氣波", "output": "Vaporwave style, 80s retro, neon aesthetic" },
+{ "key": "cyber_impasto", "display": "厚塗賽博", "output": "Thick impasto oil painting, cyberpunk theme" },
+{ "key": "glitch_art", "display": "故障藝術", "output": "Glitch art, datamoshing, distorted, VHS effect" },
+{ "key": "ukiyo_e", "display": "浮世繪", "output": "Ukiyo-e style, japanese traditional art, woodblock print" },
+{ "key": "low_poly", "display": "低多邊形", "output": "Low poly, isometric, 3d art" },
+{ "key": "claymation", "display": "黏土動畫", "output": "Claymation, stop motion, plasticine texture" },
+{ "key": "unreal_engine", "display": "虛幻引擎5", "output": "Unreal Engine 5, lumen, nanite, 3d render" },
+{ "key": "bauhaus", "display": "包豪斯", "output": "Bauhaus style, geometric, minimal, abstract" }
+cameraMovement (鏡頭運動) 追加：
+JSON
+
+{ "key": "fpv_drone", "display": "FPV穿越機", "output": "FPV Drone footage, fast moving, dynamic angle" },
+{ "key": "bullet_time", "display": "子彈時間", "output": "Bullet time, frozen motion, slow motion" },
+{ "key": "shaky_cam", "display": "手持晃動", "output": "Shaky cam, found footage style, chaotic" },
+{ "key": "gopro", "display": "GoPro視角", "output": "GoPro view, wide angle, fisheye effect" },
+{ "key": "cctv", "display": "監視器視角", "output": "CCTV footage, grainy, high angle, surveillance" }
+lighting (光線) 追加：
+JSON
+
+{ "key": "biolum", "display": "生物發光", "output": "Bioluminescence, glowing plants, ethereal glow" },
+{ "key": "eclipse", "display": "日蝕光", "output": "Eclipse lighting, ring of fire, dark atmosphere" },
+{ "key": "strobe", "display": "頻閃燈", "output": "Strobe lights, party lighting, flashing" },
+{ "key": "candlelight", "display": "燭光", "output": "Candlelight, warm glow, flickering" },
+{ "key": "projector", "display": "投影機光", "output": "Projector light overlay, pattern on face" }
+colorPalette (色調) 追加：
+JSON
+
+{ "key": "wes_anderson", "display": "魏斯安德森", "output": "Wes Anderson style color palette, pastel, symmetrical" },
+{ "key": "cyber_neon", "display": "賽博霓虹", "output": "Cyan and Magenta, neon palette" },
+{ "key": "gothic_dark", "display": "哥德暗黑", "output": "Black and Red, gothic palette, desaturated" },
+{ "key": "vintage_film", "display": "復古底片", "output": "Kodak Portra 400, vintage film look, grain" },
+{ "key": "infrared", "display": "紅外線", "output": "Infrared photography, pink foliage, surreal colors" }
+給 Sam 的戰略建議
+隨機的魔力： 有了這些資料後，你的「靈感模式」隨機按鈕可能會骰出：
+
+"A giant Shiba Inu destroying a city (巨型柴犬摧毀城市), eating ramen aggressively (憤怒地吃拉麵), in a library where books are flying (在書本飛舞的圖書館), with glitch art distortion effects (帶有故障藝術效果)." 這種充滿衝突感的畫面，正是 AI 生成最有趣的地方。
+
+指令建議： 你可以直接跟開發 LLM 說：
+
+「請參考這兩份擴充包，將其中的新選項合併到現有的 wizard_options.json 和 prompt_options.json 中，不要覆蓋舊的，而是 Append 上去，讓我的選擇更豐富。」
+=================================================
+涵蓋了 科幻、奇幻、超現實、復古、抽象 等多個維度，方便 RD 直接複製貼上到對應的 options 欄位中。
+
+📂 針對 wizard_options.json 的擴充資料
+(這部分的格式是純字串陣列，適合放入 Subject, Action, Environment, Details)
+
+1. 👤 Subject (主體) - 擴充包
+設計邏輯： 增加了非人類生物、混合體、職業特徵強烈的角色以及抽象概念實體化。
+
+JSON
+
+[
+  "A clockwork owl with gemstone eyes",
+  "A holographic AI avatar",
+  "A nomadic wasteland wanderer",
+  "A bioluminescent deep-sea diver",
+  "A corrupted cyber-angel",
+  "A stone golem covered in moss",
+  "A futuristic street racer",
+  "A weary time traveler",
+  "A geisha with robotic porcelain skin",
+  "A plague doctor with a glowing lantern",
+  "A crystalline fox spirit",
+  "A dwarf blacksmith forging a star",
+  "A cosmic horror entity",
+  "A noir detective with a smoke face",
+  "A tribal shaman summoning spirits",
+  "A miniature city inside a glass bottle",
+  "A skeleton king on a throne of swords",
+  "A joyful elderly painter",
+  "A translucent ghost bride",
+  "A giant mechanical spider",
+  "A graffiti artist spraying reality",
+  "A samurai cutting through a raindrop",
+  "A medusa with fiber-optic snakes",
+  "A floating brain in a jar",
+  "A surreal melting clock person"
+]
+2. 🎬 Action (動作) - 擴充包
+設計邏輯： 增加了動態模糊、魔法互動、情緒表達以及物理法則的破壞。
+
+JSON
+
+[
+  "shattering into million glass shards",
+  "manipulating time with bare hands",
+  "dissolving into a swarm of crows",
+  "hacking a holographic terminal",
+  "playing chess with death",
+  "levitating amidst floating rocks",
+  "screaming in silence",
+  "conducting an orchestra of lightning",
+  "fusing with a giant machine",
+  "painting the sky with a brush",
+  "emerging from a pool of liquid gold",
+  "dodging laser beams",
+  "sipping tea in a chaotic warzone",
+  "harvesting stars from the sky",
+  "meditating under a waterfall",
+  "transforming into a werewolf",
+  "falling through a fractal tunnel",
+  "dancing on a tightrope",
+  "whispering to a dragon",
+  "breaking the fourth wall",
+  "glitching out of reality",
+  "watching the universe end",
+  "juggling planets",
+  "crying tears of mercury",
+  "running vertically up a skyscraper"
+]
+3. 🌍 Environment (環境) - 擴充包
+設計邏輯： 增加了宏觀宇宙、微觀世界、矛盾空間與極端氣候。
+
+JSON
+
+[
+  "inside a giant clock mechanism",
+  "on a bridge connecting two planets",
+  "in a library with infinite books",
+  "inside a whale's belly",
+  "in a city made of candy and sweets",
+  "floating in the quantum realm",
+  "on a floating island with waterfalls",
+  "inside a brutalist concrete bunker",
+  "in a forest of giant mushrooms",
+  "at the edge of a black hole",
+  "in a submerged Atlantis ruin",
+  "inside a kaleidoscope",
+  "on a checkerboard desert",
+  "in a greenhouse driven by steampunk tech",
+  "inside a computer motherboard",
+  "in a mirror maze reflection",
+  "on a highway in the sky",
+  "in a frozen post-apocalyptic New York",
+  "inside a burning volcano crater",
+  "in a tranquil zen garden on the moon",
+  "inside a bio-organic alien spaceship",
+  "in a foggy London street (1888)",
+  "on top of a moving train",
+  "inside a drop of water",
+  "in a dimension of pure geometry"
+]
+4. ✨ Details (細節) - 擴充包
+設計邏輯： 強化了視覺質感、光影特效、氛圍粒子與鏡頭瑕疵感。
+
+JSON
+
+[
+  "with chromatic aberration effects",
+  "covered in dripping slime",
+  "with fractal patterns on skin",
+  "surrounded by floating geometric shapes",
+  "with double exposure of a forest",
+  "featuring ink-wash painting textures",
+  "with glitch art distortion",
+  "surrounded by holy halos",
+  "with translucent skin revealing gears",
+  "featuring thick impasto brushstrokes",
+  "with dramatic rim lighting",
+  "surrounded by swirling autumn leaves",
+  "with cinematic dust particles",
+  "featuring gold kintsugi cracks",
+  "with motion blur trails",
+  "surrounded by electric arcs",
+  "with VHS tracking lines",
+  "featuring intricate lace patterns",
+  "with wet surface reflections",
+  "surrounded by smoke skulls",
+  "with thermal imaging heat map",
+  "featuring halftone comic dots",
+  "with x-ray vision effect",
+  "surrounded by floating tarot cards",
+  "with cel-shaded outlines"
+]
+📂 針對 prompt_options.json 的擴充資料
+(這部分的格式包含 key/display/output，適合擴充專業參數)
+
+1. 🎨 Style (藝術風格) - 補充更有質感的選項
+JSON
+
+[
+  { "key": "vaporwave", "display": "蒸氣波", "output": "Vaporwave Aesthetic, 90s retro" },
+  { "key": "synthwave", "display": "合成波", "output": "Synthwave, retrowave, neon grid" },
+  { "key": "ukiyo_e", "display": "浮世繪", "output": "Ukiyo-e style, Japanese woodblock print" },
+  { "key": "bauhaus", "display": "包豪斯", "output": "Bauhaus style, geometric minimalism" },
+  { "key": "art_nouveau", "display": "新藝術", "output": "Art Nouveau, Mucha style, intricate curves" },
+  { "key": "gothic", "display": "哥德式", "output": "Gothic Art, dark and brooding" },
+  { "key": "lovecraftian", "display": "克蘇魯", "output": "Lovecraftian, cosmic horror, eldritch" },
+  { "key": "stippling", "display": "點描派", "output": "Stippling, dotwork, pointillism" },
+  { "key": "paper_cutout", "display": "剪紙藝術", "output": "Paper Cutout Art, layered paper" },
+  { "key": "claymation", "display": "黏土動畫", "output": "Claymation, Aardman style, plasticine" },
+  { "key": "unreal_engine", "display": "虛幻引擎5", "output": "Unreal Engine 5 Render, Lumen, Nanite" },
+  { "key": "isometric", "display": "等距視角", "output": "Isometric 3D, low poly" },
+  { "key": "glitch_art", "display": "故障藝術", "output": "Glitch Art, datamoshing, digital noise" },
+  { "key": "collage", "display": "拼貼藝術", "output": "Mixed Media Collage, dadaism" }
+]
+2. 💡 Lighting (光線) - 補充氣氛與特殊光效
+JSON
+
+[
+  { "key": "bioluminescence", "display": "生物螢光", "output": "Bioluminescence, glowing organic light" },
+  { "key": "cinematic_haze", "display": "電影霧氣", "output": "Cinematic Haze, atmospheric fog" },
+  { "key": "lens_flare", "display": "鏡頭光暈", "output": "Anamorphic Lens Flare, JJ Abrams style" },
+  { "key": "candle_light", "display": "燭光", "output": "Candle Light, warm flickering glow" },
+  { "key": "strobe_light", "display": "頻閃燈", "output": "Strobe Lighting, frozen motion" },
+  { "key": "caustics", "display": "焦散光(水紋)", "output": "Water Caustics, underwater light refraction" },
+  { "key": "infrared", "display": "紅外線", "output": "Infrared Photography, false color" },
+  { "key": "black_light", "display": "黑光燈(UV)", "output": "Black Light, UV reactive glowing" }
+]
+3. 📷 Camera/Lens (鏡頭技術) - 建議新增一個 "Lens (鏡頭)" 類別或合併入 Quality
+如果你的結構允許，可以新增這些專門的攝影詞彙：
+
+JSON
+
+[
+  { "key": "fisheye", "display": "魚眼", "output": "Fisheye Lens, distorted wide angle" },
+  { "key": "macro", "display": "微距", "output": "Macro Lens, extreme close-up details" },
+  { "key": "telephoto", "display": "長焦壓縮", "output": "Telephoto Lens, compression effect" },
+  { "key": "polaroid", "display": "拍立得", "output": "Polaroid, instant film aesthetic" },
+  { "key": "go_pro", "display": "運動相機", "output": "GoPro Footage, wide angle action" },
+  { "key": "drone", "display": "無人機視角", "output": "Drone Photography, top-down view" },
+  { "key": "night_vision", "display": "夜視鏡", "output": "Night Vision, green phosphor screen" }

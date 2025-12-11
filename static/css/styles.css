@@ -1,0 +1,776 @@
+/* =============================================================================
+   Local Insight - Typography & Micro-interactions
+   Version: 0.8.9
+   
+   Fonts:
+   - Inter Tight: Headlines & Body (modern, high readability)
+   ============================================================================= */
+
+/* -----------------------------------------------------------------------------
+   Font Face Definitions (Local woff2 files - Offline First)
+   ----------------------------------------------------------------------------- */
+
+/* inter-tight-regular - latin */
+@font-face {
+  font-display: swap;
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../fonts/inter-tight-v9-latin-regular.woff2") format("woff2");
+}
+
+/* inter-tight-500 - latin */
+@font-face {
+  font-display: swap;
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 500;
+  src: url("../fonts/inter-tight-v9-latin-500.woff2") format("woff2");
+}
+
+/* inter-tight-600 - latin */
+@font-face {
+  font-display: swap;
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 600;
+  src: url("../fonts/inter-tight-v9-latin-600.woff2") format("woff2");
+}
+
+/* inter-tight-700 - latin */
+@font-face {
+  font-display: swap;
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 700;
+  src: url("../fonts/inter-tight-v9-latin-700.woff2") format("woff2");
+}
+
+/* inter-tight-800 - latin */
+@font-face {
+  font-display: swap;
+  font-family: "Inter Tight";
+  font-style: normal;
+  font-weight: 800;
+  src: url("../fonts/inter-tight-v9-latin-800.woff2") format("woff2");
+}
+
+/* -----------------------------------------------------------------------------
+   CSS Custom Properties (Brand Colors & Typography)
+   ----------------------------------------------------------------------------- */
+
+/* === Default Theme (Blue - Professional) === */
+:root,
+[data-theme="default"] {
+  /* Font Families */
+  --font-sans: "Inter Tight", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, sans-serif;
+  --font-mono: "SF Mono", "Fira Code", Consolas, "Liberation Mono", monospace;
+
+  /* Background Colors (v0.9.0) */
+  --color-bg-base: #030712; /* gray-950 - 頁面最底層 */
+  --color-bg-surface: #111827; /* gray-900 - 卡片、面板 */
+  --color-bg-elevated: #1f2937; /* gray-800 - 懸浮元素、Modal */
+  --color-bg-hover: #374151; /* gray-700 - 懸停狀態 */
+  --color-bg-active: #4b5563; /* gray-600 - 按下狀態 */
+
+  /* Primary Colors (Blue) */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-primary-rgb: 59, 130, 246;
+
+  /* Accent Colors (Purple) */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #7c3aed;
+  --color-accent-light: #a78bfa;
+  --color-accent-rgb: 139, 92, 246;
+
+  /* Border Colors (v0.9.0) */
+  --color-border-default: #374151; /* gray-700 */
+  --color-border-subtle: #1f2937; /* gray-800 */
+  --color-border-hover: #4b5563; /* gray-600 */
+
+  /* Text Colors */
+  --color-text-primary: #f3f4f6; /* gray-100 */
+  --color-text-secondary: #9ca3af; /* gray-400 */
+  --color-text-muted: #6b7280; /* gray-500 */
+  --color-text-inverse: #111827; /* gray-900 - 用於淺色背景 */
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+
+  /* Micro-interaction timing */
+  --transition-fast: 150ms ease;
+  --transition-normal: 200ms ease;
+  --transition-slow: 300ms ease;
+}
+
+/* === Cyberpunk Theme (Neon Purple/Pink) === */
+[data-theme="cyberpunk"] {
+  /* Background - slightly purple tint */
+  --color-bg-base: #0a0612;
+  --color-bg-surface: #150d1f;
+  --color-bg-elevated: #1e1430;
+  --color-bg-hover: #2d1f45;
+  --color-bg-active: #3d2a5c;
+
+  /* Primary (Neon Pink) */
+  --color-primary: #e879f9;
+  --color-primary-hover: #d946ef;
+  --color-primary-light: #f0abfc;
+  --color-primary-rgb: 232, 121, 249;
+
+  /* Accent (Cyan) */
+  --color-accent: #22d3ee;
+  --color-accent-hover: #06b6d4;
+  --color-accent-light: #67e8f9;
+  --color-accent-rgb: 34, 211, 238;
+
+  /* Borders */
+  --color-border-default: #3d2a5c;
+  --color-border-subtle: #2d1f45;
+  --color-border-hover: #4f3875;
+
+  /* Status */
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f43f5e;
+}
+
+/* === Eye-Care Theme (Soft Green) === */
+[data-theme="eye-care"] {
+  /* Background - warm dark with slight green */
+  --color-bg-base: #060a07;
+  --color-bg-surface: #0d1610;
+  --color-bg-elevated: #141f17;
+  --color-bg-hover: #1f2d22;
+  --color-bg-active: #2a3b2e;
+
+  /* Primary (Soft Green) */
+  --color-primary: #34d399;
+  --color-primary-hover: #10b981;
+  --color-primary-light: #6ee7b7;
+  --color-primary-rgb: 52, 211, 153;
+
+  /* Accent (Lime) */
+  --color-accent: #a3e635;
+  --color-accent-hover: #84cc16;
+  --color-accent-light: #bef264;
+  --color-accent-rgb: 163, 230, 53;
+
+  /* Borders */
+  --color-border-default: #2a3b2e;
+  --color-border-subtle: #1f2d22;
+  --color-border-hover: #3a4f40;
+
+  /* Status */
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #f87171;
+}
+
+/* === Elegant Theme (Gold/Warm Gray) === */
+[data-theme="elegant"] {
+  /* Background - warm charcoal */
+  --color-bg-base: #0c0a08;
+  --color-bg-surface: #1a1613;
+  --color-bg-elevated: #28231d;
+  --color-bg-hover: #3a3328;
+  --color-bg-active: #4d4436;
+
+  /* Primary (Gold) */
+  --color-primary: #d4a574;
+  --color-primary-hover: #c9956a;
+  --color-primary-light: #e8c4a0;
+  --color-primary-rgb: 212, 165, 116;
+
+  /* Accent (Warm Gray) */
+  --color-accent: #a1887f;
+  --color-accent-hover: #8d6e63;
+  --color-accent-light: #bcaaa4;
+  --color-accent-rgb: 161, 136, 127;
+
+  /* Borders */
+  --color-border-default: #3a3328;
+  --color-border-subtle: #28231d;
+  --color-border-hover: #4d4436;
+
+  /* Status */
+  --color-success: #81c784;
+  --color-warning: #ffb74d;
+  --color-danger: #e57373;
+}
+
+/* === Ocean Theme (Teal/Deep Blue) === */
+[data-theme="ocean"] {
+  /* Background - deep ocean blue */
+  --color-bg-base: #031318;
+  --color-bg-surface: #0a1e26;
+  --color-bg-elevated: #122b36;
+  --color-bg-hover: #1d3a47;
+  --color-bg-active: #294a5a;
+
+  /* Primary (Teal) */
+  --color-primary: #14b8a6;
+  --color-primary-hover: #0d9488;
+  --color-primary-light: #2dd4bf;
+  --color-primary-rgb: 20, 184, 166;
+
+  /* Accent (Sky Blue) */
+  --color-accent: #0ea5e9;
+  --color-accent-hover: #0284c7;
+  --color-accent-light: #38bdf8;
+  --color-accent-rgb: 14, 165, 233;
+
+  /* Borders */
+  --color-border-default: #1d3a47;
+  --color-border-subtle: #122b36;
+  --color-border-hover: #29505f;
+
+  /* Status */
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+/* === Sunset Theme (Orange/Coral) === */
+[data-theme="sunset"] {
+  /* Background - warm dark with orange tint */
+  --color-bg-base: #0c0705;
+  --color-bg-surface: #1a120d;
+  --color-bg-elevated: #281b14;
+  --color-bg-hover: #3a281d;
+  --color-bg-active: #4d3627;
+
+  /* Primary (Orange) */
+  --color-primary: #f97316;
+  --color-primary-hover: #ea580c;
+  --color-primary-light: #fb923c;
+  --color-primary-rgb: 249, 115, 22;
+
+  /* Accent (Pink) */
+  --color-accent: #f472b6;
+  --color-accent-hover: #ec4899;
+  --color-accent-light: #f9a8d4;
+  --color-accent-rgb: 244, 114, 182;
+
+  /* Borders */
+  --color-border-default: #3a281d;
+  --color-border-subtle: #281b14;
+  --color-border-hover: #4d3627;
+
+  /* Status */
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+}
+
+/* -----------------------------------------------------------------------------
+   Typography Application
+   ----------------------------------------------------------------------------- */
+
+/* Body default */
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings - use heavier weights */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+/* Code elements */
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono);
+}
+
+/* Markdown rendered content code blocks */
+.prose code,
+.prose pre {
+  font-family: var(--font-mono);
+}
+
+/* -----------------------------------------------------------------------------
+   Micro-interactions - Button Active States (9.1.2)
+   ----------------------------------------------------------------------------- */
+
+/* Primary buttons - scale down on click */
+button,
+[role="button"],
+.btn {
+  transition: transform var(--transition-fast),
+    background-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled),
+.btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* Icon buttons - slightly smaller scale */
+.btn-icon:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+/* Links and clickable elements */
+a {
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+/* Card hover lift effect */
+.card-hover {
+  transition: transform var(--transition-normal),
+    box-shadow var(--transition-normal);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+/* Checkbox/Radio interaction */
+input[type="checkbox"],
+input[type="radio"] {
+  transition: transform var(--transition-fast);
+}
+
+input[type="checkbox"]:active,
+input[type="radio"]:active {
+  transform: scale(0.9);
+}
+
+/* Input focus states */
+input:not([type="checkbox"]):not([type="radio"]),
+select,
+textarea {
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+/* Dropdown open animation */
+.dropdown-menu {
+  transform-origin: top;
+  animation: dropdown-open 150ms ease-out;
+}
+
+@keyframes dropdown-open {
+  from {
+    opacity: 0;
+    transform: scaleY(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+/* Modal open animation */
+.modal-enter {
+  animation: modal-open 200ms ease-out;
+}
+
+@keyframes modal-open {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Loading spinner */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Focus ring enhancement */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* -----------------------------------------------------------------------------
+   Utility Classes
+   ----------------------------------------------------------------------------- */
+
+/* Transition utilities */
+.transition-micro {
+  transition: all var(--transition-fast);
+}
+.transition-normal {
+  transition: all var(--transition-normal);
+}
+.transition-slow {
+  transition: all var(--transition-slow);
+}
+
+/* Active scale utilities (can be added to any element) */
+.active-scale:active {
+  transform: scale(0.95);
+}
+.active-scale-sm:active {
+  transform: scale(0.98);
+}
+.active-scale-lg:active {
+  transform: scale(0.9);
+}
+
+/* -----------------------------------------------------------------------------
+   Theme-Aware Color Classes (v0.9.0)
+   Use these classes instead of Tailwind colors for theme support
+   ----------------------------------------------------------------------------- */
+
+/* === Background Colors (replaces bg-gray-*) === */
+.bg-theme-base {
+  background-color: var(--color-bg-base) !important;
+}
+.bg-theme-surface {
+  background-color: var(--color-bg-surface) !important;
+}
+.bg-theme-elevated {
+  background-color: var(--color-bg-elevated) !important;
+}
+.bg-theme-hover {
+  background-color: var(--color-bg-hover) !important;
+}
+.bg-theme-active {
+  background-color: var(--color-bg-active) !important;
+}
+
+/* Hover variants for backgrounds */
+.hover\:bg-theme-surface:hover {
+  background-color: var(--color-bg-surface) !important;
+}
+.hover\:bg-theme-elevated:hover {
+  background-color: var(--color-bg-elevated) !important;
+}
+.hover\:bg-theme-hover:hover {
+  background-color: var(--color-bg-hover) !important;
+}
+.hover\:bg-theme-active:hover {
+  background-color: var(--color-bg-active) !important;
+}
+
+/* === Primary Color Backgrounds === */
+.bg-theme-primary {
+  background-color: var(--color-primary) !important;
+}
+.hover\:bg-theme-primary:hover {
+  background-color: var(--color-primary) !important;
+}
+.hover\:bg-theme-primary-hover:hover {
+  background-color: var(--color-primary-hover) !important;
+}
+.bg-theme-primary\/10 {
+  background-color: rgba(var(--color-primary-rgb), 0.1) !important;
+}
+.bg-theme-primary\/20 {
+  background-color: rgba(var(--color-primary-rgb), 0.2) !important;
+}
+.bg-theme-primary\/30 {
+  background-color: rgba(var(--color-primary-rgb), 0.3) !important;
+}
+.hover\:bg-theme-primary\/10:hover {
+  background-color: rgba(var(--color-primary-rgb), 0.1) !important;
+}
+.hover\:bg-theme-primary\/20:hover {
+  background-color: rgba(var(--color-primary-rgb), 0.2) !important;
+}
+
+/* === Accent Color Backgrounds === */
+.bg-theme-accent {
+  background-color: var(--color-accent) !important;
+}
+.hover\:bg-theme-accent:hover {
+  background-color: var(--color-accent) !important;
+}
+.hover\:bg-theme-accent-hover:hover {
+  background-color: var(--color-accent-hover) !important;
+}
+.bg-theme-accent\/10 {
+  background-color: rgba(var(--color-accent-rgb), 0.1) !important;
+}
+.bg-theme-accent\/20 {
+  background-color: rgba(var(--color-accent-rgb), 0.2) !important;
+}
+
+/* === Text Colors (replaces text-gray-*) === */
+.text-theme-primary {
+  color: var(--color-text-primary) !important;
+}
+.text-theme-secondary {
+  color: var(--color-text-secondary) !important;
+}
+.text-theme-muted {
+  color: var(--color-text-muted) !important;
+}
+.text-theme-inverse {
+  color: var(--color-text-inverse) !important;
+}
+
+/* Text color using primary brand color */
+.text-theme-brand {
+  color: var(--color-primary) !important;
+}
+.text-theme-brand-light {
+  color: var(--color-primary-light) !important;
+}
+.hover\:text-theme-brand:hover {
+  color: var(--color-primary) !important;
+}
+.hover\:text-theme-primary:hover {
+  color: var(--color-text-primary) !important;
+}
+
+/* Text color using accent color */
+.text-theme-accent {
+  color: var(--color-accent) !important;
+}
+.text-theme-accent-light {
+  color: var(--color-accent-light) !important;
+}
+
+/* === Border Colors (replaces border-gray-*) === */
+.border-theme-default {
+  border-color: var(--color-border-default) !important;
+}
+.border-theme-subtle {
+  border-color: var(--color-border-subtle) !important;
+}
+.border-theme-hover {
+  border-color: var(--color-border-hover) !important;
+}
+.border-theme-primary {
+  border-color: var(--color-primary) !important;
+}
+.border-theme-accent {
+  border-color: var(--color-accent) !important;
+}
+
+/* Hover variants for borders */
+.hover\:border-theme-default:hover {
+  border-color: var(--color-border-default) !important;
+}
+.hover\:border-theme-hover:hover {
+  border-color: var(--color-border-hover) !important;
+}
+.hover\:border-theme-primary:hover {
+  border-color: var(--color-primary) !important;
+}
+
+/* === Ring Colors (for focus states) === */
+.ring-theme-primary {
+  --tw-ring-color: var(--color-primary) !important;
+}
+.ring-theme-accent {
+  --tw-ring-color: var(--color-accent) !important;
+}
+.focus\:ring-theme-primary:focus {
+  --tw-ring-color: var(--color-primary) !important;
+}
+.focus\:border-theme-primary:focus {
+  border-color: var(--color-primary) !important;
+}
+
+/* === Divide Colors === */
+.divide-theme-default > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--color-border-default);
+}
+.divide-theme-subtle > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--color-border-subtle);
+}
+
+/* === Status Colors === */
+.bg-theme-success {
+  background-color: var(--color-success) !important;
+}
+.bg-theme-warning {
+  background-color: var(--color-warning) !important;
+}
+.bg-theme-danger {
+  background-color: var(--color-danger) !important;
+}
+.text-theme-success {
+  color: var(--color-success) !important;
+}
+.text-theme-warning {
+  color: var(--color-warning) !important;
+}
+.text-theme-danger {
+  color: var(--color-danger) !important;
+}
+.border-theme-success {
+  border-color: var(--color-success) !important;
+}
+.border-theme-warning {
+  border-color: var(--color-warning) !important;
+}
+.border-theme-danger {
+  border-color: var(--color-danger) !important;
+}
+
+/* === Sidebar/Navigation Active States === */
+.sidebar-active {
+  background-color: rgba(var(--color-primary-rgb), 0.15) !important;
+  color: var(--color-primary-light) !important;
+}
+
+/* === Gradient Utilities === */
+.brand-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-accent) 100%
+  );
+}
+
+.brand-gradient-text {
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-accent) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* -----------------------------------------------------------------------------
+   Global Theme Overrides (v0.9.0)
+   These rules override common Tailwind blue classes to use theme colors
+   ----------------------------------------------------------------------------- */
+
+/* When any non-default theme is active, override blue colors */
+[data-theme]:not([data-theme="default"]) .text-blue-400,
+[data-theme]:not([data-theme="default"]) .text-blue-500 {
+  color: var(--color-primary-light) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .text-blue-200 {
+  color: var(--color-primary-light) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .bg-blue-500,
+[data-theme]:not([data-theme="default"]) .bg-blue-600 {
+  background-color: var(--color-primary) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .bg-blue-900\/50 {
+  background-color: rgba(var(--color-primary-rgb), 0.3) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .hover\:bg-blue-900:hover {
+  background-color: rgba(var(--color-primary-rgb), 0.5) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .border-blue-500 {
+  border-color: var(--color-primary) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .ring-blue-500 {
+  --tw-ring-color: var(--color-primary) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .focus\:ring-blue-500:focus {
+  --tw-ring-color: var(--color-primary) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .focus\:border-blue-500:focus {
+  border-color: var(--color-primary) !important;
+}
+
+/* Selection color override */
+[data-theme]:not([data-theme="default"]) ::selection {
+  background-color: var(--color-primary) !important;
+}
+
+/* Purple/Violet colors (for Prompt Builder consistency) */
+[data-theme]:not([data-theme="default"]) .text-purple-400,
+[data-theme]:not([data-theme="default"]) .text-violet-400 {
+  color: var(--color-accent-light) !important;
+}
+
+[data-theme]:not([data-theme="default"]) .bg-purple-600,
+[data-theme]:not([data-theme="default"]) .bg-violet-600 {
+  background-color: var(--color-accent) !important;
+}
+
+/* -----------------------------------------------------------------------------
+   Mobile Optimizations (v0.8.9 - Task 9.1.4)
+   v1.0 修正: 移除 !important 覆蓋，改在 HTML 使用響應式 class
+   ----------------------------------------------------------------------------- */
+
+@media (max-width: 767px) {
+  /* 
+   * ⚠️ 已棄用 (v1.0): 不再使用全域 !important 覆蓋
+   * 請在 HTML 中使用響應式 class: p-4 md:p-6 lg:p-8
+   * 
+   * 舊寫法 (已移除):
+   * .p-6 { padding: 1rem !important; }
+   * .h-48 { height: 10rem !important; }
+   */
+
+  /* Adjust header padding */
+  header.h-16 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  /* Better touch targets for mobile (合理保留) */
+  button,
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Sidebar slide animation */
+  aside {
+    box-shadow: 4px 0 25px rgba(0, 0, 0, 0.5);
+  }
+
+  /* Hide non-essential elements on mobile */
+  .hidden-mobile {
+    display: none !important;
+  }
+}
+
+/* Ensure smooth sidebar transition on all devices */
+aside {
+  will-change: transform;
+}
+
+/* Prevent flash of uncompiled Vue content */
+[v-cloak] {
+  display: none !important;
+}

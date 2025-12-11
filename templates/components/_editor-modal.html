@@ -1,0 +1,1305 @@
+<!-- Editor Modal Component (v1.0 - Phase 12 無障礙修復) -->
+      <!-- Editor Modal -->
+      <div
+        v-if="isEditing"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+        tabindex="-1"
+        @keydown.esc.prevent="closeEditor"
+        @click.self="closeEditor"
+      >
+        <div
+          class="bg-theme-surface rounded-2xl shadow-2xl border border-theme-default w-2/3 h-[85vh] overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-300"
+        >
+          <!-- Modal Header -->
+          <div
+            class="flex items-center justify-between px-6 py-4 border-b border-theme-subtle bg-theme-elevated/50 backdrop-blur-sm"
+          >
+            <h2 class="text-xl font-bold text-theme-primary flex items-center gap-2">
+              <svg
+                v-if="!isPromptMode"
+                class="w-6 h-6 text-theme-brand-light"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                ></path>
+              </svg>
+              <svg
+                v-else
+                class="w-6 h-6 text-theme-accent-light"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                ></path>
+              </svg>
+              {{ isPromptMode ? t('notes.newPrompt') : (currentNote.id ? t('notes.editNote') :
+              t('notes.newNote')) }}
+            </h2>
+
+            <button
+              @click="closeEditor"
+              class="text-theme-secondary hover:text-theme-primary transition-colors p-2 hover:bg-theme-hover rounded-lg"
+            >
+              <svg
+                class="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
+              </svg>
+            </button>
+          </div>
+
+          <!-- Tab Navigation -->
+          <div class="border-b border-theme-subtle">
+            <div class="flex px-6">
+              <button
+                @click="activeTab = 'basic'"
+                :class="activeTab === 'basic' ? 'border-b-2 border-theme-primary text-theme-brand-light' : 'text-theme-secondary hover:text-theme-primary'"
+                class="px-4 py-3 text-sm font-medium transition-colors"
+              >
+                📋 {{ t('editor.metadata') }}
+              </button>
+              <button
+                @click="activeTab = 'content'"
+                :class="activeTab === 'content' ? 'border-b-2 border-theme-primary text-theme-brand-light' : 'text-theme-secondary hover:text-theme-primary'"
+                class="px-4 py-3 text-sm font-medium transition-colors"
+              >
+                ✏️ {{ t('editor.content') }}
+              </button>
+              <!-- Images Tab (v0.8.1) -->
+              <button
+                @click="activeTab = 'images'"
+                :class="activeTab === 'images' ? 'border-b-2 border-green-500 text-green-400' : 'text-theme-secondary hover:text-theme-primary'"
+                class="px-4 py-3 text-sm font-medium transition-colors relative"
+              >
+                🖼️ {{ t('editor.images') }}
+                <span
+                  v-if="contentImages.length > 0"
+                  class="ml-1 px-1.5 py-0.5 text-xs bg-green-500/20 text-green-400 rounded"
+                >
+                  {{ contentImages.length }}
+                </span>
+              </button>
+              <!-- History Tab (v0.6) - Only show in edit mode -->
+              <button
+                v-if="currentNote.id"
+                @click="activeTab = 'history'; loadNoteHistory()"
+                :class="activeTab === 'history' ? 'border-b-2 border-theme-accent text-theme-accent-light' : 'text-theme-secondary hover:text-theme-primary'"
+                class="px-4 py-3 text-sm font-medium transition-colors"
+              >
+                🕐 {{ t('editor.history', '歷史版本') }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Modal Content - Split View Editor -->
+          <div class="flex-1 overflow-hidden flex flex-col">
+            <!-- Tab 1: Basic Info (基本資訊) -->
+            <div
+              v-show="activeTab === 'basic'"
+              class="flex-1 overflow-y-auto px-6 py-4 space-y-4"
+            >
+              <!-- Row 1: Title -->
+              <div>
+                <label class="block text-sm font-medium text-theme-secondary mb-1.5">
+                  <span class="flex items-center gap-1.5">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
+                      ></path>
+                    </svg>
+                    {{ t('editor.title') }} <span class="text-red-400">*</span>
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  v-model="currentNote.title"
+                  :placeholder="t('editor.titlePlaceholder')"
+                  class="w-full bg-theme-elevated border border-theme-default rounded-lg px-4 py-2.5 text-theme-primary placeholder-theme-muted focus:outline-none focus:border-theme-primary focus:ring-1 focus:ring-theme-primary transition-colors"
+                />
+              </div>
+
+              <!-- Row 2: Type & Remarks (Hidden in Prompt Mode) -->
+              <div
+                v-show="!isPromptMode"
+                class="grid grid-cols-1 md:grid-cols-2 gap-4"
+              >
+                <!-- Type Dropdown -->
+                <div>
+                  <label class="block text-sm font-medium text-theme-secondary mb-1.5">
+                    <span class="flex items-center gap-1.5">
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                        ></path>
+                      </svg>
+                      {{ t('editor.type') }}
+                    </span>
+                  </label>
+                  <select
+                    v-model="currentNote.type"
+                    class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 text-gray-100 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors cursor-pointer appearance-none"
+                    style="
+                      background-image: url('data:image/svg+xml;charset=UTF-8,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%239ca3af%27%3e%3cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27M19 9l-7 7-7-7%27/%3e%3c/svg%3e');
+                      background-position: right 0.75rem center;
+                      background-repeat: no-repeat;
+                      background-size: 1.25rem;
+                    "
+                  >
+                    <option
+                      v-for="t in types.filter(t => t !== 'all')"
+                      :key="t"
+                      :value="t"
+                    >
+                      {{ t }}
+                    </option>
+                  </select>
+                </div>
+
+                <!-- Remarks Input -->
+                <div>
+                  <label class="block text-sm font-medium text-theme-secondary mb-1.5">
+                    <span class="flex items-center gap-1.5">
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        ></path>
+                      </svg>
+                      {{ t('editor.remarks') }}
+                      <span class="text-theme-muted text-xs"
+                        >({{ t('editor.remarksPlaceholder') }})</span
+                      >
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    v-model="currentNote.remarks"
+                    :placeholder="t('editor.remarksPlaceholder', '簡短說明...')"
+                    class="w-full bg-theme-elevated border border-theme-default rounded-lg px-4 py-2.5 text-theme-primary placeholder-theme-muted focus:outline-none focus:border-theme-primary focus:ring-1 focus:ring-theme-primary transition-colors"
+                  />
+                </div>
+              </div>
+
+              <!-- Row 3: Cover Image (Manual Input Hidden in Prompt Mode) -->
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Cover Image Preview -->
+                <div>
+                  <label class="block text-sm font-medium text-theme-secondary mb-1.5">
+                    <span class="flex items-center gap-1.5">
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        ></path>
+                      </svg>
+                      {{ t('editor.coverImage') }}
+                    </span>
+                  </label>
+                  <div class="flex items-center gap-3">
+                    <!-- Cover Preview -->
+                    <div
+                      v-if="currentNote.cover_image || extractFirstImage(currentNote.content)"
+                      class="w-20 h-14 rounded-lg bg-cover bg-center border border-theme-default"
+                      :style="`background-image: url('${currentNote.cover_image || extractFirstImage(currentNote.content)}')`"
+                    ></div>
+                    <div
+                      v-else
+                      class="w-20 h-14 rounded-lg bg-theme-elevated border border-theme-default flex items-center justify-center"
+                    >
+                      <svg
+                        class="w-6 h-6 text-theme-muted"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div class="flex-1 text-xs text-theme-muted">
+                      <p v-if="currentNote.cover_image">{{ t('editor.coverSet', '已設定封面') }}</p>
+                      <p v-else-if="extractFirstImage(currentNote.content)">
+                        {{ t('editor.coverAuto', '自動偵測: 使用內容第一張圖') }}
+                      </p>
+                      <p v-else>{{ t('editor.noCover', '無封面 (將顯示預設色塊)') }}</p>
+                      <p v-if="isPromptMode" class="text-blue-400 mt-1">
+                        ※ 可於內容區貼上圖片
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Cover Image URL Input (Hidden in Prompt Mode) -->
+                <div v-show="!isPromptMode">
+                  <label class="block text-sm font-medium text-gray-400 mb-1.5">
+                    <span class="flex items-center gap-1.5">
+                      {{ t('editor.manualCoverUrl', '手動設定封面 URL') }}
+                    </span>
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <input
+                      type="url"
+                      v-model="currentNote.cover_image"
+                      :placeholder="t('editor.coverPlaceholder', '留空則自動偵測內容圖片')"
+                      class="flex-1 bg-theme-elevated border border-theme-default rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                    <button
+                      v-if="currentNote.cover_image"
+                      type="button"
+                      @click="currentNote.cover_image = null"
+                      class="p-2 text-theme-muted hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors"
+                      title="清除封面設定"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M6 18L18 6M6 6l12 12"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row 4: Cover Position (v0.8.4) -->
+              <div
+                v-if="currentNote.cover_image || extractFirstImage(currentNote.content)"
+              >
+                <label class="block text-sm font-medium text-gray-400 mb-1.5">
+                  <span class="flex items-center gap-1.5">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+                      ></path>
+                    </svg>
+                    {{ t('editor.coverPosition') }}
+                  </span>
+                </label>
+                <div class="flex items-center gap-4">
+                  <!-- Top -->
+                  <label
+                    class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white transition-colors"
+                  >
+                    <input
+                      type="radio"
+                      v-model="currentNote.cover_position"
+                      value="top"
+                      class="w-4 h-4 text-blue-500 bg-theme-elevated border-gray-700 focus:ring-blue-500 focus:ring-2"
+                    />
+                    {{ t('editor.coverPositionTop') }}
+                  </label>
+                  <!-- Center -->
+                  <label
+                    class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white transition-colors"
+                  >
+                    <input
+                      type="radio"
+                      v-model="currentNote.cover_position"
+                      value="center"
+                      class="w-4 h-4 text-blue-500 bg-theme-elevated border-gray-700 focus:ring-blue-500 focus:ring-2"
+                    />
+                    {{ t('editor.coverPositionCenter') }}
+                  </label>
+                  <!-- Bottom -->
+                  <label
+                    class="flex items-center gap-2 cursor-pointer text-sm text-gray-300 hover:text-white transition-colors"
+                  >
+                    <input
+                      type="radio"
+                      v-model="currentNote.cover_position"
+                      value="bottom"
+                      class="w-4 h-4 text-blue-500 bg-theme-elevated border-gray-700 focus:ring-blue-500 focus:ring-2"
+                    />
+                    {{ t('editor.coverPositionBottom') }}
+                  </label>
+                </div>
+              </div>
+
+              <!-- Row 5: Source URLs -->
+              <div>
+                <label class="block text-sm font-medium text-gray-400 mb-1.5">
+                  <span class="flex items-center gap-1.5">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                      ></path>
+                    </svg>
+                    {{ t('editor.sourceUrls') }} <span class="text-theme-muted text-xs">({{ t('common.optional', '可選') }})</span>
+                  </span>
+                </label>
+
+                <!-- URL List -->
+                <div class="space-y-2">
+                  <!-- Empty State -->
+                  <div
+                    v-if="currentNote.urls.length === 0"
+                    class="text-sm text-theme-muted italic py-2"
+                  >
+                    {{ t('editor.noUrls', '尚未新增任何網址') }}
+                  </div>
+
+                  <!-- URL Items -->
+                  <div
+                    v-for="(url, index) in currentNote.urls"
+                    :key="index"
+                    class="flex items-center gap-2 group"
+                  >
+                    <span class="text-xs text-theme-muted w-6 text-center"
+                      >{{ index + 1 }}.</span
+                    >
+                    <input
+                      type="url"
+                      v-model="currentNote.urls[index]"
+                      placeholder="https://example.com"
+                      class="flex-1 bg-theme-elevated border border-theme-default rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                    />
+                    <!-- Open URL Button (v0.6) -->
+                    <a
+                      v-if="url && url.trim()"
+                      :href="url"
+                      target="_blank"
+                      class="p-2 text-theme-muted hover:text-blue-400 hover:bg-blue-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title="開啟網址"
+                      @click.stop
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                        ></path>
+                      </svg>
+                    </a>
+                    <button
+                      type="button"
+                      @click="removeUrl(index)"
+                      class="p-2 text-gray-500 hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                      title="刪除此網址"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                        ></path>
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Add URL Button -->
+                <button
+                  type="button"
+                  @click="addUrl"
+                  class="mt-2 flex items-center gap-1.5 text-sm text-blue-400 hover:text-blue-300 transition-colors"
+                >
+                  <svg
+                    class="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M12 4v16m8-8H4"
+                    ></path>
+                  </svg>
+                  {{ t('editor.addUrl') }}
+                </button>
+              </div>
+
+              <!-- Row 4: Tags Management -->
+              <div>
+                <label
+                  class="flex items-center gap-2 text-sm font-medium text-gray-300 mb-2"
+                >
+                  <svg
+                    class="w-4 h-4 text-purple-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                    ></path>
+                  </svg>
+                  {{ t('editor.tags') }}
+                </label>
+                <div class="space-y-2">
+                  <!-- Selected Tags Display -->
+                  <div
+                    v-if="currentNote.tags.length > 0"
+                    class="flex flex-wrap gap-2 p-3 bg-gray-800/50 rounded-lg border border-gray-700"
+                  >
+                    <span
+                      v-for="(tag, index) in currentNote.tags"
+                      :key="index"
+                      class="inline-flex items-center gap-1.5 px-3 py-1 text-sm bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full"
+                    >
+                      {{ tag.name || tag }}
+                      <button
+                        type="button"
+                        @click="removeTag(index)"
+                        class="hover:text-purple-100 transition-colors"
+                      >
+                        <svg
+                          class="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          ></path>
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+
+                  <!-- Add New Tag Input -->
+                  <div class="flex gap-2">
+                    <input
+                      v-model="newTagInput"
+                      @keyup.enter="addTag"
+                      type="text"
+                      :placeholder="t('editor.tagsPlaceholder', '輸入新標籤名稱...')"
+                      class="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
+                    />
+                    <button
+                      type="button"
+                      @click="addTag"
+                      class="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-500 rounded-lg transition-colors"
+                    >
+                      {{ t('common.add', '新增') }}
+                    </button>
+                  </div>
+
+                  <!-- Quick Select from Existing Tags -->
+                  <div
+                    v-if="tags.length > 0"
+                    class="p-3 bg-gray-800/30 rounded-lg border border-gray-700/50"
+                  >
+                    <div class="text-xs text-gray-400 mb-2">
+                      {{ t('editor.quickSelect', '快速選擇') }} ({{ t('editor.clickToAdd', '點擊新增') }})
+                    </div>
+                    <div
+                      class="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto"
+                    >
+                      <button
+                        v-for="tag in tags"
+                        :key="tag.id"
+                        type="button"
+                        @click="toggleTag(tag)"
+                        :disabled="isTagSelected(tag)"
+                        class="inline-flex items-center gap-1.5 px-3 py-1 text-xs rounded-full transition-all"
+                        :class="isTagSelected(tag)
+                        ? 'bg-purple-500/30 text-purple-200 border border-purple-500/50 cursor-not-allowed opacity-50'
+                        : 'bg-gray-700 text-gray-300 border border-gray-600 hover:bg-purple-500/20 hover:text-purple-300 hover:border-purple-500/30'"
+                      >
+                        {{ tag.name }}
+                        <span class="text-xs opacity-75"
+                          >({{ tag.note_count || 0 }})</span
+                        >
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 2: Content Editor (內容編輯) -->
+            <div
+              v-show="activeTab === 'content'"
+              class="h-full flex-1 flex flex-col overflow-hidden"
+            >
+              <div
+                class="h-full flex-1 flex flex-col bg-gray-900/30 overflow-hidden"
+              >
+                <div class="flex items-center justify-between px-4 py-2">
+                  <div class="flex items-center gap-2 text-sm text-gray-400">
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+                      ></path>
+                    </svg>
+                    <span>{{ t('editor.markdownEdit', 'Markdown 編輯') }}</span>
+                  </div>
+                  <div class="flex items-center gap-3">
+                    <div class="relative">
+                      <input
+                        type="file"
+                        ref="fileInput"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        @change="handleUpload"
+                        class="hidden"
+                      />
+                      <button
+                        type="button"
+                        @click="$refs.fileInput.click()"
+                        :disabled="isUploading"
+                        class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+                        :class="isUploading
+                          ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'"
+                      >
+                        <svg
+                          v-if="!isUploading"
+                          class="w-3.5 h-3.5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          ></path>
+                        </svg>
+                        <svg
+                          v-else
+                          class="w-3.5 h-3.5 animate-spin"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                          ></circle>
+                          <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        {{ isUploading ? t('common.uploading', '上傳中...') : t('editor.insertImage', '插入圖片') }}
+                      </button>
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ currentNote.content.length }} {{ t('editor.characters', '字元') }}
+                    </div>
+
+                    <!-- Layout Toggle Button (v0.8.6) -->
+                    <button
+                      type="button"
+                      @click="currentNote.editor_layout = (currentNote.editor_layout || 'single') === 'single' ? 'dual' : 'single'"
+                      class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+                      :class="(currentNote.editor_layout || 'single') === 'dual'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                      :title="(currentNote.editor_layout || 'single') === 'dual' ? t('editor.switchToSingle', '切換至單欄模式') : t('editor.switchToDual', '切換至雙欄模式')"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          v-if="(currentNote.editor_layout || 'single') === 'dual'"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 5a1 1 0 011-1h4a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v14a1 1 0 01-1 1h-4a1 1 0 01-1-1V5z"
+                        ></path>
+                        <path
+                          v-else
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 5a1 1 0 011-1h14a1 1 0 011 1v14a1 1 0 01-1 1H5a1 1 0 01-1-1V5z"
+                        ></path>
+                      </svg>
+                      {{ (currentNote.editor_layout || 'single') === 'dual' ? t('editor.dualColumn') : t('editor.singleColumn') }}
+                    </button>
+
+                    <!-- Eye Toggle Preview Button -->
+                    <button
+                      type="button"
+                      @click="isContentPreview = !isContentPreview"
+                      class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+                      :class="isContentPreview
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                      :title="isContentPreview ? t('editor.switchToEdit', '切換至編輯模式') : t('editor.switchToPreview', '切換至預覽模式')"
+                    >
+                      <svg
+                        v-if="isContentPreview"
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                        ></path>
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                        ></path>
+                      </svg>
+                      {{ isContentPreview ? t('editor.preview') : t('editor.edit') }}
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Content Area: Single or Dual Column Layout -->
+                <div 
+                  class="flex-1 overflow-hidden flex"
+                  :class="currentNote.editor_layout === 'dual' && contentImages.length > 0 ? 'flex-row gap-4' : 'flex-col'"
+                >
+                  <!-- Left Panel: Images (only in dual mode) -->
+                  <div 
+                    v-if="currentNote.editor_layout === 'dual' && contentImages.length > 0"
+                    class="w-1/3 overflow-y-auto bg-gray-900/30 rounded-lg p-3"
+                  >
+                    <div class="text-xs text-gray-400 mb-2 font-medium">📷 {{ t('editor.referenceImages', '參考圖片') }}</div>
+                    <div class="space-y-3">
+                      <div
+                        v-for="(img, index) in contentImages"
+                        :key="index"
+                        class="group relative rounded-lg overflow-hidden bg-gray-800 border border-gray-700 hover:border-gray-600 transition-colors"
+                      >
+                        <img
+                          :src="img.url"
+                          :alt="img.alt || `Image ${index + 1}`"
+                          class="w-full h-auto object-contain"
+                          loading="lazy"
+                        />
+                        <div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span class="text-xs bg-black/70 text-white px-2 py-1 rounded">
+                            {{ index + 1 }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Right Panel: Editor/Preview -->
+                  <div 
+                    class="flex-1 h-full overflow-hidden flex flex-col"
+                  >
+                    <!-- Edit Mode -->
+                    <div v-if="!isContentPreview" class="h-full flex flex-col">
+                      <textarea
+                        ref="contentTextarea"
+                        v-model="currentNote.content"
+                        @paste="handlePasteInEditor"
+                        placeholder="在此輸入 Markdown 內容...
+
+# 標題
+## 副標題
+
+**粗體文字** 與 *斜體文字*
+
+- 項目列表
+- 項目列表
+
+1. 編號列表
+2. 編號列表
+
+`程式碼` 或程式碼區塊：
+程式碼區塊
+
+
+> 引用文字
+
+[連結文字](URL)
+![圖片描述](圖片URL)"
+                        class="flex-1 w-full h-full bg-transparent text-gray-100 p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed placeholder-gray-600 border-0"
+                        spellcheck="false"
+                      ></textarea>
+                    </div>
+
+                    <!-- Preview Mode -->
+                    <div v-else class="flex-1 h-full overflow-y-auto p-4 bg-gray-900/50">
+                      <div
+                        v-if="currentNote.content.trim() === ''"
+                        class="text-gray-500 text-center py-10"
+                      >
+                        <svg
+                          class="w-12 h-12 mx-auto mb-3 text-gray-600"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          ></path>
+                        </svg>
+                        <p class="text-sm">開始輸入內容以查看預覽</p>
+                      </div>
+                      <div
+                        v-else
+                        v-html="markedContent"
+                        class="prose prose-invert prose-sm max-w-none prose-headings:text-gray-100 prose-headings:font-bold prose-h1:text-2xl prose-h1:border-b prose-h1:border-gray-700 prose-h1:pb-2 prose-h1:mb-4 prose-h2:text-xl prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-lg prose-h3:mt-5 prose-h3:mb-2 prose-p:text-gray-300 prose-p:leading-relaxed prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-strong:text-gray-100 prose-em:text-gray-300 prose-code:text-blue-300 prose-code:bg-gray-800 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-pre:bg-gray-800 prose-pre:border prose-pre:border-gray-700 prose-pre:rounded-lg prose-blockquote:border-l-blue-500 prose-blockquote:bg-gray-800/50 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:text-gray-300 prose-ul:text-gray-300 prose-ol:text-gray-300 prose-li:marker:text-gray-500 prose-hr:border-gray-700 prose-img:rounded-lg prose-img:shadow-lg"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 3: Images (相關圖片 v1.8.1) -->
+            <div
+              v-show="activeTab === 'images'"
+              class="flex-1 p-6 overflow-y-auto"
+            >
+              <!-- No Images -->
+              <div
+                v-if="contentImages.length === 0"
+                class="flex flex-col items-center justify-center h-full text-gray-500"
+              >
+                <svg
+                  class="w-16 h-16 mb-4 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                  ></path>
+                </svg>
+                <p class="text-lg font-medium">{{ t('editor.noImages') }}</p>
+                <p class="text-sm mt-1">
+                  {{ t('editor.noImagesDesc', '在內容中貼上或上傳圖片後，會顯示在這裡') }}
+                </p>
+              </div>
+
+              <!-- Images Grid -->
+              <div v-else>
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold text-gray-200">
+                    {{ t('editor.relatedImages', '相關圖片') }} ({{ contentImages.length }} {{ t('editor.imagesCount', '張') }})
+                  </h3>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-500"
+                      >{{ t('editor.hoverForActions', '滑鼠懸停顯示操作按鈕') }}</span
+                    >
+                    <button
+                      @click="exportImages"
+                      class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-300 bg-green-900/30 hover:bg-green-800/50 border border-green-700/50 rounded-lg transition-colors"
+                    >
+                      <svg
+                        class="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                        ></path>
+                      </svg>
+                      {{ t('editor.exportImages') }}
+                    </button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  <div
+                    v-for="(img, index) in contentImages"
+                    :key="img.url"
+                    class="group relative bg-gray-800 rounded-lg overflow-hidden border border-gray-700 hover:border-green-500/50 transition-colors"
+                  >
+                    <!-- Image Preview -->
+                    <div class="aspect-video relative">
+                      <img
+                        :src="img.url"
+                        :alt="img.alt || '圖片 ' + (index + 1)"
+                        class="w-full h-full object-cover"
+                        @error="$event.target.src = 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 fill=%22none%22 viewBox=%220 0 24 24%22%3E%3Cpath stroke=%22%236b7280%22 stroke-width=%221.5%22 d=%22M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z%22/%3E%3C/svg%3E'"
+                      />
+
+                      <!-- Hover Overlay -->
+                      <div
+                        class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2"
+                      >
+                        <!-- Copy Button -->
+                        <button
+                          @click="copyImageSyntax(img.syntax) && alert(t('messages.imageSyntaxCopied', '已複製圖片語法！'))"
+                          class="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-colors"
+                          title="複製語法"
+                        >
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"
+                            ></path>
+                          </svg>
+                        </button>
+
+                        <!-- Delete (from content only) -->
+                        <button
+                          @click="deleteImageFromContent(img.url, false)"
+                          class="p-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-white transition-colors"
+                          title="從內容移除"
+                        >
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                            ></path>
+                          </svg>
+                        </button>
+
+                        <!-- Delete (file + content) -->
+                        <button
+                          @click="confirm(t('messages.confirmDeleteImageFile', '確定要刪除此圖片檔案嗎？\n\n這將從內容中移除引用，並刪除原圖和縮圖。')) && deleteImageFromContent(img.url, true)"
+                          :disabled="isDeletingImage"
+                          class="p-2 bg-red-600 hover:bg-red-500 rounded-lg text-white transition-colors disabled:opacity-50"
+                          title="刪除檔案"
+                        >
+                          <svg
+                            class="w-5 h-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            ></path>
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- Image Info -->
+                    <div class="p-2">
+                      <p
+                        class="text-xs text-gray-500 truncate"
+                        :title="img.url"
+                      >
+                        {{ img.url.split('/').pop() }}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tab 4: History (歷史版本 v1.6) -->
+            <div
+              v-show="activeTab === 'history'"
+              class="flex-1 p-6 overflow-y-auto"
+            >
+              <!-- Loading State -->
+              <div
+                v-if="historyLoading"
+                class="flex items-center justify-center h-full"
+              >
+                <svg
+                  class="animate-spin h-8 w-8 text-purple-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </div>
+
+              <!-- Empty State -->
+              <div
+                v-else-if="noteHistory.length === 0"
+                class="flex flex-col items-center justify-center h-full text-gray-500"
+              >
+                <svg
+                  class="w-16 h-16 mb-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="1.5"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  ></path>
+                </svg>
+                <p class="text-lg font-medium">{{ t('editor.noHistory', '尚無歷史版本') }}</p>
+                <p class="text-sm mt-1">{{ t('editor.noHistoryDesc', '編輯並儲存後，歷史版本將會出現在這裡') }}</p>
+              </div>
+
+              <!-- History List -->
+              <div v-else class="space-y-3">
+                <div class="flex items-center justify-between mb-4">
+                  <h3 class="text-lg font-semibold text-gray-200">
+                    版本歷史 ({{ noteHistory.length }} 筆)
+                  </h3>
+                  <div class="flex items-center gap-3">
+                    <span class="text-xs text-gray-500">{{ t('editor.maxHistory', '最多保留 50 筆') }}</span>
+                    <button
+                      @click="clearNoteHistory"
+                      class="px-2 py-1 text-xs font-medium text-red-300 hover:text-red-200 bg-red-900/20 hover:bg-red-900/40 rounded transition-colors"
+                    >
+                      {{ t('editor.clearHistory', '清空紀錄') }}
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  v-for="(version, index) in noteHistory"
+                  :key="version.id"
+                  class="bg-gray-800/50 border border-gray-700 rounded-lg p-4 hover:border-purple-500/50 transition-colors group"
+                >
+                  <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                      <!-- Version Info -->
+                      <div class="flex items-center gap-2 mb-2">
+                        <span
+                          class="px-2 py-0.5 text-xs font-medium bg-purple-900/50 text-purple-300 rounded"
+                        >
+                          v{{ noteHistory.length - index }}
+                        </span>
+                        <span class="text-sm text-gray-400">
+                          {{ new
+                          Date(version.created_at).toLocaleString('zh-TW') }}
+                        </span>
+                      </div>
+
+                      <!-- Diff Summary -->
+                      <p class="text-sm text-gray-500 mb-2">
+                        {{ version.diff_summary }}
+                      </p>
+
+                      <!-- Content Preview -->
+                      <p class="text-xs text-gray-600 line-clamp-2 font-mono">
+                        {{ version.content.substring(0, 200) }}{{
+                        version.content.length > 200 ? '...' : '' }}
+                      </p>
+                    </div>
+
+                    <!-- Restore Button -->
+                    <button
+                      @click="restoreVersion(version.id)"
+                      :disabled="isRestoring"
+                      class="ml-4 px-3 py-1.5 text-xs font-medium text-purple-300 bg-purple-900/30 hover:bg-purple-800/50 border border-purple-700/50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                    >
+                      還原此版本
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Modal Footer -->
+          <div
+            class="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-800 bg-gray-800/50"
+          >
+            <!-- Left Actions (Only show in Edit mode) -->
+            <div v-if="currentNote.id" class="flex items-center gap-2">
+              <!-- Delete Button -->
+              <button
+                @click="deleteNote"
+                :disabled="isDeleting || isDuplicating"
+                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                :class="isDeleting
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-red-600 text-white hover:bg-red-500'"
+              >
+                <svg
+                  v-if="!isDeleting"
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                {{ isDeleting ? t('common.deleting') : t('common.delete') }}
+              </button>
+
+              <!-- Duplicate Button -->
+              <button
+                @click="duplicateNote"
+                :disabled="isDuplicating || isDeleting || isSaving"
+                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                :class="isDuplicating
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-gray-700 text-gray-200 hover:bg-gray-600 border border-gray-600'"
+              >
+                <svg
+                  v-if="!isDuplicating"
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                {{ isDuplicating ? t('notes.duplicating', '複製中...') : t('notes.duplicateNote') }}
+              </button>
+            </div>
+            <div v-else></div>
+
+            <!-- Cancel & Save Buttons -->
+            <div class="flex items-center gap-3">
+              <button
+                @click="closeEditor"
+                class="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
+              >
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                @click="saveNote"
+                :disabled="isSaving"
+                class="px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2"
+                :class="isSaving
+                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-500'"
+              >
+                <svg
+                  v-if="!isSaving"
+                  class="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 13l4 4L19 7"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="w-4 h-4 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                {{ isSaving ? t('common.saving', '儲存中...') : (currentNote.id ? t('common.update', '更新') : t('common.create', '建立'))
+                }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>

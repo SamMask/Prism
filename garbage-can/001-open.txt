@@ -1,0 +1,33 @@
+以後啟動專案，請用這個腳本：
+# 在專案根目錄執行
+start_dev.bat
+或者手動啟動（不推薦）：
+# 先關閉佔用 5000 端口的進程
+for /f "tokens=5" %a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') do taskkill /F /PID %a
+
+# 再啟動
+python app.py
+========================
+
+
+您需要啟動 Flask 後端伺服器才能訪問應用程式。以下是具體步驟：
+
+啟動步驟
+1️⃣ 開啟終端機
+在專案目錄 C:\AI\Local Insight 中開啟終端機（PowerShell 或 CMD）
+
+2️⃣ 啟動 Flask 伺服器
+執行以下命令：
+
+bash
+python app.py
+3️⃣ 訪問應用程式
+啟動成功後，您會看到類似這樣的訊息：
+
+ * Running on http://127.0.0.1:5000
+然後在瀏覽器中開啟：
+
+http://localhost:5000 或
+http://127.0.0.1:5000
+
+

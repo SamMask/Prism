@@ -1,0 +1,169 @@
+<!-- Sidebar Component (v0.9.0) -->
+<!-- Mobile Sidebar Backdrop -->
+<div 
+  v-if="mobileSidebarOpen" 
+  @click="mobileSidebarOpen = false"
+  class="md:hidden fixed inset-0 bg-black/50 z-30 transition-opacity"
+></div>
+
+<!-- Sidebar -->
+<aside
+  :class="[
+    'w-64 bg-theme-surface border-r border-theme-subtle flex flex-col shrink-0 transition-all duration-300',
+    'md:relative md:inset-auto md:z-auto md:h-auto md:translate-x-0',
+    'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:top-16 max-md:h-[calc(100%-4rem)]',
+    mobileSidebarOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'
+  ]"
+>
+  <!-- Type Filter -->
+  <div class="p-4">
+    <h2
+      class="text-xs font-bold text-theme-muted uppercase tracking-wider mb-3 px-2"
+    >
+      {{ t('editor.type') }} (Type)
+    </h2>
+    <div class="space-y-1">
+      <button
+        v-for="type in types"
+        :key="type"
+        @click="selectedType = type"
+        :class="['w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center gap-2',
+                        selectedType === type 
+                            ? 'bg-theme-primary/10 text-theme-brand-light border border-theme-primary/20' 
+                            : 'text-theme-secondary hover:bg-theme-elevated hover:text-theme-primary border border-transparent']"
+      >
+        <span
+          :class="['w-2 h-2 rounded-full', selectedType === type ? 'bg-theme-brand-light' : 'bg-theme-active']"
+        ></span>
+        {{ type === 'all' ? t('common.allContent', '全部內容') : type }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Tags Filter -->
+  <div
+    class="p-4 border-t border-theme-subtle flex-1 overflow-y-auto no-scrollbar"
+  >
+    <div class="flex items-center justify-between mb-3 px-2">
+      <h2
+        class="text-xs font-bold text-theme-muted uppercase tracking-wider"
+      >
+        {{ t('editor.tags') }} (Tags)
+      </h2>
+      <div class="flex items-center gap-2">
+        <!-- AND/OR Toggle -->
+        <button
+          v-if="selectedTags.length > 1"
+          @click="tagFilterMode = tagFilterMode === 'AND' ? 'OR' : 'AND'"
+          class="text-xs px-2 py-0.5 rounded transition-colors"
+          :class="tagFilterMode === 'AND' 
+            ? 'bg-theme-accent/30 text-theme-accent-light hover:bg-theme-accent/50' 
+            : 'bg-theme-primary/30 text-theme-brand-light hover:bg-theme-primary/50'"
+          :title="tagFilterMode === 'AND' ? '須符合所有標籤' : '符合任一標籤'"
+        >
+          {{ tagFilterMode }}
+        </button>
+        <!-- Clear Button -->
+        <button
+          v-if="selectedTags.length > 0"
+          @click="selectedTags = []"
+          class="text-xs text-theme-brand-light hover:text-theme-brand transition-colors"
+        >
+          {{ t('common.clear', '清除') }}
+        </button>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div
+      v-if="tagsLoading"
+      class="px-2 text-sm text-theme-muted italic flex items-center gap-2"
+    >
+      <svg
+        class="animate-spin h-4 w-4"
+        xmlns="http://www.w3.org/2000/svg"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <circle
+          class="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          stroke-width="4"
+        ></circle>
+        <path
+          class="opacity-75"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+        ></path>
+      </svg>
+      載入中...
+    </div>
+
+    <!-- Error State -->
+    <div
+      v-else-if="tagsError"
+      class="px-2 text-sm text-red-400 flex items-center gap-2"
+    >
+      <svg
+        class="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+        ></path>
+      </svg>
+      {{ tagsError }}
+    </div>
+
+    <!-- Tags List -->
+    <div v-else-if="tags.length > 0" class="space-y-1">
+      <div
+        v-for="tag in tags"
+        :key="tag.id"
+        class="flex items-center gap-2 px-3 py-2 rounded-lg text-sm cursor-pointer transition-all duration-200 group relative"
+        :class="selectedTags.includes(tag.id) ? 'bg-theme-primary/20 hover:bg-theme-primary/30' : 'hover:bg-theme-elevated'"
+        @click="selectedTags.includes(tag.id) ? selectedTags = selectedTags.filter(id => id !== tag.id) : selectedTags.push(tag.id)"
+        @contextmenu.prevent="openTagContextMenu($event, tag)"
+      >
+        <input
+          type="checkbox"
+          :checked="selectedTags.includes(tag.id)"
+          class="w-4 h-4 rounded border-theme-hover text-theme-primary focus:ring-theme-primary focus:ring-offset-0 focus:ring-1 bg-theme-hover pointer-events-none"
+        />
+        <span
+          class="flex-1 transition-colors"
+          :class="selectedTags.includes(tag.id) ? 'text-theme-brand-light' : 'text-theme-primary group-hover:text-theme-primary'"
+          >#{{ tag.name }}</span
+        >
+        <span
+          class="text-xs px-2 py-0.5 rounded-full transition-colors"
+          :class="selectedTags.includes(tag.id) ? 'bg-theme-primary/30 text-theme-brand-light' : 'bg-theme-elevated text-theme-muted group-hover:bg-theme-hover'"
+          >{{ tag.count }}</span
+        >
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div
+      v-else
+      class="px-2 text-sm text-theme-muted italic text-center py-4"
+    >
+      尚無標籤
+    </div>
+  </div>
+
+  <!-- Footer Info -->
+  <div
+    class="p-4 border-t border-theme-subtle text-xs text-theme-muted text-center"
+  >
+    v1.0 (MVP)
+  </div>
+</aside>

@@ -1,0 +1,256 @@
+<!-- Quick Add Modal (v1.0 - Phase 12 無障礙修復) -->
+<!-- 
+  Simplified editor for quick content capture
+  Focuses on content first, with auto-title generation
+  v1.0: 新增 ESC 關閉 + focus 可見性
+-->
+<div
+  v-if="isQuickAddOpen"
+  class="fixed inset-0 z-50 overflow-y-auto"
+  aria-labelledby="modal-title"
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  @keydown.esc.prevent="closeEditor"
+  @keydown.ctrl.enter.prevent="saveNote"
+>
+  <!-- Backdrop -->
+  <div
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
+    aria-hidden="true"
+    @click="closeEditor"
+  ></div>
+
+  <div class="flex min-h-full items-center justify-center p-4">
+    <div
+      class="relative w-full max-w-2xl transform overflow-hidden rounded-2xl bg-theme-surface border border-theme-default shadow-2xl transition-all flex flex-col max-h-[90vh]"
+    >
+      <!-- Header -->
+      <div
+        class="px-6 py-4 border-b border-theme-default flex items-center justify-between bg-theme-elevated/30"
+      >
+        <h3
+          class="text-lg font-semibold text-theme-primary flex items-center gap-2"
+        >
+          <svg
+            class="w-5 h-5 text-purple-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            ></path>
+          </svg>
+          {{ t('common.quickAdd', '快速新增') }}
+        </h3>
+        <button
+          @click="closeEditor"
+          class="text-theme-muted hover:text-theme-primary transition-colors"
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M6 18L18 6M6 6l12 12"
+            ></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 flex-1 overflow-y-auto flex flex-col gap-4">
+        <!-- Title (v1.0: 修復 focus 可見性) -->
+        <input
+          type="text"
+          v-model="currentNote.title"
+          class="w-full bg-transparent border-none text-lg font-medium text-theme-primary placeholder-theme-muted p-0 rounded focus:bg-white/5 focus:ring-1 focus:ring-purple-500/30 transition-all"
+          :placeholder="t('editor.titlePlaceholder', '標題 (可留空)')"
+        />
+
+        <!-- Content (Main Focus) -->
+        <div class="flex-1 min-h-[300px] relative group">
+          <textarea
+            v-model="currentNote.content"
+            @paste="handlePasteInEditor"
+            class="w-full h-full min-h-[300px] bg-gray-900/50 hover:bg-gray-900/70 focus:bg-gray-900 rounded-lg p-4 text-theme-primary placeholder-theme-muted focus:ring-2 focus:ring-purple-500/50 resize-y border border-theme-default/20 font-mono text-sm leading-relaxed transition-colors"
+            :placeholder="t('editor.contentPlaceholder', '在此輸入內容或貼上圖片...')"
+            autofocus
+            ref="quickContentInput"
+          ></textarea>
+
+          <!-- Upload Indicator -->
+          <div
+            v-if="isUploading"
+            class="absolute bottom-4 right-4 bg-black/70 text-white text-xs px-2 py-1 rounded flex items-center gap-2"
+          >
+            <svg
+              class="animate-spin h-3 w-3 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            Uploading...
+          </div>
+        </div>
+
+        <!-- URL Input (v1.0: 修復 focus 可見性) -->
+        <div
+          class="flex items-center gap-2 bg-theme-elevated/30 rounded-lg px-3 py-2 border border-transparent focus-within:border-theme-primary/30 transition-colors"
+        >
+          <svg
+            class="w-4 h-4 text-theme-muted shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+            ></path>
+          </svg>
+          <input
+            type="text"
+            v-if="currentNote.urls"
+            v-model="currentNote.urls[0]"
+            class="flex-1 bg-transparent border-none text-sm text-theme-primary placeholder-theme-muted p-0 rounded focus:bg-white/5 focus:ring-1 focus:ring-purple-500/30 transition-all"
+            :placeholder="t('editor.urlPlaceholder', '來源網址 (選填)')"
+          />
+        </div>
+
+        <!-- Tags Input -->
+        <div>
+          <div
+            class="flex items-center gap-2 flex-wrap bg-theme-elevated/30 rounded-lg px-3 py-2 min-h-[42px] border border-transparent focus-within:border-theme-primary/30 transition-colors"
+          >
+            <svg
+              class="w-4 h-4 text-theme-muted shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+              ></path>
+            </svg>
+
+            <!-- Selected Tags -->
+            <span
+              v-for="(tag, index) in currentNote.tags"
+              :key="index"
+              class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30"
+            >
+              #{{ tag.name || tag }}
+              <button
+                @click="removeTag(index)"
+                class="ml-1 text-purple-300 hover:text-white"
+              >
+                ×
+              </button>
+            </span>
+
+            <!-- Tag Input (v1.0: 修復 focus 可見性) -->
+            <input
+              type="text"
+              v-model="newTagInput"
+              @keydown.enter.prevent="addTag"
+              class="flex-1 bg-transparent border-none text-sm text-theme-primary placeholder-theme-muted p-0 min-w-[120px] rounded focus:bg-white/5 focus:ring-1 focus:ring-purple-500/30 transition-all"
+              :placeholder="t('editor.tagPlaceholder', '輸入標籤按 Enter...')"
+            />
+          </div>
+
+          <!-- Recent Tags Recommendation -->
+          <div
+            class="mt-2 flex flex-wrap gap-2 items-center"
+            v-if="recommendedTags && recommendedTags.length > 0"
+          >
+            <span class="text-xs text-theme-muted"
+              >{{ t('editor.recommend', '推薦:') }}</span
+            >
+            <button
+              v-for="tag in recommendedTags"
+              :key="tag.id"
+              @click="toggleTag(tag)"
+              class="px-2 py-1 text-xs rounded-full border border-theme-default text-theme-secondary hover:bg-theme-elevated hover:text-theme-primary transition-colors"
+              :class="{ 'bg-theme-active text-white border-theme-primary': isTagSelected(tag) }"
+            >
+              #{{ tag.name }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div
+        class="px-6 py-4 border-t border-theme-default bg-theme-elevated/30 flex justify-between items-center"
+      >
+        <div class="text-xs text-theme-muted hidden sm:block">
+          {{ t('editor.shortcutSave', 'Ctrl + Enter 儲存') }}
+        </div>
+        <div class="flex gap-3 w-full sm:w-auto justify-end">
+          <button
+            @click="closeEditor"
+            class="px-4 py-2 text-sm text-theme-muted hover:text-theme-primary transition-colors"
+          >
+            {{ t('common.cancel', '取消') }}
+          </button>
+          <button
+            @click="saveNote"
+            :disabled="isSaving"
+            class="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-lg text-sm font-medium shadow-lg shadow-purple-900/20 transition-all flex items-center gap-2"
+          >
+            <svg
+              v-if="isSaving"
+              class="animate-spin h-4 w-4 text-white"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            {{ isSaving ? t('common.saving', '儲存中...') : t('common.save',
+            '儲存') }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

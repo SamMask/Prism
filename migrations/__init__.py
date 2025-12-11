@@ -1,0 +1,236 @@
+# -*- coding: utf-8 -*-
+"""
+Schema Migration System - Local Insight v2.0
+版本化遷移系統，消除 if 分支堆疊
+
+用法:
+    from migrations import run_migrations
+    run_migrations(db)
+
+設計原則:
+- 聲明式遷移 (資料驅動，非程式邏輯)
+- 冪等操作 (可重複執行不會重複遷移)
+- 交易隔離 (單一遷移失敗會回滾)
+- 向後相容 (不破壞現有資料)
+"""
+
+import sqlite3
+from typing import List, Tuple
+
+# ===================================================================
+# 遷移定義 (聲明式)
+# 格式: (版本號, 遷移名稱, SQL 語句列表)
+# ===================================================================
+
+MIGRATIONS: List[Tuple[int, str, List[str]]] = [
+    # v0.6.6: 新增置頂功能
+    (1, "add_is_pinned", [
+        "ALTER TABLE Notes ADD COLUMN is_pinned INTEGER DEFAULT 0",
+    ]),
+    
+    # v0.8.4: 新增封面位置
+    (2, "add_cover_position", [
+        "ALTER TABLE Notes ADD COLUMN cover_position TEXT DEFAULT 'top'",
+    ]),
+    
+    # v0.8.5: 新增編輯器佈局
+    (3, "add_editor_layout", [
+        "ALTER TABLE Notes ADD COLUMN editor_layout TEXT DEFAULT 'single'",
+    ]),
+    
+    # v0.8.9: 新增封存功能
+    (4, "add_is_archived", [
+        "ALTER TABLE Notes ADD COLUMN is_archived INTEGER DEFAULT 0",
+        "CREATE INDEX IF NOT EXISTS idx_notes_is_archived ON Notes(is_archived)",
+    ]),
+    
+    # v0.9.0: 新增自訂排序
+    (5, "add_sort_order", [
+        "ALTER TABLE Notes ADD COLUMN sort_order INTEGER DEFAULT 0",
+        "CREATE INDEX IF NOT EXISTS idx_notes_sort_order ON Notes(sort_order)",
+        "UPDATE Notes SET sort_order = id WHERE sort_order = 0 OR sort_order IS NULL",
+    ]),
+    
+    # v1.0.0: 新增分類 FK (Phase A)
+    (6, "add_category_id", [
+        "ALTER TABLE Notes ADD COLUMN category_id INTEGER REFERENCES Categories(id)",
+        "CREATE INDEX IF NOT EXISTS idx_notes_category_id ON Notes(category_id)",
+    ]),
+    
+    # v1.0.0: 填充 category_id (根據現有 type 值)
+    (7, "populate_category_id", [
+        # 根據 type 名稱匹配 category_id
+        """
+        UPDATE Notes SET category_id = (
+            SELECT id FROM Categories WHERE name = Notes.type LIMIT 1
+        ) WHERE category_id IS NULL
+        """,
+        # 為沒有匹配的筆記設定預設分類
+        """
+        UPDATE Notes SET category_id = (
+            SELECT id FROM Categories WHERE is_default = 1 LIMIT 1
+        ) WHERE category_id IS NULL
+        """,
+        # 如果還有 NULL，使用任意分類 (fallback)
+        """
+        UPDATE Notes SET category_id = (
+            SELECT id FROM Categories ORDER BY sort_order LIMIT 1
+        ) WHERE category_id IS NULL
+        """,
+    ]),
+]
+
+
+# ===================================================================
+# 遷移執行器
+# ===================================================================
+
+def _ensure_schema_meta(db) -> None:
+    """確保 Schema_Meta 表存在"""
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS Schema_Meta (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        )
+    """)
+    db.execute(
+        "INSERT OR IGNORE INTO Schema_Meta (key, value) VALUES ('schema_version', '0')"
+    )
+    db.commit()
+
+
+def get_current_version(db) -> int:
+    """取得當前 schema 版本號"""
+    try:
+        row = db.execute(
+            "SELECT value FROM Schema_Meta WHERE key = 'schema_version'"
+        ).fetchone()
+        return int(row[0]) if row else 0
+    except sqlite3.OperationalError:
+        # Schema_Meta 表不存在
+        return 0
+
+
+def _column_exists(db, table: str, column: str) -> bool:
+    """檢查資料表欄位是否存在"""
+    try:
+        cursor = db.execute(f"PRAGMA table_info({table})")
+        columns = [col[1] for col in cursor.fetchall()]
+        return column in columns
+    except sqlite3.OperationalError:
+        return False
+
+
+def _detect_existing_schema(db) -> int:
+    """
+    偵測現有資料庫已有的欄位，推斷已完成的遷移版本。
+    用於首次從 if 分支系統遷移到版本化系統。
+    """
+    version = 0
+    
+    # 檢查各個欄位，推斷版本
+    if _column_exists(db, 'Notes', 'is_pinned'):
+        version = max(version, 1)
+    if _column_exists(db, 'Notes', 'cover_position'):
+        version = max(version, 2)
+    if _column_exists(db, 'Notes', 'editor_layout'):
+        version = max(version, 3)
+    if _column_exists(db, 'Notes', 'is_archived'):
+        version = max(version, 4)
+    if _column_exists(db, 'Notes', 'sort_order'):
+        version = max(version, 5)
+    if _column_exists(db, 'Notes', 'category_id'):
+        version = max(version, 7)  # 包含填充
+    
+    return version
+
+
+def run_migrations(db) -> int:
+    """
+    執行所有待處理的遷移
+    
+    返回: 最終的 schema 版本號
+    """
+    # 1. 確保 Schema_Meta 表存在
+    _ensure_schema_meta(db)
+    
+    # 2. 取得當前版本
+    current = get_current_version(db)
+    
+    # 3. 首次遷移: 偵測已有欄位，設定初始版本
+    if current == 0:
+        detected = _detect_existing_schema(db)
+        if detected > 0:
+            print(f"[Migration] 偵測到現有欄位，設定初始版本為 v{detected}")
+            db.execute(
+                "UPDATE Schema_Meta SET value = ? WHERE key = 'schema_version'",
+                (str(detected),)
+            )
+            db.commit()
+            current = detected
+    
+    # 4. 執行待處理的遷移
+    applied = 0
+    for version, name, statements in MIGRATIONS:
+        if version > current:
+            print(f"[Migration] 執行 v{version:03d}: {name}")
+            try:
+                for sql in statements:
+                    # 跳過空白 SQL
+                    sql_clean = sql.strip()
+                    if not sql_clean:
+                        continue
+                    
+                    # 執行 SQL
+                    try:
+                        db.execute(sql_clean)
+                    except sqlite3.OperationalError as e:
+                        # 欄位已存在的錯誤可以忽略 (冪等性)
+                        if "duplicate column name" in str(e).lower():
+                            print(f"  [SKIP] 欄位已存在，跳過")
+                            continue
+                        raise
+                
+                # 更新版本號
+                db.execute(
+                    "UPDATE Schema_Meta SET value = ? WHERE key = 'schema_version'",
+                    (str(version),)
+                )
+                db.commit()
+                applied += 1
+                
+            except Exception as e:
+                db.rollback()
+                print(f"[Migration] v{version:03d} 失敗: {e}")
+                raise
+    
+    # 5. 輸出結果
+    final = get_current_version(db)
+    if applied > 0:
+        print(f"[Migration] 完成！執行了 {applied} 個遷移，版本 {current} → {final}")
+    else:
+        print(f"[Migration] 資料庫已是最新版本 (v{final})")
+    
+    return final
+
+
+def get_migration_status(db) -> dict:
+    """取得遷移狀態 (用於診斷)"""
+    _ensure_schema_meta(db)
+    current = get_current_version(db)
+    
+    pending = []
+    completed = []
+    
+    for version, name, _ in MIGRATIONS:
+        if version > current:
+            pending.append({'version': version, 'name': name})
+        else:
+            completed.append({'version': version, 'name': name})
+    
+    return {
+        'current_version': current,
+        'latest_version': MIGRATIONS[-1][0] if MIGRATIONS else 0,
+        'completed': completed,
+        'pending': pending,
+    }

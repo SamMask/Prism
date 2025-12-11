@@ -1,0 +1,139 @@
+專案需求規格書 (PRD)
+專案名稱： Local Insight - 本機端 AI 提示詞與知識管理中樞 版本： v1.2 (MVP + Features) 日期： 2025-12-05 架構模式： Local Web App (Flask + SQLite + Vue.js)
+
+1. 專案概述 (Project Overview)
+1.1 目標
+構建一個輕量化、去中心化、本機執行的網頁應用程式，用於高效管理使用者的 AI 提示詞 (Prompts)、技術筆記、學習資源與教學文檔。
+
+1.2 核心價值
+視覺化管理：透過瀑布流 (Masonry Layout) 與卡片式介面，解決傳統檔案總管無法直觀預覽內容的問題。
+
+零依賴部署：不依賴 Docker 或 Node.js 環境，僅需 Python 即可運行，資料庫採用 SQLite 單檔存儲，方便遷移與備份。
+
+高維度檢索：結合「結構化分類 (Type)」與「標籤系統 (Tags)」的雙重過濾機制。
+
+2. 技術堆疊 (Tech Stack)
+為了達到「極簡部署」與「現代化體驗」的平衡，採用以下技術組合：
+
+後端 (Backend): Python 3 + Flask (處理 API、路由、檔案 I/O)。
+
+資料庫 (Database): SQLite 3 (無需安裝 Server，啟用 Foreign Keys)。
+
+前端邏輯 (Frontend Logic): Vue.js 3 (CDN 引入，負責 SPA 頁面互動、數據綁定)。
+
+前端樣式 (UI Framework): Tailwind CSS (CDN 引入，快速構建響應式與深色模式介面)。
+
+Markdown 引擎: Marked.js (前端即時渲染)。
+
+3. 資料架構 (Database Schema)
+3.1 核心資料表 (Notes)
+儲存筆記主體內容。
+
+id (PK, Auto Inc): 唯一識別碼。
+
+title (Text): 標題。
+
+content (Text): 筆記內容 (Markdown 格式)。
+
+type (Text): 分類屬性（單選，類似資料夾）。
+
+預設值範例：提示詞、筆記、教學、資料、靈感。
+
+remarks (Text): 備註（簡短說明，用於 UI 懸停顯示）。
+
+cover_image (Text): 封面圖片路徑（若為 Null，程式邏輯將自動抓取 Content 第一張圖或顯示預設色塊）。
+
+created_at / updated_at (Datetime): 時間戳記。
+
+3.2 來源網址表 (Source_Urls)
+儲存該筆記參考的多個外部連結（一對多關係）。
+
+id (PK)
+
+note_id (FK): 關聯到 Notes 表。
+
+url (Text): 網址連結。
+
+3.3 標籤系統 (Tags & Note_Tags)
+實現多對多標籤管理。
+
+tags: 儲存標籤名稱 (id, name)。
+
+note_tags: 關聯表 (note_id, tag_id)。
+
+4. 功能需求 (Functional Requirements)
+4.1 瀏覽與檢索 (View & Search)
+瀑布流佈局 (Masonry Grid)：卡片寬度固定，高度隨內容自動調整，錯落排列（仿 Pinterest）。
+
+雙重過濾側邊欄：
+
+類型 (Type)：單選過濾 (例如：只看「提示詞」)。
+
+標籤 (Tags)：多選/反選過濾 (例如：同時選取 #Python 與 #Flux)。
+
+即時搜尋：輸入關鍵字時，前端 Vue 即時過濾標題、內文與標籤，無需刷新頁面。
+
+卡片資訊：顯示封面圖、標題、類型標籤、更新日期。滑鼠懸停 (Hover) 於卡片時，顯示 remarks 備註文字。
+
+4.2 內容編輯 (Editor)
+彈出視窗模式 (Modal)：點擊卡片或新增按鈕時，以全螢幕彈窗開啟，背景模糊。
+
+分割視窗 (Split View)：
+
+左側：Markdown 原始碼編輯區。
+
+右側：即時預覽區 (Rendered HTML)。
+
+多網址管理：提供介面動態新增/刪除多組 Source URL。
+
+圖片處理：
+
+支援從本機上傳圖片。
+
+上傳後自動插入 Markdown 語法 ![](/static/uploads/xxx.jpg)。
+
+系統自動將第一張圖片設為封面。
+
+4.3 系統邏輯
+智慧封面：若使用者未手動上傳封面，系統解析 Markdown 內容抓取第一張圖片作為封面；若無圖片，則顯示預設樣式。
+
+版本/時間控制：每次儲存自動更新 updated_at，列表預設以「最近更新」排序。
+
+4.4 進階功能 (v1.2 新增)
+資料複製：提供「建立副本」功能，快速複製既有筆記內容與標籤。
+
+本地匯出：
+- 匯出 JSON：將所有筆記資料匯出為標準 JSON 格式。
+- 匯出 DB：直接下載 SQLite 資料庫檔案 (.db) 進行備份。
+
+雲端備份：
+- Google Drive 整合：一鍵將資料庫備份至 Google 雲端硬碟 (需設定 Service Account)。
+
+標籤管理：
+- 重命名標籤：PUT /api/tags/<id> 更新標籤名稱，自動影響所有關聯筆記。
+- 刪除標籤：DELETE /api/tags/<id> 刪除標籤及其所有關聯。
+- 合併標籤：POST /api/tags/merge 將多個相似標籤合併為一個。
+- 前端 UI：側邊欄標籤右鍵選單提供管理功能。
+
+5. 介面設計規範 (UI/UX Design)
+色調：深色模式 (Dark Mode)，背景色 #111827 (Tailwind bg-gray-900)，文字以灰白為主。
+
+視覺風格：現代化、圓角 (rounded-xl)、微陰影 (shadow-lg)。
+
+響應式：
+
+桌面版：顯示側邊過濾欄。
+
+移動版：側邊欄收折，瀑布流改為單欄顯示。
+
+6. 檔案結構 (File Structure)
+Plaintext
+
+MyKnowledgeBase/
+│
+├── app.py              # 啟動入口與 API 邏輯
+├── knowledge.db        # SQLite 資料庫 (自動生成)
+├── static/
+│   └── uploads/        # 圖片存放區
+└── templates/
+    └── index.html      # 單頁應用前端 (包含 Vue 邏輯與 CSS)
