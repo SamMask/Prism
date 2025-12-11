@@ -8,9 +8,14 @@ import { api } from '../api.js';
 import { validateImageFile } from '../utils.js';
 import { injectT } from './useI18n.js';
 
-export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImageSaveMode) {
+export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImageSaveMode, getCardOpenMode) {
     const { ref, computed } = Vue;
     const t = injectT();  // v0.8.9: 自動注入翻譯函數
+    
+    // v1.1.1: 確保 getCardOpenMode 有預設值
+    if (typeof getCardOpenMode !== 'function') {
+        getCardOpenMode = () => 'reading';  // 預設閱讀模式
+    }
     
     // v0.9.0: 兼容舊調用 (如果不傳 getNewNoteDefaultType，參數會位移)
     // 實際上 app.js 會更新，但以防萬一
@@ -230,9 +235,23 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
         sessionUploadedImages.value = []; // 重置追蹤列表 (v0.8.7)
 
         if (note) {
-            // Edit mode - 優先顯示內容預覽
+            // Edit mode - 根據用戶設定決定開啟模式 (v1.1.1)
             activeTab.value = 'content';
-            isContentPreview.value = true;  // 進入預覽模式
+            
+            // 獲取用戶預設的卡片開啟模式
+            const defaultOpenMode = getCardOpenMode();
+            
+            if (defaultOpenMode === 'reading') {
+                isContentPreview.value = false;
+                isReadingMode.value = true;
+            } else if (defaultOpenMode === 'edit') {
+                isContentPreview.value = false;
+                isReadingMode.value = false;
+            } else {
+                // 'preview' 模式 (Markdown 預覽)
+                isContentPreview.value = true;
+                isReadingMode.value = false;
+            }
             
             // 智能預設佈局 (v0.8.6)
             // 如果有保存的設定就使用，否則根據是否有圖片決定

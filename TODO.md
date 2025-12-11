@@ -492,6 +492,48 @@
 
 ---
 
+## 🚧 Phase 14: 審計修復 (v1.1.1 - 2025-12-11)
+
+> 📄 來源: `MVP_Audit_Report-1211.md`, `MVP_UX_Audit_Report-1211.md`
+
+### 14.1 🔴 P0 - 技術阻斷
+
+- [x] **14.1.1** 分類資料一致性修復 (Category Split Brain) ✅ _(2025-12-11)_
+  - 位置: `routes/notes/crud.py`
+  - 問題: `create_note` / `update_note` 僅寫入 `type`，未設定 `category_id`
+  - 修復: 新增 `get_category_id_by_name()` Helper，同步寫入 `category_id`
+
+### 14.2 🔴 P0 - UX 阻斷
+
+- [x] **14.2.1** Prompt Builder 錯誤死胡同修復 ✅ _(2025-12-11)_
+
+  - 位置: `templates/prompt-builder.html`
+  - 問題: 設定檔載入失敗時無「返回首頁」連結
+  - 修復: 在錯誤狀態 div 增加返回首頁連結
+
+- [x] **14.2.2** 搜尋空狀態誤導修復 ✅ _(2025-12-11)_
+
+  - 位置: `templates/components/_note-grid.html`
+  - 問題: 搜尋無結果時顯示「尚無筆記」誤導用戶
+  - 修復: 區分「無搜尋結果」與「資料庫真空」狀態
+
+- [x] **14.2.3** 手機版側邊欄自動收合 ✅ _(2025-12-11)_
+  - 位置: `templates/components/_sidebar.html`
+  - 問題: 過濾後側邊欄不自動收合，遮擋結果
+  - 修復: 在過濾 click 事件中加入 `mobileSidebarOpen = false`
+
+### 14.3 🟡 P1 - UX 改進 (可選)
+
+- [ ] **14.3.1** Quick Add vs New Note 視覺區分
+
+  - 位置: `templates/components/_header.html`
+  - 建議: 降低 Quick Add 的視覺權重，或調整文案
+
+- [ ] **14.3.2** Markdown 編輯工具列 (長期)
+  - 狀態: 延後，未來版本考慮
+
+---
+
 ## 📅 開發里程碑
 
 | 日期       | 版本   | 里程碑                        |

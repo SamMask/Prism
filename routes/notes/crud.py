@@ -20,6 +20,27 @@ from ..helpers import parse_tags_json, parse_urls_json
 from db import get_db
 
 
+def get_category_id_by_name(db, type_name):
+    """
+    根據分類名稱取得 category_id (2025-12-11 Audit Fix)
+    解決 Notes.type 與 Notes.category_id 的「雙重事實」分裂問題
+    """
+    if not type_name:
+        type_name = '筆記'  # 預設分類
+    
+    row = db.execute('SELECT id FROM Categories WHERE name = ?', (type_name,)).fetchone()
+    if row:
+        return row[0]
+    
+    # Fallback: 使用預設分類
+    row = db.execute('SELECT id FROM Categories WHERE is_default = 1').fetchone()
+    if row:
+        return row[0]
+    
+    # 最終 Fallback: 返回 NULL (不阻斷流程)
+    return None
+
+
 @notes_bp.route('/notes', methods=['GET'])
 def get_notes():
     """
@@ -283,13 +304,18 @@ def create_note():
             if prompt_params and isinstance(prompt_params, dict):
                 prompt_params = json.dumps(prompt_params, ensure_ascii=False)
             
+            # 取得 category_id (2025-12-11 Audit Fix)
+            type_name = data.get('type', '筆記')
+            category_id = get_category_id_by_name(db, type_name)
+            
             cursor = db.execute('''
-                INSERT INTO Notes (title, content, type, remarks, cover_image, cover_position, editor_layout, prompt_params)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO Notes (title, content, type, category_id, remarks, cover_image, cover_position, editor_layout, prompt_params)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 data.get('title'),
                 data.get('content'),
-                data.get('type', '筆記'),
+                type_name,
+                category_id,
                 data.get('remarks', ''),
                 data.get('cover_image'),
                 data.get('cover_position', 'top'),
@@ -375,16 +401,21 @@ def update_note(note_id):
             if prompt_params and isinstance(prompt_params, dict):
                 prompt_params = json.dumps(prompt_params, ensure_ascii=False)
             
+            # 取得 category_id (2025-12-11 Audit Fix)
+            type_name = data.get('type', '筆記')
+            category_id = get_category_id_by_name(db, type_name)
+            
             # 更新 Notes
             db.execute('''
                 UPDATE Notes
-                SET title = ?, content = ?, type = ?, remarks = ?, cover_image = ?,
+                SET title = ?, content = ?, type = ?, category_id = ?, remarks = ?, cover_image = ?,
                     cover_position = ?, editor_layout = ?, prompt_params = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (
                 data.get('title'),
                 data.get('content'),
-                data.get('type', '筆記'),
+                type_name,
+                category_id,
                 data.get('remarks', ''),
                 data.get('cover_image'),
                 data.get('cover_position', 'top'),

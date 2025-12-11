@@ -55,6 +55,12 @@ CREATE INDEX idx_notes_updated_at ON Notes(updated_at DESC);
 - `idx_notes_updated_at DESC` 索引優化排序查詢，配合分頁使用
 - 建議定期使用 `ANALYZE` 指令更新查詢優化統計
 
+> [!WARNING] > **已知問題 (2025-12-11 Audit)**:
+>
+> - `Notes.type` 與 `Notes.category_id` 存在「雙重事實」分裂。
+> - 應用層 (`crud.py`) 目前僅寫入 `type`，`category_id` 為 NULL。
+> - **修復方向**: 短期在 CRUD 時同步寫入 `category_id`；長期廢棄 `type`。
+
 ---
 
 ### 2.2 Source_Urls (來源網址表)

@@ -74,8 +74,21 @@
           ></path>
         </svg>
       </div>
-      <p class="text-lg font-medium">{{ t('notes.noNotes') }}</p>
-      <p class="text-sm mt-1">{{ t('notes.createFirst') }}</p>
+      <!-- 區分搜尋/過濾無結果 vs 真正無資料 (2025-12-11 Audit Fix) -->
+      <template v-if="searchKeyword || selectedTags.length > 0 || selectedType !== 'all'">
+        <p class="text-lg font-medium">{{ t('notes.noMatches', '找不到符合條件的筆記') }}</p>
+        <p class="text-sm mt-1 text-theme-muted">{{ t('notes.tryDifferentFilter', '請嘗試其他搜尋條件或過濾器') }}</p>
+        <button 
+          @click="searchKeyword = ''; selectedTags = []; selectedType = 'all'"
+          class="mt-4 px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
+        >
+          {{ t('notes.clearFilters', '清除所有過濾') }}
+        </button>
+      </template>
+      <template v-else>
+        <p class="text-lg font-medium">{{ t('notes.noNotes') }}</p>
+        <p class="text-sm mt-1">{{ t('notes.createFirst') }}</p>
+      </template>
     </div>
 
     <!-- Masonry Grid (CSS Grid) - Grid View -->

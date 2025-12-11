@@ -24,11 +24,12 @@ const app = createApp({
         const notesComposable = useNotes();
         const tagsComposable = useTags();
         const settingsComposable = useSettings();
-        // useEditor needs quickAddDefaultType and imageSaveMode callbacks
+        // useEditor needs quickAddDefaultType, newNoteDefaultType, imageSaveMode, cardOpenMode callbacks
         const editorComposable = useEditor(
             () => settingsComposable.quickAddDefaultType.value,
             () => settingsComposable.newNoteDefaultType.value,
-            () => settingsComposable.imageSaveMode.value
+            () => settingsComposable.imageSaveMode.value,
+            () => settingsComposable.cardOpenMode.value
         );
 
         // UI State
@@ -259,6 +260,7 @@ const app = createApp({
             newNoteDefaultType: settingsComposable.newNoteDefaultType,
             setNewNoteDefault: (type) => { settingsComposable.newNoteDefaultType.value = type; },
             imageSaveMode: settingsComposable.imageSaveMode,
+            cardOpenMode: settingsComposable.cardOpenMode,
             colorTheme: settingsComposable.colorTheme,
             availableThemes: settingsComposable.availableThemes,
             

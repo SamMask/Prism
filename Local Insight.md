@@ -816,4 +816,27 @@ http://localhost:5000
 
 ---
 
-**END OF Local Insight.md (v1.0.0 - Updated 2025-12-11)**
+### 14.11 2025-12-11 審計報告 (v1.1.1)
+
+> 📄 來源: `MVP_Audit_Report-1211.md`, `MVP_UX_Audit_Report-1211.md`
+
+#### 技術審計發現
+
+| 分類    | 問題                              | 狀態   |
+| ------- | --------------------------------- | ------ |
+| 🔴 資料 | Notes.category_id 未被 CRUD 寫入  | 待修復 |
+| 🟡 遷移 | app.py init_db 與 migrations 重疊 | 監控中 |
+
+#### UX 審計發現
+
+| 分類  | 問題                          | 狀態   |
+| ----- | ----------------------------- | ------ |
+| 🔴 UX | Prompt Builder 錯誤狀態死胡同 | 待修復 |
+| 🔴 UX | 搜尋無結果誤導為「無資料」    | 待修復 |
+| 🔴 UX | 手機版側邊欄過濾後遮擋結果    | 待修復 |
+| 🟡 UX | Quick Add / New Note 競爭     | 可選   |
+| 🟡 UX | Markdown WYSIWYG 門檻         | 延後   |
+
+---
+
+**END OF Local Insight.md (v1.1.1 - Updated 2025-12-11)**

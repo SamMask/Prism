@@ -826,6 +826,59 @@
             </select>
           </div>
 
+          <!-- Card Open Mode Setting (v1.1.1) -->
+          <div
+            class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 bg-cyan-600/20 rounded-lg flex items-center justify-center"
+              >
+                <svg
+                  class="w-4 h-4 text-cyan-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                  ></path>
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                  ></path>
+                </svg>
+              </div>
+              <div>
+                <div class="text-sm font-medium text-gray-200">
+                  {{ t('settings.cardOpenMode', '卡片開啟模式') }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ t('settings.cardOpenModeDesc', '點擊卡片時的預設顯示模式') }}
+                </div>
+              </div>
+            </div>
+            <select
+              v-model="cardOpenMode"
+              class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-cyan-500 focus:border-cyan-500"
+            >
+              <option value="reading">
+                {{ t('settings.cardOpenModeReading', '閱讀模式 (純文字)') }}
+              </option>
+              <option value="preview">
+                {{ t('settings.cardOpenModePreview', '預覽模式 (Markdown)') }}
+              </option>
+              <option value="edit">
+                {{ t('settings.cardOpenModeEdit', '編輯模式') }}
+              </option>
+            </select>
+          </div>
+
           <!-- Color Theme Setting (v0.8.9) -->
           <div
             class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"

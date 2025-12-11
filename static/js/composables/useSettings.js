@@ -59,6 +59,9 @@ export function useSettings() {
   // 圖片保存模式 (v0.8.9): 'both' 或 'thumbnail_only'
   const imageSaveMode = ref(savedSettings.imageSaveMode || "both");
 
+  // 卡片預設開啟模式 (v1.1.1): 'preview' / 'reading' / 'edit'
+  const cardOpenMode = ref(savedSettings.cardOpenMode || "reading");
+
   // 品牌主題色 (v0.8.9): 'default' / 'cyberpunk' / 'eye-care' / 'elegant' / 'ocean' / 'sunset'
   const colorTheme = ref(savedSettings.colorTheme || "default");
   const availableThemes = [
@@ -122,6 +125,11 @@ export function useSettings() {
     const current = loadSettings();
     saveSettings({ ...current, colorTheme: newVal });
     applyTheme(newVal);
+  });
+
+  watch(cardOpenMode, (newVal) => {
+    const current = loadSettings();
+    saveSettings({ ...current, cardOpenMode: newVal });
   });
 
   // Orphan Image Cleanup (v0.8)
@@ -740,6 +748,7 @@ export function useSettings() {
     quickAddDefaultType,
     newNoteDefaultType,
     imageSaveMode,
+    cardOpenMode,
     colorTheme,
     availableThemes,
 
