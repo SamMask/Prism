@@ -57,6 +57,37 @@ def vacuum_database():
         }), 500
 
 
+@system_bp.route('/system/clear-history', methods=['POST'])
+def clear_history():
+    """
+    清空所有歷史版本記錄
+    Response: { deleted_count }
+    """
+    try:
+        db = get_db()
+        
+        # 取得刪除前的數量
+        count_before = db.execute('SELECT COUNT(*) FROM Note_History').fetchone()[0]
+        
+        # 清空歷史版本表
+        db.execute('DELETE FROM Note_History')
+        db.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'deleted_count': count_before
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+
 @system_bp.route('/system/stats', methods=['GET'])
 def get_system_stats():
     """

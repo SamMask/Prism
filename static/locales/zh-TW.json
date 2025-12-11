@@ -167,7 +167,17 @@
     "vacuumConfirm": "確定要整理資料庫嗎？這可能需要幾秒鐘時間。",
     "vacuumSuccess": "資料庫整理完成！",
     "vacuumComplete": "整理完成",
-    "freed": "釋放"
+    "freed": "釋放",
+    "startup": "啟動設定",
+    "autoOpenBrowser": "自動開啟瀏覽器",
+    "autoOpenBrowserDesc": "啟動時自動開啟瀏覽器視窗",
+    "import": "資料匯入",
+    "importMD": "匯入 Markdown",
+    "importMDDesc": "支援單檔或批量選擇 .md",
+    "clearHistory": "清空歷史版本",
+    "clearHistoryDesc": "刪除所有筆記的歷史版本記錄",
+    "clearHistoryConfirm": "確定要清空所有歷史版本嗎？此操作無法復原。",
+    "clearHistorySuccess": "已清空 {count} 個歷史版本記錄"
   },
   "categories": {
     "manage": "管理分類",
@@ -367,7 +377,11 @@
     "confirmRestore": "確定要還原至此版本嗎？當前內容將會被保存為歷史版本。",
     "imageSyntaxCopied": "已複製圖片語法！",
     "confirmDeleteImageFile": "確定要刪除此圖片檔案嗎？\n\n這將從內容中移除引用，並刪除原圖和縮圖。",
-    "deletedImages": "已刪除 {count} 個圖片"
+    "deletedImages": "已刪除 {count} 個圖片",
+    "importSuccess": "匯入成功！",
+    "importFailed": "匯入失敗",
+    "noMdFiles": "未找到 .md 檔案",
+    "confirmBatchImport": "即將匯入 {count} 個 Markdown 檔案，是否繼續？"
   },
   "tags": {
     "rename": "重新命名",

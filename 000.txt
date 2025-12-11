@@ -4,50 +4,10 @@
 2.**12.3.2** DOM 虛擬化 (Virtualization) 
 3.考慮 編輯卡片(筆記)的編輯器可以直觀一點 但如果會新增很多大小及複雜度加依賴的話就不做
 4.增加啟動模式及安裝引導模式
-=================
-Windows 批次檔法
-效果：
 
-你只要點兩下 start.bat。
+做 .gitignore 把該隔離的先做好
 
-Python 視窗會縮到最小（在工作列上）。
-
-瀏覽器會以「無邊框模式」打開，看起來就像一個獨立的 App，而不是網頁。
-=================
-方法三：極致隱形法 (.vbs) - (真正的常駐)
-原理： 利用 VBScript 讓 Python 在「背景」執行，完全看不到黑視窗。 缺點： 因為看不到視窗，要關閉它時必須去「工作管理員」找 python.exe 結束工作，或者寫另一個 stop.bat。
-
-實作步驟：
-
-建立一個 run_silent.vbs 檔案。
-
-貼上：
-
-VBScript
-
-Set WshShell = CreateObject("WScript.Shell")
-' 0 代表隱藏視窗
-WshShell.Run "python app.py", 0
-WshShell.Run "msedge --app=http://localhost:5000", 1
-
-=================
-建議採用「方法二 (.bat) + 瀏覽器 App 模式」的組合。
-
-為什麼要用 App 模式 (--app=...)？ 這會把網址列、書籤列都藏起來，你的 Local Insight 看起來就會像是一個專業的桌面軟體 (如 Notion)，沈浸感最強。
-
-為什麼不建議完全隱藏黑視窗 (方法三)？ 因為你的程式還在開發階段，偶爾可能會報錯閃退。留著那個最小化的視窗，你需要重啟或看 Log 時比較方便，用完直接按 X 關掉視窗就等於關閉伺服器，管理最直覺。
-
-下一步行動： 你可以先試試看建立這個 start.bat 檔案放在專案根目錄，體驗一下「一鍵啟動」的快感：
-
-程式碼片段
-
-@echo off
-echo Starting Local Insight...
-start /min python app.py
-timeout /t 1 >nul
-=================
-
-
+knowledge.db 肥大
 
 個人特化版另外做
 =========================

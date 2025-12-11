@@ -170,7 +170,15 @@
     "freed": "Freed",
     "startup": "Startup Settings",
     "autoOpenBrowser": "Auto Open Browser",
-    "autoOpenBrowserDesc": "Automatically open browser window on startup"
+    "autoOpenBrowserDesc": "Automatically open browser window on startup",
+    "import": "Import Data",
+    "importMD": "Import Markdown",
+    "importMDDesc": "Single or batch .md import",
+    "dbMaintenance": "Database Maintenance",
+    "clearHistory": "Clear History",
+    "clearHistoryDesc": "Delete all note history records",
+    "clearHistoryConfirm": "Are you sure you want to clear all history? This cannot be undone.",
+    "clearHistorySuccess": "Cleared {count} history records"
   },
   "categories": {
     "manage": "Manage Categories",
@@ -370,7 +378,11 @@
     "confirmRestore": "Are you sure you want to restore to this version? Current content will be saved as a history version.",
     "imageSyntaxCopied": "Image syntax copied!",
     "confirmDeleteImageFile": "Are you sure you want to delete this image file?\n\nThis will remove references from content and delete original and thumbnail.",
-    "deletedImages": "Deleted {count} images"
+    "deletedImages": "Deleted {count} images",
+    "importSuccess": "Import successful!",
+    "importFailed": "Import failed",
+    "noMdFiles": "No .md files found",
+    "confirmBatchImport": "Import {count} Markdown files?"
   },
   "tags": {
     "rename": "Rename",

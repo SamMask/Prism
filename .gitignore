@@ -1,0 +1,53 @@
+# Database
+knowledge.db
+knowledge.db-journal
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# User uploads
+static/uploads/
+
+# Temporary & Development
+garbage-can/
+pack.bat
+start_dev.bat
+.local_insight_config
+
+# Startup preference markers
+.auto_open_yes
+.auto_open_no
+
+# Build & Distribution
+dist/
+build/
+*.egg-info/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.bak
+*.tmp
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# AI Assistant
+.claude/
+.cursor/
+
+# OS
+Thumbs.db
+desktop.ini

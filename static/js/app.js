@@ -234,6 +234,10 @@ const app = createApp({
             isExporting: settingsComposable.isExporting,
             exportJSON: settingsComposable.exportJSON,
             exportDB: settingsComposable.exportDB,
+            importFileInput: settingsComposable.importFileInput,
+            isImporting: settingsComposable.isImporting,
+            triggerImportFile: settingsComposable.triggerImportFile,
+            handleImportFile: settingsComposable.handleImportFile,
             categories: settingsComposable.categories,
             categoriesLoading: settingsComposable.categoriesLoading,
             catLoadList: settingsComposable.catLoadList,
@@ -285,6 +289,8 @@ const app = createApp({
             vacuumLoading: settingsComposable.vacuumLoading,
             vacuumResult: settingsComposable.vacuumResult,
             vacuumDatabase: settingsComposable.vacuumDatabase,
+            clearingHistory: settingsComposable.clearingHistory,
+            clearHistory: settingsComposable.clearHistory,
             
             // Startup Preference (v1.1)
             startupAutoOpen: settingsComposable.startupAutoOpen,

@@ -383,6 +383,39 @@ export function useSettings() {
   // 初始載入啟動偏好
   loadStartupPreference();
 
+  // Clear History (v1.1)
+  const clearingHistory = ref(false);
+
+  const clearHistory = async () => {
+    if (!confirm(
+      t('settings.clearHistoryConfirm', '確定要清空所有歷史版本嗎？此操作無法復原。')
+    )) {
+      return;
+    }
+
+    clearingHistory.value = true;
+    try {
+      const response = await fetch('/api/system/clear-history', {
+        method: 'POST'
+      });
+      const result = await response.json();
+
+      if (result.status === 'success') {
+        const count = result.data.deleted_count;
+        alert(
+          t('settings.clearHistorySuccess', `已清空 ${count} 個歷史版本記錄`)
+        );
+      } else {
+        alert('清空失敗: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Clear history error:', error);
+      alert('清空失敗: ' + error.message);
+    } finally {
+      clearingHistory.value = false;
+    }
+  };
+
   // Load Categories
   const catLoadList = async () => {
     categoriesLoading.value = true;
@@ -571,6 +604,102 @@ export function useSettings() {
     }
   };
 
+  // Import Functions (v1.1)
+  const importFileInput = ref(null);
+  const isImporting = ref(false);
+
+  const triggerImportFile = () => {
+    if (importFileInput.value) {
+      importFileInput.value.click();
+    }
+  };
+
+  const handleImportFile = async (event) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const fileCount = files.length;
+    const mdFiles = Array.from(files).filter(f => f.name.endsWith('.md'));
+    
+    if (mdFiles.length === 0) {
+      alert(t ? t('messages.noMdFiles', '未找到 .md 檔案') : '未找到 .md 檔案');
+      return;
+    }
+
+    // 提示批量匯入
+    if (fileCount > 1) {
+      const confirmMsg = t 
+        ? t('messages.confirmBatchImport', `即將匯入 ${mdFiles.length} 個 Markdown 檔案，是否繼續？`)
+        : `即將匯入 ${mdFiles.length} 個 Markdown 檔案，是否繼續？`;
+      if (!confirm(confirmMsg)) {
+        event.target.value = '';
+        return;
+      }
+    }
+
+    isImporting.value = true;
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    try {
+      // 批量處理檔案
+      for (const file of mdFiles) {
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+
+          const response = await fetch('/api/notes/import/md', {
+            method: 'POST',
+            body: formData
+          });
+
+          const result = await response.json();
+
+          if (result.status === 'success') {
+            successCount++;
+          } else {
+            failCount++;
+            errors.push(`${file.name}: ${result.message}`);
+          }
+        } catch (error) {
+          failCount++;
+          errors.push(`${file.name}: ${error.message}`);
+        }
+      }
+
+      // 顯示結果
+      if (failCount === 0) {
+        const successMsg = fileCount === 1
+          ? (t ? t('messages.importSuccess', '匯入成功！') : '匯入成功！')
+          : `成功匯入 ${successCount} 個檔案！`;
+        alert(successMsg);
+        
+        // 重新載入筆記列表
+        if (window.location.pathname === '/') {
+          window.location.reload();
+        }
+      } else {
+        const summary = `成功: ${successCount}, 失敗: ${failCount}\n\n失敗詳情:\n${errors.join('\n')}`;
+        alert(summary);
+        
+        // 如果有成功的，仍然重新載入
+        if (successCount > 0 && window.location.pathname === '/') {
+          window.location.reload();
+        }
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      alert(t ? t('messages.importFailed', '匯入失敗') : '匯入失敗: ' + error.message);
+    } finally {
+      isImporting.value = false;
+      // 清空 file input
+      if (event.target) {
+        event.target.value = '';
+      }
+    }
+  };
+
   // Close Settings
   const closeSettings = () => {
     isSettingsOpen.value = false;
@@ -586,6 +715,12 @@ export function useSettings() {
     isExporting,
     exportJSON,
     exportDB,
+
+    // Import (v1.1)
+    importFileInput,
+    isImporting,
+    triggerImportFile,
+    handleImportFile,
 
     // Categories (camelCase)
     categories,
@@ -637,6 +772,10 @@ export function useSettings() {
     vacuumLoading,
     vacuumResult,
     vacuumDatabase,
+    
+    // Clear History (v1.1)
+    clearingHistory,
+    clearHistory,
 
     // Startup Preference (v1.1)
     startupAutoOpen,

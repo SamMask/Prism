@@ -218,6 +218,86 @@
         </div>
       </div>
 
+      <!-- Import Section (v1.1) -->
+      <div>
+        <h3
+          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+            ></path>
+          </svg>
+          {{ t('settings.import', '資料匯入') }}
+        </h3>
+        <div class="space-y-3">
+          <!-- Import Markdown -->
+          <button
+            @click="triggerImportFile"
+            :disabled="isImporting"
+            class="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 hover:border-purple-500 transition-all group"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center"
+              >
+                <svg
+                  class="w-5 h-5 text-purple-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <div class="text-sm font-medium text-white">
+                  {{ t('settings.importMD', '匯入 Markdown') }}
+                </div>
+                <div class="text-xs text-gray-400">
+                  {{ t('settings.importMDDesc', '支援單檔或批量選擇 .md') }}
+                </div>
+              </div>
+            </div>
+            <svg
+              class="w-5 h-5 text-gray-500 group-hover:text-purple-400 transition-colors"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+              ></path>
+            </svg>
+          </button>
+          <!-- Hidden file input -->
+          <input
+            ref="importFileInput"
+            type="file"
+            accept=".md"
+            multiple
+            @change="handleImportFile"
+            style="display: none"
+          />
+        </div>
+      </div>
+
       <!-- Startup Preference Section (v1.1) -->
       <div>
         <h3
@@ -264,6 +344,157 @@
               ]"
             ></span>
           </button>
+        </div>
+      </div>
+
+      <!-- Database Maintenance Section (v1.1) -->
+      <div>
+        <h3
+          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+            ></path>
+          </svg>
+          {{ t('settings.dbMaintenance', '資料庫維護') }}
+        </h3>
+        <div class="space-y-3">
+          <!-- Vacuum Database Button -->
+          <button
+            @click="vacuumDatabase"
+            :disabled="vacuumLoading"
+            class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center"
+              >
+                <svg
+                  v-if="!vacuumLoading"
+                  class="w-4 h-4 text-blue-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="animate-spin w-4 h-4 text-blue-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <div class="text-sm font-medium text-gray-200">
+                  {{ t('settings.vacuum', '整理資料庫') }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ t('settings.vacuumDesc', '清理碎片空間，優化效能') }}
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <!-- Clear History Button -->
+          <button
+            @click="clearHistory"
+            :disabled="clearingHistory"
+            class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-8 h-8 bg-red-600/20 rounded-lg flex items-center justify-center"
+              >
+                <svg
+                  v-if="!clearingHistory"
+                  class="w-4 h-4 text-red-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                  ></path>
+                </svg>
+                <svg
+                  v-else
+                  class="animate-spin w-4 h-4 text-red-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  ></path>
+                </svg>
+              </div>
+              <div class="text-left">
+                <div class="text-sm font-medium text-gray-200">
+                  {{ t('settings.clearHistory', '清空歷史版本') }}
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ t('settings.clearHistoryDesc', '刪除所有筆記的歷史版本記錄') }}
+                </div>
+              </div>
+            </div>
+          </button>
+
+          <!-- VACUUM Result -->
+          <div v-if="vacuumResult" class="bg-gray-800/50 rounded-lg p-3">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-sm text-gray-300">
+                {{ t('settings.vacuumComplete', '整理完成') }}
+              </span>
+              <span class="text-xs text-cyan-400 font-medium">
+                {{ t('settings.freed', '釋放') }} {{ vacuumResult.freed_mb }} MB
+              </span>
+            </div>
+            <div class="text-xs text-gray-500">
+              {{ vacuumResult.size_before_mb }} MB → {{
+              vacuumResult.size_after_mb }} MB
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1049,115 +1280,6 @@
                 {{ brokenImagesFixing ? t('common.saving', '儲存中...') :
                 t('brokenImages.fixAll', '一鍵修正所有路徑') }}
               </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Database Maintenance (v1.8.9) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-            ></path>
-          </svg>
-          {{ t('settings.dbMaintenance', '資料庫維護') }}
-        </h3>
-
-        <div class="space-y-3">
-          <!-- VACUUM Button -->
-          <button
-            @click="vacuumDatabase"
-            :disabled="vacuumLoading"
-            class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-cyan-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  v-if="!vacuumLoading"
-                  class="w-4 h-4 text-cyan-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  ></path>
-                </svg>
-                <svg
-                  v-else
-                  class="animate-spin w-4 h-4 text-cyan-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-              </div>
-              <div class="text-left">
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.vacuum', '整理資料庫') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.vacuumDesc', '清理碎片空間，優化效能') }}
-                </div>
-              </div>
-            </div>
-            <svg
-              class="w-5 h-5 text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              ></path>
-            </svg>
-          </button>
-
-          <!-- VACUUM Result -->
-          <div v-if="vacuumResult" class="bg-gray-800/50 rounded-lg p-3">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm text-gray-300">
-                {{ t('settings.vacuumComplete', '整理完成') }}
-              </span>
-              <span class="text-xs text-cyan-400 font-medium">
-                {{ t('settings.freed', '釋放') }} {{ vacuumResult.freed_mb }} MB
-              </span>
-            </div>
-            <div class="text-xs text-gray-500">
-              {{ vacuumResult.size_before_mb }} MB → {{
-              vacuumResult.size_after_mb }} MB
             </div>
           </div>
         </div>
