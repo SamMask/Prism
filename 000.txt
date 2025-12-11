@@ -1,30 +1,39 @@
 注1：報告寫可考慮node.js 但為了 「可攜性」與「簡易部署」 不採用 
 
+待做：
 
-上線前防禦工事 (To-Do List)
-1. 安全性漏洞 (Security Hardening) - 🔴 P0
-即便是在本機跑，這些漏洞也可能導致使用者誤開惡意檔案，或被區域網路內的惡作劇攻擊。
-[ ] S-01 檔案上傳嚴格檢查 (Magic Numbers)：
-現狀：只檢查副檔名 (e.g. .jpg)？
-漏洞：我可以把一個 virus.exe 改名為 cute_cat.jpg 上傳。
-解法：引入 python-magic 或 imghdr，讀取檔案標頭 (Header) 確認它真的是圖片。
-[ ] S-02 路徑穿越防禦 (Path Traversal)：
-現狀：上傳或讀取檔案時，檔名過濾是否足夠？
-漏洞：檔名若包含 ../../windows/system32，可能會覆蓋系統檔。
-解法：確保所有檔案操作都經過 werkzeug.utils.secure_filename 處理。
-2. 環境適應性 (Robustness) - 🟡 P1
-使用者的電腦環境千奇百怪，我們不能假設 localhost:5000 永遠是空的。
-[ ] R-01 自動端口搜尋 (Dynamic Port Seeker)：
-現狀：預設 5000。如果 5000 被佔用（如 Mac AirPlay），程式會崩潰 (Address already in use)。
-解法：寫一個迴圈，如果 5000 被佔用，自動嘗試 5001, 5002... 直到找到空位，並寫入 log 告訴前端開啟正確網址。
-[ ] R-02 錯誤日誌 (File Logging)：
-現狀：報錯只顯示在黑視窗 (Console)。視窗一關就沒了。
-解法：加入 logging 模組，將錯誤寫入 app.log。這樣使用者回報 Bug 時才有依據。
-3. 打包與發布 (Distribution) - 🟢 P2 (選擇性)如果你打算把這個給不會 Python 的朋友用，直接給 .py 檔是行不通的。
-[ ] D-01 封裝為執行檔 (PyInstaller)：
-目標：將 Python 環境、依賴庫、static、templates 全部打包成一個 LocalInsight.exe。
-好處：使用者不需要安裝 Python，點兩下就能跑。
+1.README.md 加
+「本工具刻意不支援遞迴匯入資料夾，因為『知識整理』本身就是一種心智活動。請先在檔案總管把你真的想留下的東西整理好，再匯入。這不是 bug，是 feature。」
 
+2.測試資料庫你懶得做 → 那就換個更懶的方案
+你不寫測試是對的（對這個規模的個人工具來說，單元測試的 ROI 真的很低），但你可以做一件 5 分鐘內搞定、卻價值爆表的事：
+在專案根目錄放一個 demo_db/ 資料夾，裡面直接丟一個已經有 50 筆漂亮筆記的 knowledge_demo.db + 幾張圖片。
+然後在 README 第一行就寫：
+Markdown## 馬上體驗（10 秒）
+2-1. 下載釋出版本
+2-2. 把 demo_db 裡的資料複製到根目錄，改名成 knowledge.db
+2-3. 執行 start.bat(或python app.py) → 直接看到完整範例
+
+3.要做 CONTRIBUTING.md 嗎？
+
+4.要記得 Markdown 編輯 右方加文字 Ctrl + v 可貼上截圖或圖片
+
+5.文件有「版本漂移」的傾向
+Local Insight.md 與 SCHEMA.md 的內容雖完整，但仍有小段落被 truncated 或具版本交錯。
+公開時易被認為：
+
+“文件很美，但版本不一致。”
+
+6.?
+立即修復 Notes.type 與 category_id 的雙重事實
+→ 提升架構一致性。
+
+7.?
+切分巨型 Editor Modal
+
+8.自動化測試？
+
+9.語系檔如果移到 resources 會不會很麻煩，會的話 就不移然後resources 放圖片
 
 個人特化版另外做
 =========================

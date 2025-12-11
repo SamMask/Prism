@@ -1,0 +1,252 @@
+【需求理解確認】
+基於現有資訊,我理解您的需求是:對這個「Local Insight」知識管理系統進行架構級技術審查,從資料結構、程式碼品質、系統設計的根本原則出發,找出真正會導致維護崩潰或資料損毀的技術債,而非表面的樣式問題。 請確認我的理解是否準確?
+我先輸出核心判斷,然後展開分析:
+【核心判斷】
+✅ 值得做:這個專案在資料結構設計與架構演進上展現出少見的紀律性。 原因:
+資料結構優先思維 - 作者真正理解了「Bad programmers worry about the code. Good programmers worry about data structures.」這句話
+重構的勇氣 - 能在 v1.0 時主動推翻 GROUP_CONCAT 改用 json_group_array,證明他們懂得向後相容不是盲目保留錯誤
+務實取捨 - 拒絕 Docker/Node.js,選擇 Python + SQLite 單檔部署,解決的是真實需求(離線可用),而非追逐潮流
+【關鍵洞察】
+資料結構:最關鍵的資料關係
+🟢 好的部分:
+Notes ↔ Tags (N:M): 透過 Note_Tags 中介表實現,主鍵 (note_id, tag_id) 防止重複關聯,這是教科書級的正規化設計
+FTS5 全文檢索: 獨立虛擬表 + Trigger 自動同步,分離關注點做得好
+Schema 版本控制: Schema_Meta 表 + migrations/ 目錄,取代散亂的 if 分支堆疊
+🔴 致命問題:
+# crud.py:312-318 - 雙重事實來源 (Split Brain)
+type_name = data.get('type', '筆記')
+category_id = get_category_id_by_name(db, type_name)
+
+db.execute('''
+    INSERT INTO Notes (title, content, type, category_id, ...)
+    VALUES (?, ?, ?, ?, ...)
+''', (..., type_name, category_id, ...))
+問題本質:
+Notes.type (TEXT) 與 Notes.category_id (INTEGER FK) 儲存相同語意,但可能不一致
+當用戶手動 SQL 修改 Categories.name 時,Notes.type 不會自動更新
+這是經典的「資料重複導致的一致性風險」(Denormalization without synchronization)
+正確的資料結構應該是:
+-- Option A: 只保留 FK (推薦)
+ALTER TABLE Notes DROP COLUMN type;  -- 移除文字欄位
+-- 查詢時 JOIN Categories 表取得名稱
+
+-- Option B: 維持雙欄位 + 強制同步
+CREATE TRIGGER sync_type_on_category_update 
+AFTER UPDATE ON Categories BEGIN
+    UPDATE Notes SET type = NEW.name WHERE category_id = NEW.id;
+END;
+短期修復方案 (符合你的原則:不破壞現有功能):
+# 在 crud.py 的 create_note 和 update_note 中已加入 category_id 同步 (2025-12-11)
+# ✅ 好!這是最低風險的修復方式
+複雜度:可以消除的複雜性
+🟢 已做對的簡化:
+API 層的 JSON 解析重構 (v1.0):
+# 舊版 (v0.x): 字串拼接 + split,容易因特殊字元炸裂
+tags = tags_str.split('||')
+
+# 新版: SQLite 原生 JSON 函數
+SELECT json_group_array(json_object('id', t.id, 'name', t.name))
+這是好品味 - 不再依賴自訂協議,改用標準格式
+遷移系統的聲明式設計 (migrations/__init__.py):
+MIGRATIONS = [
+    (1, "add_is_pinned", ["ALTER TABLE ..."]),
+    (2, "add_cover_position", [...]),
+]
+這消除了 10+ 個 if 分支 - 從命令式垃圾變成資料驅動
+🔴 不必要的複雜性: 問題 1: 分頁查詢的 N+1 陷阱
+# crud.py:141-168 - 使用子查詢而非 JOIN
+SELECT n.*,
+    (SELECT json_group_array(...) FROM Note_Tags nt WHERE nt.note_id = n.id) as tags_json,
+    (SELECT json_group_array(...) FROM Source_Urls s WHERE s.note_id = n.id) as urls_json
+FROM Notes n
+LIMIT 20 OFFSET 0
+為什麼這很糟?
+對於每條筆記,SQLite 都要執行 2 個子查詢
+當 LIMIT 20 變成 LIMIT 100 時,會執行 100 × 2 = 200 次子查詢
+正確的做法是用 LEFT JOIN + 結果集去重
+修復方案 (未來優化):
+-- 用 CTE + GROUP BY 取代子查詢
+WITH tagged_notes AS (
+    SELECT note_id, json_group_array(json_object('id', t.id, 'name', t.name)) as tags_json
+    FROM Note_Tags nt JOIN Tags t ON nt.tag_id = t.id
+    GROUP BY note_id
+),
+notes_with_urls AS (
+    SELECT note_id, json_group_array(url) as urls_json
+    FROM Source_Urls
+    GROUP BY note_id
+)
+SELECT n.*, 
+       COALESCE(tn.tags_json, '[]') as tags_json,
+       COALESCE(nu.urls_json, '[]') as urls_json
+FROM Notes n
+LEFT JOIN tagged_notes tn ON n.id = tn.note_id
+LEFT JOIN notes_with_urls nu ON n.id = nu.note_id
+ORDER BY n.updated_at DESC
+LIMIT 20 OFFSET 0;
+BUT - 目前資料量小,這是「理論上的問題」,按照你的實用主義原則:
+"這是在解決一個不存在的問題。真正的問題在於 [XXX]。"
+暫時接受現狀,等到筆記數 > 10,000 條時再優化。
+問題 2: FTS5 輸入清理的過度防禦
+# crud.py:88-96
+keyword = keyword[:200]  # 截斷
+for char in '"()':
+    keyword = keyword.replace(char, '')  # 移除特殊字元
+safe_keyword = "".join([c for c in keyword if c.isalnum() or c.isspace()])
+問題:
+為什麼要 .replace() 之後又 isalnum() 過濾? 這是兩層防禦做同一件事
+為什麼限制 200 字元? SQLite FTS5 沒有這個限制
+這是「為糟糕設計打的補丁」還是「真正的安全需求」?
+簡化方案:
+# 只做真正必要的清理
+def sanitize_fts_query(keyword):
+    # FTS5 只需要逃脫雙引號
+    return keyword.replace('"', '""')[:500]  # 500 是合理的搜尋長度
+BUT AGAIN - 這段程式碼可以工作,除非你們遇到實際的 bug report,否則不要碰它。
+"If it ain't broke, don't fix it."
+風險點:最大的破壞性風險
+🔴 P0 級風險: 圖片清理邏輯的競態條件
+# crud.py:493-564 - _cleanup_note_images()
+def _cleanup_note_images(content, cover_image):
+    # 刪除 cover_image
+    if cover_image and cover_image.startswith('/static/uploads/'):
+        filepath = os.path.join(upload_folder, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)  # ❌ 沒有錯誤處理!
+    
+    # 用正則提取 content 中的圖片
+    matches = re.findall(r'/static/uploads/([^\s\)\]"\']+)', content)
+    for filename in matches:
+        filepath = os.path.join(upload_folder, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)  # ❌ 如果檔案被其他筆記引用呢?
+致命缺陷:
+沒有引用計數檢查 - 如果兩則筆記共用同一張圖片,刪除其中一則會導致另一則筆記破圖
+檔案 I/O 失敗時會靜默吞掉錯誤 (只 print warning)
+正則表達式可能誤刪 - 如果 content 包含其他筆記的連結,會誤判為當前筆記的圖片
+修復方案:
+def _cleanup_note_images(content, cover_image):
+    """刪除筆記的圖片,但只刪除沒有其他筆記引用的檔案"""
+    db = get_db()
+    
+    # 收集所有要檢查的圖片路徑
+    image_paths = set()
+    if cover_image and cover_image.startswith('/static/uploads/'):
+        image_paths.add(cover_image)
+    if content:
+        matches = re.findall(r'/static/uploads/([^\s\)\]"\']+)', content)
+        image_paths.update(f'/static/uploads/{m}' for m in matches)
+    
+    for img_path in image_paths:
+        # 檢查是否有其他筆記引用此圖片
+        ref_count = db.execute('''
+            SELECT COUNT(*) FROM Notes 
+            WHERE (cover_image = ? OR content LIKE ?) AND id != ?
+        ''', (img_path, f'%{img_path}%', note_id)).fetchone()[0]
+        
+        if ref_count == 0:
+            # 沒有其他引用,安全刪除
+            filepath = os.path.join(upload_folder, img_path.replace('/static/uploads/', ''))
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except OSError as e:
+                # 記錄錯誤但不阻斷刪除筆記的操作
+                print(f"[ERROR] Failed to delete {filepath}: {e}")
+BUT - 這個 bug 只在以下情況觸發:
+用戶手動複製其他筆記的圖片連結
+然後刪除原始筆記
+發生機率低,但後果嚴重 (資料損壞不可逆)。建議在 v1.2 修復。
+🟡 P1 級風險: WAL 模式的 Checkpoint 管理缺失
+# db.py:30
+g.db.execute('PRAGMA journal_mode = WAL')
+問題:
+啟用 WAL 後,資料庫的變更會寫入 .db-wal 檔案
+如果從未執行 PRAGMA wal_checkpoint,WAL 檔案會無限增長
+當用戶複製 knowledge.db 備份時,如果沒有一併複製 .db-wal,會遺失未合併的資料
+修復方案:
+# app.py 啟動時加入定期 checkpoint
+from apscheduler.schedulers.background import BackgroundScheduler
+
+def checkpoint_wal():
+    with app.app_context():
+        db = get_db()
+        db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+        db.commit()
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(checkpoint_wal, 'interval', hours=1)
+scheduler.start()
+OR - 在系統設定頁提供手動 checkpoint 按鈕 (類似 VACUUM 功能)。
+【Linus 式方案】
+如果值得做:
+第一步:簡化資料結構
+保持 Notes.type 與 Notes.category_id 雙欄位,但強制在應用層同步 (已完成)
+長期 (v2.0) 廢棄 type 欄位,遷移腳本:
+-- 確保所有筆記都有 category_id
+UPDATE Notes SET category_id = (
+    SELECT id FROM Categories WHERE is_default = 1
+) WHERE category_id IS NULL;
+
+-- 刪除 type 欄位
+ALTER TABLE Notes DROP COLUMN type;
+第二步:消除所有特殊情況
+統一分頁查詢邏輯 - 用 CTE 取代子查詢 (當資料量 > 5000 條時)
+移除 FTS 輸入清理的冗餘邏輯
+第三步:用最笨但最清晰的方式實作
+圖片引用計數 - 不要用複雜的垃圾回收,直接在刪除前 SELECT COUNT(*)
+WAL Checkpoint - 不要用排程器,在 VACUUM 按鈕旁加個 "合併 WAL" 按鈕
+第四步:確保零破壞性
+所有 Schema 變更都走 migrations/ 系統
+每次遷移前自動備份 knowledge.db → knowledge.db.backup-YYYYMMDD
+【品味評分與致命問題】
+🟢 好品味
+資料結構層面:
+Notes/Tags/Source_Urls 的正規化設計
+FTS5 虛擬表 + Trigger 的分離關注點
+json_group_array 取代字串拼接
+架構層面:
+遷移系統的聲明式設計
+API 層的統一錯誤處理 (api.js)
+Composable 模式的前端架構 (useNotes.js, useEditor.js)
+實用主義:
+拒絕 Docker/Node.js,選擇 Python + SQLite
+離線優先,所有資源本地化
+手動 VACUUM 而非自動排程
+🔴 垃圾 (致命問題)
+資料層:
+Split Brain - Notes.type vs Notes.category_id 雙重事實 (已修復 50%,需持續監控)
+圖片刪除的引用計數缺失 - 會導致其他筆記破圖 (P0 級 bug)
+WAL Checkpoint 缺失 - 備份時可能遺失資料 (P1 級風險)
+程式碼層:
+N+1 子查詢 (小數據量無感,暫時接受)
+FTS 清理邏輯冗餘 (能工作但不優雅,暫時接受)
+【改進方向】
+P0 - 立即修復:
+# 在 crud.py 的 _cleanup_note_images 加入引用計數檢查
+if ref_count == 0:
+    os.remove(filepath)
+P1 - v1.2 修復:
+# 在系統設定頁加入 WAL Checkpoint 按鈕
+@app.route('/api/system/wal-checkpoint', methods=['POST'])
+def wal_checkpoint():
+    db = get_db()
+    db.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+    return jsonify({'status': 'success'})
+P2 - v2.0 重構:
+-- 廢棄 Notes.type,統一使用 category_id
+ALTER TABLE Notes DROP COLUMN type;
+【最終結論】
+這個專案展現出少見的技術紀律:
+資料結構優先 - 作者真正理解正規化與索引
+務實重構 - v1.0 的 json_group_array 重構證明他們懂得向後相容不是盲目保留錯誤
+簡單至上 - 拒絕過度工程,選擇最簡單可行的方案
+唯一的致命風險是圖片刪除邏輯的引用計數缺失,這會導致不可逆的資料損壞。其他問題都是「理論上的瑕疵」,在目前的資料規模下不會觸發。 如果我是這個專案的 Maintainer,我會:
+立即修復圖片引用計數 bug
+加入 WAL Checkpoint 手動按鈕
+監控 Notes.type vs category_id 的一致性
+其他問題等到真正的 bug report 再處理
+絕不會做的事:
+引入 TypeScript/ESLint 等「理論上更好」的工具
+重寫查詢邏輯 (除非真的出現效能瓶頸)
+為了「程式碼美感」修改可運作的部分

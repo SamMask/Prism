@@ -620,6 +620,13 @@ http://localhost:5000
 - **Run Prompt**: 整合 External Link，一鍵將提示詞帶入 ChatGPT/Claude 測試。
 - **View Transitions**: 使用 Vue TransitionGroup 實現列表過濾時的「洗牌」動畫。
 
+### 13.5 系統可靠性強化 (System Reliability) - [🚧 v1.2 規劃中]
+
+> **注意**: 以下功能尚未實作，預計於 v1.2 版本推出。
+
+- **自動備份 (Auto Backup)**: [待實作] 建排程機制，定期將 `knowledge.db` 備份至 `backups/` 目錄，並提供一鍵還原功能。
+- **日誌管理 (Log Management)**: [待實作] 在設定頁面提供 `app.log` 檢視器，並支援日誌檔的輪替 (Rotation) 與過期清理。
+
 ---
 
 ## 14. Phase 8 變更日誌 (v0.7.x - v0.8.x)

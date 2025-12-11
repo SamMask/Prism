@@ -489,6 +489,11 @@ Response: ZIP file (notes/_.md + assets/_.jpg)
 | -------------------- | ---- | ------------------------------------ |
 | `/api/system/vacuum` | POST | 執行 VACUUM 緊縮資料庫，釋放碎片空間 |
 
+### 10.5 備份與日誌策略 (Phase 15 規劃 - 尚未實作)
+
+- **備份機制 (待實作)**: 為了確保資料一致性，建議在應用層執行 `VACUUM INTO 'backup.db'` (SQLite 3.27+) 或使用 Python 的 `shutil.copy` 配合 WAL Checkpoint。
+- **日誌監控 (待實作)**: 應用層日誌 (`app.log`) 應實作輪替機制 (RotatingFileHandler 已啟用)，並規劃 API (`GET /api/system/logs`) 供管理介面讀取。
+
 ---
 
 ## 11. CSS 設計系統 (v0.9.0)
