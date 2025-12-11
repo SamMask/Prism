@@ -228,13 +228,13 @@ def init_db():
             END;
         ''')
 
-        # 9. 預設分類種子數據
+        # 9. 預設分類種子數據 (格式: 中文|English)
         default_categories = [
-            ('提示詞', '🎨', 1, 0),
-            ('筆記', '📝', 2, 1),   # 筆記為預設分類
-            ('教學', '📚', 3, 0),
-            ('資料', '💾', 4, 0),
-            ('靈感', '💡', 5, 0)
+            ('提示詞 | Prompt', '🎨', 1, 0),
+            ('筆記 | Note', '📝', 2, 1),   # 筆記為預設分類
+            ('教學 | Tutorial', '📚', 3, 0),
+            ('資料 | Data', '💾', 4, 0),
+            ('靈感 | Inspiration', '💡', 5, 0)
         ]
         db.executemany('''
             INSERT OR IGNORE INTO Categories (name, icon, sort_order, is_default)
@@ -302,20 +302,83 @@ def init_db():
 # 程式進入點
 # ===================================================================
 
+def find_available_port(start_port=5000, max_attempts=10):
+    """
+    R-01: 自動端口搜尋
+    如果 start_port 被佔用，自動遞增嘗試直到找到可用端口
+    """
+    import socket
+    for port in range(start_port, start_port + max_attempts):
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.bind(('127.0.0.1', port))
+                return port
+        except OSError:
+            continue
+    return None
+
+
+def setup_logging(app):
+    """
+    R-02: 設定檔案日誌
+    將錯誤寫入 app.log
+    """
+    import logging
+    from logging.handlers import RotatingFileHandler
+    
+    # 建立日誌 handler（最大 1MB，保留 3 個備份）
+    log_file = os.path.join(os.path.dirname(__file__), 'app.log')
+    file_handler = RotatingFileHandler(
+        log_file, maxBytes=1024*1024, backupCount=3, encoding='utf-8'
+    )
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s [%(levelname)s] %(message)s'
+    ))
+    file_handler.setLevel(logging.INFO)
+    
+    # 設定 Flask app logger
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    
+    # 同時設定 werkzeug logger
+    logging.getLogger('werkzeug').addHandler(file_handler)
+    
+    return log_file
+
+
 if __name__ == '__main__':
     env = os.getenv('FLASK_ENV', 'default')
     app = create_app(env)
+    
+    # R-02: 設定日誌
+    log_file = setup_logging(app)
     
     # 初始化資料庫
     with app.app_context():
         init_db()
 
-    # 讀取環境變數 'PORT'，如果沒有設定，預設就用 5000
-    port = int(os.environ.get('PORT', 5000))
+    # R-01: 自動尋找可用端口
+    preferred_port = int(os.environ.get('PORT', 5000))
+    port = find_available_port(preferred_port)
+    
+    if port is None:
+        print(f"[ERROR] 無法找到可用端口 ({preferred_port}-{preferred_port+9})")
+        app.logger.error(f"無法找到可用端口 ({preferred_port}-{preferred_port+9})")
+        exit(1)
+    
+    if port != preferred_port:
+        print(f"[WARNING] Port {preferred_port} 被佔用，改用 Port {port}")
+        app.logger.warning(f"Port {preferred_port} 被佔用，改用 Port {port}")
     
     # 讀取 Debug 設定
     debug = os.environ.get('FLASK_DEBUG', 'False') == 'True'
     
+    # 啟動訊息
+    startup_msg = f"Local Insight 啟動 (Env: {env}, Port: {port}, Debug: {debug})"
+    print(f"[INFO] {startup_msg}")
+    print(f"[INFO] 日誌位置: {log_file}")
+    print(f"[INFO] 訪問網址: http://127.0.0.1:{port}/")
+    app.logger.info(startup_msg)
+    
     # 啟動應用
-    print(f"[INFO] 啟動 Local Insight (Environment: {env}, Port: {port}, Debug: {debug})")
     app.run(host='0.0.0.0', port=port, debug=debug)

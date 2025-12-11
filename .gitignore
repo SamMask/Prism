@@ -16,9 +16,11 @@ ENV/
 # User uploads
 static/uploads/
 
-# Temporary & Development
+# Temp files
 garbage-can/
 000.txt
+app.log
+app.log.*
 pack.bat
 start_dev.bat
 .local_insight_config
