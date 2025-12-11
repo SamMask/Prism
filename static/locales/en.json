@@ -37,9 +37,9 @@
     "quickAdd": "Quick Add"
   },
   "sort": {
-      "updated": "Last Updated",
-      "created": "Creation Time",
-      "custom": "Custom Order (Draggable)"
+    "updated": "Last Updated",
+    "created": "Creation Time",
+    "custom": "Custom Order (Draggable)"
   },
   "nav": {
     "home": "Home",
@@ -167,7 +167,10 @@
     "vacuumConfirm": "Are you sure you want to optimize the database? This may take a few seconds.",
     "vacuumSuccess": "Database optimization complete!",
     "vacuumComplete": "Optimization Complete",
-    "freed": "Freed"
+    "freed": "Freed",
+    "startup": "Startup Settings",
+    "autoOpenBrowser": "Auto Open Browser",
+    "autoOpenBrowserDesc": "Automatically open browser window on startup"
   },
   "categories": {
     "manage": "Manage Categories",

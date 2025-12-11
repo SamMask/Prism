@@ -59,7 +59,9 @@
     <!-- Modal Content (with scroll) -->
     <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
       <!-- Stats -->
-      <div class="bg-theme-elevated/50 rounded-xl p-4 border border-theme-default">
+      <div
+        class="bg-theme-elevated/50 rounded-xl p-4 border border-theme-default"
+      >
         <h3
           class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
         >
@@ -80,7 +82,9 @@
         </h3>
         <div class="grid grid-cols-2 gap-3">
           <div class="bg-theme-surface/50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-theme-brand-light">{{ totalNotes }}</div>
+            <div class="text-2xl font-bold text-theme-brand-light">
+              {{ totalNotes }}
+            </div>
             <div class="text-xs text-theme-muted">
               {{ t('settings.notesCount', '筆記數量') }}
             </div>
@@ -206,13 +210,59 @@
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              ></path>
+              <path stroke-linecap="round" stroke-linejoin="round"
+              stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4
+              4m0 0l-4-4m4 4V4"
             </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Startup Preference Section (v1.1) -->
+      <div>
+        <h3
+          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+            ></path>
+          </svg>
+          {{ t('settings.startup', '啟動設定') }}
+        </h3>
+        <div
+          class="flex items-center justify-between p-3 bg-theme-elevated/50 rounded-lg border border-theme-default"
+        >
+          <div>
+            <div class="text-sm text-theme-primary">
+              {{ t('settings.autoOpenBrowser', '自動開啟瀏覽器') }}
+            </div>
+            <div class="text-xs text-theme-muted">
+              {{ t('settings.autoOpenBrowserDesc', '啟動時自動開啟瀏覽器視窗')
+              }}
+            </div>
+          </div>
+          <button
+            @click="toggleAutoOpenBrowser"
+            :class="[
+              'relative w-12 h-6 rounded-full transition-colors duration-200',
+              startupAutoOpen ? 'bg-blue-500' : 'bg-gray-600'
+            ]"
+          >
+            <span
+              :class="[
+                'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200',
+                startupAutoOpen ? 'translate-x-6' : 'translate-x-0'
+              ]"
+            ></span>
           </button>
         </div>
       </div>
@@ -271,20 +321,22 @@
               <span class="text-lg">{{ cat.icon }}</span>
               <span class="text-sm text-gray-200">{{ cat.name }}</span>
               <span class="text-xs text-gray-500">({{ cat.count }})</span>
-              
-              <!-- New Note Default Toggler (v0.9.0) -->
-               <button 
-                 @click="setNewNoteDefault(cat.name)"
-                 class="ml-1 transition-colors focus:outline-none"
-                 :class="newNoteDefaultType === cat.name ? 'text-yellow-400 opacity-100' : 'text-gray-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100'"
-                 :title="t('settings.defaultNewCard', '設為「新增卡片」預設分類')"
-               >
-                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                   <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
-                 </svg>
-               </button>
 
-               <!-- User Default Label (Follows the star) -->
+              <!-- New Note Default Toggler (v0.9.0) -->
+              <button
+                @click="setNewNoteDefault(cat.name)"
+                class="ml-1 transition-colors focus:outline-none"
+                :class="newNoteDefaultType === cat.name ? 'text-yellow-400 opacity-100' : 'text-gray-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100'"
+                :title="t('settings.defaultNewCard', '設為「新增卡片」預設分類')"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                  />
+                </svg>
+              </button>
+
+              <!-- User Default Label (Follows the star) -->
               <span
                 v-if="newNoteDefaultType === cat.name"
                 class="px-1.5 py-0.5 text-xs bg-yellow-600/20 text-yellow-500 rounded ml-2"
@@ -297,8 +349,18 @@
                 class="ml-2 text-gray-600"
                 :title="t('messages.cannotDeleteDefault', '無法刪除預設分類')"
               >
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                <svg
+                  class="w-3 h-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  ></path>
                 </svg>
               </span>
             </div>

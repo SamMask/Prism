@@ -111,3 +111,62 @@ def get_system_stats():
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+# ===================================================================
+# Startup Preference (v1.1)
+# ===================================================================
+
+@system_bp.route('/system/startup-preference', methods=['GET'])
+def get_startup_preference():
+    """
+    取得啟動偏好設定
+    Response: { auto_open_browser: true | false | null }
+    """
+    try:
+        auto_open_yes = os.path.exists('.auto_open_yes')
+        auto_open_no = os.path.exists('.auto_open_no')
+        
+        if auto_open_yes:
+            return jsonify({'status': 'success', 'data': {'auto_open_browser': True}})
+        elif auto_open_no:
+            return jsonify({'status': 'success', 'data': {'auto_open_browser': False}})
+        else:
+            return jsonify({'status': 'success', 'data': {'auto_open_browser': None}})
+    
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@system_bp.route('/system/startup-preference', methods=['POST'])
+def set_startup_preference():
+    """
+    設定啟動偏好
+    Body: { auto_open_browser: true | false }
+    """
+    try:
+        from flask import request
+        data = request.get_json() or {}
+        auto_open = data.get('auto_open_browser')
+        
+        if auto_open is None:
+            return jsonify({'status': 'error', 'message': 'auto_open_browser is required'}), 400
+        
+        # 刪除舊的標記檔案
+        if os.path.exists('.auto_open_yes'):
+            os.remove('.auto_open_yes')
+        if os.path.exists('.auto_open_no'):
+            os.remove('.auto_open_no')
+        
+        # 建立新的標記檔案
+        if auto_open:
+            with open('.auto_open_yes', 'w') as f:
+                f.write('1')
+        else:
+            with open('.auto_open_no', 'w') as f:
+                f.write('0')
+        
+        return jsonify({'status': 'success', 'data': {'auto_open_browser': auto_open}})
+    
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500

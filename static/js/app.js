@@ -285,6 +285,10 @@ const app = createApp({
             vacuumLoading: settingsComposable.vacuumLoading,
             vacuumResult: settingsComposable.vacuumResult,
             vacuumDatabase: settingsComposable.vacuumDatabase,
+            
+            // Startup Preference (v1.1)
+            startupAutoOpen: settingsComposable.startupAutoOpen,
+            toggleAutoOpenBrowser: settingsComposable.toggleAutoOpenBrowser,
 
             // i18n (v0.8.8)
             t: i18nComposable.t,
