@@ -88,6 +88,8 @@
     "coverPositionCenter": "置中",
     "coverPositionBottom": "置底",
     "preview": "預覽",
+    "readingMode": "閱讀",
+    "readingModeDesc": "純文字模式（保留格式）",
     "edit": "編輯",
     "singleColumn": "單欄模式",
     "dualColumn": "雙欄模式",

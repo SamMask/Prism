@@ -88,6 +88,8 @@
     "coverPositionCenter": "Center",
     "coverPositionBottom": "Bottom",
     "preview": "Preview",
+    "readingMode": "Read",
+    "readingModeDesc": "Plain text mode (preserves formatting)",
     "edit": "Edit",
     "singleColumn": "Single Column",
     "dualColumn": "Dual Column",

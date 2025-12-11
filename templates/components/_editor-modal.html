@@ -724,15 +724,14 @@
                     <!-- Eye Toggle Preview Button -->
                     <button
                       type="button"
-                      @click="isContentPreview = !isContentPreview"
+                      @click="isContentPreview = !isContentPreview; if(isContentPreview) isReadingMode = false"
                       class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
-                      :class="isContentPreview
+                      :class="isContentPreview && !isReadingMode
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
-                      :title="isContentPreview ? t('editor.switchToEdit', '切換至編輯模式') : t('editor.switchToPreview', '切換至預覽模式')"
+                      :title="t('editor.switchToPreview', '切換至 Markdown 預覽')"
                     >
                       <svg
-                        v-if="isContentPreview"
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -751,8 +750,20 @@
                           d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                         ></path>
                       </svg>
+                      {{ t('editor.preview', '預覽') }}
+                    </button>
+
+                    <!-- Reading Mode Button -->
+                    <button
+                      type="button"
+                      @click="if(isReadingMode) { isReadingMode = false; isContentPreview = false; } else { isReadingMode = true; isContentPreview = true; }"
+                      class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors"
+                      :class="isReadingMode
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'"
+                      :title="t('editor.readingModeDesc', '純文字模式（保留格式）')"
+                    >
                       <svg
-                        v-else
                         class="w-4 h-4"
                         fill="none"
                         stroke="currentColor"
@@ -762,10 +773,10 @@
                           stroke-linecap="round"
                           stroke-linejoin="round"
                           stroke-width="2"
-                          d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                         ></path>
                       </svg>
-                      {{ isContentPreview ? t('editor.preview') : t('editor.edit') }}
+                      {{ t('editor.readingMode', '閱讀') }}
                     </button>
                   </div>
                 </div>
@@ -859,6 +870,12 @@
                         </svg>
                         <p class="text-sm">開始輸入內容以查看預覽</p>
                       </div>
+                      <!-- Reading Mode: Plain Text (preserves whitespace) -->
+                      <pre
+                        v-else-if="isReadingMode"
+                        class="text-gray-300 text-sm leading-relaxed whitespace-pre-wrap font-sans"
+                      >{{ currentNote.content }}</pre>
+                      <!-- Markdown Preview Mode -->
                       <div
                         v-else
                         v-html="markedContent"

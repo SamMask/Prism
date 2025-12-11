@@ -24,6 +24,7 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
     const isPromptMode = ref(false);
     const activeTab = ref('basic'); // 'basic' | 'content' | 'images' | 'history'
     const isContentPreview = ref(false);
+    const isReadingMode = ref(false);  // v1.1: 純文字閱讀模式
     const isDeletingImage = ref(false);
     const isQuickAddOpen = ref(false); // v0.9.0 Quick Add Modal
 
@@ -675,6 +676,7 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
         isPromptMode,
         activeTab,
         isContentPreview,
+        isReadingMode,  // v1.1
         
         // Loading States
         isSaving,

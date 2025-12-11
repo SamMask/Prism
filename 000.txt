@@ -1,11 +1,30 @@
 注1：報告寫可考慮node.js 但為了 「可攜性」與「簡易部署」 不採用 
 
-1.已有匯出功能，再來做匯入功能(在設定那邊做就好)
-2.**12.3.2** DOM 虛擬化 (Virtualization) 
-3.考慮 編輯卡片(筆記)的編輯器可以直觀一點 但如果會新增很多大小及複雜度加依賴的話就不做
-4.增加啟動模式及安裝引導模式
 
-knowledge.db 肥大
+上線前防禦工事 (To-Do List)
+1. 安全性漏洞 (Security Hardening) - 🔴 P0
+即便是在本機跑，這些漏洞也可能導致使用者誤開惡意檔案，或被區域網路內的惡作劇攻擊。
+[ ] S-01 檔案上傳嚴格檢查 (Magic Numbers)：
+現狀：只檢查副檔名 (e.g. .jpg)？
+漏洞：我可以把一個 virus.exe 改名為 cute_cat.jpg 上傳。
+解法：引入 python-magic 或 imghdr，讀取檔案標頭 (Header) 確認它真的是圖片。
+[ ] S-02 路徑穿越防禦 (Path Traversal)：
+現狀：上傳或讀取檔案時，檔名過濾是否足夠？
+漏洞：檔名若包含 ../../windows/system32，可能會覆蓋系統檔。
+解法：確保所有檔案操作都經過 werkzeug.utils.secure_filename 處理。
+2. 環境適應性 (Robustness) - 🟡 P1
+使用者的電腦環境千奇百怪，我們不能假設 localhost:5000 永遠是空的。
+[ ] R-01 自動端口搜尋 (Dynamic Port Seeker)：
+現狀：預設 5000。如果 5000 被佔用（如 Mac AirPlay），程式會崩潰 (Address already in use)。
+解法：寫一個迴圈，如果 5000 被佔用，自動嘗試 5001, 5002... 直到找到空位，並寫入 log 告訴前端開啟正確網址。
+[ ] R-02 錯誤日誌 (File Logging)：
+現狀：報錯只顯示在黑視窗 (Console)。視窗一關就沒了。
+解法：加入 logging 模組，將錯誤寫入 app.log。這樣使用者回報 Bug 時才有依據。
+3. 打包與發布 (Distribution) - 🟢 P2 (選擇性)如果你打算把這個給不會 Python 的朋友用，直接給 .py 檔是行不通的。
+[ ] D-01 封裝為執行檔 (PyInstaller)：
+目標：將 Python 環境、依賴庫、static、templates 全部打包成一個 LocalInsight.exe。
+好處：使用者不需要安裝 Python，點兩下就能跑。
+
 
 個人特化版另外做
 =========================

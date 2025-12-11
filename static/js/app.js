@@ -187,6 +187,7 @@ const app = createApp({
             isPromptMode: editorComposable.isPromptMode,
             activeTab: editorComposable.activeTab,
             isContentPreview: editorComposable.isContentPreview,
+            isReadingMode: editorComposable.isReadingMode,  // v1.1
             isSaving: editorComposable.isSaving,
             isDeleting: editorComposable.isDeleting,
             isDuplicating: editorComposable.isDuplicating,
