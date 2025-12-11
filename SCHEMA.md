@@ -419,11 +419,24 @@ CREATE INDEX idx_note_history_note_id ON Note_History(note_id);
 Request Body: `{ "note_ids": [1, 2, 3] }`
 Response: ZIP file (notes/_.md + assets/_.jpg)
 
-**匯入功能 (v1.1 規劃)**:
+**匯入功能 (v1.1 已實作)**:
 
 | 操作     | 端點                        | 說明              |
 | -------- | --------------------------- | ----------------- |
 | 匯入單檔 | `POST /api/notes/import/md` | 上傳 .md 建立筆記 |
+
+- 支援批量選擇（前端 `multiple` 屬性）
+- 自動解析 YAML front matter (type, tags)
+- 自動下載外部圖片並儲存至 `static/uploads/`
+
+**系統維護 API (v1.1 已實作)**:
+
+| 操作         | 端點                                  | 說明                   |
+| ------------ | ------------------------------------- | ---------------------- |
+| VACUUM       | `POST /api/system/vacuum`             | 緊縮資料庫釋放碎片空間 |
+| 清空歷史     | `POST /api/system/clear-history`      | 刪除所有 Note_History  |
+| 啟動偏好(讀) | `GET /api/system/startup-preference`  | 取得自動開啟瀏覽器設定 |
+| 啟動偏好(寫) | `POST /api/system/startup-preference` | 設定自動開啟瀏覽器偏好 |
 
 ---
 

@@ -20,6 +20,7 @@ from db import get_db  # v1.8.9: 統一資料庫連線層
 def vacuum_database():
     """
     執行 VACUUM 緊縮資料庫，釋放碎片空間
+    v1.1: 先重建 FTS5 索引，再執行 VACUUM，確保搜尋殘留也被清除
     Response: { size_before, size_after, freed_bytes }
     """
     try:
@@ -31,6 +32,17 @@ def vacuum_database():
         # 執行 VACUUM
         # 注意：VACUUM 需要獨立連線，不能在事務中執行
         conn = sqlite3.connect(db_path)
+        
+        # 1. 先強制重建 FTS5 索引 (清除搜尋殘留)
+        # FTS5 會建立隱藏表格存放索引資料，刪除主表後這些殘影不會自動清除
+        try:
+            conn.execute("INSERT INTO Notes_FTS(Notes_FTS) VALUES('rebuild');")
+            conn.commit()
+        except Exception as fts_error:
+            # 如果 FTS 表不存在或出錯，忽略繼續執行 VACUUM
+            print(f"[Info] FTS rebuild skipped: {fts_error}")
+        
+        # 2. 執行物理壓縮 (清除空洞)
         conn.execute('VACUUM')
         conn.close()
         

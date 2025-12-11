@@ -175,7 +175,7 @@ def batch_update_tags():
 
 @notes_bp.route('/notes/batch/delete', methods=['POST'])
 def batch_delete_notes():
-    """批量刪除筆記"""
+    """批量刪除筆記 (v1.1: 同時刪除關聯圖片)"""
     try:
         data = request.get_json()
 
@@ -209,7 +209,19 @@ def batch_delete_notes():
         db = get_db()
 
         try:
+            # v1.1: 先取得筆記內容，用於清理圖片
             placeholders = ','.join('?' * len(note_ids))
+            notes = db.execute(f'''
+                SELECT id, content, cover_image FROM Notes 
+                WHERE id IN ({placeholders})
+            ''', note_ids).fetchall()
+            
+            # 清理每個筆記的關聯圖片
+            from .crud import _cleanup_note_images
+            for note in notes:
+                _cleanup_note_images(note['content'], note['cover_image'])
+            
+            # 刪除資料庫記錄
             cursor = db.execute(f'''
                 DELETE FROM Notes WHERE id IN ({placeholders})
             ''', note_ids)

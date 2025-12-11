@@ -173,7 +173,7 @@
     "autoOpenBrowserDesc": "Automatically open browser window on startup",
     "import": "Import Data",
     "importMD": "Import Markdown",
-    "importMDDesc": "Single or batch .md import",
+    "importMDDesc": "Single or batch .md import (images must be in same folder)",
     "dbMaintenance": "Database Maintenance",
     "clearHistory": "Clear History",
     "clearHistoryDesc": "Delete all note history records",

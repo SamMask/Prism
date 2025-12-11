@@ -161,20 +161,20 @@ def import_markdown():
         upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
         
         # 找出所有圖片鏈結 ![alt](url)
+        # v1.1.1: 移除所有圖片鏈結（避免外部下載造成效能問題 + 本地路徑 404）
         image_pattern = re.compile(r'!\[([^\]]*)\]\(([^)]+)\)')
         images = image_pattern.findall(content)
         
         if images:
-            # 處理每個圖片鏈結
             for alt_text, image_url in images:
-                # 只處理 http(s) URL
-                if image_url.startswith(('http://', 'https://')):
-                    new_url, success = download_and_save_image(image_url, upload_folder, thumbnail_only)
-                    if success and new_url:
-                        # 更新內容中的圖片路徑
-                        old_pattern = f'![{alt_text}]({image_url})'
-                        new_pattern = f'![{alt_text}]({new_url})'
-                        content = content.replace(old_pattern, new_pattern)
+                # 統一移除所有圖片鏈結，保留 alt text 作為說明
+                old_pattern = f'![{alt_text}]({image_url})'
+                # 如果是已經在 static/uploads 的本地圖片，保留它
+                if image_url.startswith('/static/uploads/'):
+                    continue  # 保留本地已上傳的圖片
+                else:
+                    # 外部 URL 或無效本地路徑 - 移除鏈結
+                    content = content.replace(old_pattern, f'[{alt_text or "圖片"}]')
         
         content = content.strip()
         
