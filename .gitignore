@@ -18,6 +18,7 @@ static/uploads/
 
 # Temporary & Development
 garbage-can/
+000.txt
 pack.bat
 start_dev.bat
 .local_insight_config
