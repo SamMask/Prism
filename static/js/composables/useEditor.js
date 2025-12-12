@@ -336,19 +336,28 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
 
     // Save Note
     const saveNote = async (onSuccess) => {
-        // v0.9.0: Quick Add 模式下自動生成標題
-        if (!currentNote.value.title.trim() && isQuickAddOpen.value) {
-            const date = new Date();
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            currentNote.value.title = `Untitled Note - ${year}/${month}/${day}`;
+        // v1.3: 自動生成標題 - 使用內容第一行前50字元，或建立時間
+        if (!currentNote.value.title.trim()) {
+            const content = currentNote.value.content || '';
+            // 取第一行
+            let firstLine = content.split('\n')[0].trim();
+            // 移除 Markdown 符號
+            firstLine = firstLine.replace(/^[#>*\-\s]+/, '').trim();
+            
+            if (firstLine) {
+                currentNote.value.title = firstLine.substring(0, 50) + (firstLine.length > 50 ? '...' : '');
+            } else {
+                // Fallback: 使用建立時間
+                const date = new Date();
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                currentNote.value.title = `Note - ${year}/${month}/${day} ${hours}:${minutes}`;
+            }
         }
         
-        if (!currentNote.value.title.trim()) {
-            alert(t('messages.enterTitle'));
-            return;
-        }
         if (!currentNote.value.content.trim()) {
             alert(t('messages.enterContent'));
             return;

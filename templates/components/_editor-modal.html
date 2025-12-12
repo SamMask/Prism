@@ -134,7 +134,7 @@
                         d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"
                       ></path>
                     </svg>
-                    {{ t('editor.title') }} <span class="text-red-400">*</span>
+                    {{ t('editor.title') }} <span class="text-theme-muted text-xs">({{ t('common.optional', '選填') }})</span>
                   </span>
                 </label>
                 <input
@@ -552,13 +552,14 @@
                     </span>
                   </div>
 
-                  <!-- Add New Tag Input -->
+                  <!-- Add New Tag Input (v1.3: blur 自動加入) -->
                   <div class="flex gap-2">
                     <input
                       v-model="newTagInput"
                       @keyup.enter="addTag"
+                      @blur="addTag"
                       type="text"
-                      :placeholder="t('editor.tagsPlaceholder', '輸入新標籤名稱...')"
+                      :placeholder="t('editor.tagsPlaceholder', '輸入標籤後按 Enter 或點擊外部')"
                       class="flex-1 px-3 py-2 text-sm bg-gray-800 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-shadow"
                     />
                     <button

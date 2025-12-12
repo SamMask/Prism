@@ -8,8 +8,9 @@
         {{ t('promptBuilder.outputPreview', '輸出預覽') }}
       </h2>
       <div class="flex items-center gap-3">
-        <!-- Weight Mode Toggle (v1.0: 補 peer-focus 視覺回饋) -->
+        <!-- Weight Mode Toggle (v1.3: 暫時隱藏，避免新手困惑) -->
         <label
+          v-if="false"
           class="flex items-center gap-2 text-xs text-theme-secondary cursor-pointer"
         >
           <input type="checkbox" v-model="useWeights" class="sr-only peer" />
@@ -19,8 +20,8 @@
           {{ t('promptBuilder.weights', '權重') }}
         </label>
 
-        <!-- Text/JSON Toggle -->
-        <div class="flex bg-theme-elevated rounded-lg p-1">
+        <!-- Text/JSON Toggle (v1.3: 暫時隱藏，簡化介面) -->
+        <div v-if="false" class="flex bg-theme-elevated rounded-lg p-1">
           <button
             @click="outputMode = 'text'"
             :class="outputMode === 'text' ? 'bg-theme-accent text-white' : 'text-theme-secondary hover:text-white'"

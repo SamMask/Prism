@@ -106,8 +106,8 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.shotSize" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <!-- Weight Slider -->
-          <div v-if="form.shotSize" class="mt-2 flex items-center gap-2">
+          <!-- Weight Slider (v1.3: 暫時隱藏) -->
+          <div v-if="false && form.shotSize" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.shotSize" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.shotSize.toFixed(1) }}</span>
           </div>
@@ -125,7 +125,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.cameraMovement" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.cameraMovement" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.cameraMovement" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.cameraMovement" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.cameraMovement.toFixed(1) }}</span>
           </div>
@@ -143,7 +143,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.angle" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.angle" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.angle" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.angle" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.angle.toFixed(1) }}</span>
           </div>
@@ -161,7 +161,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.focus" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.focus" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.focus" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.focus" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.focus.toFixed(1) }}</span>
           </div>
@@ -198,7 +198,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.style" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.style" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.style" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.style" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.style.toFixed(1) }}</span>
           </div>
@@ -216,7 +216,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.lighting" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.lighting" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.lighting" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.lighting" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.lighting.toFixed(1) }}</span>
           </div>
@@ -234,7 +234,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.colorPalette" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.colorPalette" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.colorPalette" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.colorPalette" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.colorPalette.toFixed(1) }}</span>
           </div>
@@ -252,7 +252,7 @@
             <option value="">-- {{ t('common.select', '選擇') }} --</option>
             <option v-for="opt in options.quality" :key="getOptKey(opt)" :value="getOptOutput(opt)" v-text="getOptDisplay(opt)"></option>
           </select>
-          <div v-if="form.quality" class="mt-2 flex items-center gap-2">
+          <div v-if="false && form.quality" class="mt-2 flex items-center gap-2">
             <input type="range" v-model.number="weights.quality" min="0.1" max="2" step="0.1" class="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500">
             <span class="text-xs text-theme-muted w-8">{{ weights.quality.toFixed(1) }}</span>
           </div>

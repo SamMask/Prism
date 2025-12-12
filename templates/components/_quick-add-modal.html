@@ -176,13 +176,14 @@
               </button>
             </span>
 
-            <!-- Tag Input (v1.0: 修復 focus 可見性) -->
+            <!-- Tag Input (v1.3: 增加 blur 自動加入) -->
             <input
               type="text"
               v-model="newTagInput"
               @keydown.enter.prevent="addTag"
+              @blur="addTag"
               class="flex-1 bg-transparent border-none text-sm text-theme-primary placeholder-theme-muted p-0 min-w-[120px] rounded focus:bg-white/5 focus:ring-1 focus:ring-purple-500/30 transition-all"
-              :placeholder="t('editor.tagPlaceholder', '輸入標籤按 Enter...')"
+              :placeholder="t('editor.tagPlaceholder', '輸入標籤後按 Enter 或點擊外部')"
             />
           </div>
 

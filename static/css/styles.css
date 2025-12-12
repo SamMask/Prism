@@ -94,7 +94,7 @@
   /* Text Colors */
   --color-text-primary: #f3f4f6; /* gray-100 */
   --color-text-secondary: #9ca3af; /* gray-400 */
-  --color-text-muted: #6b7280; /* gray-500 */
+  --color-text-muted: #94a3b8; /* gray-400 - improved contrast for WCAG AA (v1.3) */
   --color-text-inverse: #111827; /* gray-900 - 用於淺色背景 */
 
   /* Status Colors */

@@ -290,19 +290,35 @@ def get_note(note_id):
 
 @notes_bp.route('/notes', methods=['POST'])
 def create_note():
-    """新增筆記"""
+    """新增筆記 (v1.3: 標題自動生成)"""
     try:
         data = request.get_json()
 
-        if not data or not data.get('title') or not data.get('content'):
+        # v1.3: 內容必填，標題可選（自動生成）
+        if not data or not data.get('content'):
             return jsonify({
                 'status': 'error',
-                'message': 'Title and content are required'
+                'message': 'Content is required'
             }), 400
 
         db = get_db()
 
         try:
+            # v1.3: 自動生成標題 - 使用內容第一行前50字元，或建立時間
+            title = data.get('title', '').strip()
+            if not title:
+                content = data.get('content', '')
+                # 取第一行（遇到換行就截斷）
+                first_line = content.split('\n')[0].strip()
+                # 移除 Markdown 符號
+                first_line = first_line.lstrip('#').lstrip('>').lstrip('-').lstrip('*').strip()
+                if first_line:
+                    title = first_line[:50] + ('...' if len(first_line) > 50 else '')
+                else:
+                    # Fallback: 使用建立時間
+                    from datetime import datetime
+                    title = f"Note - {datetime.now().strftime('%Y/%m/%d %H:%M')}"
+            
             # 處理 prompt_params (v0.6.5 - Prompt Builder)
             prompt_params = data.get('prompt_params')
             if prompt_params and isinstance(prompt_params, dict):
@@ -316,7 +332,7 @@ def create_note():
                 INSERT INTO Notes (title, content, type, category_id, remarks, cover_image, cover_position, editor_layout, prompt_params)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                data.get('title'),
+                title,
                 data.get('content'),
                 type_name,
                 category_id,

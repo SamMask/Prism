@@ -113,7 +113,7 @@
           'ring-2 ring-theme-primary': isDragging && draggedNoteIndex !== index
         }"
         :style="{ animationDelay: `${Math.min(index * 30, 300)}ms` }"
-        :title="note.remarks || ''"
+        :title="sortMode !== 'custom' && !isSelectionMode ? t('notes.switchToCustomSort', '切換至「自訂排序」以拖曳調整順序') : (note.remarks || '')"
       >
         <!-- Cover Image or Default Color Block -->
         <!-- v0.6: 優先載入縮圖 (_thumb.webp)，若失敗則 fallback 回原圖 -->
