@@ -138,12 +138,13 @@ def get_notes():
 
         # 2. 使用子查詢取得分頁筆記及其關聯的標籤與網址
         # v1.0: 使用 json_group_array 取代 GROUP_CONCAT 序列化
+        # v1.1: JOIN Categories 解決雙重事實問題 (Single Source of Truth)
         data_query = f'''
             SELECT
                 n.id,
                 n.title,
                 n.content,
-                n.type,
+                COALESCE(c.name, n.type) as category_name,
                 n.remarks,
                 n.cover_image,
                 COALESCE(n.cover_position, 'top') as cover_position,
@@ -159,6 +160,7 @@ def get_notes():
                  FROM Source_Urls s2 
                  WHERE s2.note_id = n.id) as urls_json
             FROM Notes n
+            LEFT JOIN Categories c ON n.category_id = c.id
             {where_sql}
             ORDER BY COALESCE(n.is_pinned, 0) DESC, 
                      {('COALESCE(n.sort_order, n.id) ASC' if sort_by == 'custom' else 
@@ -178,7 +180,7 @@ def get_notes():
                 'id': row['id'],
                 'title': row['title'],
                 'content': row['content'],
-                'type': row['type'],
+                'type': row['category_name'],
                 'remarks': row['remarks'],
                 'cover_image': row['cover_image'],
                 'cover_position': row['cover_position'] if row['cover_position'] else 'top',
@@ -216,12 +218,13 @@ def get_note(note_id):
         db = get_db()
 
         # v1.0: 使用 json_group_array 取代 GROUP_CONCAT
+        # v1.1: JOIN Categories 解決雙重事實問題 (Single Source of Truth)
         query = '''
             SELECT
                 n.id,
                 n.title,
                 n.content,
-                n.type,
+                COALESCE(c.name, n.type) as category_name,
                 n.remarks,
                 n.cover_image,
                 COALESCE(n.cover_position, 'top') as cover_position,
@@ -237,6 +240,7 @@ def get_note(note_id):
                  FROM Source_Urls s2 
                  WHERE s2.note_id = n.id) as urls_json
             FROM Notes n
+            LEFT JOIN Categories c ON n.category_id = c.id
             WHERE n.id = ?
         '''
 
@@ -260,7 +264,7 @@ def get_note(note_id):
             'id': row['id'],
             'title': row['title'],
             'content': row['content'],
-            'type': row['type'],
+            'type': row['category_name'],
             'remarks': row['remarks'],
             'cover_image': row['cover_image'],
             'cover_position': row['cover_position'] if row['cover_position'] else 'top',

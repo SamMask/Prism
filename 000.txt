@@ -47,9 +47,9 @@ Local Insight.md 與 SCHEMA.md 的內容雖完整，但仍有小段落被 trunca
 一個文字框 api送回的最佳化文字
 =========================
 
+demo的方式要修改 tools裡的檔案問要不要刪然後 demo_db資料夾放demo的檔就好
 
-
- @TODO.md @SCHEMA.md @Local Insight.md 
+ @TODO.md @SCHEMA.md @Prism.md
 
 好的，請繼續實作下一項 在執行以下任務時，你必須仔細閱讀並嚴格參考 @SCHEMA.md 如果未規劃到的就先更新文檔 @SCHEMA.md @TODO.md 後再實作
 

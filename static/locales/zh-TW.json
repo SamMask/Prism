@@ -113,6 +113,7 @@
     "quickSelect": "快速選擇",
     "clickToAdd": "點擊新增",
     "markdownEdit": "Markdown 編輯",
+    "pasteImageHint": "（Ctrl + V 可貼上截圖或圖片）",
     "insertImage": "插入圖片",
     "characters": "字元",
     "referenceImages": "參考圖片",

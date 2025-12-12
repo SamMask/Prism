@@ -1,4 +1,4 @@
-# Local Insight - 技術規格書
+# Prism - 技術規格書
 
 **版本**: v1.1.0
 **日期**: 2025-12-11
@@ -846,4 +846,4 @@ http://localhost:5000
 
 ---
 
-**END OF Local Insight.md (v1.1.1 - Updated 2025-12-11)**
+**END OF Prism.md (v1.1 - Updated 2025-12-12)**

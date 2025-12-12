@@ -1,5 +1,5 @@
 """
-Local Insight - 本機端 AI 提示詞與知識管理中樞
+Prism - 本機端 AI 提示詞與知識管理中樞
 Flask 應用入口與資料庫初始化 (Blueprint 架構)
 """
 
@@ -86,7 +86,7 @@ def create_app(env_name='default'):
     
     @app.route('/api/test')
     def test_api():
-        return jsonify({'status': 'success', 'message': 'Local Insight API is running!'})
+        return jsonify({'status': 'success', 'message': 'Prism API is running!'})
 
     return app
 
@@ -244,8 +244,8 @@ def init_db():
         # 10. 預設歡迎筆記 (Seed Note)
         cursor = db.execute('SELECT COUNT(*) FROM Notes')
         if cursor.fetchone()[0] == 0:
-            welcome_title = "👋 歡迎使用 Local Insight"
-            welcome_content = """# 歡迎使用 Local Insight
+            welcome_title = "👋 歡迎使用 Prism"
+            welcome_content = """# 歡迎使用 Prism
 
 這是一個本地運行的個人知識庫與 AI 提示詞管理工具。
 
@@ -374,7 +374,7 @@ if __name__ == '__main__':
     debug = os.environ.get('FLASK_DEBUG', 'False') == 'True'
     
     # 啟動訊息
-    startup_msg = f"Local Insight 啟動 (Env: {env}, Port: {port}, Debug: {debug})"
+    startup_msg = f"Prism 啟動 (Env: {env}, Port: {port}, Debug: {debug})"
     print(f"[INFO] {startup_msg}")
     print(f"[INFO] 日誌位置: {log_file}")
     print(f"[INFO] 訪問網址: http://127.0.0.1:{port}/")
