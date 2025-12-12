@@ -293,10 +293,68 @@ def init_db():
         from migrations import run_migrations
         run_migrations(db)
         
+        # ===================================================================
+        # 資料一致性自動修復 (v1.2: 15.3 啟動時靜默修復)
+        # ===================================================================
+        auto_fix_consistency(db)
+        
         print("[INFO] 資料庫初始化完成")
 
     except sqlite3.Error as e:
         print(f"[ERROR] 資料庫初始化失敗: {e}")
+
+
+def auto_fix_consistency(db):
+    """
+    啟動時自動檢查並修復資料一致性問題 (v1.2)
+    
+    修復項目:
+    1. 孤兒 Note_Tags (引用不存在的 Notes)
+    2. type 與 category_id 不一致
+    3. NULL category_id 設為預設分類
+    """
+    fixes = []
+    
+    try:
+        # 1. 刪除孤兒 Note_Tags
+        cursor = db.execute('''
+            DELETE FROM Note_Tags 
+            WHERE note_id NOT IN (SELECT id FROM Notes)
+        ''')
+        if cursor.rowcount > 0:
+            fixes.append(f"刪除 {cursor.rowcount} 個孤兒標籤關聯")
+        
+        # 2. 同步 type 與 category_id
+        # 如果 category_id 有值但 type 不匹配，更新 type
+        cursor = db.execute('''
+            UPDATE Notes 
+            SET type = (SELECT name FROM Categories WHERE id = Notes.category_id)
+            WHERE category_id IS NOT NULL 
+              AND type != (SELECT name FROM Categories WHERE id = Notes.category_id)
+        ''')
+        if cursor.rowcount > 0:
+            fixes.append(f"同步 {cursor.rowcount} 則筆記的 type 欄位")
+        
+        # 3. NULL category_id 設為預設分類
+        default_cat = db.execute('''
+            SELECT id, name FROM Categories WHERE is_default = 1 LIMIT 1
+        ''').fetchone()
+        
+        if default_cat:
+            cursor = db.execute('''
+                UPDATE Notes 
+                SET category_id = ?, type = ?
+                WHERE category_id IS NULL
+            ''', (default_cat[0], default_cat[1]))
+            if cursor.rowcount > 0:
+                fixes.append(f"修復 {cursor.rowcount} 則筆記的空分類")
+        
+        if fixes:
+            db.commit()
+            print(f"[AUTO-FIX] 資料一致性修復: {', '.join(fixes)}")
+        
+    except Exception as e:
+        print(f"[WARNING] 資料一致性檢查失敗: {e}")
 
 # ===================================================================
 # 程式進入點

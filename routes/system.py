@@ -21,6 +21,7 @@ def vacuum_database():
     """
     執行 VACUUM 緊縮資料庫，釋放碎片空間
     v1.1: 先重建 FTS5 索引，再執行 VACUUM，確保搜尋殘留也被清除
+    v1.2: 整合 WAL Checkpoint，一次完成所有資料庫維護
     Response: { size_before, size_after, freed_bytes }
     """
     try:
@@ -32,6 +33,13 @@ def vacuum_database():
         # 執行 VACUUM
         # 注意：VACUUM 需要獨立連線，不能在事務中執行
         conn = sqlite3.connect(db_path)
+        
+        # 0. 先執行 WAL Checkpoint (v1.2: 合併 WAL 日誌)
+        try:
+            conn.execute('PRAGMA wal_checkpoint(TRUNCATE)')
+            print("[Info] WAL checkpoint completed")
+        except Exception as wal_error:
+            print(f"[Info] WAL checkpoint skipped: {wal_error}")
         
         # 1. 先強制重建 FTS5 索引 (清除搜尋殘留)
         # FTS5 會建立隱藏表格存放索引資料，刪除主表後這些殘影不會自動清除
@@ -213,3 +221,123 @@ def set_startup_preference():
     
     except Exception as e:
         return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+# ===================================================================
+# WAL Checkpoint (v1.2 - 🟡-2 修復)
+# ===================================================================
+
+@system_bp.route('/system/wal-checkpoint', methods=['POST'])
+def wal_checkpoint():
+    """
+    手動執行 WAL Checkpoint，將 WAL 日誌合併至主資料庫檔案
+    確保備份時資料完整性
+    
+    Response: { wal_size_before, pages_checkpointed }
+    """
+    try:
+        db_path = current_app.config['DATABASE']
+        wal_path = db_path + '-wal'
+        
+        # 取得 WAL 檔案大小 (合併前)
+        wal_size_before = os.path.getsize(wal_path) if os.path.exists(wal_path) else 0
+        
+        # 執行 TRUNCATE 模式的 checkpoint (最徹底)
+        conn = sqlite3.connect(db_path)
+        result = conn.execute('PRAGMA wal_checkpoint(TRUNCATE)').fetchone()
+        conn.close()
+        
+        # result = (blocked, pages_checkpointed, pages_moved)
+        wal_size_after = os.path.getsize(wal_path) if os.path.exists(wal_path) else 0
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'wal_size_before': wal_size_before,
+                'wal_size_before_kb': round(wal_size_before / 1024, 2),
+                'wal_size_after': wal_size_after,
+                'pages_checkpointed': result[1] if result else 0,
+                'message': 'WAL 日誌已合併至主資料庫'
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# ===================================================================
+# Data Consistency Check (v1.2 - 🟡-3 修復)
+# ===================================================================
+
+@system_bp.route('/system/check-consistency', methods=['GET'])
+def check_consistency():
+    """
+    資料一致性檢查
+    檢查 Notes.type 與 category_id 的不一致記錄
+    
+    Response: { 
+        orphan_note_tags, 
+        unused_tags, 
+        type_category_mismatch, 
+        null_category_id,
+        fk_status 
+    }
+    """
+    try:
+        db = get_db()
+        
+        # 1. 孤兒標籤關聯 (Note_Tags 引用不存在的 Notes)
+        orphan_note_tags = db.execute('''
+            SELECT COUNT(*) FROM Note_Tags nt
+            LEFT JOIN Notes n ON nt.note_id = n.id
+            WHERE n.id IS NULL
+        ''').fetchone()[0]
+        
+        # 2. 未使用的標籤
+        unused_tags = db.execute('''
+            SELECT COUNT(*) FROM Tags t
+            LEFT JOIN Note_Tags nt ON t.id = nt.tag_id
+            WHERE nt.tag_id IS NULL
+        ''').fetchone()[0]
+        
+        # 3. type 與 category_id 不一致
+        type_category_mismatch = db.execute('''
+            SELECT COUNT(*) FROM Notes n
+            LEFT JOIN Categories c ON n.category_id = c.id
+            WHERE c.name IS NOT NULL AND n.type != c.name
+        ''').fetchone()[0]
+        
+        # 4. 缺少 category_id 的筆記
+        null_category_id = db.execute('''
+            SELECT COUNT(*) FROM Notes WHERE category_id IS NULL
+        ''').fetchone()[0]
+        
+        # 5. Foreign Keys 狀態
+        fk_status = db.execute('PRAGMA foreign_keys').fetchone()[0]
+        
+        # 計算整體健康狀態
+        issues = orphan_note_tags + type_category_mismatch
+        health = 'healthy' if issues == 0 else 'warning' if issues < 5 else 'critical'
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'orphan_note_tags': orphan_note_tags,
+                'unused_tags': unused_tags,
+                'type_category_mismatch': type_category_mismatch,
+                'null_category_id': null_category_id,
+                'fk_status': fk_status,
+                'fk_enabled': fk_status == 1,
+                'health': health
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+

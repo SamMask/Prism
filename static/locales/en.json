@@ -181,7 +181,12 @@
     "clearHistory": "Clear History",
     "clearHistoryDesc": "Delete all note history records",
     "clearHistoryConfirm": "Are you sure you want to clear all history? This cannot be undone.",
-    "clearHistorySuccess": "Cleared {count} history records"
+    "clearHistorySuccess": "Cleared {count} history records",
+    "cardOpenMode": "Card Open Mode",
+    "cardOpenModeDesc": "Default display mode when clicking a card",
+    "cardOpenModeReading": "Reading Mode (Plain Text)",
+    "cardOpenModePreview": "Preview Mode (Markdown)",
+    "cardOpenModeEdit": "Edit Mode"
   },
   "categories": {
     "manage": "Manage Categories",

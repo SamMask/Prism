@@ -295,6 +295,11 @@ const app = createApp({
             clearingHistory: settingsComposable.clearingHistory,
             clearHistory: settingsComposable.clearHistory,
             
+            // WAL Checkpoint (v1.2)
+            walCheckpointing: settingsComposable.walCheckpointing,
+            walCheckpointResult: settingsComposable.walCheckpointResult,
+            walCheckpoint: settingsComposable.walCheckpoint,
+            
             // Startup Preference (v1.1)
             startupAutoOpen: settingsComposable.startupAutoOpen,
             toggleAutoOpenBrowser: settingsComposable.toggleAutoOpenBrowser,

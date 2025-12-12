@@ -1,9 +1,9 @@
 # Prism - 全域資料字典 (Database Schema)
 
 **資料庫**: SQLite 3
-**版本**: v1.1.0
+**版本**: v1.2.0
 **特性**: 啟用 Foreign Keys 約束 (`PRAGMA foreign_keys = ON;`)
-**修訂**: Phase 14 - 審計修復 + Schema 一致性優化
+**修訂**: Phase 15 - 系統可靠性 (圖片引用計數 / WAL Checkpoint / 資料一致性自動修復)
 
 ---
 

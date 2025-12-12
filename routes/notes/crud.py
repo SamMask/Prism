@@ -475,8 +475,8 @@ def delete_note(note_id):
                 'message': 'Note not found'
             }), 404
 
-        # v1.1: 刪除關聯的圖片檔案
-        _cleanup_note_images(existing['content'], existing['cover_image'])
+        # v1.2: 刪除關聯的圖片檔案 (含引用計數檢查)
+        _cleanup_note_images(existing['content'], existing['cover_image'], note_id)
 
         # Manually cascade delete related data (since foreign keys might not be enabled)
         db.execute('DELETE FROM Note_History WHERE note_id = ?', (note_id,))
@@ -494,74 +494,85 @@ def delete_note(note_id):
         }), 500
 
 
-def _cleanup_note_images(content, cover_image):
+def _cleanup_note_images(content, cover_image, note_id):
     """
     清理筆記關聯的圖片檔案
     - 從 content 中提取 /static/uploads/ 路徑的圖片
     - 刪除 cover_image 和對應的縮圖
+    
+    v1.2: 新增引用計數檢查，避免刪除其他筆記仍在使用的圖片 (🟡-1 修復)
     """
     import re
     import os
     from flask import current_app
+    from db import get_db
     
     upload_folder = current_app.config.get('UPLOAD_FOLDER', 'static/uploads')
     deleted_files = []
+    skipped_files = []
     
     try:
+        db = get_db()
+        
+        # 收集所有要檢查的圖片路徑
+        image_paths = set()
+        
         # 1. 處理 cover_image
         if cover_image and cover_image.startswith('/static/uploads/'):
-            filename = cover_image.replace('/static/uploads/', '')
+            image_paths.add(cover_image)
+        
+        # 2. 從 content 中提取所有 /static/uploads/ 的圖片
+        if content:
+            pattern = r'/static/uploads/([^\s\)\]\"\'\>]+)'
+            matches = re.findall(pattern, content)
+            for m in matches:
+                image_paths.add(f'/static/uploads/{m}')
+        
+        # 3. 對每個圖片檢查引用計數後再刪除
+        for img_path in image_paths:
+            # 檢查是否有其他筆記引用此圖片 (在 cover_image 或 content 中)
+            ref_count = db.execute('''
+                SELECT COUNT(*) FROM Notes
+                WHERE id != ? AND (cover_image = ? OR content LIKE ?)
+            ''', (note_id, img_path, f'%{img_path}%')).fetchone()[0]
+            
+            if ref_count > 0:
+                # 仍有其他筆記引用，跳過刪除
+                skipped_files.append(f"{img_path} (referenced by {ref_count} notes)")
+                continue
+            
+            # 安全刪除圖片
+            filename = img_path.replace('/static/uploads/', '')
             filepath = os.path.join(upload_folder, filename)
             
             if os.path.exists(filepath):
                 os.remove(filepath)
                 deleted_files.append(filename)
             
-            # 嘗試刪除對應的縮圖（如果是原圖，可能有 _thumb.webp）
+            # 嘗試刪除對應的縮圖
             name_without_ext = os.path.splitext(filename)[0]
-            thumb_variants = [
-                f"{name_without_ext}_thumb.webp",
-                f"{name_without_ext}.webp"  # 如果是縮圖本身
-            ]
-            for thumb in thumb_variants:
-                thumb_path = os.path.join(upload_folder, thumb)
+            
+            if not filename.endswith('_thumb.webp'):
+                # 如果是原圖，刪除 _thumb.webp
+                thumb_name = f"{name_without_ext}_thumb.webp"
+                thumb_path = os.path.join(upload_folder, thumb_name)
                 if os.path.exists(thumb_path):
                     os.remove(thumb_path)
-                    deleted_files.append(thumb)
-        
-        # 2. 從 content 中提取所有 /static/uploads/ 的圖片
-        if content:
-            # 匹配 Markdown 圖片語法 ![](path) 和直接的路徑
-            pattern = r'/static/uploads/([^\s\)\]"\']+)'
-            matches = re.findall(pattern, content)
-            
-            for filename in matches:
-                filepath = os.path.join(upload_folder, filename)
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-                    deleted_files.append(filename)
-                
-                # 嘗試刪除對應的縮圖
-                name_without_ext = os.path.splitext(filename)[0]
-                
-                # 如果是原圖，刪除 _thumb.webp
-                if not filename.endswith('_thumb.webp'):
-                    thumb_name = f"{name_without_ext}_thumb.webp"
-                    thumb_path = os.path.join(upload_folder, thumb_name)
-                    if os.path.exists(thumb_path):
-                        os.remove(thumb_path)
-                        deleted_files.append(thumb_name)
-                else:
-                    # 如果是縮圖，嘗試刪除原圖
-                    original_base = name_without_ext.replace('_thumb', '')
-                    for ext in ['.jpg', '.png', '.gif', '.webp']:
-                        original_path = os.path.join(upload_folder, f"{original_base}{ext}")
-                        if os.path.exists(original_path):
-                            os.remove(original_path)
-                            deleted_files.append(f"{original_base}{ext}")
+                    deleted_files.append(thumb_name)
+            else:
+                # 如果是縮圖，嘗試刪除原圖
+                original_base = name_without_ext.replace('_thumb', '')
+                for ext in ['.jpg', '.png', '.gif', '.webp']:
+                    original_path = os.path.join(upload_folder, f"{original_base}{ext}")
+                    if os.path.exists(original_path):
+                        os.remove(original_path)
+                        deleted_files.append(f"{original_base}{ext}")
         
         if deleted_files:
-            print(f"[Info] Deleted {len(deleted_files)} image files: {deleted_files}")
+            print(f"[Cleanup] Deleted {len(deleted_files)} files: {deleted_files}")
+        if skipped_files:
+            print(f"[Cleanup] Skipped {len(skipped_files)} files (still referenced): {skipped_files}")
             
     except Exception as e:
         print(f"[Warning] Image cleanup error: {e}")
+

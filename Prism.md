@@ -1,9 +1,9 @@
 # Prism - 技術規格書
 
-**版本**: v1.1.0
+**版本**: v1.2.0
 **日期**: 2025-12-12
 **架構**: Local Web App (Flask + SQLite + Vue.js)
-**修訂**: v1.1 - 專案更名 Prism + Schema 一致性修復 + Demo DB
+**修訂**: v1.2 - Phase 15 系統可靠性 + 設定頁簡化
 
 ---
 
@@ -620,20 +620,20 @@ http://localhost:5000
 - **Run Prompt**: 整合 External Link，一鍵將提示詞帶入 ChatGPT/Claude 測試。
 - **View Transitions**: 使用 Vue TransitionGroup 實現列表過濾時的「洗牌」動畫。
 
-### 13.5 系統可靠性強化 (System Reliability) - [🚧 v1.2 規劃中]
+### 13.5 系統可靠性強化 (System Reliability) - [✅ v1.2 已完成]
 
-> **注意**: 以下功能尚未實作，基於 MVP Audit 2025-12-12 報告規劃。
+> **完成日期**: 2025-12-12 (MVP Audit 修復)
 
-#### 🟡 高風險技術債 (P1 優先)
+#### ✅ 高風險技術債 (P1) - 已完成
 
-- **圖片引用計數 (🟡-1)**: [待實作] 刪除筆記時檢查圖片是否被其他筆記引用，避免破圖。
-- **WAL Checkpoint (🟡-2)**: [待實作] 新增「合併 WAL 日誌」按鈕，確保備份資料完整。
-- **資料一致性檢查 (🟡-3)**: [待實作] 檢測 `Notes.type` 與 `category_id` 不一致的記錄。
+- **圖片引用計數 (🟡-1)**: ✅ `_cleanup_note_images()` 刪除前檢查引用
+- **WAL Checkpoint (🟡-2)**: ✅ `POST /api/system/wal-checkpoint`
+- **資料一致性檢查 (🟡-3)**: ✅ `GET /api/system/check-consistency`
 
-#### 備份與日誌
+#### 備份與日誌 (待實作)
 
-- **自動備份 (Auto Backup)**: [待實作] 定期備份 `knowledge.db`，提供一鍵還原功能。
-- **日誌管理 (Log Management)**: [待實作] 設定頁整合 `app.log` 檢視器。
+- **自動備份 (Auto Backup)**: [待實作] 定期備份 `knowledge.db`
+- **日誌管理 (Log Management)**: [待實作] 設定頁整合 `app.log` 檢視器
 
 ---
 

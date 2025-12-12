@@ -1,8 +1,8 @@
 # Prism - 開發待辦清單 (TODO)
 
-**版本**: v1.1.0
+**版本**: v1.2.0
 **最後更新**: 2025-12-12
-**修訂**: Phase 14 - 審計修復 + 專案更名 (Prism)
+**修訂**: Phase 15 - 系統可靠性與設定頁簡化
 
 ---
 
@@ -553,24 +553,28 @@
 > 以下項目尚未實作，列入長期規劃。
 > 來源: `MVP_Audit_Report-1212.md`
 
-### Phase 15: 系統可靠性與維運 (v1.2+)
+### Phase 15: 系統可靠性與維運 (v1.2)
 
-#### 🟡 高風險技術債 (P1)
+#### ✅ 高風險技術債 (P1) - 已完成
 
-- [ ] **15.1** 圖片刪除引用計數檢查 (🟡-1)
+- [x] **15.1** 圖片刪除引用計數檢查 (🟡-1) ✅ _(2025-12-12)_
 
-  - 問題: 多則筆記共用圖片時，刪除其中一則會導致其他筆記破圖
-  - 方案: 刪除前檢查 `SELECT COUNT(*) FROM Notes WHERE content LIKE ?`
+  - `_cleanup_note_images()` 刪除前檢查其他筆記是否引用
 
-- [ ] **15.2** WAL Checkpoint 機制 (🟡-2)
+- [x] **15.2** WAL Checkpoint 機制 (🟡-2) ✅ _(2025-12-12)_
 
-  - 問題: 用戶複製 `knowledge.db` 備份時可能遺失 WAL 中的變更
-  - 方案: 匯出資料庫前自動執行 `PRAGMA wal_checkpoint(TRUNCATE)`
-  - UI: 設定頁新增「合併 WAL 日誌」按鈕
+  - 整合到 VACUUM 函數 (API 保留: `POST /api/system/wal-checkpoint`)
+  - UI 按鈕已移除，「整理資料庫」一併執行 WAL + FTS + VACUUM
 
-- [ ] **15.3** 資料一致性檢查 API (🟡-3)
-  - 新增 `/api/system/check-consistency` 端點
-  - 檢查 `Notes.type` 與 `category_id` 的不一致記錄
+- [x] **15.3** 資料一致性檢查 (🟡-3) ✅ _(2025-12-12)_
+  - 啟動時自動修復 `auto_fix_consistency()` in `app.py`
+  - API 保留: `GET /api/system/check-consistency`
+
+#### ✅ 設定頁簡化 _(2025-12-12)_
+
+- [x] 移除「匯出資料庫」按鈕 (README 有說明 knowledge.db 位置)
+- [x] 移除「合併 WAL 日誌」按鈕 (整合到 VACUUM)
+- [x] 新增 cardOpenMode 英文翻譯
 
 #### 備份與日誌
 

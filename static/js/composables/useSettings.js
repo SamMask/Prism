@@ -355,39 +355,71 @@ export function useSettings() {
     }
   };
 
+  // WAL Checkpoint (v1.2)
+  const walCheckpointing = ref(false);
+  const walCheckpointResult = ref(null);
+
+  const walCheckpoint = async () => {
+    walCheckpointing.value = true;
+    walCheckpointResult.value = null;
+    try {
+      const response = await fetch("/api/system/wal-checkpoint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json();
+      if (result.status === "success") {
+        walCheckpointResult.value = result.data;
+        console.log("[WAL Checkpoint]", result.data.message);
+      } else {
+        alert(
+          t("settings.walCheckpointFailed", "WAL 合併失敗") +
+            ": " +
+            result.message
+        );
+      }
+    } catch (error) {
+      alert(
+        t("settings.walCheckpointFailed", "WAL 合併失敗") + ": " + error.message
+      );
+    } finally {
+      walCheckpointing.value = false;
+    }
+  };
+
   // Startup Preference (v1.1)
   const startupAutoOpen = ref(null);
-  
+
   const loadStartupPreference = async () => {
     try {
-      const response = await fetch('/api/system/startup-preference');
+      const response = await fetch("/api/system/startup-preference");
       const result = await response.json();
-      if (result.status === 'success') {
+      if (result.status === "success") {
         startupAutoOpen.value = result.data.auto_open_browser;
       }
     } catch (error) {
-      console.error('Load startup preference error:', error);
+      console.error("Load startup preference error:", error);
     }
   };
-  
+
   const toggleAutoOpenBrowser = async () => {
     try {
       const newValue = !startupAutoOpen.value;
-      const response = await fetch('/api/system/startup-preference', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auto_open_browser: newValue })
+      const response = await fetch("/api/system/startup-preference", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ auto_open_browser: newValue }),
       });
       const result = await response.json();
-      if (result.status === 'success') {
+      if (result.status === "success") {
         startupAutoOpen.value = newValue;
       }
     } catch (error) {
-      console.error('Toggle startup preference error:', error);
-      alert('設定失敗: ' + error.message);
+      console.error("Toggle startup preference error:", error);
+      alert("設定失敗: " + error.message);
     }
   };
-  
+
   // 初始載入啟動偏好
   loadStartupPreference();
 
@@ -395,30 +427,35 @@ export function useSettings() {
   const clearingHistory = ref(false);
 
   const clearHistory = async () => {
-    if (!confirm(
-      t('settings.clearHistoryConfirm', '確定要清空所有歷史版本嗎？此操作無法復原。')
-    )) {
+    if (
+      !confirm(
+        t(
+          "settings.clearHistoryConfirm",
+          "確定要清空所有歷史版本嗎？此操作無法復原。"
+        )
+      )
+    ) {
       return;
     }
 
     clearingHistory.value = true;
     try {
-      const response = await fetch('/api/system/clear-history', {
-        method: 'POST'
+      const response = await fetch("/api/system/clear-history", {
+        method: "POST",
       });
       const result = await response.json();
 
-      if (result.status === 'success') {
+      if (result.status === "success") {
         const count = result.data.deleted_count;
         alert(
-          t('settings.clearHistorySuccess', `已清空 ${count} 個歷史版本記錄`)
+          t("settings.clearHistorySuccess", `已清空 ${count} 個歷史版本記錄`)
         );
       } else {
-        alert('清空失敗: ' + result.message);
+        alert("清空失敗: " + result.message);
       }
     } catch (error) {
-      console.error('Clear history error:', error);
-      alert('清空失敗: ' + error.message);
+      console.error("Clear history error:", error);
+      alert("清空失敗: " + error.message);
     } finally {
       clearingHistory.value = false;
     }
@@ -627,20 +664,23 @@ export function useSettings() {
     if (!files || files.length === 0) return;
 
     const fileCount = files.length;
-    const mdFiles = Array.from(files).filter(f => f.name.endsWith('.md'));
-    
+    const mdFiles = Array.from(files).filter((f) => f.name.endsWith(".md"));
+
     if (mdFiles.length === 0) {
-      alert(t ? t('messages.noMdFiles', '未找到 .md 檔案') : '未找到 .md 檔案');
+      alert(t ? t("messages.noMdFiles", "未找到 .md 檔案") : "未找到 .md 檔案");
       return;
     }
 
     // 提示批量匯入
     if (fileCount > 1) {
-      const confirmMsg = t 
-        ? t('messages.confirmBatchImport', `即將匯入 ${mdFiles.length} 個 Markdown 檔案，是否繼續？`)
+      const confirmMsg = t
+        ? t(
+            "messages.confirmBatchImport",
+            `即將匯入 ${mdFiles.length} 個 Markdown 檔案，是否繼續？`
+          )
         : `即將匯入 ${mdFiles.length} 個 Markdown 檔案，是否繼續？`;
       if (!confirm(confirmMsg)) {
-        event.target.value = '';
+        event.target.value = "";
         return;
       }
     }
@@ -655,16 +695,16 @@ export function useSettings() {
       for (const file of mdFiles) {
         try {
           const formData = new FormData();
-          formData.append('file', file);
+          formData.append("file", file);
 
-          const response = await fetch('/api/notes/import/md', {
-            method: 'POST',
-            body: formData
+          const response = await fetch("/api/notes/import/md", {
+            method: "POST",
+            body: formData,
           });
 
           const result = await response.json();
 
-          if (result.status === 'success') {
+          if (result.status === "success") {
             successCount++;
           } else {
             failCount++;
@@ -678,32 +718,41 @@ export function useSettings() {
 
       // 顯示結果
       if (failCount === 0) {
-        const successMsg = fileCount === 1
-          ? (t ? t('messages.importSuccess', '匯入成功！') : '匯入成功！')
-          : `成功匯入 ${successCount} 個檔案！`;
+        const successMsg =
+          fileCount === 1
+            ? t
+              ? t("messages.importSuccess", "匯入成功！")
+              : "匯入成功！"
+            : `成功匯入 ${successCount} 個檔案！`;
         alert(successMsg);
-        
+
         // 重新載入筆記列表
-        if (window.location.pathname === '/') {
+        if (window.location.pathname === "/") {
           window.location.reload();
         }
       } else {
-        const summary = `成功: ${successCount}, 失敗: ${failCount}\n\n失敗詳情:\n${errors.join('\n')}`;
+        const summary = `成功: ${successCount}, 失敗: ${failCount}\n\n失敗詳情:\n${errors.join(
+          "\n"
+        )}`;
         alert(summary);
-        
+
         // 如果有成功的，仍然重新載入
-        if (successCount > 0 && window.location.pathname === '/') {
+        if (successCount > 0 && window.location.pathname === "/") {
           window.location.reload();
         }
       }
     } catch (error) {
-      console.error('Import error:', error);
-      alert(t ? t('messages.importFailed', '匯入失敗') : '匯入失敗: ' + error.message);
+      console.error("Import error:", error);
+      alert(
+        t
+          ? t("messages.importFailed", "匯入失敗")
+          : "匯入失敗: " + error.message
+      );
     } finally {
       isImporting.value = false;
       // 清空 file input
       if (event.target) {
-        event.target.value = '';
+        event.target.value = "";
       }
     }
   };
@@ -781,7 +830,12 @@ export function useSettings() {
     vacuumLoading,
     vacuumResult,
     vacuumDatabase,
-    
+
+    // WAL Checkpoint (v1.2)
+    walCheckpointing,
+    walCheckpointResult,
+    walCheckpoint,
+
     // Clear History (v1.1)
     clearingHistory,
     clearHistory,

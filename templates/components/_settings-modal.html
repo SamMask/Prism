@@ -59,970 +59,106 @@
     <!-- Modal Content (with scroll) -->
     <div class="p-6 max-h-[70vh] overflow-y-auto">
       <div class="grid grid-cols-1 md:grid-cols-[1fr_1px_1fr] gap-6">
-      <!-- Left Column -->
-      <div class="space-y-6">
-      <!-- Stats -->
-      <div
-        class="bg-theme-elevated/50 rounded-xl p-4 border border-theme-default"
-      >
-        <h3
-          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <!-- Left Column -->
+        <div class="space-y-6">
+          <!-- Stats -->
+          <div
+            class="bg-theme-elevated/50 rounded-xl p-4 border border-theme-default"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-            ></path>
-          </svg>
-          {{ t('settings.stats', '資料統計') }}
-        </h3>
-        <div class="grid grid-cols-2 gap-3">
-          <div class="bg-theme-surface/50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-theme-brand-light">
-              {{ totalNotes }}
-            </div>
-            <div class="text-xs text-theme-muted">
-              {{ t('settings.notesCount', '筆記數量') }}
+            <h3
+              class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                ></path>
+              </svg>
+              {{ t('settings.stats', '資料統計') }}
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="bg-theme-surface/50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-theme-brand-light">
+                  {{ totalNotes }}
+                </div>
+                <div class="text-xs text-theme-muted">
+                  {{ t('settings.notesCount', '筆記數量') }}
+                </div>
+              </div>
+              <div class="bg-theme-surface/50 rounded-lg p-3 text-center">
+                <div class="text-2xl font-bold text-theme-accent-light">
+                  {{ tags.length }}
+                </div>
+                <div class="text-xs text-theme-muted">
+                  {{ t('settings.tagsCount', '標籤數量') }}
+                </div>
+              </div>
             </div>
           </div>
-          <div class="bg-theme-surface/50 rounded-lg p-3 text-center">
-            <div class="text-2xl font-bold text-theme-accent-light">
-              {{ tags.length }}
-            </div>
-            <div class="text-xs text-theme-muted">
-              {{ t('settings.tagsCount', '標籤數量') }}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      <!-- Startup Preference Section (v1.1) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
-            ></path>
-          </svg>
-          {{ t('settings.startup', '啟動設定') }}
-        </h3>
-        <div
-          class="flex items-center justify-between p-3 bg-theme-elevated/50 rounded-lg border border-theme-default"
-        >
+          <!-- Startup Preference Section (v1.1) -->
           <div>
-            <div class="text-sm text-theme-primary">
-              {{ t('settings.autoOpenBrowser', '自動開啟瀏覽器') }}
-            </div>
-            <div class="text-xs text-theme-muted">
-              {{ t('settings.autoOpenBrowserDesc', '啟動時自動開啟瀏覽器視窗')
-              }}
-            </div>
-          </div>
-          <button
-            @click="toggleAutoOpenBrowser"
-            :class="[
+            <h3
+              class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"
+                ></path>
+              </svg>
+              {{ t('settings.startup', '啟動設定') }}
+            </h3>
+            <div
+              class="flex items-center justify-between p-3 bg-theme-elevated/50 rounded-lg border border-theme-default"
+            >
+              <div>
+                <div class="text-sm text-theme-primary">
+                  {{ t('settings.autoOpenBrowser', '自動開啟瀏覽器') }}
+                </div>
+                <div class="text-xs text-theme-muted">
+                  {{ t('settings.autoOpenBrowserDesc',
+                  '啟動時自動開啟瀏覽器視窗') }}
+                </div>
+              </div>
+              <button
+                @click="toggleAutoOpenBrowser"
+                :class="[
               'relative w-12 h-6 rounded-full transition-colors duration-200',
               startupAutoOpen ? 'bg-blue-500' : 'bg-gray-600'
             ]"
-          >
-            <span
-              :class="[
+              >
+                <span
+                  :class="[
                 'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200',
                 startupAutoOpen ? 'translate-x-6' : 'translate-x-0'
               ]"
-            ></span>
-          </button>
-        </div>
-      </div>
-
-            <!-- Import Section (v1.1) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-            ></path>
-          </svg>
-          {{ t('settings.import', '資料匯入') }}
-        </h3>
-        <div class="space-y-3">
-          <!-- Import Markdown -->
-          <button
-            @click="triggerImportFile"
-            :disabled="isImporting"
-            class="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 hover:border-purple-500 transition-all group"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-5 h-5 text-purple-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-                  ></path>
-                </svg>
-              </div>
-              <div class="text-left">
-                <div class="text-sm font-medium text-white">
-                  {{ t('settings.importMD', '匯入 Markdown') }}
-                </div>
-                <div class="text-xs text-gray-400">
-                  {{ t('settings.importMDDesc', '支援單檔或批量選擇 .md') }}
-                </div>
-              </div>
-            </div>
-            <svg
-              class="w-5 h-5 text-gray-500 group-hover:text-purple-400 transition-colors"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-              ></path>
-            </svg>
-          </button>
-          <!-- Hidden file input -->
-          <input
-            ref="importFileInput"
-            type="file"
-            accept=".md"
-            multiple
-            @change="handleImportFile"
-            style="display: none"
-          />
-        </div>
-      </div>
-
-      <!-- Export Section -->
-      <div>
-        <h3
-          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-            ></path>
-          </svg>
-          {{ t('settings.export', '資料匯出') }}
-        </h3>
-        <div class="space-y-3">
-          <!-- Export JSON -->
-          <button
-            @click="exportJSON"
-            :disabled="isExporting"
-            class="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 hover:border-blue-500 transition-all group"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-5 h-5 text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  ></path>
-                </svg>
-              </div>
-              <div class="text-left">
-                <div class="font-medium text-gray-100">
-                  {{ t('settings.exportJSON', '匯出 JSON') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.exportJSONDesc',
-                  '可讀格式，適合資料備份與轉移') }}
-                </div>
-              </div>
-            </div>
-            <svg
-              class="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-              ></path>
-            </svg>
-          </button>
-
-          <!-- Export DB -->
-          <button
-            @click="exportDB"
-            :disabled="isExporting"
-            class="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 hover:border-green-500 transition-all group"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-10 h-10 bg-green-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-5 h-5 text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
-                  ></path>
-                </svg>
-              </div>
-              <div class="text-left">
-                <div class="font-medium text-gray-100">
-                  {{ t('settings.exportDB', '匯出資料庫') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.exportDBDesc', 'SQLite 檔案，可直接覆蓋還原')
-                  }}
-                </div>
-              </div>
-            </div>
-            <svg
-              class="w-5 h-5 text-gray-500 group-hover:text-green-400 transition-colors"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path stroke-linecap="round" stroke-linejoin="round"
-              stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4
-              4m0 0l-4-4m4 4V4"
-            </svg>
-          </button>
-        </div>
-      </div>
-
-
-
-      <!-- Database Maintenance Section (v1.1) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-            ></path>
-          </svg>
-          {{ t('settings.dbMaintenance', '資料庫維護') }}
-        </h3>
-        <div class="space-y-3">
-          <!-- Vacuum Database Button -->
-          <button
-            @click="vacuumDatabase"
-            :disabled="vacuumLoading"
-            class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  v-if="!vacuumLoading"
-                  class="w-4 h-4 text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  ></path>
-                </svg>
-                <svg
-                  v-else
-                  class="animate-spin w-4 h-4 text-blue-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-              </div>
-              <div class="text-left">
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.vacuum', '整理資料庫') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.vacuumDesc', '清理碎片空間，優化效能') }}
-                </div>
-              </div>
-            </div>
-          </button>
-
-          <!-- Clear History Button -->
-          <button
-            @click="clearHistory"
-            :disabled="clearingHistory"
-            class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-red-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  v-if="!clearingHistory"
-                  class="w-4 h-4 text-red-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  ></path>
-                </svg>
-                <svg
-                  v-else
-                  class="animate-spin w-4 h-4 text-red-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-              </div>
-              <div class="text-left">
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.clearHistory', '清空歷史版本') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.clearHistoryDesc', '刪除所有筆記的歷史版本記錄') }}
-                </div>
-              </div>
-            </div>
-          </button>
-
-          <!-- VACUUM Result -->
-          <div v-if="vacuumResult" class="bg-gray-800/50 rounded-lg p-3">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm text-gray-300">
-                {{ t('settings.vacuumComplete', '整理完成') }}
-              </span>
-              <span class="text-xs text-cyan-400 font-medium">
-                {{ t('settings.freed', '釋放') }} {{ vacuumResult.freed_mb }} MB
-              </span>
-            </div>
-            <div class="text-xs text-gray-500">
-              {{ vacuumResult.size_before_mb }} MB → {{
-              vacuumResult.size_after_mb }} MB
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-      <!-- End Left Column -->
-
-      <!-- Vertical Divider -->
-      <div class="hidden md:block bg-gray-700"></div>
-
-      <!-- Right Column -->
-      <div class="space-y-6">
-
-      <!-- Category Manager Section (v0.6) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-            ></path>
-          </svg>
-          {{ t('settings.categories') }}
-        </h3>
-
-        <!-- Category List -->
-        <div class="space-y-2 max-h-48 overflow-y-auto mb-3">
-          <div v-if="categoriesLoading" class="text-center py-4 text-gray-500">
-            <svg
-              class="animate-spin h-5 w-5 mx-auto"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <circle
-                class="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                stroke-width="4"
-              ></circle>
-              <path
-                class="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              ></path>
-            </svg>
-          </div>
-          <div
-            v-else
-            v-for="cat in categories"
-            :key="cat.id"
-            class="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg border border-gray-700 group"
-          >
-            <div class="flex items-center gap-2">
-              <span class="text-lg">{{ cat.icon }}</span>
-              <span class="text-sm text-gray-200">{{ cat.name }}</span>
-              <span class="text-xs text-gray-500">({{ cat.count }})</span>
-
-              <!-- New Note Default Toggler (v0.9.0) -->
-              <button
-                @click="setNewNoteDefault(cat.name)"
-                class="ml-1 transition-colors focus:outline-none"
-                :class="newNoteDefaultType === cat.name ? 'text-yellow-400 opacity-100' : 'text-gray-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100'"
-                :title="t('settings.defaultNewCard', '設為「新增卡片」預設分類')"
-              >
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
-                  />
-                </svg>
-              </button>
-
-              <!-- User Default Label (Follows the star) -->
-              <span
-                v-if="newNoteDefaultType === cat.name"
-                class="px-1.5 py-0.5 text-xs bg-yellow-600/20 text-yellow-500 rounded ml-2"
-                >{{ t('categories.default', '預設') }}</span
-              >
-
-              <!-- System Default Lock Icon -->
-              <span
-                v-if="cat.is_default"
-                class="ml-2 text-gray-600"
-                :title="t('messages.cannotDeleteDefault', '無法刪除預設分類')"
-              >
-                <svg
-                  class="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  ></path>
-                </svg>
-              </span>
-            </div>
-            <div
-              class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <button
-                v-if="!cat.is_default"
-                @click="catStartEdit(cat)"
-                class="p-1 text-gray-400 hover:text-blue-400 transition-colors"
-                :title="t('common.edit')"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  ></path>
-                </svg>
-              </button>
-              <button
-                v-if="!cat.is_default"
-                @click="catDelete(cat.id)"
-                class="p-1 text-gray-400 hover:text-red-400 transition-colors"
-                title="刪除"
-              >
-                <svg
-                  class="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                  ></path>
-                </svg>
+                ></span>
               </button>
             </div>
           </div>
-        </div>
 
-        <!-- Add/Edit Category Form -->
-        <div class="flex items-center gap-2">
-          <input
-            v-model="catForm.icon"
-            type="text"
-            placeholder="📁"
-            maxlength="2"
-            class="w-12 text-center bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-lg focus:outline-none focus:border-blue-500"
-          />
-          <input
-            v-model="catForm.name"
-            type="text"
-            :placeholder="catEditMode ? t('categories.editName', '編輯分類名稱') : t('categories.addName', '新增分類名稱')"
-            class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
-            @keyup.enter="catEditMode ? catSaveEdit() : catCreate()"
-          />
-          <button
-            v-if="catEditMode"
-            @click="catCancelEdit"
-            class="px-3 py-1.5 text-sm bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
-          >
-            {{ t('common.cancel') }}
-          </button>
-          <button
-            @click="catEditMode ? catSaveEdit() : catCreate()"
-            class="px-3 py-1.5 text-sm rounded-lg transition-colors"
-            :class="catEditMode ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-green-600 text-white hover:bg-green-500'"
-          >
-            {{ catEditMode ? t('common.save') : t('categories.add') }}
-          </button>
-        </div>
-      </div>
-
-      <!-- User Preferences Section (v0.7.5) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
-            ></path>
-          </svg>
-          {{ t('settings.preferences', '用戶偏好') }}
-        </h3>
-
-        <div class="space-y-3">
-          <!-- Auto Load More Toggle -->
-          <div
-            class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-4 h-4 text-purple-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  ></path>
-                </svg>
-              </div>
-              <div>
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.autoLoadMore', '自動載入更多') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.autoLoadMoreDesc', '滾動到底部時自動載入') }}
-                </div>
-              </div>
-            </div>
-            <button
-              @click="autoLoadMore = !autoLoadMore"
-              :class="autoLoadMore ? 'bg-purple-600' : 'bg-gray-600'"
-              class="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none"
+          <!-- Import Section (v1.1) -->
+          <div>
+            <h3
+              class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
             >
-              <span
-                :class="autoLoadMore ? 'translate-x-5' : 'translate-x-0.5'"
-                class="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200"
-              ></span>
-            </button>
-          </div>
-
-          <!-- Quick Add Default Category Setting (v0.8.8) -->
-          <div
-            class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-4 h-4 text-purple-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  ></path>
-                </svg>
-              </div>
-              <div>
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.quickAddDefault', '快速新增預設分類') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.quickAddDefaultDesc',
-                  '點擊「快速新增」按鈕時使用的預設分類') }}
-                </div>
-              </div>
-            </div>
-            <select
-              v-model="quickAddDefaultType"
-              class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-purple-500 focus:border-purple-500"
-            >
-              <option v-for="cat in categories" :key="cat.id" :value="cat.name">
-                {{ cat.icon }} {{ cat.name }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Image Save Mode Setting (v0.8.9) -->
-          <div
-            class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-green-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-4 h-4 text-green-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                  ></path>
-                </svg>
-              </div>
-              <div>
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.imageSaveMode', '圖片保存模式') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.imageSaveModeDesc', '貼上圖片時的保存方式') }}
-                </div>
-              </div>
-            </div>
-            <select
-              v-model="imageSaveMode"
-              class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="both">
-                {{ t('settings.imageSaveModeBoth', '原圖 + 縮圖') }}
-              </option>
-              <option value="thumbnail_only">
-                {{ t('settings.imageSaveModeThumbnail', '僅縮圖 (節省空間)') }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Card Open Mode Setting (v1.1.1) -->
-          <div
-            class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-cyan-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-4 h-4 text-cyan-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  ></path>
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  ></path>
-                </svg>
-              </div>
-              <div>
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.cardOpenMode', '卡片開啟模式') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.cardOpenModeDesc', '點擊卡片時的預設顯示模式') }}
-                </div>
-              </div>
-            </div>
-            <select
-              v-model="cardOpenMode"
-              class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-cyan-500 focus:border-cyan-500"
-            >
-              <option value="reading">
-                {{ t('settings.cardOpenModeReading', '閱讀模式 (純文字)') }}
-              </option>
-              <option value="preview">
-                {{ t('settings.cardOpenModePreview', '預覽模式 (Markdown)') }}
-              </option>
-              <option value="edit">
-                {{ t('settings.cardOpenModeEdit', '編輯模式') }}
-              </option>
-            </select>
-          </div>
-
-          <!-- Color Theme Setting (v0.8.9) -->
-          <div
-            class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  class="w-4 h-4 text-purple-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
-                  ></path>
-                </svg>
-              </div>
-              <div>
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('settings.colorTheme', '主題色彩') }}
-                </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('settings.colorThemeDesc', '選擇你喜歡的配色方案') }}
-                </div>
-              </div>
-            </div>
-            <div class="flex items-center gap-2">
-              <button
-                v-for="theme in availableThemes"
-                :key="theme.id"
-                @click="colorTheme = theme.id"
-                :title="currentLocale === 'en' ? theme.nameEn : theme.name"
-                class="w-6 h-6 rounded-full transition-all duration-200 border-2"
-                :class="colorTheme === theme.id ? 'border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105'"
-                :style="{ backgroundColor: theme.color }"
-              ></button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Orphan Image Cleanup Section (v0.8) -->
-      <div>
-        <h3
-          class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
-        >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            ></path>
-          </svg>
-          {{ t('orphanImages.title', '圖片清理') }}
-        </h3>
-
-        <div class="space-y-3">
-          <!-- Original Images Cleanup (v0.8.9) -->
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <p class="text-xs text-gray-500 mb-2">
-              {{ t('originalImages.title', '原圖清理') }}
-            </p>
-
-            <!-- Scan Originals Button -->
-            <button
-              @click="loadOriginalImagesStats"
-              :disabled="originalImagesLoading"
-              class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 bg-red-600/20 rounded-lg flex items-center justify-center"
-                >
-                  <svg
-                    v-if="!originalImagesLoading"
-                    class="w-4 h-4 text-red-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    ></path>
-                  </svg>
-                  <svg
-                    v-else
-                    class="animate-spin w-4 h-4 text-red-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    ></path>
-                  </svg>
-                </div>
-                <div class="text-left">
-                  <div class="text-sm font-medium text-gray-200">
-                    {{ t('originalImages.scanOriginals', '掃描可刪除原圖') }}
-                  </div>
-                  <div class="text-xs text-gray-500">
-                    {{ t('originalImages.scanDesc', '找出有縮圖備份的原圖檔案')
-                    }}
-                  </div>
-                </div>
-              </div>
               <svg
-                class="w-5 h-5 text-gray-500"
+                class="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -1031,206 +167,47 @@
                   stroke-linecap="round"
                   stroke-linejoin="round"
                   stroke-width="2"
-                  d="M9 5l7 7-7 7"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                 ></path>
               </svg>
-            </button>
-
-            <!-- Original Images Stats & Delete -->
-            <div
-              v-if="originalImagesStats.original_count > 0"
-              class="mt-3 bg-gray-800/50 rounded-lg p-3"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-300">
-                  {{ t('originalImages.found', '發現') }}
-                  <span class="text-red-400 font-medium"
-                    >{{ originalImagesStats.original_count }}</span
-                  >
-                  {{ t('originalImages.items', '個可刪除原圖') }}
-                  <span class="text-gray-500"
-                    >({{ originalImagesStats.original_size_mb }} MB)</span
-                  >
-                </span>
-              </div>
-              <p class="text-xs text-gray-500 mb-3">
-                {{ t('originalImages.warning',
-                '刪除後，筆記中的圖片路徑將自動改為縮圖，無法復原。') }}
-              </p>
+              {{ t('settings.import', '資料匯入') }}
+            </h3>
+            <div class="space-y-3">
+              <!-- Import Markdown -->
               <button
-                @click="handleDeleteAllOriginals"
-                :disabled="originalImagesDeleting"
-                class="w-full py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                @click="triggerImportFile"
+                :disabled="isImporting"
+                class="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 hover:border-purple-500 transition-all group"
               >
-                <svg
-                  v-if="originalImagesDeleting"
-                  class="animate-spin w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                {{ originalImagesDeleting ? t('common.deleting', '刪除中...') :
-                t('originalImages.deleteAll', '一鍵刪除所有原圖') }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Broken Images Fix (v1.8.9) -->
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <p class="text-xs text-gray-500 mb-2">
-              {{ t('brokenImages.title', '失效路徑修正') }}
-            </p>
-            <!-- Scan Broken Images Button -->
-            <button
-              @click="loadBrokenImages"
-              :disabled="brokenImagesLoading"
-              class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-            >
-              <div class="flex items-center gap-3">
-                <div
-                  class="w-8 h-8 bg-yellow-600/20 rounded-lg flex items-center justify-center"
-                >
-                  <svg
-                    v-if="!brokenImagesLoading"
-                    class="w-4 h-4 text-yellow-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 bg-purple-600/20 rounded-lg flex items-center justify-center"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                    ></path>
-                  </svg>
-                  <svg
-                    v-else
-                    class="animate-spin w-4 h-4 text-yellow-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      class="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
+                    <svg
+                      class="w-5 h-5 text-purple-400"
+                      fill="none"
                       stroke="currentColor"
-                      stroke-width="4"
-                    ></circle>
-                    <path
-                      class="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    ></path>
-                  </svg>
-                </div>
-                <div class="text-left">
-                  <div class="text-sm font-medium text-gray-200">
-                    {{ t('brokenImages.scanBroken', '掃描失效圖片路徑') }}
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                      ></path>
+                    </svg>
                   </div>
-                  <div class="text-xs text-gray-500">
-                    {{ t('brokenImages.scanDesc',
-                    '找出原圖已刪除但有縮圖可用的路徑') }}
+                  <div class="text-left">
+                    <div class="text-sm font-medium text-white">
+                      {{ t('settings.importMD', '匯入 Markdown') }}
+                    </div>
+                    <div class="text-xs text-gray-400">
+                      {{ t('settings.importMDDesc', '支援單檔或批量選擇 .md') }}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <svg
-                class="w-5 h-5 text-gray-500"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                ></path>
-              </svg>
-            </button>
-
-            <!-- Broken Images Stats & Fix -->
-            <div
-              v-if="brokenImagesStats.total_count > 0"
-              class="mt-3 bg-gray-800/50 rounded-lg p-3"
-            >
-              <div class="flex items-center justify-between mb-2">
-                <span class="text-sm text-gray-300">
-                  {{ t('brokenImages.found', '發現') }}
-                  <span class="text-yellow-400 font-medium"
-                    >{{ brokenImagesStats.total_count }}</span
-                  >
-                  {{ t('brokenImages.items', '個失效圖片路徑') }}
-                </span>
-              </div>
-              <p class="text-xs text-gray-500 mb-3">
-                {{ t('brokenImages.desc',
-                '這些圖片的原圖已不存在，但有縮圖可用。點擊修正後，筆記中的路徑將自動改為縮圖。')
-                }}
-              </p>
-              <button
-                @click="handleFixBrokenImages(refreshNotes)"
-                :disabled="brokenImagesFixing"
-                class="w-full py-2 text-sm bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
                 <svg
-                  v-if="brokenImagesFixing"
-                  class="animate-spin w-4 h-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    class="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    stroke-width="4"
-                  ></circle>
-                  <path
-                    class="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                  ></path>
-                </svg>
-                {{ brokenImagesFixing ? t('common.saving', '儲存中...') :
-                t('brokenImages.fixAll', '一鍵修正所有路徑') }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Orphan Images Cleanup -->
-          <div class="mt-4 pt-4 border-t border-gray-700">
-            <p class="text-xs text-gray-500 mb-2">
-              {{ t('orphanImages.subtitle', '孤兒圖片管理') }}
-            </p>
-          <!-- Scan Button -->
-          <button
-            @click="loadOrphanImages"
-            :disabled="orphanImagesLoading"
-            class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="w-8 h-8 bg-orange-600/20 rounded-lg flex items-center justify-center"
-              >
-                <svg
-                  v-if="!orphanImagesLoading"
-                  class="w-4 h-4 text-orange-400"
+                  class="w-5 h-5 text-gray-500 group-hover:text-purple-400 transition-colors"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -1239,12 +216,281 @@
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                    d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
                   ></path>
                 </svg>
+              </button>
+              <!-- Hidden file input -->
+              <input
+                ref="importFileInput"
+                type="file"
+                accept=".md"
+                multiple
+                @change="handleImportFile"
+                style="display: none"
+              />
+            </div>
+          </div>
+
+          <!-- Export Section -->
+          <div>
+            <h3
+              class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+                ></path>
+              </svg>
+              {{ t('settings.export', '資料匯出') }}
+            </h3>
+            <div class="space-y-3">
+              <!-- Export JSON -->
+              <button
+                @click="exportJSON"
+                :disabled="isExporting"
+                class="w-full flex items-center justify-between p-4 bg-gray-800 hover:bg-gray-700 rounded-xl border border-gray-700 hover:border-blue-500 transition-all group"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 bg-blue-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-5 h-5 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="text-left">
+                    <div class="font-medium text-gray-100">
+                      {{ t('settings.exportJSON', '匯出 JSON') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.exportJSONDesc',
+                      '可讀格式，適合資料備份與轉移') }}
+                    </div>
+                  </div>
+                </div>
                 <svg
-                  v-else
-                  class="animate-spin w-4 h-4 text-orange-400"
+                  class="w-5 h-5 text-gray-500 group-hover:text-blue-400 transition-colors"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- Database Maintenance Section (v1.1) -->
+          <div>
+            <h3
+              class="text-sm font-medium text-theme-secondary mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+                ></path>
+              </svg>
+              {{ t('settings.dbMaintenance', '資料庫維護') }}
+            </h3>
+            <div class="space-y-3">
+              <!-- Vacuum Database Button -->
+              <button
+                @click="vacuumDatabase"
+                :disabled="vacuumLoading"
+                class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-blue-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      v-if="!vacuumLoading"
+                      class="w-4 h-4 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                      ></path>
+                    </svg>
+                    <svg
+                      v-else
+                      class="animate-spin w-4 h-4 text-blue-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="text-left">
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.vacuum', '整理資料庫') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.vacuumDesc', '清理碎片空間，優化效能') }}
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <!-- Clear History Button -->
+              <button
+                @click="clearHistory"
+                :disabled="clearingHistory"
+                class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-red-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      v-if="!clearingHistory"
+                      class="w-4 h-4 text-red-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      ></path>
+                    </svg>
+                    <svg
+                      v-else
+                      class="animate-spin w-4 h-4 text-red-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div class="text-left">
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.clearHistory', '清空歷史版本') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.clearHistoryDesc',
+                      '刪除所有筆記的歷史版本記錄') }}
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <!-- VACUUM Result -->
+              <div v-if="vacuumResult" class="bg-gray-800/50 rounded-lg p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm text-gray-300">
+                    {{ t('settings.vacuumComplete', '整理完成') }}
+                  </span>
+                  <span class="text-xs text-cyan-400 font-medium">
+                    {{ t('settings.freed', '釋放') }} {{ vacuumResult.freed_mb
+                    }} MB
+                  </span>
+                </div>
+                <div class="text-xs text-gray-500">
+                  {{ vacuumResult.size_before_mb }} MB → {{
+                  vacuumResult.size_after_mb }} MB
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- End Left Column -->
+
+        <!-- Vertical Divider -->
+        <div class="hidden md:block bg-gray-700"></div>
+
+        <!-- Right Column -->
+        <div class="space-y-6">
+          <!-- Category Manager Section (v0.6) -->
+          <div>
+            <h3
+              class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+                ></path>
+              </svg>
+              {{ t('settings.categories') }}
+            </h3>
+
+            <!-- Category List -->
+            <div class="space-y-2 max-h-48 overflow-y-auto mb-3">
+              <div
+                v-if="categoriesLoading"
+                class="text-center py-4 text-gray-500"
+              >
+                <svg
+                  class="animate-spin h-5 w-5 mx-auto"
                   fill="none"
                   viewBox="0 0 24 24"
                 >
@@ -1263,72 +509,488 @@
                   ></path>
                 </svg>
               </div>
-              <div class="text-left">
-                <div class="text-sm font-medium text-gray-200">
-                  {{ t('orphanImages.scan', '掃描孤兒圖片') }}
+              <div
+                v-else
+                v-for="cat in categories"
+                :key="cat.id"
+                class="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg border border-gray-700 group"
+              >
+                <div class="flex items-center gap-2">
+                  <span class="text-lg">{{ cat.icon }}</span>
+                  <span class="text-sm text-gray-200">{{ cat.name }}</span>
+                  <span class="text-xs text-gray-500">({{ cat.count }})</span>
+
+                  <!-- New Note Default Toggler (v0.9.0) -->
+                  <button
+                    @click="setNewNoteDefault(cat.name)"
+                    class="ml-1 transition-colors focus:outline-none"
+                    :class="newNoteDefaultType === cat.name ? 'text-yellow-400 opacity-100' : 'text-gray-600 hover:text-yellow-400 opacity-0 group-hover:opacity-100'"
+                    :title="t('settings.defaultNewCard', '設為「新增卡片」預設分類')"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                      />
+                    </svg>
+                  </button>
+
+                  <!-- User Default Label (Follows the star) -->
+                  <span
+                    v-if="newNoteDefaultType === cat.name"
+                    class="px-1.5 py-0.5 text-xs bg-yellow-600/20 text-yellow-500 rounded ml-2"
+                    >{{ t('categories.default', '預設') }}</span
+                  >
+
+                  <!-- System Default Lock Icon -->
+                  <span
+                    v-if="cat.is_default"
+                    class="ml-2 text-gray-600"
+                    :title="t('messages.cannotDeleteDefault', '無法刪除預設分類')"
+                  >
+                    <svg
+                      class="w-3 h-3"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                      ></path>
+                    </svg>
+                  </span>
                 </div>
-                <div class="text-xs text-gray-500">
-                  {{ t('orphanImages.description', '找出未被引用的圖片檔案') }}
+                <div
+                  class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <button
+                    v-if="!cat.is_default"
+                    @click="catStartEdit(cat)"
+                    class="p-1 text-gray-400 hover:text-blue-400 transition-colors"
+                    :title="t('common.edit')"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                      ></path>
+                    </svg>
+                  </button>
+                  <button
+                    v-if="!cat.is_default"
+                    @click="catDelete(cat.id)"
+                    class="p-1 text-gray-400 hover:text-red-400 transition-colors"
+                    title="刪除"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      ></path>
+                    </svg>
+                  </button>
                 </div>
               </div>
             </div>
-            <svg
-              class="w-5 h-5 text-gray-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M9 5l7 7-7 7"
-              ></path>
-            </svg>
-          </button>
 
-          <!-- Orphan Images List -->
-          <div
-            v-if="orphanImages.length > 0"
-            class="bg-gray-800/50 rounded-lg p-3"
-          >
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-sm text-gray-300">
-                {{ t('orphanImages.found', '發現') }}
-                <span class="text-orange-400 font-medium"
-                  >{{ orphanImages.length }}</span
-                >
-                {{ t('orphanImages.items', '個孤兒圖片') }}
-                <span class="text-gray-500">({{ orphanTotalSize }} MB)</span>
-              </span>
+            <!-- Add/Edit Category Form -->
+            <div class="flex items-center gap-2">
+              <input
+                v-model="catForm.icon"
+                type="text"
+                placeholder="📁"
+                maxlength="2"
+                class="w-12 text-center bg-gray-800 border border-gray-700 rounded-lg px-2 py-1.5 text-lg focus:outline-none focus:border-blue-500"
+              />
+              <input
+                v-model="catForm.name"
+                type="text"
+                :placeholder="catEditMode ? t('categories.editName', '編輯分類名稱') : t('categories.addName', '新增分類名稱')"
+                class="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
+                @keyup.enter="catEditMode ? catSaveEdit() : catCreate()"
+              />
               <button
-                @click="deleteAllOrphanImages().then(count => count && alert(t('messages.deletedImages', '已刪除 {count} 個圖片').replace('{count}', count)))"
-                :disabled="orphanDeleting"
-                class="px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                v-if="catEditMode"
+                @click="catCancelEdit"
+                class="px-3 py-1.5 text-sm bg-gray-700 text-gray-300 rounded-lg hover:bg-gray-600 transition-colors"
               >
-                {{ orphanDeleting ? t('common.deleting', '刪除中...') :
-                t('orphanImages.deleteAll') }}
+                {{ t('common.cancel') }}
+              </button>
+              <button
+                @click="catEditMode ? catSaveEdit() : catCreate()"
+                class="px-3 py-1.5 text-sm rounded-lg transition-colors"
+                :class="catEditMode ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-green-600 text-white hover:bg-green-500'"
+              >
+                {{ catEditMode ? t('common.save') : t('categories.add') }}
               </button>
             </div>
-            <div class="max-h-32 overflow-y-auto space-y-1">
-              <div
-                v-for="img in orphanImages"
-                :key="img.filename"
-                class="flex items-center justify-between text-xs p-2 bg-gray-900/50 rounded"
+          </div>
+
+          <!-- User Preferences Section (v0.7.5) -->
+          <div>
+            <h3
+              class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <span class="text-gray-400 truncate flex-1 mr-2"
-                  >{{ img.filename }}</span
-                >
-                <span class="text-gray-500 mr-2"
-                  >{{ (img.size / 1024).toFixed(1) }} KB</span
-                >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"
+                ></path>
+              </svg>
+              {{ t('settings.preferences', '用戶偏好') }}
+            </h3>
+
+            <div class="space-y-3">
+              <!-- Auto Load More Toggle -->
+              <div
+                class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-4 h-4 text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M19 9l-7 7-7-7"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.autoLoadMore', '自動載入更多') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.autoLoadMoreDesc', '滾動到底部時自動載入')
+                      }}
+                    </div>
+                  </div>
+                </div>
                 <button
-                  @click="deleteOrphanImages([img.filename])"
-                  class="text-red-400 hover:text-red-300"
-                  title="刪除"
+                  @click="autoLoadMore = !autoLoadMore"
+                  :class="autoLoadMore ? 'bg-purple-600' : 'bg-gray-600'"
+                  class="relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none"
                 >
+                  <span
+                    :class="autoLoadMore ? 'translate-x-5' : 'translate-x-0.5'"
+                    class="inline-block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200"
+                  ></span>
+                </button>
+              </div>
+
+              <!-- Quick Add Default Category Setting (v0.8.8) -->
+              <div
+                class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-4 h-4 text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.quickAddDefault', '快速新增預設分類') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.quickAddDefaultDesc',
+                      '點擊「快速新增」按鈕時使用的預設分類') }}
+                    </div>
+                  </div>
+                </div>
+                <select
+                  v-model="quickAddDefaultType"
+                  class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-purple-500 focus:border-purple-500"
+                >
+                  <option
+                    v-for="cat in categories"
+                    :key="cat.id"
+                    :value="cat.name"
+                  >
+                    {{ cat.icon }} {{ cat.name }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Image Save Mode Setting (v0.8.9) -->
+              <div
+                class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-green-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-4 h-4 text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.imageSaveMode', '圖片保存模式') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.imageSaveModeDesc', '貼上圖片時的保存方式')
+                      }}
+                    </div>
+                  </div>
+                </div>
+                <select
+                  v-model="imageSaveMode"
+                  class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-green-500 focus:border-green-500"
+                >
+                  <option value="both">
+                    {{ t('settings.imageSaveModeBoth', '原圖 + 縮圖') }}
+                  </option>
+                  <option value="thumbnail_only">
+                    {{ t('settings.imageSaveModeThumbnail', '僅縮圖 (節省空間)')
+                    }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Card Open Mode Setting (v1.1.1) -->
+              <div
+                class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-cyan-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-4 h-4 text-cyan-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      ></path>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.cardOpenMode', '卡片開啟模式') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.cardOpenModeDesc',
+                      '點擊卡片時的預設顯示模式') }}
+                    </div>
+                  </div>
+                </div>
+                <select
+                  v-model="cardOpenMode"
+                  class="bg-gray-700 border border-gray-600 text-gray-200 text-sm rounded-lg px-3 py-1.5 focus:ring-cyan-500 focus:border-cyan-500"
+                >
+                  <option value="reading">
+                    {{ t('settings.cardOpenModeReading', '閱讀模式 (純文字)') }}
+                  </option>
+                  <option value="preview">
+                    {{ t('settings.cardOpenModePreview', '預覽模式 (Markdown)')
+                    }}
+                  </option>
+                  <option value="edit">
+                    {{ t('settings.cardOpenModeEdit', '編輯模式') }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Color Theme Setting (v0.8.9) -->
+              <div
+                class="flex items-center justify-between p-3 bg-gray-800/50 rounded-lg"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-8 h-8 bg-purple-600/20 rounded-lg flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-4 h-4 text-purple-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div>
+                    <div class="text-sm font-medium text-gray-200">
+                      {{ t('settings.colorTheme', '主題色彩') }}
+                    </div>
+                    <div class="text-xs text-gray-500">
+                      {{ t('settings.colorThemeDesc', '選擇你喜歡的配色方案') }}
+                    </div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    v-for="theme in availableThemes"
+                    :key="theme.id"
+                    @click="colorTheme = theme.id"
+                    :title="currentLocale === 'en' ? theme.nameEn : theme.name"
+                    class="w-6 h-6 rounded-full transition-all duration-200 border-2"
+                    :class="colorTheme === theme.id ? 'border-white scale-110 shadow-lg' : 'border-transparent hover:scale-105'"
+                    :style="{ backgroundColor: theme.color }"
+                  ></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Orphan Image Cleanup Section (v0.8) -->
+          <div>
+            <h3
+              class="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                ></path>
+              </svg>
+              {{ t('orphanImages.title', '圖片清理') }}
+            </h3>
+
+            <div class="space-y-3">
+              <!-- Original Images Cleanup (v0.8.9) -->
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-500 mb-2">
+                  {{ t('originalImages.title', '原圖清理') }}
+                </p>
+
+                <!-- Scan Originals Button -->
+                <button
+                  @click="loadOriginalImagesStats"
+                  :disabled="originalImagesLoading"
+                  class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-8 h-8 bg-red-600/20 rounded-lg flex items-center justify-center"
+                    >
+                      <svg
+                        v-if="!originalImagesLoading"
+                        class="w-4 h-4 text-red-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        class="animate-spin w-4 h-4 text-red-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div class="text-left">
+                      <div class="text-sm font-medium text-gray-200">
+                        {{ t('originalImages.scanOriginals', '掃描可刪除原圖')
+                        }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        {{ t('originalImages.scanDesc',
+                        '找出有縮圖備份的原圖檔案') }}
+                      </div>
+                    </div>
+                  </div>
                   <svg
-                    class="w-4 h-4"
+                    class="w-5 h-5 text-gray-500"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -1337,38 +999,345 @@
                       stroke-linecap="round"
                       stroke-linejoin="round"
                       stroke-width="2"
-                      d="M6 18L18 6M6 6l12 12"
+                      d="M9 5l7 7-7 7"
                     ></path>
                   </svg>
                 </button>
+
+                <!-- Original Images Stats & Delete -->
+                <div
+                  v-if="originalImagesStats.original_count > 0"
+                  class="mt-3 bg-gray-800/50 rounded-lg p-3"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-300">
+                      {{ t('originalImages.found', '發現') }}
+                      <span class="text-red-400 font-medium"
+                        >{{ originalImagesStats.original_count }}</span
+                      >
+                      {{ t('originalImages.items', '個可刪除原圖') }}
+                      <span class="text-gray-500"
+                        >({{ originalImagesStats.original_size_mb }} MB)</span
+                      >
+                    </span>
+                  </div>
+                  <p class="text-xs text-gray-500 mb-3">
+                    {{ t('originalImages.warning',
+                    '刪除後，筆記中的圖片路徑將自動改為縮圖，無法復原。') }}
+                  </p>
+                  <button
+                    @click="handleDeleteAllOriginals"
+                    :disabled="originalImagesDeleting"
+                    class="w-full py-2 text-sm bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <svg
+                      v-if="originalImagesDeleting"
+                      class="animate-spin w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    {{ originalImagesDeleting ? t('common.deleting',
+                    '刪除中...') : t('originalImages.deleteAll',
+                    '一鍵刪除所有原圖') }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Broken Images Fix (v1.8.9) -->
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-500 mb-2">
+                  {{ t('brokenImages.title', '失效路徑修正') }}
+                </p>
+                <!-- Scan Broken Images Button -->
+                <button
+                  @click="loadBrokenImages"
+                  :disabled="brokenImagesLoading"
+                  class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-8 h-8 bg-yellow-600/20 rounded-lg flex items-center justify-center"
+                    >
+                      <svg
+                        v-if="!brokenImagesLoading"
+                        class="w-4 h-4 text-yellow-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        class="animate-spin w-4 h-4 text-yellow-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div class="text-left">
+                      <div class="text-sm font-medium text-gray-200">
+                        {{ t('brokenImages.scanBroken', '掃描失效圖片路徑') }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        {{ t('brokenImages.scanDesc',
+                        '找出原圖已刪除但有縮圖可用的路徑') }}
+                      </div>
+                    </div>
+                  </div>
+                  <svg
+                    class="w-5 h-5 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
+                  </svg>
+                </button>
+
+                <!-- Broken Images Stats & Fix -->
+                <div
+                  v-if="brokenImagesStats.total_count > 0"
+                  class="mt-3 bg-gray-800/50 rounded-lg p-3"
+                >
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm text-gray-300">
+                      {{ t('brokenImages.found', '發現') }}
+                      <span class="text-yellow-400 font-medium"
+                        >{{ brokenImagesStats.total_count }}</span
+                      >
+                      {{ t('brokenImages.items', '個失效圖片路徑') }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-gray-500 mb-3">
+                    {{ t('brokenImages.desc',
+                    '這些圖片的原圖已不存在，但有縮圖可用。點擊修正後，筆記中的路徑將自動改為縮圖。')
+                    }}
+                  </p>
+                  <button
+                    @click="handleFixBrokenImages(refreshNotes)"
+                    :disabled="brokenImagesFixing"
+                    class="w-full py-2 text-sm bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    <svg
+                      v-if="brokenImagesFixing"
+                      class="animate-spin w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        class="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        stroke-width="4"
+                      ></circle>
+                      <path
+                        class="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      ></path>
+                    </svg>
+                    {{ brokenImagesFixing ? t('common.saving', '儲存中...') :
+                    t('brokenImages.fixAll', '一鍵修正所有路徑') }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Orphan Images Cleanup -->
+              <div class="mt-4 pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-500 mb-2">
+                  {{ t('orphanImages.subtitle', '孤兒圖片管理') }}
+                </p>
+                <!-- Scan Button -->
+                <button
+                  @click="loadOrphanImages"
+                  :disabled="orphanImagesLoading"
+                  class="w-full flex items-center justify-between p-3 bg-gray-800/50 rounded-lg hover:bg-gray-700/50 transition-colors"
+                >
+                  <div class="flex items-center gap-3">
+                    <div
+                      class="w-8 h-8 bg-orange-600/20 rounded-lg flex items-center justify-center"
+                    >
+                      <svg
+                        v-if="!orphanImagesLoading"
+                        class="w-4 h-4 text-orange-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        ></path>
+                      </svg>
+                      <svg
+                        v-else
+                        class="animate-spin w-4 h-4 text-orange-400"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          class="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          stroke-width="4"
+                        ></circle>
+                        <path
+                          class="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                        ></path>
+                      </svg>
+                    </div>
+                    <div class="text-left">
+                      <div class="text-sm font-medium text-gray-200">
+                        {{ t('orphanImages.scan', '掃描孤兒圖片') }}
+                      </div>
+                      <div class="text-xs text-gray-500">
+                        {{ t('orphanImages.description',
+                        '找出未被引用的圖片檔案') }}
+                      </div>
+                    </div>
+                  </div>
+                  <svg
+                    class="w-5 h-5 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9 5l7 7-7 7"
+                    ></path>
+                  </svg>
+                </button>
+
+                <!-- Orphan Images List -->
+                <div
+                  v-if="orphanImages.length > 0"
+                  class="bg-gray-800/50 rounded-lg p-3"
+                >
+                  <div class="flex items-center justify-between mb-3">
+                    <span class="text-sm text-gray-300">
+                      {{ t('orphanImages.found', '發現') }}
+                      <span class="text-orange-400 font-medium"
+                        >{{ orphanImages.length }}</span
+                      >
+                      {{ t('orphanImages.items', '個孤兒圖片') }}
+                      <span class="text-gray-500"
+                        >({{ orphanTotalSize }} MB)</span
+                      >
+                    </span>
+                    <button
+                      @click="deleteAllOrphanImages().then(count => count && alert(t('messages.deletedImages', '已刪除 {count} 個圖片').replace('{count}', count)))"
+                      :disabled="orphanDeleting"
+                      class="px-3 py-1 text-xs bg-red-600 hover:bg-red-500 text-white rounded-lg transition-colors disabled:opacity-50"
+                    >
+                      {{ orphanDeleting ? t('common.deleting', '刪除中...') :
+                      t('orphanImages.deleteAll') }}
+                    </button>
+                  </div>
+                  <div class="max-h-32 overflow-y-auto space-y-1">
+                    <div
+                      v-for="img in orphanImages"
+                      :key="img.filename"
+                      class="flex items-center justify-between text-xs p-2 bg-gray-900/50 rounded"
+                    >
+                      <span class="text-gray-400 truncate flex-1 mr-2"
+                        >{{ img.filename }}</span
+                      >
+                      <span class="text-gray-500 mr-2"
+                        >{{ (img.size / 1024).toFixed(1) }} KB</span
+                      >
+                      <button
+                        @click="deleteOrphanImages([img.filename])"
+                        class="text-red-400 hover:text-red-300"
+                        title="刪除"
+                      >
+                        <svg
+                          class="w-4 h-4"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                          ></path>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- No Orphan Images -->
+                <div
+                  v-else-if="orphanImages.length === 0 && !orphanImagesLoading && orphanTotalSize === 0"
+                  class="text-center py-4 text-gray-500 text-sm"
+                >
+                  {{ t('orphanImages.clickToScan',
+                  '點擊「掃描孤兒圖片」開始檢查') }}
+                </div>
               </div>
             </div>
           </div>
-
-          <!-- No Orphan Images -->
-          <div
-            v-else-if="orphanImages.length === 0 && !orphanImagesLoading && orphanTotalSize === 0"
-            class="text-center py-4 text-gray-500 text-sm"
-          >
-            {{ t('orphanImages.clickToScan', '點擊「掃描孤兒圖片」開始檢查') }}
-          </div>
-
-
-
-
+          <!-- End Right Column -->
         </div>
+        <!-- End Grid -->
+
+        <!-- Version Info -->
+        <div
+          class="text-center text-xs text-gray-600 pt-2 border-t border-gray-800"
+        >
+          Prism v1.1 · {{ t('settings.localData', '資料儲存於本機') }}
         </div>
-      </div>
-      <!-- End Right Column -->
-
-      </div>
-      <!-- End Grid -->
-
-      <!-- Version Info -->
-      <div
-        class="text-center text-xs text-gray-600 pt-2 border-t border-gray-800"
-      >
-        Prism v1.1 · {{ t('settings.localData', '資料儲存於本機') }}
       </div>
     </div>
   </div>
