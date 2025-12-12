@@ -77,7 +77,24 @@ python app.py
 ## 📝 提交變更 (Submitting Changes)
 
 - 請保持 Commit 訊息簡潔明確 (例如: `fix: text contrast issue` 或 `feat: auto-title generation`)。
-- 重大變更請先更新 `TODO.md` 或 `implementation_plan.md`。
+- 重大變更請先更新 `docs/TODO.md` 或 `implementation_plan.md`。
+
+## 📦 打包發布 (Packaging)
+
+發布新版本時，執行以下腳本：
+
+| 腳本                        | 產出                              | 說明                          |
+| --------------------------- | --------------------------------- | ----------------------------- |
+| `scripts\pack.bat`          | `Prism_v*_*.zip` (~8MB)           | 輕量版，用戶需先安裝 Python   |
+| `scripts\pack_portable.bat` | `Prism_v*_Portable_*.zip` (~80MB) | 完整版，內嵌 Python，解壓即用 |
+
+### 版本號更新
+
+發布前請更新以下檔案中的版本號：
+
+- `scripts/pack.bat` 和 `scripts/pack_portable.bat` 中的 `VERSION`
+- `start.bat` 標題
+- `README.md` 徽章
 
 ## 🤝 行為準則 (Code of Conduct)
 

@@ -31,6 +31,7 @@ xcopy /E /I /Y "templates" "dist\%ARCHIVE_NAME%\templates" >nul
 xcopy /E /I /Y "docs" "dist\%ARCHIVE_NAME%\docs" >nul
 xcopy /E /I /Y "migrations" "dist\%ARCHIVE_NAME%\migrations" >nul
 xcopy /E /I /Y "scripts" "dist\%ARCHIVE_NAME%\scripts" >nul
+xcopy /E /I /Y "wheels" "dist\%ARCHIVE_NAME%\wheels" >nul
 
 REM 複製根目錄檔案
 copy "app.py" "dist\%ARCHIVE_NAME%\" >nul

@@ -1,5 +1,7 @@
 @echo off
+setlocal
 chcp 65001 >nul
+title Prism Server Launcher
 REM Prism - 快速啟動腳本 (含首次引導)
 
 echo ================================================
@@ -51,23 +53,47 @@ set OPEN_BROWSER=0
 goto :START_SERVER
 
 :START_SERVER
-REM ===== 檢查 Python 是否已安裝 =====
+REM ===== 偵測 Python (優先 py 啟動器，更穩定) =====
 echo [1/4] 檢查 Python...
-where python >nul 2>&1
-if %errorlevel% neq 0 (
-    echo.
-    echo [警告] 未偵測到 Python！
-    echo.
-    echo 請選擇安裝方式：
-    echo   [1] 自動安裝 (使用 winget，需要 Windows 10/11)
-    echo   [2] 手動下載 (開啟 Python 官網)
-    echo   [3] 取消
-    echo.
-    choice /C 123 /N /M "請輸入選項 (1, 2, 或 3): "
-    if errorlevel 3 goto :CANCEL
-    if errorlevel 2 goto :MANUAL_PYTHON
-    if errorlevel 1 goto :AUTO_PYTHON
+set PYTHON_CMD=
+
+REM 優先嘗試 py 啟動器 (能更好處理多版本和 MS Store 版)
+where py >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=py
+    goto :PYTHON_FOUND
 )
+
+REM 嘗試 python
+where python >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=python
+    goto :PYTHON_FOUND
+)
+
+REM 嘗試 python3
+where python3 >nul 2>&1
+if %errorlevel% equ 0 (
+    set PYTHON_CMD=python3
+    goto :PYTHON_FOUND
+)
+
+REM 都找不到
+echo.
+echo [警告] 未偵測到 Python！
+echo.
+echo 請選擇安裝方式：
+echo   [1] 自動安裝 (使用 winget，需要 Windows 10/11)
+echo   [2] 手動下載 (開啟 Python 官網)
+echo   [3] 取消
+echo.
+choice /C 123 /N /M "請輸入選項 (1, 2, 或 3): "
+if errorlevel 3 goto :CANCEL
+if errorlevel 2 goto :MANUAL_PYTHON
+if errorlevel 1 goto :AUTO_PYTHON
+
+:PYTHON_FOUND
+echo 找到 Python: %PYTHON_CMD%
 goto :CHECK_FLASK
 
 :AUTO_PYTHON
@@ -100,22 +126,44 @@ pause
 exit /b 0
 
 :CHECK_FLASK
-REM ===== 檢查 Flask 是否已安裝 =====
+REM ===== 檢查依賴 (Flask + Pillow) =====
 echo [2/4] 檢查依賴...
-python -c "import flask" 2>nul
+%PYTHON_CMD% -c "import flask; import PIL" 2>nul
 if %errorlevel% neq 0 (
-    echo Flask 未安裝，正在自動安裝依賴...
-    pip install -r requirements.txt
+    echo 首次啟動，正在安裝依賴...
+    
+    REM 策略 A: 優先使用本地離線包 (wheels/)
+    if exist "wheels\*.whl" (
+        echo 發現本地離線包，優先安裝...
+        %PYTHON_CMD% -m pip install --user --no-index --find-links=wheels flask pillow 2>nul
+        if %errorlevel% equ 0 (
+            echo 離線安裝成功！
+            goto :DEPS_OK
+        )
+        echo 離線安裝失敗，嘗試線上安裝...
+    )
+    
+    REM 策略 B: 線上安裝 (--user 避開權限問題)
+    echo 線上安裝依賴...
+    %PYTHON_CMD% -m pip install --user -r requirements.txt
     if %errorlevel% neq 0 (
         echo.
-        echo [錯誤] 安裝失敗！請確認 Python 已正確安裝。
+        echo [錯誤] 依賴安裝失敗！
+        echo 可能原因：網路問題 / Python 版本問題
         pause
         exit /b 1
     )
-    echo 依賴安裝完成！
+    
+    REM 嘗試單獨安裝 Pillow (縮圖功能)
+    %PYTHON_CMD% -c "import PIL" 2>nul
+    if %errorlevel% neq 0 (
+        echo [提示] Pillow 安裝失敗，縮圖功能將停用。
+    )
 ) else (
     echo 依賴已就緒
 )
+
+:DEPS_OK
 
 REM ===== 檢查端口 =====
 echo [3/4] 檢查 5000 端口...
@@ -148,7 +196,7 @@ echo  伺服器已啟動！按 Ctrl+C 停止
 echo ================================================
 echo.
 
-python app.py
+%PYTHON_CMD% app.py
 
 echo.
 echo 伺服器已停止
