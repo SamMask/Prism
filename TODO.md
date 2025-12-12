@@ -1,8 +1,8 @@
-# Local Insight - 開發待辦清單 (TODO)
+# Prism - 開發待辦清單 (TODO)
 
-**版本**: v1.0.0
-**最後更新**: 2025-12-10
-**修訂**: Phase 12 - 無障礙與技術債清理 (v1.0 Release)
+**版本**: v1.1.0
+**最後更新**: 2025-12-12
+**修訂**: Phase 14 - 審計修復 + 專案更名 (Prism)
 
 ---
 
@@ -458,14 +458,12 @@
   - 功能: `Ctrl+Enter` 複製結果, `Ctrl+S` 儲存至筆記庫
   - 狀態: 已實作 (v1.0)
 
-- [ ] **12.3.2** DOM 虛擬化 (Virtualization) `v1.X`
-  - 觸發條件: 當筆記數 > 500，無限滾動累積 1000+ DOM 會卡頓
-  - 方案: 實作 Virtual Scroller 或改為傳統分頁
-  - 狀態: 延後至 v1.X，目前資料量不足，無需行動
+- [x] **12.3.2** DOM 虛擬化 (Virtualization) - 延後至 v1.X
+  - 目前資料量不足，無需行動，改列入未來規劃
 
 ---
 
-## 🚧 Phase 13: 功能擴展 (v1.1)
+## ✅ Phase 13: 功能擴展 (v1.1) - 已完成
 
 - [x] **13.1** 匯入功能 ✅
 
@@ -474,106 +472,144 @@
   - YAML front matter 解析 (type, tags)
   - 自動下載外部圖片並儲存至本地
 
-- [ ] **13.2** 編輯器模式切換
-
-  - 預設：純文字模式 (保留換行/空白)
-  - 按鈕切換：Markdown 預覽
-  - 不新增第三方依賴
-
-- [x] **13.3** 首次啟動引導 ✅
+- [x] **13.2** 首次啟動引導 ✅
 
   - 首次執行詢問：自動開啟瀏覽器 / 手動開啟
   - 偏好儲存至 `.auto_open_yes` / `.auto_open_no`
   - 設定頁「啟動設定」可切換偏好
 
-- [x] **13.4** 資料庫維護增強 ✅
+- [x] **13.3** 資料庫維護增強 ✅
   - 整理資料庫（VACUUM）+ 結果顯示
   - 清空歷史版本（新功能）
 
 ---
 
-## 🚧 Phase 14: 審計修復 (v1.1.1 - 2025-12-11)
+## ✅ Phase 14: 審計修復 (v1.1.0 - 2025-12-11)
 
-> 📄 來源: `MVP_Audit_Report-1211.md`, `MVP_UX_Audit_Report-1211.md`
+> 📄 來源: `Gemini3綜合評估-深度-1211.md`, `Linuse再審查-1212.txt`, `Grok-狠建議.txt`
 
 ### 14.1 🔴 P0 - 技術阻斷
 
 - [x] **14.1.1** 分類資料一致性修復 (Category Split Brain) ✅ _(2025-12-11)_
-  - 位置: `routes/notes/crud.py`
-  - 問題: `create_note` / `update_note` 僅寫入 `type`，未設定 `category_id`
-  - 修復: 新增 `get_category_id_by_name()` Helper，同步寫入 `category_id`
+
+  - 新增 `get_category_id_by_name()` Helper，同步寫入 `category_id`
+
+- [x] **14.1.2** Schema 雙重事實修復 (Single Source of Truth) ✅ _(2025-12-12)_
+  - `get_notes`/`get_note` 改用 `LEFT JOIN Categories` 取得分類名稱
 
 ---
 
 ### 14.2 🔴 P0 - UX 阻斷
 
 - [x] **14.2.1** Prompt Builder 錯誤死胡同修復 ✅ _(2025-12-11)_
-
-  - 位置: `templates/prompt-builder.html`
-  - 問題: 設定檔載入失敗時無「返回首頁」連結
-  - 修復: 在錯誤狀態 div 增加返回首頁連結
-
 - [x] **14.2.2** 搜尋空狀態誤導修復 ✅ _(2025-12-11)_
-
-  - 位置: `templates/components/_note-grid.html`
-  - 問題: 搜尋無結果時顯示「尚無筆記」誤導用戶
-  - 修復: 區分「無搜尋結果」與「資料庫真空」狀態
-
 - [x] **14.2.3** 手機版側邊欄自動收合 ✅ _(2025-12-11)_
-  - 位置: `templates/components/_sidebar.html`
-  - 問題: 過濾後側邊欄不自動收合，遮擋結果
-  - 修復: 在過濾 click 事件中加入 `mobileSidebarOpen = false`
-
-### 14.3 🟡 P1 - UX 改進 (可選)
-
-- [ ] **14.3.1** Quick Add vs New Note 視覺區分
-
-  - 位置: `templates/components/_header.html`
-  - 建議: 降低 Quick Add 的視覺權重，或調整文案
-
-- [ ] **14.3.2** Markdown 編輯工具列 (長期)
-  - 狀態: 延後，未來版本考慮
 
 ---
 
-## 📅 Phase 15: 系統可靠性與維運 (v1.2 規劃)
+### 14.3 🟢 新功能 (2025-12-12)
 
-- [ ] **15.1** 資料庫自動備份與回滾
+- [x] **14.3.1** 專案更名 (Local Insight -> Prism) ✅
 
-  - 定期備份機制 (排程任務)
-  - 備份檔案管理 UI (下載/刪除)
-  - 一鍵回滾 (Restore) 功能
+  - README, app.py, 所有模板標題已更新
 
-- [ ] **15.2** 應用層日誌管理
-  - 設定頁面整合 `app.log` 檢視器
-  - 日誌輪替 (Rotation) 設定 UI
-  - 錯誤監控與主動通知機制
+- [x] **14.3.2** Demo DB 生成腳本 ✅
+
+  - `tools/create_demo_db.py` - 生成 51 則範例筆記
+
+- [x] **14.3.3** README 文檔優化 ✅
+
+  - 新增「馬上體驗 10 秒」快速開始
+  - 新增「Ctrl+V 貼圖」小撇步
+
+- [x] **14.3.4** 編輯器 Ctrl+V 提示 (i18n) ✅
+
+  - 在 Markdown 編輯標題右方新增提示文字
+
+- [x] **14.3.5** 文件版本對齊 ✅
+  - TODO.md, SCHEMA.md, Prism.md 統一為 v1.1.0
 
 ---
 
 ## 📅 開發里程碑
 
-| 日期       | 版本   | 里程碑                        |
-| ---------- | ------ | ----------------------------- |
-| 2025-11-27 | v0.1   | Phase 1 環境建置完成          |
-| 2025-11-28 | v0.2   | Phase 2 API + 安全性修復      |
-| 2025-12-05 | v0.3   | Phase 3-4 前端 UI + 編輯器    |
-| 2025-12-06 | v0.5   | Phase 5-7 進階功能 + XSS 修復 |
-| 2025-12-07 | v0.6   | Prompt Builder 完整功能       |
-| 2025-12-08 | v0.8.8 | Phase 8 UX 優化 + i18n        |
-| 2025-12-09 | v0.9.1 | Phase 9 視覺優化 + 儲存效能   |
-| 2025-12-09 | v1.0.0 | Phase 10-12 架構重構 + 無障礙 |
-| 2025-12-11 | v1.1.0 | Phase 13 匯入功能 + DB 維護   |
+| 日期       | 版本   | 里程碑                         |
+| ---------- | ------ | ------------------------------ |
+| 2025-11-27 | v0.1   | Phase 1 環境建置完成           |
+| 2025-11-28 | v0.2   | Phase 2 API + 安全性修復       |
+| 2025-12-05 | v0.3   | Phase 3-4 前端 UI + 編輯器     |
+| 2025-12-06 | v0.5   | Phase 5-7 進階功能 + XSS 修復  |
+| 2025-12-07 | v0.6   | Prompt Builder 完整功能        |
+| 2025-12-08 | v0.8.8 | Phase 8 UX 優化 + i18n         |
+| 2025-12-09 | v0.9.1 | Phase 9 視覺優化 + 儲存效能    |
+| 2025-12-09 | v1.0.0 | Phase 10-12 架構重構 + 無障礙  |
+| 2025-12-11 | v1.1.0 | Phase 13 匯入功能 + DB 維護    |
+| 2025-12-12 | v1.1.0 | Phase 14 審計修復 + 更名 Prism |
+
+---
+
+## 🔮 未來規劃 (Future Roadmap)
+
+> 以下項目尚未實作，列入長期規劃。
+> 來源: `MVP_Audit_Report-1212.md`
+
+### Phase 15: 系統可靠性與維運 (v1.2+)
+
+#### 🟡 高風險技術債 (P1)
+
+- [ ] **15.1** 圖片刪除引用計數檢查 (🟡-1)
+
+  - 問題: 多則筆記共用圖片時，刪除其中一則會導致其他筆記破圖
+  - 方案: 刪除前檢查 `SELECT COUNT(*) FROM Notes WHERE content LIKE ?`
+
+- [ ] **15.2** WAL Checkpoint 機制 (🟡-2)
+
+  - 問題: 用戶複製 `knowledge.db` 備份時可能遺失 WAL 中的變更
+  - 方案: 匯出資料庫前自動執行 `PRAGMA wal_checkpoint(TRUNCATE)`
+  - UI: 設定頁新增「合併 WAL 日誌」按鈕
+
+- [ ] **15.3** 資料一致性檢查 API (🟡-3)
+  - 新增 `/api/system/check-consistency` 端點
+  - 檢查 `Notes.type` 與 `category_id` 的不一致記錄
+
+#### 備份與日誌
+
+- [ ] **15.4** 資料庫自動備份與回滾
+
+  - 定期備份機制 (排程任務)
+  - 備份檔案管理 UI (下載/刪除)
+  - 一鍵回滾 (Restore) 功能
+
+- [ ] **15.5** 應用層日誌管理
+  - 設定頁面整合 `app.log` 檢視器
+  - 日誌輪替 (Rotation) 設定 UI
+
+### 功能擴充 (Enhancements)
+
+- [ ] DOM 虛擬化 (Virtual Scrolling)
+
+  - 觸發條件: 筆記數 > 500
+  - 方案: Virtual Scroller 或傳統分頁
+
+- [ ] Quick Add vs New Note 視覺區分
+
+  - 調整按鈕視覺權重或文案
+
+- [ ] Markdown 編輯工具列
+  - 長期考慮，不新增第三方依賴
+
+### 長期優化 (v2.0+)
+
+- [ ] 廢棄 `Notes.type` 欄位，完全依賴 `category_id`
+- [ ] 批量操作查詢優化 (N+1 → 批量 INSERT)
 
 ---
 
 ## 📚 相關文件
 
 - **SCHEMA.md** - 資料庫結構與 API 規格
-- **SCHEMA_V2.md** - 架構重構藍圖 (v2.0)
-- **Local Insight.md** - 技術規格書
-- **UX 使用者體驗-視覺體感報告 1207.md** - UX 審計報告
+- **Prism.md** - 技術規格書
 
 ---
 
-**END OF TODO.md (v1.0.0 - 2025-12-10)**
+**END OF TODO.md (v1.1.0 - 2025-12-12)**

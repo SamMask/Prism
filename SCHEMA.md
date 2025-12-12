@@ -1,9 +1,9 @@
-# Local Insight - 全域資料字典 (Database Schema)
+# Prism - 全域資料字典 (Database Schema)
 
 **資料庫**: SQLite 3
-**版本**: v1.0.0
+**版本**: v1.1.0
 **特性**: 啟用 Foreign Keys 約束 (`PRAGMA foreign_keys = ON;`)
-**修訂**: Phase 10 - 架構重構 (Linus 風格瘦身)
+**修訂**: Phase 14 - 審計修復 + Schema 一致性優化
 
 ---
 
@@ -58,8 +58,8 @@ CREATE INDEX idx_notes_updated_at ON Notes(updated_at DESC);
 > [!WARNING] > **已知問題 (2025-12-11 Audit)**:
 >
 > - `Notes.type` 與 `Notes.category_id` 存在「雙重事實」分裂。
-> - 應用層 (`crud.py`) 目前僅寫入 `type`，`category_id` 為 NULL。
-> - **修復方向**: 短期在 CRUD 時同步寫入 `category_id`；長期廢棄 `type`。
+> - **已修復 (2025-12-12)**: `crud.py` 的 `get_notes`/`get_note` 已改用 `LEFT JOIN Categories` 取得分類名稱。
+> - 長期規劃: 廢棄 `type` 欄位，完全依賴 `category_id`。
 
 ---
 
@@ -491,8 +491,12 @@ Response: ZIP file (notes/_.md + assets/_.jpg)
 
 ### 10.5 備份與日誌策略 (Phase 15 規劃 - 尚未實作)
 
-- **備份機制 (待實作)**: 為了確保資料一致性，建議在應用層執行 `VACUUM INTO 'backup.db'` (SQLite 3.27+) 或使用 Python 的 `shutil.copy` 配合 WAL Checkpoint。
-- **日誌監控 (待實作)**: 應用層日誌 (`app.log`) 應實作輪替機制 (RotatingFileHandler 已啟用)，並規劃 API (`GET /api/system/logs`) 供管理介面讀取。
+> [!WARNING] > **WAL 備份風險 (MVP Audit 2025-12-12)**:
+> 直接複製 `knowledge.db` 可能遺失 `knowledge.db-wal` 中未合併的變更。
+> 備份前請執行 `PRAGMA wal_checkpoint(TRUNCATE)` 或使用 `/api/export/db` 端點。
+
+- **備份機制 (待實作)**: 建議在應用層執行 `VACUUM INTO 'backup.db'` (SQLite 3.27+) 配合 WAL Checkpoint。
+- **日誌監控 (待實作)**: 應用層日誌 (`app.log`) 使用 RotatingFileHandler，規劃 UI 整合。
 
 ---
 
@@ -711,4 +715,4 @@ MIGRATIONS = [
 
 ---
 
-**END OF SCHEMA.md (v1.0.0)**
+**END OF SCHEMA.md (v1.1.0 - 2025-12-12)**
