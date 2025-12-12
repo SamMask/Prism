@@ -20,8 +20,9 @@ static/uploads/
 garbage-can/
 000.txt
 app.log
+地雷檢測清單.txt
 app.log.*
-pack.bat
+
 start_dev.bat
 .local_insight_config
 

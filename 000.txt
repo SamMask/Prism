@@ -1,13 +1,5 @@
 注1：報告寫可考慮node.js 但為了 「可攜性」與「簡易部署」 不採用 
 
-待做：
-2.README 第一行就寫：
-Markdown## 馬上體驗（10 秒）
-2-1. 下載釋出版本
-2-2. 把 demo_db 裡的資料複製到根目錄，改名成 knowledge.db
-2-3. 執行 start.bat(或python app.py) → 直接看到完整範例
-
-3.要做 CONTRIBUTING.md 嗎？ //還沒做
 
 個人特化版另外做
 =========================
@@ -21,7 +13,6 @@ Markdown## 馬上體驗（10 秒）
 一個文字框 api送回的最佳化文字
 =========================
 
-demo的方式要修改 tools裡的檔案問要不要刪然後 demo_db資料夾放demo的檔就好
 
  @TODO.md @SCHEMA.md @Prism.md
 
