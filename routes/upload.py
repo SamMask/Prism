@@ -9,7 +9,14 @@ import magic
 from datetime import datetime
 from werkzeug.utils import secure_filename
 from flask import request, jsonify, current_app
-from PIL import Image
+
+# Pillow 為可選依賴 (v1.3: 安裝失敗時降級運行)
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
+    print("[Info] Pillow not installed. Thumbnail generation disabled.")
 
 from . import upload_bp
 
@@ -98,33 +105,36 @@ def upload_file():
         return_url = None
         thumb_filename = None
         
-        # 生成縮圖 (v1.6 圖片虛擬化)
-        try:
-            # 讀取圖片到記憶體
-            file.seek(0)
-            with Image.open(file) as img:
-                # 計算縮圖尺寸 (最大寬度 500px)
-                max_width = 500
-                if img.width > max_width:
-                    ratio = max_width / img.width
-                    new_height = int(img.height * ratio)
-                    img_resized = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                else:
-                    img_resized = img.copy()
+        # 生成縮圖 (v1.6 圖片虛擬化) - 需要 Pillow
+        if PIL_AVAILABLE:
+            try:
+                # 讀取圖片到記憶體
+                file.seek(0)
+                with Image.open(file) as img:
+                    # 計算縮圖尺寸 (最大寬度 500px)
+                    max_width = 500
+                    if img.width > max_width:
+                        ratio = max_width / img.width
+                        new_height = int(img.height * ratio)
+                        img_resized = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+                    else:
+                        img_resized = img.copy()
 
-                # 轉換並儲存為 WebP
-                name_without_ext = os.path.splitext(new_filename)[0]
-                thumb_filename = f"{name_without_ext}_thumb.webp"
-                thumb_path = os.path.join(upload_folder, thumb_filename)
+                    # 轉換並儲存為 WebP
+                    name_without_ext = os.path.splitext(new_filename)[0]
+                    thumb_filename = f"{name_without_ext}_thumb.webp"
+                    thumb_path = os.path.join(upload_folder, thumb_filename)
 
-                if img_resized.mode in ('RGBA', 'LA', 'P'):
-                    img_resized = img_resized.convert('RGB')
+                    if img_resized.mode in ('RGBA', 'LA', 'P'):
+                        img_resized = img_resized.convert('RGB')
 
-                img_resized.save(thumb_path, 'WEBP', quality=80)
-                
-        except Exception as thumb_error:
-            print(f"[Warning] Thumbnail generation failed: {thumb_error}")
-            thumb_filename = None
+                    img_resized.save(thumb_path, 'WEBP', quality=80)
+                    
+            except Exception as thumb_error:
+                print(f"[Warning] Thumbnail generation failed: {thumb_error}")
+                thumb_filename = None
+        else:
+            thumb_filename = None  # Pillow 未安裝，跳過縮圖
         
         # 根據模式決定是否保存原圖
         if thumbnail_only and thumb_filename:

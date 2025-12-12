@@ -56,18 +56,28 @@
 
 ## 🚀 正式安裝
 
+### 系統需求
+
+| 軟體                                              | 必要性   | 說明                                               |
+| ------------------------------------------------- | -------- | -------------------------------------------------- |
+| [Python 3.10+](https://www.python.org/downloads/) | **必要** | 安裝時請勾選 "Add Python to PATH"                  |
+| Flask                                             | 必要     | `start.bat` 會自動安裝                             |
+| Pillow                                            | 選用     | 用於生成縮圖。未安裝時圖片仍可上傳，但不會產生縮圖 |
+
+> 💡 **免安裝版**：下載 `Prism_*_Portable_*.zip` 完整版，解壓即用，無需安裝任何軟體！
+
 ### Windows 使用者
 
 **方法一：懶人包 (推薦)**
 
-1. 雙擊 `install.bat` 自動安裝依賴 (僅首次)
-2. 雙擊 `start.bat` 啟動
-3. 瀏覽器自動開啟 `http://127.0.0.1:5000`
+1. 雙擊 `start.bat` 啟動（首次會自動安裝依賴）
+2. 瀏覽器自動開啟 `http://127.0.0.1:5000`
 
 **方法二：命令列**
 
 ```bash
 pip install -r requirements.txt
+pip install Pillow  # 選用：啟用縮圖功能
 python app.py
 ```
 
@@ -76,6 +86,7 @@ python app.py
 ```bash
 chmod +x install.sh
 ./install.sh
+pip install Pillow  # 選用：啟用縮圖功能
 ```
 
 ---

@@ -10,7 +10,13 @@ import requests
 from datetime import datetime
 from flask import request, jsonify, current_app
 from werkzeug.utils import secure_filename
-from PIL import Image
+
+# Pillow 為可選依賴 (v1.3)
+try:
+    from PIL import Image
+    PIL_AVAILABLE = True
+except ImportError:
+    PIL_AVAILABLE = False
 
 from . import notes_bp
 from db import get_db
