@@ -599,8 +599,40 @@
 
   - 調整按鈕視覺權重或文案
 
-- [ ] Markdown 編輯工具列
-  - 長期考慮，不新增第三方依賴
+- [ ] 長期考慮，不新增第三方依賴
+
+### Phase 16: UX 細緻化與 SSR 審計修復 (v1.3)
+
+#### 🔴 阻斷性問題 (Critical)
+
+- [ ] **16.1** 全域視覺對比度優化 (C-01)
+
+  - 修正 `text-theme-muted` 顏色 (#6b7280 -> #94a3b8)
+  - 改善 Sidebar 計數器、Footer、Prompt Builder 權重數值可讀性
+
+- [ ] **16.2** 標籤輸入邏輯優化 (C-02/S-01)
+
+  - 實作失焦自動加入 (Auto-add on blur)
+  - 更新 Placeholder 提示文字
+
+- [ ] **16.3** Prompt Builder 權重模式隱藏 (C-03/S-02)
+  - 暫時隱藏 Weights Toggle 與相關 UI
+  - 簡化預覽邏輯，避免出現 `(keyword:1.2)` 格式困擾新手
+
+#### 🟡 體驗優化 (Friction)
+
+- [ ] **16.4** 篩選器語意化 (F-01/S-03)
+
+  - `AND` -> 下拉選單「包含所有」
+  - `OR` -> 下拉選單「包含任一」
+
+- [ ] **16.5** 拖曳排序提示 (F-02)
+
+  - 在 Grid View 嘗試拖曳時提示「請切換至自訂排序」
+  - 或在卡片上增加拖曳手柄 (Handle) 僅在 Sort=Custom 時顯示
+
+- [ ] **16.6** Prompt Builder 工具提示 (F-03)
+  - 為 Randomize/Edit 按鈕增加 Tooltip
 
 ### 長期優化 (v2.0+)
 

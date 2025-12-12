@@ -3,7 +3,7 @@
 **版本**: v1.2.0
 **日期**: 2025-12-12
 **架構**: Local Web App (Flask + SQLite + Vue.js)
-**修訂**: v1.2 - Phase 15 系統可靠性 + 設定頁簡化
+**修訂**: v1.3 (Planned) - Phase 16 UX 細緻化與 UX 審計修復
 
 ---
 
