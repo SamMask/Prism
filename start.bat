@@ -2,202 +2,171 @@
 setlocal
 chcp 65001 >nul
 title Prism Server Launcher
-REM Prism - 快速啟動腳本 (含首次引導)
+REM Prism - Quick Start Script (with first-run guide)
 
 echo ================================================
-echo  Prism v1.2 - Quick Start
+echo  Prism v1.3 - Quick Start
 echo ================================================
 echo.
 
-REM ===== 首次啟動引導 =====
-REM 使用獨立檔案標記，避免變數問題
-
-if exist ".auto_open_yes" goto :AUTO_OPEN
-if exist ".auto_open_no" goto :MANUAL_OPEN
-
-REM 首次執行詢問
-echo ================================================
-echo  歡迎使用 Prism！
-echo  請選擇啟動方式：
-echo ================================================
-echo.
-echo   [1] 自動開啟瀏覽器 (推薦)
-echo   [2] 手動開啟 http://127.0.0.1:5000
-echo.
-choice /C 12 /N /M "請輸入選項 (1 或 2): "
-if errorlevel 2 goto :SAVE_MANUAL
-if errorlevel 1 goto :SAVE_AUTO
-
-:SAVE_AUTO
-del ".auto_open_no" 2>nul
-echo 1 > ".auto_open_yes"
-echo.
-echo 設定已儲存！刪除 .auto_open_yes 可重設偏好。
-echo.
-goto :AUTO_OPEN
-
-:SAVE_MANUAL
-del ".auto_open_yes" 2>nul
-echo 0 > ".auto_open_no"
-echo.
-echo 設定已儲存！刪除 .auto_open_no 可重設偏好。
-echo.
-goto :MANUAL_OPEN
-
-:AUTO_OPEN
-set OPEN_BROWSER=1
-goto :START_SERVER
-
-:MANUAL_OPEN
-set OPEN_BROWSER=0
-goto :START_SERVER
+REM ===== Browser preference (v1.3: default auto-open) =====
+REM Delete .auto_open_no file to enable auto-open
+if exist ".auto_open_no" (
+    set OPEN_BROWSER=0
+) else (
+    set OPEN_BROWSER=1
+)
 
 :START_SERVER
-REM ===== 偵測 Python (優先 py 啟動器，更穩定) =====
-echo [1/4] 檢查 Python...
+REM ===== Detect Python (v1.3: actual execution test) =====
+echo [1/4] Checking Python...
 set PYTHON_CMD=
 
-REM 優先嘗試 py 啟動器 (能更好處理多版本和 MS Store 版)
-where py >nul 2>&1
+REM Try py launcher first (handles multiple versions well)
+py --version >nul 2>&1
 if %errorlevel% equ 0 (
     set PYTHON_CMD=py
     goto :PYTHON_FOUND
 )
 
-REM 嘗試 python
-where python >nul 2>&1
+REM Try python (actual execution test, avoids MS Store alias)
+python --version >nul 2>&1
 if %errorlevel% equ 0 (
     set PYTHON_CMD=python
     goto :PYTHON_FOUND
 )
 
-REM 嘗試 python3
-where python3 >nul 2>&1
+REM Try python3
+python3 --version >nul 2>&1
 if %errorlevel% equ 0 (
     set PYTHON_CMD=python3
     goto :PYTHON_FOUND
 )
 
-REM 都找不到
+REM Not found
 echo.
-echo [警告] 未偵測到 Python！
+echo [WARNING] Python not detected!
 echo.
-echo 請選擇安裝方式：
-echo   [1] 自動安裝 (使用 winget，需要 Windows 10/11)
-echo   [2] 手動下載 (開啟 Python 官網)
-echo   [3] 取消
+echo Please select installation method:
+echo   [1] Auto install (using winget, requires Windows 10/11)
+echo   [2] Manual download (open Python website)
+echo   [3] Cancel
 echo.
-choice /C 123 /N /M "請輸入選項 (1, 2, 或 3): "
+choice /C 123 /N /M "Enter option (1, 2, or 3): "
 if errorlevel 3 goto :CANCEL
 if errorlevel 2 goto :MANUAL_PYTHON
 if errorlevel 1 goto :AUTO_PYTHON
 
 :PYTHON_FOUND
-echo 找到 Python: %PYTHON_CMD%
+echo Found Python: %PYTHON_CMD%
 goto :CHECK_FLASK
 
 :AUTO_PYTHON
 echo.
-echo 正在使用 winget 安裝 Python 3.12...
+echo Installing Python 3.12 via winget...
 winget install Python.Python.3.12 --silent --accept-package-agreements --accept-source-agreements
 if %errorlevel% neq 0 (
-    echo [錯誤] winget 安裝失敗，請手動安裝 Python。
+    echo [ERROR] winget installation failed, please install Python manually.
     start https://www.python.org/downloads/
     pause
     exit /b 1
 )
 echo.
-echo Python 安裝完成！請關閉此視窗，重新執行 start.bat。
+echo ================================================
+echo  Python installed successfully!
+echo  IMPORTANT: Please CLOSE this window and
+echo  run start.bat again for PATH to take effect.
+echo ================================================
 pause
 exit /b 0
 
 :MANUAL_PYTHON
-echo 正在開啟 Python 下載頁面...
+echo Opening Python download page...
 start https://www.python.org/downloads/
 echo.
-echo 安裝完成後，請重新執行 start.bat。
-echo (安裝時請務必勾選 "Add Python to PATH")
+echo After installation, please run start.bat again.
+echo (Make sure to check "Add Python to PATH" during install)
 pause
 exit /b 0
 
 :CANCEL
-echo 已取消。
+echo Cancelled.
 pause
 exit /b 0
 
 :CHECK_FLASK
-REM ===== 檢查依賴 (Flask + Pillow) =====
-echo [2/4] 檢查依賴...
+REM ===== Check dependencies (Flask + Pillow) =====
+echo [2/4] Checking dependencies...
 %PYTHON_CMD% -c "import flask; import PIL" 2>nul
 if %errorlevel% neq 0 (
-    echo 首次啟動，正在安裝依賴...
+    echo First run, installing dependencies...
     
-    REM 策略 A: 優先使用本地離線包 (wheels/)
+    REM Strategy A: Try local offline packages first (wheels/)
     if exist "wheels\*.whl" (
-        echo 發現本地離線包，優先安裝...
+        echo Found local packages, trying offline install...
         %PYTHON_CMD% -m pip install --user --no-index --find-links=wheels flask pillow 2>nul
         if %errorlevel% equ 0 (
-            echo 離線安裝成功！
+            echo Offline install successful!
             goto :DEPS_OK
         )
-        echo 離線安裝失敗，嘗試線上安裝...
+        echo Offline install failed, trying online...
     )
     
-    REM 策略 B: 線上安裝 (--user 避開權限問題)
-    echo 線上安裝依賴...
+    REM Strategy B: Online install (--user to avoid permission issues)
+    echo Installing online...
     %PYTHON_CMD% -m pip install --user -r requirements.txt
     if %errorlevel% neq 0 (
         echo.
-        echo [錯誤] 依賴安裝失敗！
-        echo 可能原因：網路問題 / Python 版本問題
+        echo [ERROR] Dependency installation failed!
+        echo Possible causes: network issues / Python version issues
         pause
         exit /b 1
     )
     
-    REM 嘗試單獨安裝 Pillow (縮圖功能)
+    REM Try Pillow separately (for thumbnail feature)
     %PYTHON_CMD% -c "import PIL" 2>nul
     if %errorlevel% neq 0 (
-        echo [提示] Pillow 安裝失敗，縮圖功能將停用。
+        echo [NOTE] Pillow install failed, thumbnails will be disabled.
     )
 ) else (
-    echo 依賴已就緒
+    echo Dependencies ready
 )
 
 :DEPS_OK
 
-REM ===== 檢查端口 =====
-echo [3/4] 檢查 5000 端口...
+REM ===== Check port =====
+echo [3/4] Checking port 5000...
 netstat -ano | findstr :5000 | findstr LISTENING >nul 2>&1
 if %errorlevel% equ 0 (
-    echo 發現佔用 5000 端口的進程 - 正在關閉...
+    echo Found process using port 5000 - closing...
     for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') do (
         taskkill /F /PID %%a >nul 2>&1
     )
     timeout /t 1 /nobreak >nul
-    echo 舊進程已關閉
+    echo Old process closed
 ) else (
-    echo 5000 端口可用
+    echo Port 5000 available
 )
 
-REM ===== 啟動 Flask =====
-echo [4/4] 啟動伺服器...
+REM ===== Start Flask =====
+echo [4/4] Starting server...
 echo.
 
 if "%OPEN_BROWSER%"=="1" (
     start "" http://127.0.0.1:5000
-    echo 瀏覽器已開啟: http://127.0.0.1:5000
+    echo Browser opened: http://127.0.0.1:5000
 ) else (
-    echo 請手動開啟瀏覽器訪問: http://127.0.0.1:5000
+    echo Please open browser and visit: http://127.0.0.1:5000
 )
 
 echo.
 echo ================================================
-echo  伺服器已啟動！按 Ctrl+C 停止
+echo  Server started! Press Ctrl+C to stop
 echo ================================================
 echo.
 
 %PYTHON_CMD% app.py
 
 echo.
-echo 伺服器已停止
+echo Server stopped
 pause

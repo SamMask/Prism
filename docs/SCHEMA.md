@@ -1,9 +1,9 @@
 # Prism - 全域資料字典 (Database Schema)
 
 **資料庫**: SQLite 3
-**版本**: v1.2.0
+**版本**: v1.3.0
 **特性**: 啟用 Foreign Keys 約束 (`PRAGMA foreign_keys = ON;`)
-**修訂**: Phase 16 - UX 細緻化 (本次審計無 Schema 變更)
+**修訂**: Phase 17 - 安全強化 (CSRF 防護與本機綁定)
 
 ---
 
@@ -732,4 +732,35 @@ MIGRATIONS = [
 
 ---
 
-**END OF SCHEMA.md (v1.1.0 - 2025-12-12)**
+## 15. 安全機制 (v1.3)
+
+### 15.1 CSRF 防護
+
+**實作位置**: `app.py` `create_app()` 內的 `before_request` 中介軟體
+
+**運作原理**:
+
+- 對 POST/PUT/DELETE/PATCH 請求驗證 `Origin` 或 `Referer` 標頭
+- 僅允許與 `request.host_url` 同源的請求
+- 無標頭的請求 (如 curl/Postman) 放行 (本機開發使用)
+
+**被阻擋時的錯誤訊息**:
+
+```json
+{ "status": "error", "message": "CSRF validation failed: Origin mismatch" }
+```
+
+### 15.2 網路綁定安全
+
+| 設定                | 預設值      | 覆蓋方式                      |
+| ------------------- | ----------- | ----------------------------- |
+| 綁定介面            | `127.0.0.1` | 環境變數 `HOST=0.0.0.0`       |
+| 遠端存取 (區網 LAN) | ❌ 禁止     | 設定 `HOST=0.0.0.0` 後允許    |
+| 0.0.0.0 警告提示    | 是          | 終端機與 app.log 顯示警告訊息 |
+
+> [!CAUTION]
+> 設定 `HOST=0.0.0.0` 會將應用暴露給區域網路。由於**無身份驗證機制**，請僅在信任的私人網路使用。
+
+---
+
+**END OF SCHEMA.md (v1.3.0 - 2025-12-13)**

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "========================================"
-echo "  Local Insight - Installation Script"
+echo "  Prism - Installation Script"
 echo "========================================"
 echo
 

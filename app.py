@@ -64,6 +64,42 @@ def create_app(env_name='default'):
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
     # ===================================================================
+    # CSRF 防護 (v1.3: MVP Audit 2025-12-13)
+    # ===================================================================
+    @app.before_request
+    def csrf_protect():
+        """
+        簡易 CSRF 防護：驗證 Origin/Referer 標頭
+        - 僅對 POST/PUT/DELETE 等狀態變更請求生效
+        - 允許同源請求 (localhost/127.0.0.1)
+        - 允許無 Origin 的本機請求 (如 curl)
+        """
+        from flask import request, abort
+        
+        if request.method in ('POST', 'PUT', 'DELETE', 'PATCH'):
+            origin = request.headers.get('Origin')
+            referer = request.headers.get('Referer')
+            
+            # 無 Origin/Referer 的請求 (如 curl/Postman) 放行
+            if not origin and not referer:
+                return
+            
+            # 驗證 Origin 或 Referer 是否為本機
+            host_url = request.host_url.rstrip('/')  # e.g., http://127.0.0.1:5000
+            allowed_origins = [
+                host_url,
+                host_url.replace('127.0.0.1', 'localhost'),
+                host_url.replace('localhost', '127.0.0.1')
+            ]
+            
+            origin_valid = origin and any(origin.startswith(o) for o in allowed_origins)
+            referer_valid = referer and any(referer.startswith(o) for o in allowed_origins)
+            
+            if not origin_valid and not referer_valid:
+                app.logger.warning(f"[CSRF] Blocked request: Origin={origin}, Referer={referer}")
+                abort(403, description='CSRF validation failed: Origin mismatch')
+
+    # ===================================================================
     # 註冊 Blueprints
     # ===================================================================
     from routes import register_blueprints
@@ -439,4 +475,10 @@ if __name__ == '__main__':
     app.logger.info(startup_msg)
     
     # 啟動應用
-    app.run(host='0.0.0.0', port=port, debug=debug)
+    # v1.3: 預設綁定 127.0.0.1 (僅本機訪問)，可透過 HOST 環境變數覆蓋
+    host = os.environ.get('HOST', '127.0.0.1')
+    if host == '0.0.0.0':
+        print(f"[WARNING] 綁定到所有網路介面 (0.0.0.0)。請確保您信任此網路環境！")
+        app.logger.warning("Binding to all interfaces (0.0.0.0). Ensure you trust this network!")
+    
+    app.run(host=host, port=port, debug=debug)

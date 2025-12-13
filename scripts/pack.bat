@@ -4,7 +4,7 @@ REM Prism - 打包腳本
 REM 確保腳本在根目錄 context 執行
 cd /d "%~dp0.."
 
-set VERSION=v1.2.0
+set VERSION=v1.3.0
 
 REM 取得日期時間 (格式: YYYYMMDD_HHMM)
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I

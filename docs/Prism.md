@@ -1,9 +1,9 @@
 # Prism - 技術規格書
 
-**版本**: v1.2.0
-**日期**: 2025-12-12
+**版本**: v1.3.0
+**日期**: 2025-12-13
 **架構**: Local Web App (Flask + SQLite + Vue.js)
-**修訂**: v1.3 (Planned) - Phase 16 UX 細緻化與 UX 審計修復
+**修訂**: v1.3 - Phase 17 安全強化 (CSRF 防護與本機綁定)
 
 ---
 
@@ -460,14 +460,18 @@ http://localhost:5000
 | `DATABASE_PATH`   | 資料庫路徑   | `./knowledge.db`              | ❌   |
 | `UPLOAD_FOLDER`   | 上傳目錄     | `./static/uploads`            | ❌   |
 | `MAX_UPLOAD_SIZE` | 上傳大小限制 | `5242880` (5MB)               | ❌   |
+| `HOST`            | 網路綁定     | `127.0.0.1` (僅本機)          | ❌   |
+| `PORT`            | 連接埠       | `5000`                        | ❌   |
 
 ### 10.2 安全性檢查清單
 
-- [ ] **生產環境禁止 Debug 模式**: 確保 `app.run(debug=False)` 或透過環境變數控制
-- [ ] **檔案上傳 Magic Numbers 驗證**: 使用 `python-magic` 檢查真實檔案類型
-- [ ] **輸入驗證**: API 對 `title`, `content` 長度進行限制
-- [ ] **錯誤訊息**: 生產環境不可暴露完整 Exception 堆疊
-- [ ] **資料庫注入防護**: 使用 SQLite 參數化查詢 (已實作)
+- [x] **生產環境禁止 Debug 模式**: 確保 `app.run(debug=False)` 或透過環境變數控制
+- [x] **檔案上傳 Magic Numbers 驗證**: 使用 `python-magic` 檢查真實檔案類型
+- [x] **輸入驗證**: API 對 `title`, `content` 長度進行限制
+- [x] **錯誤訊息**: 生產環境不可暴露完整 Exception 堆疊
+- [x] **資料庫注入防護**: 使用 SQLite 參數化查詢
+- [x] **CSRF 防護 (v1.3)**: Origin/Referer 標頭驗證 (阻止跨站請求偽造)
+- [x] **本機綁定 (v1.3)**: 預設僅綁定 127.0.0.1 (可透過 HOST 變數覆蓋)
 
 ---
 
