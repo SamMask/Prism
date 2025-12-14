@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Upload API Routes
-Local Insight v1.6
+Prism v1.4.1
 """
 
 import os

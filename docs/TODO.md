@@ -605,30 +605,7 @@
 - [x] 移除「合併 WAL 日誌」按鈕 (整合到 VACUUM)
 - [x] 新增 cardOpenMode 英文翻譯
 
-#### 備份與日誌
 
-- [ ] **15.4** 資料庫自動備份與回滾
-
-  - 定期備份機制 (排程任務)
-  - 備份檔案管理 UI (下載/刪除)
-  - 一鍵回滾 (Restore) 功能
-
-- [ ] **15.5** 應用層日誌管理
-  - 設定頁面整合 `app.log` 檢視器
-  - 日誌輪替 (Rotation) 設定 UI
-
-### 功能擴充 (Enhancements)
-
-- [ ] DOM 虛擬化 (Virtual Scrolling)
-
-  - 觸發條件: 筆記數 > 500
-  - 方案: Virtual Scroller 或傳統分頁
-
-- [ ] Quick Add vs New Note 視覺區分
-
-  - 調整按鈕視覺權重或文案
-
-- [ ] 長期考慮，不新增第三方依賴
 
 ### Phase 16: UX 細緻化與 UX 審計修復 (v1.3) ✅ _(2025-12-12)_
 
@@ -656,10 +633,44 @@
 
 - [x] **16.5** Prompt Builder 工具提示 (F-03) ✅ (已有 title 屬性)
 
+### Phase 19: Gemini3 審計修復 (v1.4.1 - 2025-12-15) ✅
+
+> **來源**: `docs/Gemini3綜合評估-Bug.md`
+
+#### ✅ 🔴 P0 - 阻斷性問題
+
+- [x] **19.1** 批量修改類型同步 `category_id` (BUG-001) ✅
+  - `routes/notes/batch.py` 的 `batch_update_type()` 新增 `category_id` 同步更新
+  - 解決 `type` 與 `category_id` 雙重事實不一致問題
+
+#### ✅ 🟡 P1 - 中優先
+
+- [x] **19.2** 標籤合併交易一致性 (BUG-002) ✅
+  - `routes/tags.py` 改用 `transaction()` context manager
+  - 移除手動 `BEGIN TRANSACTION`
+
+- [x] **19.3** 啟動偏好檔案路徑安全 (SEC-001) ✅
+  - `routes/system.py` 使用 `current_app.root_path` 絕對路徑
+
+#### ✅ 🟢 P2 - 低優先
+
+- [x] **19.4** 版本標記更新 (NAMING-002) ✅
+  - `db.py`, `batch.py`, `tags.py`, `system.py` 標題改為 `Prism v1.4.1`
+
 ### 長期優化 (v2.0+)
 
+#### 效能優化
 - [ ] 廢棄 `Notes.type` 欄位，完全依賴 `category_id`
-- [ ] 批量操作查詢優化 (N+1 → 批量 INSERT)
+- [ ] 批量操作查詢優化 (N+1 → 批量 INSERT) - 原 PERF-001
+- [ ] Cleanup 全表掃描優化 - 原 PERF-002
+- [ ] DOM 虛擬化 (Virtual Scrolling) - 觸發條件: 筆記數 > 500
+
+#### 備份與日誌
+- [ ] 資料庫自動備份與回滾 (定期備份、一鍵回滾)
+- [ ] 應用層日誌管理 (log 檢視器、日誌輪替)
+
+#### 功能擴充
+- [ ] Quick Add vs New Note 視覺區分
 
 ---
 
@@ -670,4 +681,4 @@
 
 ---
 
-**END OF TODO.md (v1.1.0 - 2025-12-12)**
+**END OF TODO.md (v1.4.1 - 2025-12-15)**

@@ -277,7 +277,7 @@
     "displayNamePlaceholder": "中文顯示名",
     "outputPlaceholder": "English Output",
     "narrativeOutput": "智能造句",
-    "copyLLMPrompt": "複製 Gemini/ChatGPT 優化指令"
+    "copyLLMPrompt": "Copy AI Optimization Prompt"
   },
   "wizard": {
     "title": "靈感引導 Wizard",

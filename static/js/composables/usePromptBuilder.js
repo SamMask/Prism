@@ -555,7 +555,7 @@ export function usePromptBuilder() {
     URL.revokeObjectURL(url);
   };
 
-  // v0.8.9: Copy Meta-Prompt
+  // v0.8.9: Copy Meta-Prompt (i18n support)
   const copyMetaPromptSuccess = ref(false);
   const copyMetaPrompt = async () => {
     const f = form.value;
@@ -570,7 +570,32 @@ export function usePromptBuilder() {
       camera: [f.shotSize, f.angle, f.focus].filter(Boolean).join(", "),
     };
 
-    const metaPrompt = `[ 角色設定 ] 你是一位精通各類視覺藝術（從攝影、CGI 到傳統工藝）的 AI 圖像生成專家 (Prompt Engineer)。你的任務是將我提供的「關鍵字片段」重寫為一段流暢、細節豐富且符合該藝術風格邏輯的 Midjourney/DALL-E 提示詞。
+    // English Meta Prompt
+    const metaPromptEN = `[ Role ] You are an AI image generation expert (Prompt Engineer) proficient in various visual arts (from photography, CGI to traditional crafts). Your task is to rewrite the "keyword fragments" I provide into a flowing, detail-rich Midjourney/DALL-E prompt that follows the logic of that artistic style.
+
+[ Input Data ]
+
+- **Subject & Description**: ${data.subject}
+- **Art Style/Medium**: ${data.style} <-- KEY! Prioritize analyzing this
+- **Lighting Atmosphere**: ${data.lighting || "Not specified"}
+- **Camera Technique**: ${data.camera || "Not specified"}
+
+[ Processing Rules (Important) ]
+
+1. **Material Awareness**:
+   - For "Knitted" style: Emphasize yarn texture, weaving patterns, soft touch.
+   - For "Claymation": Emphasize fingerprint marks, plasticine texture, stop-motion lighting.
+   - For "Miniature": Emphasize tilt-shift effect, depth of field, macro details.
+   - For other styles, use domain-specific descriptors.
+
+2. **Narrative Structure**: Don't just stack words. Use a complete descriptive sentence (e.g., "A huge knitted monster stands..." instead of "Knitted, monster, standing").
+
+3. **Output Format**: Directly output the optimized English prompt (Prompt Only), no explanation needed.
+
+[ Start Generation ]`;
+
+    // Chinese Meta Prompt
+    const metaPromptZH = `[ 角色設定 ] 你是一位精通各類視覺藝術（從攝影、CGI 到傳統工藝）的 AI 圖像生成專家 (Prompt Engineer)。你的任務是將我提供的「關鍵字片段」重寫為一段流暢、細節豐富且符合該藝術風格邏輯的 Midjourney/DALL-E 提示詞。
 
 [ 輸入數據 ]
 
@@ -592,6 +617,10 @@ export function usePromptBuilder() {
 3. **輸出格式**：請直接輸出優化後的英文提示詞 (Prompt Only)，不需要解釋。
 
 [ 開始生成 ]`;
+
+    // Select prompt based on current locale
+    const metaPrompt =
+      currentLocale.value === "en" ? metaPromptEN : metaPromptZH;
 
     try {
       await navigator.clipboard.writeText(metaPrompt);

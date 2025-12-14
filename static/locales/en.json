@@ -283,7 +283,7 @@
     "displayNamePlaceholder": "Display Name",
     "outputPlaceholder": "English Output",
     "narrativeOutput": "Smart Narrative",
-    "copyLLMPrompt": "Copy Gemini/ChatGPT Optimization Prompt"
+    "copyLLMPrompt": "Copy AI Optimization Prompt"
   },
   "wizard": {
     "title": "Inspiration Wizard",

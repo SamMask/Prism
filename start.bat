@@ -5,7 +5,7 @@ title Prism Server Launcher
 REM Prism - Quick Start Script (with first-run guide)
 
 echo ================================================
-echo  Prism v1.3 - Quick Start
+echo  Prism v1.4.1 - Quick Start
 echo ================================================
 echo.
 

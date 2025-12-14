@@ -4,7 +4,7 @@ REM Prism - 打包腳本
 REM 確保腳本在根目錄 context 執行
 cd /d "%~dp0.."
 
-set VERSION=v1.3.0
+set VERSION=v1.4.1
 
 REM 取得日期時間 (格式: YYYYMMDD_HHMM)
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
@@ -31,7 +31,7 @@ xcopy /E /I /Y "templates" "dist\%ARCHIVE_NAME%\templates" >nul
 xcopy /E /I /Y "docs" "dist\%ARCHIVE_NAME%\docs" >nul
 xcopy /E /I /Y "migrations" "dist\%ARCHIVE_NAME%\migrations" >nul
 xcopy /E /I /Y "scripts" "dist\%ARCHIVE_NAME%\scripts" >nul
-xcopy /E /I /Y "wheels" "dist\%ARCHIVE_NAME%\wheels" >nul
+xcopy /E /I /Y "resources\wheels" "dist\%ARCHIVE_NAME%\wheels" >nul
 
 REM 複製根目錄檔案
 copy "app.py" "dist\%ARCHIVE_NAME%\" >nul

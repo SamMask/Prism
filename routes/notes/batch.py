@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Notes Batch Operations
-Local Insight v1.0
+Prism v1.4.1
 
 Routes:
 - POST /api/notes/batch/type   - 批量修改分類
@@ -13,6 +13,7 @@ import sqlite3
 from flask import request, jsonify
 
 from . import notes_bp
+from .crud import get_category_id_by_name  # BUG-001 Fix: 引入同步函數
 from db import get_db
 
 
@@ -53,12 +54,15 @@ def batch_update_type():
         db = get_db()
 
         try:
+            # BUG-001 Fix: 同步取得 category_id
+            category_id = get_category_id_by_name(db, new_type)
+            
             placeholders = ','.join('?' * len(note_ids))
             cursor = db.execute(f'''
                 UPDATE Notes 
-                SET type = ?, updated_at = CURRENT_TIMESTAMP
+                SET type = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id IN ({placeholders})
-            ''', [new_type] + note_ids)
+            ''', [new_type, category_id] + note_ids)
             
             db.commit()
 
@@ -219,7 +223,7 @@ def batch_delete_notes():
             # 清理每個筆記的關聯圖片
             from .crud import _cleanup_note_images
             for note in notes:
-                _cleanup_note_images(note['content'], note['cover_image'])
+                _cleanup_note_images(note['content'], note['cover_image'], note['id'])
             
             # 刪除資料庫記錄
             cursor = db.execute(f'''

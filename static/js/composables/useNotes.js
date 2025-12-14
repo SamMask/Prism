@@ -207,6 +207,9 @@ export function useNotes() {
     };
 
     // Image Helpers
+    // v1.4.1: 失敗圖片緩存，避免重複請求 404 資源
+    const brokenImageCache = new Set();
+    
     const getNoteCover = (note) => {
         if (note.cover_image) {
             return note.cover_image;
@@ -216,7 +219,22 @@ export function useNotes() {
 
     const getNoteThumbnail = (note) => {
         const originalUrl = getNoteCover(note);
-        return getThumbUrl(originalUrl);
+        const thumbUrl = getThumbUrl(originalUrl);
+        
+        // 如果已知縮圖失效，回傳 null 避免重複請求
+        if (thumbUrl && brokenImageCache.has(thumbUrl)) {
+            return null;
+        }
+        
+        return thumbUrl;
+    };
+    
+    // 標記圖片為失效（從 template 呼叫）
+    const markImageAsBroken = (url) => {
+        if (url) {
+            brokenImageCache.add(url);
+            console.log('[Image] Marked as broken:', url);
+        }
     };
 
     // Quick Actions
@@ -436,6 +454,7 @@ export function useNotes() {
         // Helpers
         getNoteCover,
         getNoteThumbnail,
+        markImageAsBroken,
         quickCopy,
         runPrompt,
         togglePinNote,

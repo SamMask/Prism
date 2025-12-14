@@ -92,6 +92,17 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
+REM ===== Auto-install Offline Wheels (v1.4.1) =====
+if exist "wheels\*.whl" (
+    echo.
+    echo [2.5/3] Found offline packages, installing...
+    for %%f in (wheels\*.whl) do (
+        echo   - Installing %%~nxf...
+        %PYTHON_CMD% -m pip install --user "%%f" >nul
+        if errorlevel 1 echo     [WARNING] Failed to install %%~nxf
+    )
+)
+
 echo.
 echo [3/3] Starting server...
 echo.

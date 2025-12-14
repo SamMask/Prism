@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 Database Utilities
-Local Insight v1.8.9
+Prism v1.4.1
 
 統一的資料庫連線層，避免各 routes 模組重複定義 get_db()
 """

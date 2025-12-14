@@ -415,7 +415,9 @@ def find_available_port(start_port=5000, max_attempts=10):
 def setup_logging(app):
     """
     R-02: 設定檔案日誌
-    將錯誤寫入 app.log
+    將錯誤和警告寫入 app.log
+    
+    v1.4.1: 簡化日誌 - 只記錄 WARNING 以上，移除 HTTP 請求記錄
     """
     import logging
     from logging.handlers import RotatingFileHandler
@@ -428,14 +430,15 @@ def setup_logging(app):
     file_handler.setFormatter(logging.Formatter(
         '%(asctime)s [%(levelname)s] %(message)s'
     ))
-    file_handler.setLevel(logging.INFO)
+    # v1.4.1: 只記錄 WARNING 以上 (警告、錯誤、嚴重錯誤)
+    file_handler.setLevel(logging.WARNING)
     
     # 設定 Flask app logger
     app.logger.addHandler(file_handler)
-    app.logger.setLevel(logging.INFO)
+    app.logger.setLevel(logging.WARNING)
     
-    # 同時設定 werkzeug logger
-    logging.getLogger('werkzeug').addHandler(file_handler)
+    # v1.4.1: 移除 werkzeug logger，不記錄每個 HTTP 請求
+    # 若需要除錯，可設定環境變數 FLASK_DEBUG=True
     
     return log_file
 

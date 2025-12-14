@@ -59,6 +59,7 @@ CREATE INDEX idx_notes_updated_at ON Notes(updated_at DESC);
 >
 > - `Notes.type` 與 `Notes.category_id` 存在「雙重事實」分裂。
 > - **已修復 (2025-12-12)**: `crud.py` 的 `get_notes`/`get_note` 已改用 `LEFT JOIN Categories` 取得分類名稱。
+> - **已修復 (2025-12-15)**: `batch.py` 的 `batch_update_type()` 現會同步更新 `category_id` (BUG-001)。
 > - 長期規劃: 廢棄 `type` 欄位，完全依賴 `category_id`。
 
 ---

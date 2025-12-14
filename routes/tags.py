@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 Tags API Routes
-Local Insight v1.8.9
+Prism v1.4.1
 """
 
 import sqlite3
 from flask import request, jsonify
 
 from . import tags_bp
-from db import get_db  # v1.8.9: 統一資料庫連線層
+from db import get_db, transaction  # BUG-002 Fix: 引入 transaction()
 
 
 @tags_bp.route('/tags', methods=['GET'])
@@ -154,10 +154,8 @@ def merge_tags():
                 'message': 'Target tag not found'
             }), 404
 
-        try:
-            # v1.8.9: 使用明確交易確保合併操作的原子性
-            db.execute('BEGIN TRANSACTION')
-            
+        # BUG-002 Fix: 使用 transaction() context manager 確保原子性
+        with transaction() as db:
             merged_count = 0
 
             for source_id in source_tag_ids:
@@ -179,16 +177,10 @@ def merge_tags():
                 db.execute('DELETE FROM Tags WHERE id = ?', (source_id,))
                 merged_count += 1
 
-            db.commit()
-
-            return jsonify({
-                'status': 'success',
-                'data': {'merged_count': merged_count}
-            })
-
-        except sqlite3.Error as e:
-            db.rollback()
-            raise e
+        return jsonify({
+            'status': 'success',
+            'data': {'merged_count': merged_count}
+        })
 
     except Exception as e:
         return jsonify({

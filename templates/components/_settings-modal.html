@@ -1144,14 +1144,23 @@
                         >{{ brokenImagesStats.total_count }}</span
                       >
                       {{ t('brokenImages.items', '個失效圖片路徑') }}
+                      <template v-if="brokenImagesStats.fixable_count !== undefined">
+                        <span class="text-gray-500">
+                          ({{ brokenImagesStats.fixable_count }} {{ t('brokenImages.fixable', '可修復') }})
+                        </span>
+                      </template>
                     </span>
                   </div>
                   <p class="text-xs text-gray-500 mb-3">
-                    {{ t('brokenImages.desc',
-                    '這些圖片的原圖已不存在，但有縮圖可用。點擊修正後，筆記中的路徑將自動改為縮圖。')
-                    }}
+                    <template v-if="brokenImagesStats.fixable_count > 0">
+                      {{ t('brokenImages.desc', '這些圖片的原圖已不存在，但有縮圖可用。點擊修正後，筆記中的路徑將自動改為縮圖。') }}
+                    </template>
+                    <template v-else>
+                      {{ t('brokenImages.noFixable', '所有失效路徑均無可用替代檔案，需手動處理。') }}
+                    </template>
                   </p>
                   <button
+                    v-if="brokenImagesStats.fixable_count > 0"
                     @click="handleFixBrokenImages(refreshNotes)"
                     :disabled="brokenImagesFixing"
                     class="w-full py-2 text-sm bg-yellow-600 hover:bg-yellow-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
@@ -1336,7 +1345,7 @@
         <div
           class="text-center text-xs text-gray-600 pt-2 border-t border-gray-800"
         >
-          Prism v1.1 · {{ t('settings.localData', '資料儲存於本機') }}
+          Prism v1.4.1 · {{ t('settings.localData', '資料儲存於本機') }}
         </div>
       </div>
     </div>

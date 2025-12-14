@@ -1,7 +1,5 @@
 <!-- Main Content / Note Grid Component (v0.9.0) -->
-<main
-  class="flex-1 overflow-y-auto bg-theme-base p-6 relative scroll-smooth"
->
+<main class="flex-1 overflow-y-auto bg-theme-base p-6 relative scroll-smooth">
   <div class="max-w-7xl mx-auto">
     <!-- Loading State -->
     <div
@@ -75,10 +73,16 @@
         </svg>
       </div>
       <!-- 區分搜尋/過濾無結果 vs 真正無資料 (2025-12-11 Audit Fix) -->
-      <template v-if="searchKeyword || selectedTags.length > 0 || selectedType !== 'all'">
-        <p class="text-lg font-medium">{{ t('notes.noMatches', '找不到符合條件的筆記') }}</p>
-        <p class="text-sm mt-1 text-theme-muted">{{ t('notes.tryDifferentFilter', '請嘗試其他搜尋條件或過濾器') }}</p>
-        <button 
+      <template
+        v-if="searchKeyword || selectedTags.length > 0 || selectedType !== 'all'"
+      >
+        <p class="text-lg font-medium">
+          {{ t('notes.noMatches', '找不到符合條件的筆記') }}
+        </p>
+        <p class="text-sm mt-1 text-theme-muted">
+          {{ t('notes.tryDifferentFilter', '請嘗試其他搜尋條件或過濾器') }}
+        </p>
+        <button
           @click="searchKeyword = ''; selectedTags = []; selectedType = 'all'"
           class="mt-4 px-4 py-2 bg-theme-primary hover:bg-theme-primary-hover text-white rounded-lg text-sm font-medium transition-colors"
         >
@@ -123,8 +127,9 @@
           class="w-full h-48 overflow-hidden bg-theme-surface"
         >
           <img
+            v-if="getNoteThumbnail(note)"
             :src="getNoteThumbnail(note)"
-            @error="$event.target.src = getNoteCover(note)"
+            @error="markImageAsBroken(getNoteThumbnail(note)); $event.target.style.display = 'none'"
             class="w-full h-full object-cover"
             :style="`object-position: ${note.cover_position === 'center' ? 'center' : note.cover_position === 'bottom' ? 'bottom' : 'top'}`"
             loading="lazy"
@@ -222,11 +227,7 @@
                 : 'bg-theme-hover/30 text-theme-muted hover:bg-theme-hover/50 hover:text-amber-400 opacity-0 group-hover:opacity-100'"
               :title="note.is_pinned ? t('notes.unpinNote') : t('notes.pinNote')"
             >
-              <svg
-                class="w-4 h-4"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                 <path
                   d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"
                 ></path>
@@ -267,9 +268,7 @@
           </div>
 
           <!-- Footer: Updated Date & Quick Actions -->
-          <div
-            class="flex items-center justify-between text-xs text-gray-500"
-          >
+          <div class="flex items-center justify-between text-xs text-gray-500">
             <div class="flex items-center gap-1">
               <svg
                 class="w-4 h-4"
@@ -285,8 +284,7 @@
                 ></path>
               </svg>
               <span
-                >{{ new
-                Date(note.updated_at).toLocaleDateString('zh-TW')
+                >{{ new Date(note.updated_at).toLocaleDateString('zh-TW')
                 }}</span
               >
             </div>
@@ -389,8 +387,9 @@
             class="w-20 h-14 rounded-lg overflow-hidden bg-gray-900"
           >
             <img
+              v-if="getNoteThumbnail(note)"
               :src="getNoteThumbnail(note)"
-              @error="$event.target.src = getNoteCover(note)"
+              @error="markImageAsBroken(getNoteThumbnail(note)); $event.target.style.display = 'none'"
               class="w-full h-full object-cover"
               loading="lazy"
               alt=""
@@ -430,8 +429,7 @@
             </h3>
           </div>
           <p class="text-sm text-gray-400 line-clamp-1 mb-2">
-            {{ note.content.replace(/[#*`>\[\]!()-]/g, '').slice(0, 100)
-            }}
+            {{ note.content.replace(/[#*`>\[\]!()-]/g, '').slice(0, 100) }}
           </p>
           <div class="flex items-center gap-3 text-xs text-gray-500">
             <div class="flex items-center gap-1">
@@ -449,8 +447,7 @@
                 ></path>
               </svg>
               <span
-                >{{ new
-                Date(note.updated_at).toLocaleDateString('zh-TW')
+                >{{ new Date(note.updated_at).toLocaleDateString('zh-TW')
                 }}</span
               >
             </div>
@@ -472,7 +469,11 @@
         </div>
 
         <!-- Remarks indicator -->
-        <div v-if="note.remarks" class="flex-shrink-0" :title="t('notes.hasRemarks', '有備註')">
+        <div
+          v-if="note.remarks"
+          class="flex-shrink-0"
+          :title="t('notes.hasRemarks', '有備註')"
+        >
           <svg
             class="w-4 h-4 text-blue-400"
             fill="currentColor"
@@ -517,11 +518,7 @@
     <!-- Loading More Indicator (自動載入時顯示) -->
     <div v-if="loadingMore && hasMore" class="mt-8 flex justify-center">
       <div class="flex items-center gap-3 text-gray-500">
-        <svg
-          class="animate-spin w-5 h-5"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
+        <svg class="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
           <circle
             class="opacity-25"
             cx="12"

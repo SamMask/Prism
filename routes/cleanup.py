@@ -421,11 +421,13 @@ def find_thumbnail_for_original(original_filename, uploads_dir):
 @cleanup_bp.route('/cleanup/broken-images', methods=['GET'])
 def get_broken_images():
     """
-    掃描筆記中所有圖片路徑，找出原圖不存在但有縮圖可用的情況
+    掃描筆記中所有圖片路徑，找出失效（檔案不存在）的路徑
+    v1.4.1: 改為偵測所有失效路徑，不限於有縮圖可用的
     
     Response:
-    - broken_paths: 失效路徑列表，每個包含 {note_id, original_path, thumbnail_path}
+    - broken_paths: 失效路徑列表，每個包含 {note_id, original_path, thumbnail_path, can_fix}
     - total_count: 總數量
+    - fixable_count: 可修復數量（有縮圖可用）
     """
     try:
         db = get_db()
@@ -451,38 +453,61 @@ def get_broken_images():
                 
                 # 跳過已經是縮圖的
                 if '_thumb' in filename:
+                    # 檢查縮圖本身是否存在
+                    if not os.path.exists(filepath):
+                        broken_paths.append({
+                            'note_id': note_id,
+                            'original_path': f'/static/uploads/{filename}',
+                            'thumbnail_path': None,
+                            'can_fix': False,
+                            'reason': 'thumbnail_missing'
+                        })
                     continue
                 
                 # 如果原圖不存在
                 if not os.path.exists(filepath):
                     thumb = find_thumbnail_for_original(filename, uploads_dir)
-                    if thumb:
-                        broken_paths.append({
-                            'note_id': note_id,
-                            'original_path': f'/static/uploads/{filename}',
-                            'thumbnail_path': f'/static/uploads/{thumb}'
-                        })
+                    broken_paths.append({
+                        'note_id': note_id,
+                        'original_path': f'/static/uploads/{filename}',
+                        'thumbnail_path': f'/static/uploads/{thumb}' if thumb else None,
+                        'can_fix': thumb is not None,
+                        'reason': 'original_missing'
+                    })
             
             # 檢查 cover_image
             if cover and '/static/uploads/' in cover:
                 filename = cover.split('/static/uploads/')[-1]
-                if '_thumb' not in filename:
-                    filepath = os.path.join(uploads_dir, filename)
-                    if not os.path.exists(filepath):
+                filepath = os.path.join(uploads_dir, filename)
+                if not os.path.exists(filepath):
+                    if '_thumb' in filename:
+                        broken_paths.append({
+                            'note_id': note_id,
+                            'original_path': cover,
+                            'thumbnail_path': None,
+                            'can_fix': False,
+                            'is_cover': True,
+                            'reason': 'thumbnail_missing'
+                        })
+                    else:
                         thumb = find_thumbnail_for_original(filename, uploads_dir)
-                        if thumb:
-                            broken_paths.append({
-                                'note_id': note_id,
-                                'original_path': cover,
-                                'thumbnail_path': f'/static/uploads/{thumb}',
-                                'is_cover': True
-                            })
+                        broken_paths.append({
+                            'note_id': note_id,
+                            'original_path': cover,
+                            'thumbnail_path': f'/static/uploads/{thumb}' if thumb else None,
+                            'can_fix': thumb is not None,
+                            'is_cover': True,
+                            'reason': 'original_missing'
+                        })
+        
+        fixable_count = sum(1 for p in broken_paths if p.get('can_fix'))
         
         return jsonify({
             'status': 'success',
             'data': {
                 'broken_paths': broken_paths,
-                'total_count': len(broken_paths)
+                'total_count': len(broken_paths),
+                'fixable_count': fixable_count
             }
         })
     

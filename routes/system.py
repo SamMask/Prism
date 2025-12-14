@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 System API Routes - Database Maintenance & System Info
-Local Insight v1.8.9
+Prism v1.4.1
 """
 
 import os
@@ -9,7 +9,7 @@ import sqlite3
 from flask import jsonify, current_app
 
 from . import system_bp
-from db import get_db  # v1.8.9: 統一資料庫連線層
+from db import get_db
 
 
 # ===================================================================
@@ -175,8 +175,10 @@ def get_startup_preference():
     Response: { auto_open_browser: true | false | null }
     """
     try:
-        auto_open_yes = os.path.exists('.auto_open_yes')
-        auto_open_no = os.path.exists('.auto_open_no')
+        # SEC-001 Fix: 使用絕對路徑
+        pref_dir = current_app.root_path
+        auto_open_yes = os.path.exists(os.path.join(pref_dir, '.auto_open_yes'))
+        auto_open_no = os.path.exists(os.path.join(pref_dir, '.auto_open_no'))
         
         if auto_open_yes:
             return jsonify({'status': 'success', 'data': {'auto_open_browser': True}})
@@ -203,18 +205,23 @@ def set_startup_preference():
         if auto_open is None:
             return jsonify({'status': 'error', 'message': 'auto_open_browser is required'}), 400
         
+        # SEC-001 Fix: 使用絕對路徑確保安全性
+        pref_dir = current_app.root_path
+        yes_file = os.path.join(pref_dir, '.auto_open_yes')
+        no_file = os.path.join(pref_dir, '.auto_open_no')
+        
         # 刪除舊的標記檔案
-        if os.path.exists('.auto_open_yes'):
-            os.remove('.auto_open_yes')
-        if os.path.exists('.auto_open_no'):
-            os.remove('.auto_open_no')
+        if os.path.exists(yes_file):
+            os.remove(yes_file)
+        if os.path.exists(no_file):
+            os.remove(no_file)
         
         # 建立新的標記檔案
         if auto_open:
-            with open('.auto_open_yes', 'w') as f:
+            with open(yes_file, 'w') as f:
                 f.write('1')
         else:
-            with open('.auto_open_no', 'w') as f:
+            with open(no_file, 'w') as f:
                 f.write('0')
         
         return jsonify({'status': 'success', 'data': {'auto_open_browser': auto_open}})
