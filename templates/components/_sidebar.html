@@ -9,10 +9,10 @@
 <!-- Sidebar -->
 <aside
   :class="[
-    'w-64 bg-theme-surface border-r border-theme-subtle flex flex-col shrink-0 transition-all duration-300',
-    'md:relative md:inset-auto md:z-auto md:h-auto md:translate-x-0',
-    'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:top-16 max-md:h-[calc(100%-4rem)]',
-    mobileSidebarOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'
+    'w-64 glass-panel m-4 rounded-2xl flex flex-col shrink-0 transition-transform duration-300',
+    'md:relative md:inset-auto md:z-auto md:h-[calc(100vh-2rem)]',
+    'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:h-[calc(100%-2rem)] max-md:m-4',
+    mobileSidebarOpen ? 'translate-x-0' : 'max-md:-translate-x-[120%]'
   ]"
 >
   <!-- Type Filter -->
@@ -162,8 +162,8 @@
 
   <!-- Footer Info -->
   <div
-    class="p-4 border-t border-theme-subtle text-xs text-theme-muted text-center"
+    class="p-4 border-t border-white/5 text-xs text-theme-muted text-center"
   >
-    v1.0 (MVP)
+    v1.4 UI 2.0 (Glass)
   </div>
 </aside>

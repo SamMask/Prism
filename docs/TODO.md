@@ -560,6 +560,24 @@
 
 ---
 
+## ✅ Phase 18: UI 2.0 Redesign (v1.4 - 2025-12-14)
+
+### 18.1 視覺與互動升級 (Glassmorphism)
+
+- [x] **18.1.1** 全局玻璃化 (Glassmorphism Core) ✅ _(2025-12-14)_
+  - 新增 `styles.css` 玻璃變數 (`--glass-opacity`, `--glass-blur`)
+  - 實作 `.glass-panel` 統一風格
+- [x] **18.1.2** Bento Grid 佈局重構 ✅ _(2025-12-14)_
+
+  - Header/Sidebar 改為懸浮面板
+  - 主內容區與側邊欄形成獨立區塊
+
+- [x] **18.1.3** 3D 微互動 (Micro-interactions) ✅ _(2025-12-14)_
+  - 引入 `vanilla-tilt.js` 實現卡片 3D 傾斜與反光
+  - 新增按鈕與邊框的流光效果 (Glow)
+
+---
+
 ## 🔮 未來規劃 (Future Roadmap)
 
 > 以下項目尚未實作，列入長期規劃。

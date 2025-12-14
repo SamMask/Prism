@@ -1,3 +1,32 @@
 <!-- Scripts Component (v0.8.9) -->
     <!-- ES Modules Architecture (v0.8.8) -->
+    <!-- ES Modules Architecture (v0.8.8) -->
     <script type="module" src="/static/js/app.js?v=1.0"></script>
+
+    <!-- UI 2.0 Micro-interactions (Tilt.js) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
+    <script>
+      // Initialize Tilt on dynamically added cards
+      document.addEventListener("DOMContentLoaded", () => {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            mutation.addedNodes.forEach((node) => {
+              if (node.nodeType === 1 && node.classList.contains('glass-panel-hover')) {
+                VanillaTilt.init(node, {
+                  max: 3,
+                  speed: 400,
+                  glare: true,
+                  "max-glare": 0.1,
+                  scale: 1.02
+                });
+              }
+            });
+          });
+        });
+
+        const container = document.getElementById("app");
+        if (container) {
+          observer.observe(container, { childList: true, subtree: true });
+        }
+      });
+    </script>

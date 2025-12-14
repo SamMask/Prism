@@ -34,8 +34,12 @@
     </script>
     <style>
       body {
-        background-color: var(--color-bg-surface);
+        background-color: var(--color-bg-base);
         color: var(--color-text-primary);
+        background-image: 
+          radial-gradient(circle at 15% 50%, rgba(var(--color-primary-rgb), 0.08), transparent 25%),
+          radial-gradient(circle at 85% 30%, rgba(var(--color-accent-rgb), 0.08), transparent 25%);
+        background-attachment: fixed;
       }
       /* Custom Scrollbar - Theme Aware (v0.9.0) */
       ::-webkit-scrollbar {

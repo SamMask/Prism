@@ -28,9 +28,15 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
 
+class TestingConfig(Config):
+    TESTING = True
+    DATABASE = ':memory:'  # Use in-memory SQLite for testing
+    UPLOAD_FOLDER = os.path.join(Config.BASE_DIR, 'static', 'test_uploads')
+
 # 配置映射
 config = {
     'development': DevelopmentConfig,
     'production': ProductionConfig,
+    'testing': TestingConfig,
     'default': DevelopmentConfig
 }

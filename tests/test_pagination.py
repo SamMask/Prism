@@ -3,282 +3,126 @@
 建立 100+ 筆測試資料並驗證分頁正確性
 """
 
-import requests
-import json
-import sys
+import pytest
 
-BASE_URL = 'http://localhost:5000/api'
+@pytest.fixture
 
+def populated_client(app):
+    """
+    建立一個包含許多測試筆記的 client fixture。
+    scope="module" 意味著這個 setup 在此模組的所有測試中只會執行一次。
+    """
+    with app.app_context():
+        # 直接使用 DB 插入會比 API 快很多，但為了整合測試，我們還是模擬 API 行為
+        # 或者混合：大量數據用 DB，少量用 API
+        # 這裡為了保證觸發所有 side effects (FTS, etc)，我們使用 client
+        client = app.test_client()
+        
+        # 批量建立 105 筆筆記
+        notes_count = 105
+        print(f"Creating {notes_count} test notes...")
+        
+        # 為了效率，我們可以直接操作 DB，因為這只是測試分頁，不是測試創建
+        from db import get_db
+        db = get_db()
+        
+        # 只有在資料為空時才建立 (避免重複)
+        cursor = db.execute("SELECT COUNT(*) FROM Notes WHERE type='測試'")
+        if cursor.fetchone()[0] < notes_count:
+            notes_data = []
+            for i in range(1, notes_count + 1):
+                notes_data.append((
+                    f"Test Note {i:03d}",
+                    f"# Test Content {i}\n\nThis is test note number {i}.",
+                    "測試",
+                    f"Test note {i}"
+                ))
+            
+            # 使用 executemany 加速
+            db.executemany('''
+                INSERT INTO Notes (title, content, type, remarks, created_at, updated_at)
+                VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ''', notes_data)
+            db.commit()
+            
+            print(f"Created {notes_count} notes via SQL")
+            
+    return app.test_client()
 
-def create_test_notes(count=105):
-    """建立測試筆記資料"""
-    print(f"\n[SETUP] Creating {count} test notes...")
-
-    created_ids = []
-
-    for i in range(1, count + 1):
-        note = {
-            "title": f"Test Note {i:03d}",
-            "content": f"# Test Content {i}\n\nThis is test note number {i}.",
-            "type": "測試",
-            "remarks": f"Test note {i}",
-            "tags": [f"Tag{(i-1)%10+1}", "測試"],
-            "urls": [f"https://example.com/note{i}"]
-        }
-
-        response = requests.post(f"{BASE_URL}/notes", json=note)
-
-        if response.status_code == 201:
-            note_id = response.json()['data']['note_id']
-            created_ids.append(note_id)
-
-            if i % 20 == 0:
-                print(f"  Created {i}/{count} notes...")
-        else:
-            print(f"[ERROR] Failed to create note {i}: {response.text}")
-            return []
-
-    print(f"[OK] Successfully created {len(created_ids)} test notes")
-    return created_ids
-
-
-def test_default_pagination():
+def test_default_pagination(populated_client):
     """測試預設分頁參數"""
-    print("\n[TEST 1] Testing default pagination...")
-
-    response = requests.get(f"{BASE_URL}/notes")
-
-    if response.status_code != 200:
-        print(f"[FAIL] Request failed: {response.text}")
-        return False
-
-    result = response.json()
-
-    # 驗證回應結構
-    if 'pagination' not in result:
-        print("[FAIL] Missing 'pagination' in response")
-        return False
-
+    response = populated_client.get('/api/notes?type=測試') # Filter by our test type
+    assert response.status_code == 200
+    
+    result = response.json
+    assert 'pagination' in result
     pagination = result['pagination']
+    
+    # 預設 page=1, per_page=20
+    assert pagination['page'] == 1
+    assert pagination['per_page'] == 20
+    assert len(result['data']) <= 20
+    assert pagination['total'] >= 105
 
-    # 驗證預設值
-    if pagination['page'] != 1:
-        print(f"[FAIL] Expected page=1, got {pagination['page']}")
-        return False
-
-    if pagination['per_page'] != 20:
-        print(f"[FAIL] Expected per_page=20, got {pagination['per_page']}")
-        return False
-
-    if len(result['data']) > 20:
-        print(f"[FAIL] Expected at most 20 notes, got {len(result['data'])}")
-        return False
-
-    print(f"[OK] Default pagination works correctly")
-    print(f"     Page: {pagination['page']}, Per page: {pagination['per_page']}")
-    print(f"     Total: {pagination['total']}, Total pages: {pagination['total_pages']}")
-    print(f"     Notes returned: {len(result['data'])}")
-
-    return True
-
-
-def test_custom_pagination():
+def test_custom_pagination(populated_client):
     """測試自定義分頁參數"""
-    print("\n[TEST 2] Testing custom pagination (page=2, per_page=10)...")
-
-    response = requests.get(f"{BASE_URL}/notes?page=2&per_page=10")
-
-    if response.status_code != 200:
-        print(f"[FAIL] Request failed: {response.text}")
-        return False
-
-    result = response.json()
+    response = populated_client.get('/api/notes?page=2&per_page=10&type=測試')
+    assert response.status_code == 200
+    
+    result = response.json
     pagination = result['pagination']
+    
+    assert pagination['page'] == 2
+    assert pagination['per_page'] == 10
+    assert len(result['data']) == 10
 
-    if pagination['page'] != 2:
-        print(f"[FAIL] Expected page=2, got {pagination['page']}")
-        return False
-
-    if pagination['per_page'] != 10:
-        print(f"[FAIL] Expected per_page=10, got {pagination['per_page']}")
-        return False
-
-    if len(result['data']) > 10:
-        print(f"[FAIL] Expected at most 10 notes, got {len(result['data'])}")
-        return False
-
-    print(f"[OK] Custom pagination works correctly")
-    print(f"     Notes returned: {len(result['data'])}")
-
-    return True
-
-
-def test_max_per_page():
+def test_max_per_page(populated_client):
     """測試 per_page 最大值限制"""
-    print("\n[TEST 3] Testing max per_page limit (requesting 150, should cap at 100)...")
-
-    response = requests.get(f"{BASE_URL}/notes?per_page=150")
-
-    if response.status_code != 200:
-        print(f"[FAIL] Request failed: {response.text}")
-        return False
-
-    result = response.json()
+    response = populated_client.get('/api/notes?per_page=150&type=測試')
+    assert response.status_code == 200
+    
+    result = response.json
     pagination = result['pagination']
+    
+    # 應該被限制在 100
+    assert pagination['per_page'] == 100
 
-    if pagination['per_page'] != 100:
-        print(f"[FAIL] Expected per_page capped at 100, got {pagination['per_page']}")
-        return False
-
-    print(f"[OK] Max per_page limit enforced correctly")
-
-    return True
-
-
-def test_invalid_page():
+def test_invalid_page(populated_client):
     """測試無效頁碼處理"""
-    print("\n[TEST 4] Testing invalid page numbers...")
+    # 測試 page=0
+    response = populated_client.get('/api/notes?page=0&type=測試')
+    result = response.json
+    assert result['pagination']['page'] == 1
+    
+    # 測試 page=-5
+    response = populated_client.get('/api/notes?page=-5&type=測試')
+    result = response.json
+    assert result['pagination']['page'] == 1
 
-    # 測試 page=0（應該被修正為 1）
-    response = requests.get(f"{BASE_URL}/notes?page=0")
-    result = response.json()
-
-    if result['pagination']['page'] != 1:
-        print(f"[FAIL] Expected page=0 to be corrected to 1, got {result['pagination']['page']}")
-        return False
-
-    # 測試 page=-5（應該被修正為 1）
-    response = requests.get(f"{BASE_URL}/notes?page=-5")
-    result = response.json()
-
-    if result['pagination']['page'] != 1:
-        print(f"[FAIL] Expected page=-5 to be corrected to 1, got {result['pagination']['page']}")
-        return False
-
-    print(f"[OK] Invalid page numbers handled correctly")
-
-    return True
-
-
-def test_last_page():
+def test_last_page(populated_client):
     """測試最後一頁資料"""
-    print("\n[TEST 5] Testing last page...")
-
     # 先取得總頁數
-    response = requests.get(f"{BASE_URL}/notes")
-    result = response.json()
-    total_pages = result['pagination']['total_pages']
+    response = populated_client.get('/api/notes?type=測試')
+    result = response.json
     total = result['pagination']['total']
-
-    # 請求最後一頁
-    response = requests.get(f"{BASE_URL}/notes?page={total_pages}&per_page=20")
-    result = response.json()
-
-    # 最後一頁的筆記數應該是 total % 20（如果能整除則是 20）
-    expected_count = total % 20 if total % 20 != 0 else 20
-    actual_count = len(result['data'])
-
-    if actual_count != expected_count:
-        print(f"[FAIL] Expected {expected_count} notes on last page, got {actual_count}")
-        return False
-
-    print(f"[OK] Last page contains correct number of notes ({actual_count})")
-
-    return True
-
-
-def test_beyond_last_page():
-    """測試超出最後一頁"""
-    print("\n[TEST 6] Testing page beyond last page...")
-
-    # 先取得總頁數
-    response = requests.get(f"{BASE_URL}/notes")
-    result = response.json()
     total_pages = result['pagination']['total_pages']
+    
+    # 請求最後一頁
+    response = populated_client.get(f'/api/notes?page={total_pages}&per_page=20&type=測試')
+    result = response.json
+    
+    # 計算預期數量
+    expected_count = total % 20
+    if expected_count == 0: expected_count = 20
+    
+    assert len(result['data']) == expected_count
 
-    # 請求超出範圍的頁碼
-    response = requests.get(f"{BASE_URL}/notes?page={total_pages + 10}")
-    result = response.json()
-
-    if len(result['data']) != 0:
-        print(f"[FAIL] Expected 0 notes beyond last page, got {len(result['data'])}")
-        return False
-
-    print(f"[OK] Page beyond last page returns empty data")
-
-    return True
-
-
-def cleanup_test_notes(note_ids):
-    """清理測試筆記"""
-    print(f"\n[CLEANUP] Deleting {len(note_ids)} test notes...")
-
-    success_count = 0
-    for note_id in note_ids:
-        response = requests.delete(f"{BASE_URL}/notes/{note_id}")
-        if response.status_code == 200:
-            success_count += 1
-
-    print(f"[OK] Deleted {success_count}/{len(note_ids)} test notes")
-
-
-def main():
-    print("=" * 70)
-    print("API Pagination Test")
-    print("=" * 70)
-
-    # 建立測試資料
-    test_note_ids = create_test_notes(105)
-
-    if not test_note_ids:
-        print("\n[ERROR] Failed to create test notes. Aborting tests.")
-        sys.exit(1)
-
-    try:
-        # 執行測試
-        tests = [
-            test_default_pagination,
-            test_custom_pagination,
-            test_max_per_page,
-            test_invalid_page,
-            test_last_page,
-            test_beyond_last_page
-        ]
-
-        passed = 0
-        failed = 0
-
-        for test_func in tests:
-            if test_func():
-                passed += 1
-            else:
-                failed += 1
-
-        # 輸出結果
-        print("\n" + "=" * 70)
-        print(f"Test Results: {passed} passed, {failed} failed")
-        print("=" * 70)
-
-        if failed == 0:
-            print("[SUCCESS] All pagination tests passed!")
-        else:
-            print(f"[FAIL] {failed} test(s) failed")
-
-    finally:
-        # 清理測試資料
-        cleanup_choice = input("\nDelete test notes? (y/n): ").strip().lower()
-        if cleanup_choice == 'y':
-            cleanup_test_notes(test_note_ids)
-        else:
-            print(f"[INFO] Test notes kept (IDs: {test_note_ids[0]} to {test_note_ids[-1]})")
-
-
-if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n[INFO] Test interrupted by user")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n[ERROR] Test failed with exception: {e}")
-        sys.exit(1)
+def test_beyond_last_page(populated_client):
+    """測試超出最後一頁"""
+    response = populated_client.get('/api/notes?type=測試')
+    total_pages = response.json['pagination']['total_pages']
+    
+    response = populated_client.get(f'/api/notes?page={total_pages + 10}&type=測試')
+    result = response.json
+    
+    assert len(result['data']) == 0

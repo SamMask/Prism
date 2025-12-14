@@ -1,6 +1,8 @@
 Flask==3.0.0
 python-magic-bin==0.4.14
 requests==2.31.0
+pytest==7.4.3
+
 
 # Optional: Pillow for thumbnail generation (may fail on Windows without build tools)
 # pip install Pillow

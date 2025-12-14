@@ -102,6 +102,15 @@
   --color-warning: #f59e0b;
   --color-danger: #ef4444;
 
+  /* Glassmorphism Variables (v1.4 UI 2.0) */
+  --glass-opacity: 0.7;
+  --glass-blur: 16px;
+  --glass-border-opacity: 0.1;
+  --glass-bg-base: rgba(17, 24, 39, 0.7); /* gray-900 @ 70% */
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-glow: 0 0 20px rgba(59, 130, 246, 0.15); /* Primary glow */
+
   /* Micro-interaction timing */
   --transition-fast: 150ms ease;
   --transition-normal: 200ms ease;
@@ -138,6 +147,11 @@
   --color-success: #4ade80;
   --color-warning: #fbbf24;
   --color-danger: #f43f5e;
+
+  /* Glass Overrides */
+  --glass-bg-base: rgba(21, 13, 31, 0.6);
+  --glass-border: rgba(232, 121, 249, 0.2);
+  --glass-glow: 0 0 25px rgba(232, 121, 249, 0.25);
 }
 
 /* === Eye-Care Theme (Soft Green) === */
@@ -170,6 +184,11 @@
   --color-success: #22c55e;
   --color-warning: #eab308;
   --color-danger: #f87171;
+
+  /* Glass Overrides */
+  --glass-bg-base: rgba(13, 22, 16, 0.75);
+  --glass-border: rgba(52, 211, 153, 0.15);
+  --glass-glow: 0 0 20px rgba(52, 211, 153, 0.1);
 }
 
 /* === Elegant Theme (Gold/Warm Gray) === */
@@ -444,6 +463,24 @@ textarea:focus-visible,
 }
 .active-scale-lg:active {
   transform: scale(0.9);
+}
+
+/* Glassmorphism Utilities (v1.4) */
+.glass-panel {
+  background: var(--glass-bg-base);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
+}
+
+.glass-panel-hover:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.4);
+  box-shadow: var(--glass-shadow), var(--glass-glow);
+}
+
+.text-glow {
+  text-shadow: 0 0 10px rgba(var(--color-primary-rgb), 0.5);
 }
 
 /* -----------------------------------------------------------------------------

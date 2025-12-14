@@ -1,24 +1,36 @@
-# 測試腳本
+# 測試腳本 (Test Suite)
 
-此目錄包含專案開發過程中的功能驗證與安全性測試腳本。
+本目錄包含專案的自動化測試腳本，已全面現代化為 **Pytest** 架構。
 
-## 重要的測試腳本
+## Setup (設定)
 
-- **test_upload_security.py**: 安全性測試。驗證系統是否能正確阻擋偽裝成圖片的惡意檔案（Magic Number 檢查）。
-- **test_pagination.py**: 壓力測試。建立大量筆記來測試分頁效能與邏輯。
+- **框架**: `pytest`
+- **設定檔**: `pytest.ini` (位於專案根目錄)
+- **共用 Fixtures**: `conftest.py` (包含 `app`, `client`, 在記憶體中的測試資料庫設定)
 
-## 其他腳本
+## 測試檔案列表
 
-- **test_reorder.py**: 驗證拖放排序 API。
-- **test_offline_mode.py**: 驗證靜態資源是否本地化（注意：需更新路徑以適應新的 template 架構，目前針對 v1.8.8 以前版本）。
-- 測試 Jinja2 分隔符相關腳本 (`test_separator*.py`): 用於開發初期解決 Vue 與 Jinja2 語法衝突問題。
-- **test_sql.py**, **test_tags_filter.py**: 簡單的資料庫與過濾邏輯驗證。
+| 檔案名稱                  | 說明               | 測試重點                                                    |
+| :------------------------ | :----------------- | :---------------------------------------------------------- |
+| `test_upload_security.py` | 檔案上傳安全性測試 | 驗證 Magic Number 檢查，防止偽裝的 EXE/HTML/Script 檔案上傳 |
+| `test_pagination.py`      | 分頁邏輯測試       | 驗證 API 分頁參數 (`page`, `per_page`) 及邊界條件           |
+| `test_tags_filter.py`     | 標籤過濾測試       | 驗證標籤清單 API 與前端整合格式                             |
+| `test_sql.py`             | 資料庫邏輯測試     | 使用獨立環境驗證複雜 SQL 操作 (如筆記拖曳排序)              |
+| `test_comma_tags.py`      | 特殊字元標籤測試   | 驗證含逗號的標籤 (如 "AI, ML") 能被正確儲存與讀取           |
 
-**使用說明**:
-由於移入此目錄，執行腳本時可能需要將根目錄加入 `PYTHONPATH`，或將腳本移回根目錄執行。
-例如：
+## 如何執行測試 (Running Tests)
 
-```bash
-set PYTHONPATH=..
-python test_upload_security.py
+由於專案使用內嵌式 (Embedded) Python 環境，建議直接使用下列終端機指令執行：
+
+```powershell
+.\python\python.exe -m pytest
+```
+
+執行後應看到類似以下的輸出 (全綠燈 PASSED)：
+
+```text
+tests/test_comma_tags.py::test_comma_in_tags PASSED
+tests/test_pagination.py::test_default_pagination PASSED
+...
+====================== 15 passed in 3.16s ======================
 ```

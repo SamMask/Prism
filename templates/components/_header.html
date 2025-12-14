@@ -1,6 +1,6 @@
 <!-- Header Component (v1.0) -->
 <header
-  class="bg-theme-elevated/50 backdrop-blur-md border-b border-theme-default h-16 flex items-center px-6 shrink-0 z-20"
+  class="glass-panel sticky top-4 mx-4 mt-4 rounded-2xl h-16 flex items-center px-6 shrink-0 z-20 transition-all duration-300"
 >
   <div class="flex items-center gap-3">
     <!-- Mobile Menu Button (v0.8.9) -->
@@ -8,14 +8,31 @@
       @click="mobileSidebarOpen = !mobileSidebarOpen"
       class="md:hidden p-2 -ml-2 text-theme-secondary hover:text-white hover:bg-theme-hover rounded-lg transition-colors"
     >
-      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path v-if="!mobileSidebarOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-        <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      <svg
+        class="w-6 h-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          v-if="!mobileSidebarOpen"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M4 6h16M4 12h16M4 18h16"
+        ></path>
+        <path
+          v-else
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M6 18L18 6M6 6l12 12"
+        ></path>
       </svg>
     </button>
     <div
       class="w-8 h-8 brand-gradient rounded-lg flex items-center justify-center shadow-lg"
-      style="box-shadow: 0 4px 15px -3px rgba(var(--color-primary-rgb), 0.3);"
+      style="box-shadow: 0 4px 15px -3px rgba(var(--color-primary-rgb), 0.3)"
     >
       <svg
         class="w-5 h-5 text-white"
@@ -31,11 +48,7 @@
         ></path>
       </svg>
     </div>
-    <h1
-      class="text-xl font-bold brand-gradient-text"
-    >
-      Prism
-    </h1>
+    <h1 class="text-xl font-bold brand-gradient-text">Prism</h1>
   </div>
 
   <div class="ml-auto flex items-center gap-4">
@@ -46,7 +59,7 @@
         :placeholder="t('notes.searchPlaceholder')"
         v-model="searchKeyword"
         @input="handleSearchInput"
-        class="bg-theme-surface/50 border border-theme-default text-gray-800 text-sm rounded-full px-4 py-2 pl-10 w-64 focus:outline-none focus:border-theme-primary focus:ring-1 focus:ring-theme-primary transition-all placeholder-gray-500"
+        class="bg-theme-surface/30 border border-theme-default/50 text-gray-200 text-sm rounded-full px-4 py-2 pl-10 w-64 focus:outline-none focus:border-theme-primary focus:ring-1 focus:ring-theme-primary transition-all placeholder-gray-500 backdrop-blur-sm"
       />
       <svg
         class="w-4 h-4 text-theme-muted absolute left-3.5 top-2.5 group-focus-within:text-theme-brand-light transition-colors"
@@ -89,17 +102,29 @@
     <!-- Quick Add Button (Purple/Accent) -->
     <button
       @click="openQuickAdd()"
-      class="bg-theme-accent hover:bg-theme-accent-hover text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-lg shadow-[rgba(var(--color-accent-rgb),0.2)] flex items-center gap-2"
+      class="bg-theme-accent/80 hover:bg-theme-accent text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-[0_0_15px_rgba(var(--color-accent-rgb),0.3)] hover:shadow-[0_0_25px_rgba(var(--color-accent-rgb),0.5)] flex items-center gap-2 backdrop-blur-sm border border-white/10"
       :title="t('common.quickAdd', '快速新增')"
     >
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      <svg
+        class="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M13 10V3L4 14h7v7l9-11h-7z"
+        ></path>
+      </svg>
       {{ t('common.quickAdd', '快速新增') }}
     </button>
 
     <!-- Add Note Button (Blue/Primary) -->
     <button
       @click="openEditor()"
-      class="bg-theme-primary hover:bg-theme-primary-hover text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-lg shadow-[rgba(var(--color-primary-rgb),0.2)] flex items-center gap-2"
+      class="bg-theme-primary/80 hover:bg-theme-primary text-white px-4 py-2 rounded-full text-sm font-medium transition-all shadow-[0_0_15px_rgba(var(--color-primary-rgb),0.3)] hover:shadow-[0_0_25px_rgba(var(--color-primary-rgb),0.5)] flex items-center gap-2 backdrop-blur-sm border border-white/10"
     >
       <svg
         class="w-4 h-4"
@@ -156,7 +181,10 @@
             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
           ></path>
         </svg>
-        <span class="hidden sm:inline">{{ isSelectionMode ? t('common.cancel', '取消') : t('notes.multiSelect', '複選') }}</span>
+        <span class="hidden sm:inline"
+          >{{ isSelectionMode ? t('common.cancel', '取消') :
+          t('notes.multiSelect', '複選') }}</span
+        >
       </button>
 
       <!-- Sort Mode Toggle (v0.9.0) -->
@@ -167,8 +195,18 @@
           class="px-2 py-1 rounded text-xs transition-colors"
           :title="t('sort.updated', '更新時間')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+            ></path>
           </svg>
         </button>
         <button
@@ -177,8 +215,18 @@
           class="px-2 py-1 rounded text-xs transition-colors"
           :title="t('sort.custom', '自訂排序 (可拖放)')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+            ></path>
           </svg>
         </button>
         <button
@@ -187,8 +235,18 @@
           class="px-2 py-1 rounded text-xs transition-colors"
           :title="t('sort.created', '建立時間')"
         >
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            ></path>
           </svg>
         </button>
       </div>
@@ -242,8 +300,11 @@
         v-if="!notesLoading && filteredNotes.length > 0"
         class="text-xs text-gray-500 px-2"
       >
-        {{ t('notes.showing', '已顯示') }} {{ notes.length }}/{{ totalNotes }} {{ t('notes.items', '則') }}
-        <span v-if="!hasMore" class="text-blue-400">· {{ t('notes.allLoaded') }}</span>
+        {{ t('notes.showing', '已顯示') }} {{ notes.length }}/{{ totalNotes }}
+        {{ t('notes.items', '則') }}
+        <span v-if="!hasMore" class="text-blue-400"
+          >· {{ t('notes.allLoaded') }}</span
+        >
       </div>
     </div>
 
@@ -254,10 +315,22 @@
         class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-1"
         title="語言 / Language"
       >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+        <svg
+          class="w-5 h-5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+          ></path>
         </svg>
-        <span class="text-xs">{{ currentLocale === 'zh-TW' ? '中' : 'EN' }}</span>
+        <span class="text-xs"
+          >{{ currentLocale === 'zh-TW' ? '中' : 'EN' }}</span
+        >
       </button>
       <!-- Language Dropdown -->
       <div
