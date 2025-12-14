@@ -40,6 +40,11 @@ xcopy /E /I /Y "docs" "dist\%ARCHIVE_NAME%\docs" >nul
 xcopy /E /I /Y "migrations" "dist\%ARCHIVE_NAME%\migrations" >nul
 xcopy /E /I /Y "python" "dist\%ARCHIVE_NAME%\python" >nul
 
+REM 移除測試相關套件 (縮小體積)
+echo [2.5/3] 清理測試套件...
+"dist\%ARCHIVE_NAME%\python\python.exe" -m pip uninstall -y pytest pluggy iniconfig pygments packaging >nul 2>&1
+
+
 REM 複製根目錄檔案
 copy "app.py" "dist\%ARCHIVE_NAME%\" >nul
 copy "config.py" "dist\%ARCHIVE_NAME%\" >nul
