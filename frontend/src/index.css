@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================================================
+   Prism V2 - Design System CSS Variables
+   Migrated from v1.x static/css/styles.css
+   =================================================================== */
+
+:root {
+  /* Background Colors (Dark Theme Default) */
+  --color-bg-base: #030712;
+  --color-bg-surface: #111827;
+  --color-bg-elevated: #1f2937;
+  --color-bg-hover: #374151;
+
+  /* Primary Colors (Professional Blue) */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-primary-rgb: 59, 130, 246;
+
+  /* Accent Colors (Purple) */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #7c3aed;
+  --color-accent-light: #a78bfa;
+
+  /* Text Colors */
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+
+  /* Border Colors */
+  --color-border-default: #374151;
+  --color-border-subtle: #1f2937;
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-error: #ef4444;
+}
+
+/* ===================================================================
+   Light Theme (Gray 15% - Soft, not too bright)
+   =================================================================== */
+
+html.light, .light {
+  /* Background Colors (Light Theme - Gray 15) */
+  --color-bg-base: #e5e5e5;
+  --color-bg-surface: #d9d9d9;
+  --color-bg-elevated: #cccccc;
+  --color-bg-hover: #bfbfbf;
+
+  /* Primary Colors (Same) */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #93c5fd;
+  --color-primary-rgb: 59, 130, 246;
+
+  /* Accent Colors (Same) */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #7c3aed;
+  --color-accent-light: #c4b5fd;
+
+  /* Text Colors (Dark text on gray background) */
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #404040;
+  --color-text-muted: #666666;
+
+  /* Border Colors (Light gray) */
+  --color-border-default: #a6a6a6;
+  --color-border-subtle: #b3b3b3;
+
+  /* Status Colors (Same) */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-error: #ef4444;
+}
+
+/* ===================================================================
+   Base Styles
+   =================================================================== */
+
+body {
+  font-family: "Inter", "Noto Sans TC", sans-serif;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===================================================================
+   Scrollbar Styles
+   =================================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ===================================================================
+   Utility Classes
+   =================================================================== */
+
+@layer utilities {
+  .glass {
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .light .glass {
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  .gradient-text {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-accent)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

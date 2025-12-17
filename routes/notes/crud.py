@@ -41,6 +41,81 @@ def get_category_id_by_name(db, type_name):
     return None
 
 
+def _queue_embedding_update(note_id: int, title: str, content: str):
+    """
+    Phase 3.2: 非同步更新筆記的 Embedding
+    
+    使用背景線程避免阻塞 API 回應。
+    Graceful degradation: 如果 embedding 服務未安裝，靜默失敗。
+    """
+    import threading
+    import hashlib
+    
+    def _do_embedding():
+        try:
+            from services.embedding_service import is_model_available, text_to_embedding, embedding_to_blob
+            from config import Config
+            import sqlite3
+            
+            if not is_model_available():
+                return  # Graceful degradation
+            
+            # 計算 content_hash (用於增量更新)
+            text = f"{title}\n{content}"
+            content_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
+            
+            # 獨立連線 (在新線程中)
+            conn = sqlite3.connect(Config.DATABASE)
+            
+            try:
+                # 檢查是否需要更新 (content_hash 比對)
+                cursor = conn.execute(
+                    'SELECT content_hash FROM Embeddings WHERE resource_type = ? AND resource_id = ?',
+                    ('note', note_id)
+                )
+                existing = cursor.fetchone()
+                
+                if existing and existing[0] == content_hash:
+                    return  # 內容未變更，跳過
+                
+                # 產生新 Embedding
+                embedding = text_to_embedding(text)
+                if embedding is None:
+                    return
+                
+                blob = embedding_to_blob(embedding)
+                
+                # 更新或插入 Embeddings 表
+                conn.execute('''
+                    INSERT OR REPLACE INTO Embeddings 
+                    (resource_type, resource_id, chunk_index, model_name, vector, content_hash, dimensions, created_at)
+                    VALUES (?, ?, 0, 'all-MiniLM-L6-v2', ?, ?, 384, datetime('now'))
+                ''', ('note', note_id, blob, content_hash))
+                
+                # 同時更新 Notes.embedding_status (如果欄位存在)
+                try:
+                    conn.execute(
+                        'UPDATE Notes SET embedding_status = ? WHERE id = ?',
+                        ('indexed', note_id)
+                    )
+                except sqlite3.OperationalError:
+                    pass  # 欄位不存在，忽略
+                
+                conn.commit()
+                print(f"[Embedding] Note {note_id} embedded successfully")
+                
+            finally:
+                conn.close()
+                
+        except Exception as e:
+            print(f"[Embedding] Failed to embed note {note_id}: {e}")
+    
+    # 啟動背景線程
+    thread = threading.Thread(target=_do_embedding, daemon=True)
+    thread.start()
+
+
+
 @notes_bp.route('/notes', methods=['GET'])
 def get_notes():
     """
@@ -213,36 +288,71 @@ def get_notes():
 
 @notes_bp.route('/notes/<int:note_id>', methods=['GET'])
 def get_note(note_id):
-    """取得單一筆記詳情"""
+    """取得單一筆記詳情 (v2.0: 包含卡片譜系 parent_id)"""
     try:
         db = get_db()
 
+        # v2.0: 檢查 parent_id 欄位是否存在
+        cursor = db.execute("PRAGMA table_info(Notes)")
+        columns = [col[1] for col in cursor.fetchall()]
+        has_parent_id = 'parent_id' in columns
+
         # v1.0: 使用 json_group_array 取代 GROUP_CONCAT
         # v1.1: JOIN Categories 解決雙重事實問題 (Single Source of Truth)
-        query = '''
-            SELECT
-                n.id,
-                n.title,
-                n.content,
-                COALESCE(c.name, n.type) as category_name,
-                n.remarks,
-                n.cover_image,
-                COALESCE(n.cover_position, 'top') as cover_position,
-                COALESCE(n.editor_layout, 'single') as editor_layout,
-                n.prompt_params,
-                n.created_at,
-                n.updated_at,
-                (SELECT json_group_array(json_object('id', t2.id, 'name', t2.name))
-                 FROM Note_Tags nt2 
-                 JOIN Tags t2 ON nt2.tag_id = t2.id 
-                 WHERE nt2.note_id = n.id) as tags_json,
-                (SELECT json_group_array(s2.url)
-                 FROM Source_Urls s2 
-                 WHERE s2.note_id = n.id) as urls_json
-            FROM Notes n
-            LEFT JOIN Categories c ON n.category_id = c.id
-            WHERE n.id = ?
-        '''
+        # v2.0: 新增 parent_id 與 parent 筆記資訊
+        if has_parent_id:
+            query = '''
+                SELECT
+                    n.id,
+                    n.title,
+                    n.content,
+                    COALESCE(c.name, n.type) as category_name,
+                    n.remarks,
+                    n.cover_image,
+                    COALESCE(n.cover_position, 'top') as cover_position,
+                    COALESCE(n.editor_layout, 'single') as editor_layout,
+                    n.prompt_params,
+                    n.parent_id,
+                    p.title as parent_title,
+                    n.created_at,
+                    n.updated_at,
+                    (SELECT json_group_array(json_object('id', t2.id, 'name', t2.name))
+                     FROM Note_Tags nt2 
+                     JOIN Tags t2 ON nt2.tag_id = t2.id 
+                     WHERE nt2.note_id = n.id) as tags_json,
+                    (SELECT json_group_array(s2.url)
+                     FROM Source_Urls s2 
+                     WHERE s2.note_id = n.id) as urls_json
+                FROM Notes n
+                LEFT JOIN Categories c ON n.category_id = c.id
+                LEFT JOIN Notes p ON n.parent_id = p.id
+                WHERE n.id = ?
+            '''
+        else:
+            query = '''
+                SELECT
+                    n.id,
+                    n.title,
+                    n.content,
+                    COALESCE(c.name, n.type) as category_name,
+                    n.remarks,
+                    n.cover_image,
+                    COALESCE(n.cover_position, 'top') as cover_position,
+                    COALESCE(n.editor_layout, 'single') as editor_layout,
+                    n.prompt_params,
+                    n.created_at,
+                    n.updated_at,
+                    (SELECT json_group_array(json_object('id', t2.id, 'name', t2.name))
+                     FROM Note_Tags nt2 
+                     JOIN Tags t2 ON nt2.tag_id = t2.id 
+                     WHERE nt2.note_id = n.id) as tags_json,
+                    (SELECT json_group_array(s2.url)
+                     FROM Source_Urls s2 
+                     WHERE s2.note_id = n.id) as urls_json
+                FROM Notes n
+                LEFT JOIN Categories c ON n.category_id = c.id
+                WHERE n.id = ?
+            '''
 
         row = db.execute(query, (note_id,)).fetchone()
 
@@ -275,6 +385,12 @@ def get_note(note_id):
             'tags': parse_tags_json(row['tags_json']),
             'urls': parse_urls_json(row['urls_json']),
         }
+        
+        # v2.0: 加入父筆記資訊
+        if has_parent_id:
+            parent_id = row['parent_id']
+            note['parent_id'] = parent_id
+            note['parent_title'] = row['parent_title'] if parent_id else None
 
         return jsonify({
             'status': 'success',
@@ -363,6 +479,9 @@ def create_note():
                         db.execute('INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)', (note_id, url.strip()))
 
             db.commit()
+            
+            # Phase 3.2: 自動產生 Embedding (非同步，不阻塞回應)
+            _queue_embedding_update(note_id, title, data.get('content', ''))
 
             return jsonify({
                 'status': 'success',
@@ -464,6 +583,9 @@ def update_note(note_id):
                         db.execute('INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)', (note_id, url.strip()))
 
             db.commit()
+            
+            # Phase 3.2: 自動更新 Embedding (背景執行)
+            _queue_embedding_update(note_id, data.get('title', ''), data.get('content', ''))
 
             return jsonify({'status': 'success'})
 

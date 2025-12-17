@@ -3,7 +3,7 @@
 **資料庫**: SQLite 3
 **版本**: v1.3.0
 **特性**: 啟用 Foreign Keys 約束 (`PRAGMA foreign_keys = ON;`)
-**修訂**: Phase 17 - 安全強化 (CSRF 防護與本機綁定)
+**修訂**: Phase 20 - Personal Edition Features (v2.0)
 
 ---
 
@@ -42,6 +42,8 @@
 | `prompt_params`  | TEXT     | -                         | NULL                | Prompt Builder 結構化參數 (JSON 格式, v0.6.5)<br>儲存原始表單狀態，用於再次編輯                                       |
 | `created_at`     | DATETIME | NOT NULL                  | `CURRENT_TIMESTAMP` | 建立時間 (ISO 8601 格式)                                                                                              |
 | `updated_at`     | DATETIME | NOT NULL                  | `CURRENT_TIMESTAMP` | 最後更新時間                                                                                                          |
+| `dominant_color` | TEXT     | -                         | NULL                | 主色調 (v2.0): 自動提取的圖片主色 (Hex 格式, e.g., #FF0055)                                                           |
+| `generation_info`| TEXT     | -                         | NULL                | AI 生成資訊 (JSON/Review, v2.0): 儲存 PNG Metadata (Prompt, Workflow, Seeds)                                          |
 
 **索引建議**:
 
@@ -169,7 +171,9 @@ CREATE TABLE IF NOT EXISTS Notes (
     remarks TEXT,
     cover_image TEXT,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    dominant_color TEXT,
+    generation_info TEXT
 );
 
 CREATE INDEX idx_notes_type ON Notes(type);

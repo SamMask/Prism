@@ -121,9 +121,25 @@ def toggle_archive_note(note_id):
 
 @notes_bp.route('/notes/<int:note_id>/duplicate', methods=['POST'])
 def duplicate_note(note_id):
-    """複製筆記"""
+    """
+    複製筆記 / 建立變體 (Fork)
+    
+    Phase 3.7: 卡片譜系 (Card Lineage)
+    - 當 as_variant=true 時，設定 parent_id 建立父子關係
+    - 變體不複製圖片 (僅引用 cover_image 路徑)
+    
+    Request Body (optional):
+    {
+        "as_variant": true,          # 是否作為變體 (設定 parent_id)
+        "title_suffix": " (v2)"      # 標題後綴 (預設 " (Copy)" 或 " (Variant)")
+    }
+    """
     try:
         db = get_db()
+        data = request.get_json() or {}
+        
+        as_variant = data.get('as_variant', False)
+        title_suffix = data.get('title_suffix', ' (Variant)' if as_variant else ' (Copy)')
 
         original = db.execute('SELECT * FROM Notes WHERE id = ?', (note_id,)).fetchone()
         if original is None:
@@ -133,16 +149,41 @@ def duplicate_note(note_id):
             }), 404
 
         try:
-            cursor = db.execute('''
-                INSERT INTO Notes (title, content, type, remarks, cover_image)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                original['title'] + ' (Copy)',
-                original['content'],
-                original['type'],
-                original['remarks'],
-                original['cover_image']
-            ))
+            # 準備要插入的欄位 (根據是否支持 parent_id 動態調整)
+            new_title = original['title'] + title_suffix
+            
+            # 檢查 parent_id 欄位是否存在
+            cursor = db.execute("PRAGMA table_info(Notes)")
+            columns = [col[1] for col in cursor.fetchall()]
+            has_parent_id = 'parent_id' in columns
+            
+            if as_variant and has_parent_id:
+                # 變體模式: 設定 parent_id，不重複複製圖片
+                cursor = db.execute('''
+                    INSERT INTO Notes (title, content, type, remarks, cover_image, category_id, parent_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_title,
+                    original['content'],
+                    original['type'],
+                    original['remarks'],
+                    original['cover_image'],  # 引用，不複製
+                    original['category_id'] if 'category_id' in original.keys() else None,
+                    note_id  # parent_id = 原始筆記 ID
+                ))
+            else:
+                # 傳統複製模式
+                cursor = db.execute('''
+                    INSERT INTO Notes (title, content, type, remarks, cover_image, category_id)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_title,
+                    original['content'],
+                    original['type'],
+                    original['remarks'],
+                    original['cover_image'],
+                    original['category_id'] if 'category_id' in original.keys() else None,
+                ))
 
             new_note_id = cursor.lastrowid
 
@@ -162,7 +203,11 @@ def duplicate_note(note_id):
 
             return jsonify({
                 'status': 'success',
-                'data': {'note_id': new_note_id}
+                'data': {
+                    'note_id': new_note_id,
+                    'parent_id': note_id if as_variant else None,
+                    'is_variant': as_variant
+                }
             }), 201
 
         except sqlite3.Error as e:

@@ -7,6 +7,10 @@ class Config:
     # 專案根目錄
     BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 
+    # Versioning (Single Source of Truth)
+    PRISM_VERSION = "2.0.0-alpha.1"
+
+
     # 資料庫路徑
     DATABASE = os.environ.get('DATABASE_PATH') or os.path.join(BASE_DIR, 'knowledge.db')
 
@@ -21,6 +25,12 @@ class Config:
 
     # JSON 回應支援 Unicode (顯示中文)
     JSON_AS_ASCII = False
+
+    # V2: Frontend dist directory
+    FRONTEND_DIST = os.path.join(BASE_DIR, 'frontend', 'dist')
+    
+    # V2: Enable React SPA mode (set via environment variable)
+    V2_MODE = os.environ.get('PRISM_V2', 'false').lower() == 'true'
 
 class DevelopmentConfig(Config):
     DEBUG = True

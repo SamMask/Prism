@@ -1,11 +1,13 @@
 """
 Prism - 本機端 AI 提示詞與知識管理中樞
 Flask 應用入口與資料庫初始化 (Blueprint 架構)
+
+V2: Headless API + React SPA 支援
 """
 
 import os
 import sqlite3
-from flask import Flask, g, render_template, jsonify
+from flask import Flask, g, render_template, jsonify, send_from_directory, abort
 from config import config
 
 from werkzeug.exceptions import HTTPException
@@ -89,7 +91,10 @@ def create_app(env_name='default'):
             allowed_origins = [
                 host_url,
                 host_url.replace('127.0.0.1', 'localhost'),
-                host_url.replace('localhost', '127.0.0.1')
+                host_url.replace('localhost', '127.0.0.1'),
+                # V2: Allow Vite dev server (port 5173)
+                'http://localhost:5173',
+                'http://127.0.0.1:5173',
             ]
             
             origin_valid = origin and any(origin.startswith(o) for o in allowed_origins)
@@ -99,22 +104,53 @@ def create_app(env_name='default'):
                 app.logger.warning(f"[CSRF] Blocked request: Origin={origin}, Referer={referer}")
                 abort(403, description='CSRF validation failed: Origin mismatch')
 
-    # ===================================================================
-    # 註冊 Blueprints
+
+    # Global Template Variables
+    @app.context_processor
+    def inject_global_vars():
+        return dict(
+            version=app.config.get('PRISM_VERSION', '2.0.0-dev'),
+            is_v2=app.config.get('V2_MODE', False)
+        )
+
     # ===================================================================
     from routes import register_blueprints
     register_blueprints(app)
 
     # ===================================================================
-    # 首頁路由 (Frontend Entry Points)
+    # V2: React SPA 或 V1: Jinja2 模板
     # ===================================================================
-    @app.route('/')
-    def index():
-        return render_template('index.html')
+    if app.config.get('V2_MODE'):
+        # V2 Mode: Serve React SPA from frontend/dist
+        frontend_dist = app.config.get('FRONTEND_DIST')
+        
+        # V1 Prompt Builder page (still served via Jinja2 for now)
+        @app.route('/prompt-builder.html')
+        def prompt_builder_v1():
+            return render_template('prompt-builder.html')
+        
+        @app.route('/')
+        @app.route('/<path:path>')
+        def serve_spa(path=''):
+            # Skip API routes (handled by blueprints)
+            if path.startswith('api/'):
+                abort(404)
+            # Serve static files if they exist
+            if path and os.path.exists(os.path.join(frontend_dist, path)):
+                return send_from_directory(frontend_dist, path)
+            # Otherwise serve index.html for client-side routing
+            return send_from_directory(frontend_dist, 'index.html')
+        
+        print("[V2] React SPA 模式已啟用")
+    else:
+        # V1 Mode: Traditional Jinja2 templates
+        @app.route('/')
+        def index():
+            return render_template('index.html')
 
-    @app.route('/prompt-builder')
-    def prompt_builder():
-        return render_template('prompt-builder.html')
+        @app.route('/prompt-builder')
+        def prompt_builder():
+            return render_template('prompt-builder.html')
     
     @app.route('/favicon.ico')
     def favicon():
@@ -122,7 +158,24 @@ def create_app(env_name='default'):
     
     @app.route('/api/test')
     def test_api():
-        return jsonify({'status': 'success', 'message': 'Prism API is running!'})
+        """Health check with database statistics"""
+        from db import get_db
+        try:
+            db = get_db()
+            notes_count = db.execute('SELECT COUNT(*) FROM Notes').fetchone()[0]
+            categories_count = db.execute('SELECT COUNT(*) FROM Categories').fetchone()[0]
+            tags_count = db.execute('SELECT COUNT(*) FROM Tags').fetchone()[0]
+            return jsonify({
+                'status': 'ok',
+                'message': 'Prism API is running!',
+                'stats': {
+                    'notes_count': notes_count,
+                    'categories_count': categories_count,
+                    'tags_count': tags_count
+                }
+            })
+        except Exception as e:
+            return jsonify({'status': 'ok', 'message': 'Prism API is running!', 'error': str(e)})
 
     return app
 

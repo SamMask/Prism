@@ -66,7 +66,23 @@ python app.py
 - 所有使用者介面文字**必須**支援多語系。
 - 新增文字時，請同步更新 `static/locales/zh-TW.json` 與 `en.json`。
 
+## ⚖️ 授權與版權規範 (License Compliance)
+
+**嚴格遵守以下開源引用規則:**
+
+| 燈號 | 協議範例 | 策略 | 說明 |
+| :--- | :--- | :--- | :--- |
+| **🟢 綠燈** | MIT, Apache 2.0 | **可複製** | 允許直接複製代碼。**必須**在檔案頭部保留原版權聲明。 |
+| **🟡 黃燈** | GPL-3.0 | **僅參考架構** | 具傳染性。**禁止**直接複製代碼。僅參考架構與邏輯，必須自行重寫實作。 |
+| **🛑 紅燈** | AGPL-3.0 | **完全禁止** | 極具傳染性。禁止複製代碼，僅限學習思路。 |
+
+> **原則**: 你的程式碼必須是你自己敲的 (Clean Room Implementation)，除非來源是綠燈區。
+
 ## 🧪 測試 (Testing)
+
+**測試哲學 (Testing Philosophy)**:
+- **No UI Automation**: 不使用 Selenium/Playwright 測試 UI (成本 > 效益)。UI 依賴人工驗證。
+- **Unit Tests Only**: 僅針對核心業務邏輯 (如資料庫遷移、Prompt 解析) 撰寫 Python 單元測試 (`tests/`)。
 
 提交修復或新功能前，請確保：
 
@@ -88,13 +104,18 @@ python app.py
 | `scripts\pack.bat`          | `Prism_v*_*.zip` (~8MB)           | 輕量版，用戶需先安裝 Python   |
 | `scripts\pack_portable.bat` | `Prism_v*_Portable_*.zip` (~80MB) | 完整版，內嵌 Python，解壓即用 |
 
-### 版本號更新
+### 版本號更新 (Versioning)
+> **Single Source of Truth**: `config.py` 中的 `PRISM_VERSION`
 
-發布前請更新以下檔案中的版本號：
+不再需要手動更新多個檔案。請僅更新 `config.py`：
 
-- `scripts/pack.bat` 和 `scripts/pack_portable.bat` 中的 `VERSION`
-- `start.bat` 標題
-- `README.md` 徽章
+```python
+# config.py
+PRISM_VERSION = "2.0.0-alpha.1"
+```
+
+App 啟動時會自動讀取此變數，並注入到 Templates 與標題中。
+打包腳本 (`pack.bat`) 需修改為從 Python 讀取此變數 (Pending)。
 
 ## 🤝 行為準則 (Code of Conduct)
 

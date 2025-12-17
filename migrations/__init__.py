@@ -78,6 +78,59 @@ MIGRATIONS: List[Tuple[int, str, List[str]]] = [
         ) WHERE category_id IS NULL
         """,
     ]),
+    
+    # v2.0.0 Phase 3.4: 新增附件系統
+    (8, "add_note_attachments", [
+        """
+        CREATE TABLE IF NOT EXISTS Note_Attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER NOT NULL,
+            file_path TEXT NOT NULL,
+            file_type TEXT DEFAULT 'md',
+            title TEXT,
+            size_bytes INTEGER,
+            is_auto_extracted INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (note_id) REFERENCES Notes(id) ON DELETE CASCADE
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_attachments_note_id ON Note_Attachments(note_id)",
+    ]),
+    
+    # v2.0.0 Phase 3.2: 語意搜尋 - Embedding 欄位
+    (9, "add_text_embedding", [
+        "ALTER TABLE Notes ADD COLUMN text_embedding BLOB",
+        "ALTER TABLE Notes ADD COLUMN embedding_updated_at DATETIME",
+    ]),
+
+    # v2.1.0: AI Metadata & Lineage (SCHEMA-V2 Section 2.1)
+    (10, "add_ai_metadata_and_lineage", [
+        "ALTER TABLE Notes ADD COLUMN ai_summary TEXT",       # AI 生成的摘要
+        "ALTER TABLE Notes ADD COLUMN ai_tags TEXT",          # AI 建議的標籤 (JSON Array)
+        "ALTER TABLE Notes ADD COLUMN embedding_status TEXT", # 'pending', 'indexed'
+        "ALTER TABLE Notes ADD COLUMN parent_id INTEGER REFERENCES Notes(id)", # Prompt Versioning
+        "CREATE INDEX IF NOT EXISTS idx_notes_parent_id ON Notes(parent_id)",
+    ]),
+    
+    # v2.2.0: Embeddings Table (SCHEMA-V2 Section 1.1)
+    # 獨立的向量表，支援多資源類型 (notes, images, attachments)
+    (11, "create_embeddings_table", [
+        """
+        CREATE TABLE IF NOT EXISTS Embeddings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resource_type TEXT NOT NULL,      -- 'note', 'image', 'attachment'
+            resource_id INTEGER NOT NULL,     -- 對應 Notes.id / Attachment.id
+            chunk_index INTEGER DEFAULT 0,    -- 0=全文, 1,2,3...=長文切塊 (RAG 預留)
+            model_name TEXT NOT NULL,         -- e.g., 'all-MiniLM-L6-v2'
+            vector BLOB NOT NULL,             -- 二進位向量數據
+            content_hash TEXT,                -- MD5 Hash 用於增量更新
+            dimensions INTEGER,               -- 向量維度 (e.g., 384)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(resource_type, resource_id, chunk_index)
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_embeddings_resource ON Embeddings(resource_type, resource_id)",
+    ]),
 ]
 
 
