@@ -780,6 +780,34 @@ export function SettingsPage() {
               <option value="edit">編輯模式 (Edit) - 直接編輯</option>
             </select>
           </div>
+
+          {/* Image Save Mode */}
+          <div className="pt-6 border-t border-border-subtle">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-text-primary">圖片保存模式</p>
+                <p className="text-text-muted text-sm">
+                  選擇上傳圖片時保存原圖或僅縮圖（節省空間）
+                </p>
+              </div>
+              <select
+                value={localStorage.getItem('imageSaveMode') || 'both'}
+                onChange={(e) => {
+                  localStorage.setItem('imageSaveMode', e.target.value)
+                  const modeName = e.target.value === 'both' ? '原圖+縮圖' : '僅縮圖'
+                  toast.success(`已設定為「${modeName}」模式`)
+                }}
+                className="px-4 py-2 rounded-lg
+                           bg-bg-elevated border border-border-default
+                           text-text-primary
+                           focus:outline-none focus:border-primary
+                           transition-colors"
+              >
+                <option value="both">原圖+縮圖 (Both) - 保留完整品質</option>
+                <option value="thumbnail_only">僅縮圖 (Thumbnail Only) - 節省儲存空間</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Database Stats */}

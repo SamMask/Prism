@@ -222,6 +222,13 @@ export const api = {
   ): Promise<{ url: string; filename?: string }> => {
     const formData = new FormData();
     formData.append("file", file);
+    
+    // Read image save mode preference from localStorage
+    const imageSaveMode = localStorage.getItem('imageSaveMode') || 'both';
+    if (imageSaveMode === 'thumbnail_only') {
+      formData.append("thumbnail_only", "true");
+    }
+    
     const { data } = await client.post("/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

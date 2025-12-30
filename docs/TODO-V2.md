@@ -107,12 +107,13 @@
   - [x] localStorage 持久化 (`cardOpenMode` key)
   - ⚠️ **備註**: 目前三種模式都開啟編輯器，Preview/Reading 模式的 UI 實作延後（需要新增 Modal 或 ReadOnly 狀態）
   
-- [ ] **0.4.3 圖片保存模式 (Image Save Mode)** 🟢 P3
+- [x] **0.4.3 圖片保存模式 (Image Save Mode)** 🟢 P3 ✅ 2024-12-30
   > V1 位置: `static/js/composables/useSettings.js` L60
-  - [ ] 新增設定: both (原圖+縮圖) / thumbnail_only (僅縮圖)
-  - [ ] 在 `SettingsPage.tsx` 新增切換開關
-  - [ ] 圖片上傳 API 接收 `save_mode` 參數
-  - [ ] localStorage 持久化 (`imageSaveMode` key)
+  - [x] 新增設定: both (原圖+縮圖) / thumbnail_only (僅縮圖)
+  - [x] 在 `SettingsPage.tsx` 新增下拉選擇器
+  - [x] 圖片上傳 API (`api.ts uploadImage`) 讀取 localStorage 並傳遞 `thumbnail_only` 參數
+  - [x] localStorage 持久化 (`imageSaveMode` key)
+  - [x] 後端已支援 (`routes/upload.py` L59, L267)
   
 - [ ] **0.4.4 快速新增預設分類 (Quick Add Default Category)** 🟢 P4
   > V1 位置: `static/js/composables/useSettings.js` L52
