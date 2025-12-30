@@ -38,13 +38,14 @@ ALTER TABLE Notes DROP COLUMN type;
 - ✅ `batch.py`: `batch_update_type()` 改用 `category_id` 參數 - **完成**
 - ✅ API 端點: 不再接受 `type` 參數，統一使用 `category_id` - **完成**
 - ✅ Migration v12: 資料庫層面完成 (type 欄位已移除)
+- ✅ `crud.py` `get_note()`: 修復殘留的 `COALESCE(c.name, n.type)` → `COALESCE(c.name, 'Uncategorized')` - **完成 (Post-Audit)**
 
 **Breaking Changes**:
 - `POST /api/notes` 現在只接受 `category_id`，不再接受 `type`
 - `PUT /api/notes/<id>` 現在只接受 `category_id`，不再接受 `type`
 - `POST /api/notes/batch/type` 現在只接受 `category_id`，不再接受 `type`
 
-**狀態**: ✅ Step 0.1 完成 (2024-12-30) - 所有子任務完成，測試通過
+**狀態**: ✅ Step 0.1 完成 (2024-12-30) - 所有子任務完成，測試通過，Post-Audit 修復完成
 
 ### 0.2 實作 AI_Tasks 任務隊列 (Migration v13)
 

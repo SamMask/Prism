@@ -29,9 +29,6 @@ def _queue_embedding_update(note_id: int, title: str, content: str):
 
     [Phase 0 2024-12-30] Linus Report: 實作真正的任務隊列
     """
-    import json
-    from db import get_db
-
     try:
         db = get_db()
 
@@ -230,7 +227,7 @@ def get_note(note_id):
                     n.id,
                     n.title,
                     n.content,
-                    COALESCE(c.name, n.type) as category_name,
+                    COALESCE(c.name, 'Uncategorized') as category_name,
                     n.remarks,
                     n.cover_image,
                     COALESCE(n.cover_position, 'top') as cover_position,
@@ -258,7 +255,7 @@ def get_note(note_id):
                     n.id,
                     n.title,
                     n.content,
-                    COALESCE(c.name, n.type) as category_name,
+                    COALESCE(c.name, 'Uncategorized') as category_name,
                     n.remarks,
                     n.cover_image,
                     COALESCE(n.cover_position, 'top') as cover_position,

@@ -36,6 +36,11 @@
 
 **實際結果**: ✅ 消除雙重事實，移除 ~60 行程式碼，所有測試通過
 
+- [x] **0.1.3 修復殘留引用 (Post-Audit)** ✅ 2024-12-30
+  > **來源**: Phase 0 審核 (Gemini) - 發現 `get_note()` 仍有 `COALESCE(c.name, n.type)` 引用
+  - [x] 修改 `crud.py` L233, L261: `COALESCE(c.name, n.type)` → `COALESCE(c.name, 'Uncategorized')`
+  - [x] 移除 `_queue_embedding_update()` 中重複的 import
+
 **狀態**: ✅ Step 0.1 完成 (2024-12-30)
 
 ### 0.2 ⚙️ Step 2: 實作真正的任務隊列 (Proper Task Queue)
