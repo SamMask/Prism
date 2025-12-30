@@ -47,20 +47,20 @@
 ### 階段三：本地智慧 (Phase 3: Local Intelligence) 🧠
 > **目標**: 引入 "Heavy" 功能，讓 Prism 變聰明。
 
-1.  **AI Tagging (Auto-Label)**:
+1.  **AI Tagging (Auto-Label)**: ✅ 完成
     *   整合 `Ollama` API。
     *   前端上傳圖片 -> 後端呼叫 `LLaVA`/`BakLLaVA` -> 回傳建議標籤。
-2.  **Semantic Search (The "Killer Feature")**:
+2.  **Semantic Search (The "Killer Feature")**: ✅ 完成
     *   後端整合 `CLIP` 或 `Sentence-Transformers`。
     *   對舊圖庫進行 "Embedding Indexing" (背景任務)。
     *   前端搜尋框支援自然語言：「找一張有紅色跑車的圖」。
-3.  **Graph/Canvas View**:
+3.  **Graph/Canvas View**: 🧊 (Deferred)
     *   新增「畫布模式」，允許自由拖曳筆記與圖片，建立視覺化連結。
-4.  **Prompt Lineage (Card Versioning)**:
+4.  **Prompt Lineage (Card Versioning)**: ✅ (Phase 2 Integrated)
     *   實作「卡片分支」，記錄 Prompt 的演變過程 (v1 -> v1.1)。
     *   解決 AI 算圖過程中的版本迷失問題。
-5.  **AI Gateway & Prompt Optimizer**:
-    *   整合多模型 (Local/Cloud) 並提供「AI 提示詞最佳化」功能。
+5.  **AI Gateway & Prompt Optimizer**: 🟡 (Partial)
+    *   整合多模型 (Local/Cloud) 並提供「AI 提示詞最佳化」功能 (Prompt Builder 已整合 AI Optimize)。
     *   讓 Prism 成為 Prompt Engineering 的實驗台。
 
 ### 2.5 🧪 測試策略 (Testing Philosophy)
@@ -100,4 +100,30 @@
 
 ---
 
-**Next Step**: 請參考 `docs/TODO-V2.md` 查看詳細執行清單。
+## 🔴 技術債清償 (Technical Debt - Linus Report 2024-12-30)
+
+> **來源**: `1230-審核報告.md`
+> **核心判斷**: 專案處於「能跑但脆弱」的 V1.5 狀態。Schema V2 有正確的想法，但程式碼還停留在 V1 的補丁思維。
+
+### The Linus Way: 三步驟修正
+
+| 步驟 | 問題 | 解法 | 預期效果 |
+|------|------|------|----------|
+| **1. 淨化資料結構** | `Notes.type` 與 `category_id` 雙重事實 | 刪除 `Notes.type`，移除 `get_category_id_by_name` | 程式碼 -50 行，Bug -50% |
+| **2. 真正的任務隊列** | `ThreadPoolExecutor` 在 WSGI 中啟動，重啟丟失任務 | 使用 `AI_Tasks` 表 + 獨立 Worker Process | 任務持久化，崩潰不丟失 |
+| **3. 重構查詢邏輯** | `get_notes` 160 行義大利麵條 | 提取 `NoteQueryBuilder` 類別 | 新增過濾條件只需改一處 |
+
+### 程式碼審查摘要 (crud.py)
+
+| 項目 | 評分 | 評論 |
+|------|------|------|
+| **品味** | 🟡 | 用 `get_category_id_by_name` 掩蓋架構錯誤是壞品味；使用 SQLite JSON 功能是好品味 |
+| **結構** | 🔴 | `get_notes` 太過龐大，`_do_embedding` 定義在函式內部很醜陋 |
+| **安全** | 🟡 | FTS5 字串處理較原始，但有意識到 DoS 風險 |
+
+> **Linus 觀點**: "Design the architecture, create the data structures, and then write the code."
+> 別再寫 Python 補丁了。修好你的 Database Schema，程式碼自然會變簡單。
+
+---
+
+**Next Step**: 請參考 `docs/TODO-V2.md` 查看詳細執行清單。**Phase 0 現為最高優先級**。
