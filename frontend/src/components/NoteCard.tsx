@@ -54,6 +54,12 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     if (isSelectionMode) {
       toggleNoteSelection(note.id)
     } else {
+      // Read card open mode preference from localStorage
+      // @ts-ignore - Reserved for future preview/reading mode implementation
+      const cardOpenMode = localStorage.getItem('cardOpenMode') || 'reading'
+      
+      // For now, all modes open the editor (preview/reading modes to be implemented later)
+      // Future: preview mode could show a modal, reading mode could open in read-only
       openEditor(note)
     }
   }

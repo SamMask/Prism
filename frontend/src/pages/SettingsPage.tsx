@@ -753,6 +753,33 @@ export function SettingsPage() {
               })}
             </div>
           </div>
+
+          {/* Card Open Mode */}
+          <div className="pt-6 border-t border-border-subtle">
+            <div className="mb-3">
+              <p className="text-text-primary">卡片開啟模式</p>
+              <p className="text-text-muted text-sm">
+                選擇點擊卡片時的預設開啟模式
+              </p>
+            </div>
+            <select
+              value={localStorage.getItem('cardOpenMode') || 'reading'}
+              onChange={(e) => {
+                localStorage.setItem('cardOpenMode', e.target.value)
+                const modeName = e.target.value === 'preview' ? '預覽' : e.target.value === 'reading' ? '閱讀' : '編輯'
+                toast.success(`已設定為「${modeName}」模式`)
+              }}
+              className="w-full px-4 py-2 rounded-lg
+                         bg-bg-elevated border border-border-default
+                         text-text-primary
+                         focus:outline-none focus:border-primary
+                         transition-colors"
+            >
+              <option value="preview">預覽模式 (Preview) - 快速瀏覽內容</option>
+              <option value="reading">閱讀模式 (Reading) - 沉浸式閱讀</option>
+              <option value="edit">編輯模式 (Edit) - 直接編輯</option>
+            </select>
+          </div>
         </div>
 
         {/* Database Stats */}

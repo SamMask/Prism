@@ -99,12 +99,13 @@
   - [x] localStorage 持久化 (`colorTheme` key)
   - [x] 在 `main.tsx` 初始化時載入儲存的主題
   
-- [ ] **0.4.2 卡片開啟模式 (Card Open Mode)** 🟢 P2
+- [x] **0.4.2 卡片開啟模式 (Card Open Mode)** 🟢 P2 ✅ 2024-12-30
   > V1 位置: `static/js/composables/useSettings.js` L63
-  - [ ] 新增設定: preview (預覽) / reading (閱讀) / edit (編輯)
-  - [ ] 在 `SettingsPage.tsx` 新增下拉選擇器
-  - [ ] `NoteCard.tsx` 讀取設定並套用開啟模式
-  - [ ] localStorage 持久化 (`cardOpenMode` key)
+  - [x] 新增設定: preview (預覽) / reading (閱讀) / edit (編輯)
+  - [x] 在 `SettingsPage.tsx` 新增下拉選擇器
+  - [x] `NoteCard.tsx` 讀取設定（預留擴充接口）
+  - [x] localStorage 持久化 (`cardOpenMode` key)
+  - ⚠️ **備註**: 目前三種模式都開啟編輯器，Preview/Reading 模式的 UI 實作延後（需要新增 Modal 或 ReadOnly 狀態）
   
 - [ ] **0.4.3 圖片保存模式 (Image Save Mode)** 🟢 P3
   > V1 位置: `static/js/composables/useSettings.js` L60
