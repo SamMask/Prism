@@ -66,6 +66,11 @@ export function SettingsPage() {
   const [isScanningOriginals, setIsScanningOriginals] = useState(false)
   const [isDeletingOriginals, setIsDeletingOriginals] = useState(false)
   
+
+  
+  // Auto Load More State
+  const [autoLoadMore, setAutoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') === 'true')
+
   // Broken Image Paths
   const [brokenPaths, setBrokenPaths] = useState<{total: number, fixable: number} | null>(null)
   const [isScanningBroken, setIsScanningBroken] = useState(false)
@@ -853,10 +858,12 @@ export function SettingsPage() {
               <label className="relative inline-flex items-center cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={localStorage.getItem('autoLoadMore') === 'true'}
+                  checked={autoLoadMore}
                   onChange={(e) => {
-                    localStorage.setItem('autoLoadMore', String(e.target.checked))
-                    toast.success(e.target.checked ? '已開啟無限滾動' : '已關閉無限滾動')
+                    const newValue = e.target.checked
+                    setAutoLoadMore(newValue)
+                    localStorage.setItem('autoLoadMore', String(newValue))
+                    toast.success(newValue ? '已開啟無限滾動' : '已關閉無限滾動')
                   }}
                   className="sr-only peer"
                 />

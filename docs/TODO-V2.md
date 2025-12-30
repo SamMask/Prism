@@ -120,7 +120,7 @@
   - [x] 新增設定: 選擇預設快速新增的分類
   - [x] 在 `SettingsPage.tsx` 新增分類下拉選擇器（使用 appStore categories）
   - [x] localStorage 持久化 (`quickAddDefaultCategory` key)
-  - ⚠️ **備註**: Header 新增按鈕套用預設分類的邏輯尚未實作（需要找到 Header 組件並修改）
+  - [x] NoteEditor 初始化時自動讀取 `quickAddDefaultCategory` 設定
   
 - [x] **0.4.5 自動載入更多 (Auto Load More / Infinite Scroll)** 🟢 P5 ✅ 2024-12-30
   > V1 位置: `static/js/composables/useSettings.js` L49

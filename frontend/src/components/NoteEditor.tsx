@@ -44,9 +44,11 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
   // Form State
   const [title, setTitle] = useState(note?.title || "");
   const [content, setContent] = useState(note?.content || "");
-  const [categoryId, setCategoryId] = useState<number | undefined>(
-    note?.category_id
-  );
+  const [categoryId, setCategoryId] = useState<number | undefined>(() => {
+    if (note) return note.category_id
+    const saved = localStorage.getItem('quickAddDefaultCategory')
+    return saved ? Number(saved) : undefined
+  });
   const [selectedTags, setSelectedTags] = useState<Tag[]>(note?.tags || []);
   const [remarks, setRemarks] = useState(note?.remarks || "");
   const [coverPosition, setCoverPosition] = useState<"top" | "center" | "bottom">(

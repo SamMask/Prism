@@ -64,6 +64,9 @@ export function HomePage() {
   const [localNotes, setLocalNotes] = useState<Note[]>([])
   const observerRef = useRef<IntersectionObserver | null>(null)
   const loadMoreRef = useRef<HTMLDivElement | null>(null)
+  
+  // Settings State
+  const [autoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') === 'true')
 
   // Sync local notes with store
   useEffect(() => {
@@ -121,9 +124,6 @@ export function HomePage() {
   }, [isLoading, hasMore, fetchNotes])
 
   useEffect(() => {
-    // Check if auto load more is enabled
-    const autoLoadMore = localStorage.getItem('autoLoadMore') === 'true'
-    
     if (observerRef.current) {
       observerRef.current.disconnect()
     }
@@ -149,7 +149,7 @@ export function HomePage() {
         observerRef.current.disconnect()
       }
     }
-  }, [handleLoadMore])
+  }, [handleLoadMore, autoLoadMore])
 
   // Only enable drag when sortBy is 'custom'
   const isDragEnabled = sortBy === 'custom'
@@ -219,11 +219,22 @@ export function HomePage() {
         </div>
       )}
 
-      {/* Infinite Scroll Trigger */}
+      {/* Infinite Scroll Trigger / Manual Load Button */}
       {hasMore && localNotes.length > 0 && (
-        <div ref={loadMoreRef} className="h-20 flex items-center justify-center">
+        <div 
+          ref={loadMoreRef} 
+          onClick={handleLoadMore}
+          className={`h-20 flex items-center justify-center transition-colors
+                     ${!autoLoadMore ? 'cursor-pointer hover:bg-bg-elevated/50 active:bg-bg-elevated rounded-lg' : ''}`}
+        >
           {!isLoading && (
-            <span className="text-text-muted text-sm">滾動載入更多...</span>
+            <span className="text-text-muted text-sm flex items-center gap-2">
+              {autoLoadMore ? (
+                '滾動載入更多...'
+              ) : (
+                '點擊載入更多'
+              )}
+            </span>
           )}
         </div>
       )}
