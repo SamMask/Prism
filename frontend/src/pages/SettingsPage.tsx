@@ -840,6 +840,36 @@ export function SettingsPage() {
               </select>
             </div>
           </div>
+
+          {/* Auto Load More */}
+          <div className="pt-6 border-t border-border-subtle">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-text-primary">自動載入更多</p>
+                <p className="text-text-muted text-sm">
+                  滾動到底部時自動載入下一頁（無限滾動）
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={localStorage.getItem('autoLoadMore') === 'true'}
+                  onChange={(e) => {
+                    localStorage.setItem('autoLoadMore', String(e.target.checked))
+                    toast.success(e.target.checked ? '已開啟無限滾動' : '已關閉無限滾動')
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-bg-hover rounded-full peer 
+                                peer-checked:bg-primary
+                                peer-focus:ring-2 peer-focus:ring-primary/50
+                                after:content-[''] after:absolute after:top-0.5 after:left-0.5
+                                after:bg-white after:rounded-full after:h-5 after:w-5
+                                after:transition-all peer-checked:after:translate-x-5">
+                </div>
+              </label>
+            </div>
+          </div>
         </div>
 
         {/* Database Stats */}

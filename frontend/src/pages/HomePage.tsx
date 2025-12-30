@@ -121,21 +121,27 @@ export function HomePage() {
   }, [isLoading, hasMore, fetchNotes])
 
   useEffect(() => {
+    // Check if auto load more is enabled
+    const autoLoadMore = localStorage.getItem('autoLoadMore') === 'true'
+    
     if (observerRef.current) {
       observerRef.current.disconnect()
     }
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          handleLoadMore()
-        }
-      },
-      { threshold: 0.1 }
-    )
+    // Only set up observer if auto load more is enabled
+    if (autoLoadMore) {
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting) {
+            handleLoadMore()
+          }
+        },
+        { threshold: 0.1 }
+      )
 
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current)
+      if (loadMoreRef.current) {
+        observerRef.current.observe(loadMoreRef.current)
+      }
     }
 
     return () => {

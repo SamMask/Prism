@@ -122,18 +122,18 @@
   - [x] localStorage 持久化 (`quickAddDefaultCategory` key)
   - ⚠️ **備註**: Header 新增按鈕套用預設分類的邏輯尚未實作（需要找到 Header 組件並修改）
   
-- [ ] **0.4.5 自動載入更多 (Auto Load More / Infinite Scroll)** 🟢 P5
+- [x] **0.4.5 自動載入更多 (Auto Load More / Infinite Scroll)** 🟢 P5 ✅ 2024-12-30
   > V1 位置: `static/js/composables/useSettings.js` L49
-  - [ ] 新增設定: 開啟/關閉無限滾動
-  - [ ] 在 `SettingsPage.tsx` 新增切換開關
-  - [ ] `HomePage.tsx` 根據設定決定是否啟用 scroll 監聽
-  - [ ] localStorage 持久化 (`autoLoadMore` key)
+  - [x] 新增設定: 開啟/關閉無限滾動
+  - [x] 在 `SettingsPage.tsx` 新增切換開關
+  - [x] `HomePage.tsx` 根據設定決定是否啟用 IntersectionObserver
+  - [x] localStorage 持久化 (`autoLoadMore` key)
 
 **延遲項目 (Deferred)**:
 - 🧊 **i18n 多語系**: 已預留架構 (`i18n/index.ts`)，正式版本再啟用
 - 🧊 **啟動時自動開啟瀏覽器**: EXE 打包時再處理
 
-**狀態**: 🔴 待執行 (Next Priority)
+**狀態**: ✅ Phase 0.4 完成 (2024-12-30) - 所有 5 個 V1 功能設定已移植完成
 
 ---
 
