@@ -336,12 +336,12 @@
 > **目的**: 將 Prism 打造為外部 AI (如 Antigravity, Trading Bot) 的知識庫/長期記憶，而非在 Prism 內建聊天機器人。
 > **來源**: User Request 2025-12-16 (Downgrade In-App Chat, Upgrade API)
 
-- [ ] **3.5.1 Search/Context API**
-  - [ ] `POST /api/rag/search` (Input: query, params; Output: JSON chunks)
-  - [ ] 支援 Hybrid Search (Vector + FTS)
-  - [ ] 回傳格式包含: content, source_id, distance/score
-- [ ] **3.5.2 External Integration**
-  - [ ] CORS 設定: 允許外部 Agent 呼叫
+- [x] **3.5.1 Search/Context API**
+  - [x] `POST /api/rag/search` (Input: query, params; Output: JSON chunks)
+  - [x] 支援 Hybrid Search (Vector + FTS)
+  - [x] 回傳格式包含: content, source_id, distance/score
+- [x] **3.5.2 External Integration**
+  - [x] CORS 設定: 允許外部 Agent 呼叫 (同源或無 Origin)
   - [ ] (Optional) API Key 機制
 
 ### 3.6 🔌 AI Gateway (Pluggable AI Providers)
