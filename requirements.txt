@@ -5,7 +5,8 @@ pytest==7.4.3
 
 
 # Optional: Pillow for thumbnail generation (may fail on Windows without build tools)
-# pip install Pillow
+Pillow
 
-# Optional: Phase 3.2 Semantic Search (downloads ~90MB model on first use)
-# pip install sentence-transformers
+# For Phase 3.2 Semantic Search
+numpy
+sentence-transformers

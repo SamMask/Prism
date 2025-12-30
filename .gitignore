@@ -41,7 +41,7 @@ build/
 *.egg-info/
 
 # IDE & Editor
-.vscode/
+# .vscode/
 .idea/
 *.swp
 *.bak

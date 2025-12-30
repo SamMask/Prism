@@ -11,7 +11,15 @@ Design Philosophy:
 Based on Claude's architecture suggestion (2024-12)
 """
 
-import numpy as np
+
+try:
+    import numpy as np
+    _HAS_NUMPY = True
+except ImportError:
+    np = None
+    _HAS_NUMPY = False
+    print("[WARNING] numpy not found. Vector search will be disabled.")
+
 from typing import List, Dict, Tuple, Optional
 import hashlib
 import threading
@@ -22,6 +30,7 @@ from db import get_db
 MODEL_NAME = 'all-MiniLM-L6-v2'
 EMBEDDING_DIM = 384
 RRF_K = 60  # RRF smoothing constant
+_HAS_SENTENCE_TRANSFORMERS = False # Default assuming missing until checked below
 
 # Lazy-load model
 _model = None
@@ -30,16 +39,16 @@ _model_lock = threading.Lock()
 
 def get_model():
     """Get or initialize the embedding model (singleton with thread safety)"""
-    global _model
+    global _model, _HAS_SENTENCE_TRANSFORMERS
     if _model is None:
         with _model_lock:
             if _model is None:  # Double-check
                 try:
                     from sentence_transformers import SentenceTransformer
-                    print(f"[VectorStore] Loading model: {MODEL_NAME}...")
                     _model = SentenceTransformer(MODEL_NAME)
-                    print(f"[VectorStore] Model loaded successfully")
+                    _HAS_SENTENCE_TRANSFORMERS = True
                 except ImportError:
+                    _HAS_SENTENCE_TRANSFORMERS = False
                     raise RuntimeError(
                         "sentence-transformers not installed. "
                         "Run: pip install sentence-transformers"
@@ -59,11 +68,6 @@ def is_available() -> bool:
 class VectorStore:
     """
     In-Memory Vector Store with SQLite persistence
-    
-    Core data structures:
-    - matrix: (N, 384) numpy array of normalized vectors
-    - ids: List mapping matrix row index -> note_id
-    - id_map: Dict mapping note_id -> matrix row index
     """
     _instance = None
     _lock = threading.Lock()
@@ -80,13 +84,20 @@ class VectorStore:
         if self._initialized:
             return
             
-        self.matrix: Optional[np.ndarray] = None
+        # Initialize as empty/None if numpy is missing
+        if _HAS_NUMPY:
+            self.matrix: Optional[np.ndarray] = None
+        else:
+            self.matrix = None
+            
         self.ids: List[int] = []
         self.id_map: Dict[int, int] = {}
         self._initialized = True
         
-    def _normalize(self, v: np.ndarray) -> np.ndarray:
-        """L2 Normalization - makes Cosine Similarity = Dot Product"""
+    def _normalize(self, v):
+        """L2 Normalization"""
+        if not _HAS_NUMPY:
+            return v
         norm = np.linalg.norm(v)
         if norm == 0:
             return v
@@ -94,6 +105,10 @@ class VectorStore:
 
     def refresh_from_db(self, app=None):
         """Load all vectors from SQLite into RAM (Cold Start)"""
+        if not _HAS_NUMPY:
+            print("[VectorStore] Numpy not installed, skipping vector load.")
+            return
+
         with self._lock:  # Thread safety
             print("[VectorStore] Loading vectors from DB...")
             
@@ -107,12 +122,16 @@ class VectorStore:
                     self._load_vectors(db)
             except Exception as e:
                 print(f"[VectorStore] Failed to load: {e}")
-                self.matrix = np.zeros((0, EMBEDDING_DIM), dtype=np.float32)
+                if _HAS_NUMPY:
+                    self.matrix = np.zeros((0, EMBEDDING_DIM), dtype=np.float32)
                 self.ids = []
                 self.id_map = {}
 
     def _load_vectors(self, db):
         """Internal: Load vectors from database connection"""
+        if not _HAS_NUMPY:
+            return
+
         cursor = db.execute("""
             SELECT id, text_embedding 
             FROM Notes 
@@ -153,8 +172,11 @@ class VectorStore:
             
         print(f"[VectorStore] Loaded {len(self.ids)} vectors into RAM")
 
-    def encode_text(self, text: str) -> np.ndarray:
+    def encode_text(self, text: str):
         """Convert text to normalized embedding vector"""
+        if not _HAS_NUMPY:
+            return None
+            
         model = get_model()
         # Truncate for model
         truncated = text[:2000] if len(text) > 2000 else text

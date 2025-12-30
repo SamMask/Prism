@@ -20,6 +20,9 @@ from ..helpers import parse_tags_json, parse_urls_json
 from db import get_db
 
 
+
+_HAS_PARENT_ID = None  # Global cache for schema check
+
 def _queue_embedding_update(note_id: int, title: str, content: str):
     """
     Phase 0 Step 2: 使用 AI_Tasks 持久化任務隊列

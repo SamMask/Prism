@@ -147,7 +147,8 @@ MIGRATIONS: List[Tuple[int, str, List[str]]] = [
         SET category_id = (SELECT id FROM Categories ORDER BY sort_order LIMIT 1)
         WHERE category_id IS NULL
         """,
-        # 3. 移除 type 欄位 (需要 SQLite 3.35.0+)
+        # 3. 移除相關索引與欄位
+        "DROP INDEX IF EXISTS idx_notes_type",
         "ALTER TABLE Notes DROP COLUMN type",
     ]),
 

@@ -9,42 +9,45 @@ Lightweight and fast for personal knowledge base
 Note: First run will download the model (~90MB)
 """
 
-import numpy as np
-from typing import Optional, List, Tuple
 import json
+from typing import Optional, List, Tuple, Any
 
 # Lazy loading to avoid slow startup
 _model = None
 _model_name = "all-MiniLM-L6-v2"
+_HAS_DEPS = False
+
+try:
+    import numpy as np
+    import sentence_transformers
+    _HAS_DEPS = True
+    NDArray = np.ndarray
+except ImportError:
+    np = None
+    _HAS_DEPS = False
+    NDArray = Any
 
 
 def get_model():
     """Get or initialize the embedding model (singleton)"""
     global _model
+    if not _HAS_DEPS:
+        raise RuntimeError("Dependencies (numpy/sentence-transformers) not installed")
+        
     if _model is None:
-        try:
-            from sentence_transformers import SentenceTransformer
-            print(f"[Embedding] Loading model: {_model_name}...")
-            _model = SentenceTransformer(_model_name)
-            print(f"[Embedding] Model loaded successfully")
-        except ImportError:
-            raise RuntimeError(
-                "sentence-transformers not installed. "
-                "Run: pip install sentence-transformers"
-            )
+        from sentence_transformers import SentenceTransformer
+        print(f"[Embedding] Loading model: {_model_name}...")
+        _model = SentenceTransformer(_model_name)
+        print(f"[Embedding] Model loaded successfully")
     return _model
 
 
 def is_model_available() -> bool:
     """Check if sentence-transformers is installed"""
-    try:
-        import sentence_transformers
-        return True
-    except ImportError:
-        return False
+    return _HAS_DEPS
 
 
-def text_to_embedding(text: str) -> Optional[np.ndarray]:
+def text_to_embedding(text: str) -> Optional[NDArray]:
     """
     Convert text to embedding vector
 
@@ -54,6 +57,9 @@ def text_to_embedding(text: str) -> Optional[np.ndarray]:
     Returns:
         384-dimensional numpy array or None if failed
     """
+    if not _HAS_DEPS:
+        return None
+
     if not text or not text.strip():
         return None
 
@@ -68,17 +74,17 @@ def text_to_embedding(text: str) -> Optional[np.ndarray]:
         return None
 
 
-def embedding_to_blob(embedding: np.ndarray) -> bytes:
+def embedding_to_blob(embedding: NDArray) -> bytes:
     """Convert numpy array to bytes for SQLite storage"""
     return embedding.astype(np.float32).tobytes()
 
 
-def blob_to_embedding(blob: bytes) -> np.ndarray:
+def blob_to_embedding(blob: bytes) -> NDArray:
     """Convert bytes from SQLite to numpy array"""
     return np.frombuffer(blob, dtype=np.float32)
 
 
-def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+def cosine_similarity(a: NDArray, b: NDArray) -> float:
     """Calculate cosine similarity between two vectors"""
     dot = np.dot(a, b)
     norm_a = np.linalg.norm(a)

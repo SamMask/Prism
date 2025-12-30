@@ -1,0 +1,41 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Tests (Pytest)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["tests/"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "FLASK_ENV": "testing"
+      }
+    },
+    {
+      "name": "Debug Flask (V2 Mode)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/app.py",
+      "console": "integratedTerminal",
+      "env": {
+        "PRISM_V2": "true",
+        "FLASK_DEBUG": "True",
+        "FLASK_ENV": "development"
+      },
+      "justMyCode": false
+    },
+    {
+      "name": "Debug E2E (Playwright)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["e2e/", "--headed", "--slowmo=500"],
+      "console": "integratedTerminal",
+      "env": {
+        "PRISM_V2": "true"
+      }
+    }
+  ]
+}
