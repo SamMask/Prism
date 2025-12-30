@@ -91,12 +91,13 @@
 > **目標**: 保持 V2 與 V1 功能對等，避免使用者升級後功能回歸
 > **來源**: V1.4.2 功能對比分析 (2024-12-30)
 
-- [ ] **0.4.1 主題色彩系統 (Color Theme)** 🟡 P1
+- [x] **0.4.1 主題色彩系統 (Color Theme)** 🟡 P1 ✅ 2024-12-30
   > V1 位置: `static/js/composables/useSettings.js` L66-84
-  - [ ] 新增 CSS 變數 (`index.css`) 支援 6 個主題: default, cyberpunk, eye-care, elegant, ocean, sunset
-  - [ ] 實作 `data-theme` 屬性切換機制
-  - [ ] 在 `SettingsPage.tsx` 新增主題色彩選擇器 UI
-  - [ ] localStorage 持久化 (`colorTheme` key)
+  - [x] 新增 CSS 變數 (`index.css`) 支援 6 個主題: default, cyberpunk, eye-care, elegant, ocean, sunset
+  - [x] 實作 `data-theme` 屬性切換機制
+  - [x] 在 `SettingsPage.tsx` 新增主題色彩選擇器 UI
+  - [x] localStorage 持久化 (`colorTheme` key)
+  - [x] 在 `main.tsx` 初始化時載入儲存的主題
   
 - [ ] **0.4.2 卡片開啟模式 (Card Open Mode)** 🟢 P2
   > V1 位置: `static/js/composables/useSettings.js` L63

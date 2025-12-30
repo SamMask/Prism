@@ -682,7 +682,9 @@ export function SettingsPage() {
             <Sun size={20} className="text-primary" />
             外觀
           </h2>
-          <div className="flex items-center justify-between">
+          
+          {/* Dark/Light Mode */}
+          <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-text-primary">主題模式</p>
               <p className="text-text-muted text-sm">
@@ -697,6 +699,59 @@ export function SettingsPage() {
               {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
               {theme === 'dark' ? '深色' : '淺色'}
             </Button>
+          </div>
+
+          {/* Color Theme */}
+          <div className="pt-6 border-t border-border-subtle">
+            <div className="mb-3">
+              <p className="text-text-primary">主題色彩</p>
+              <p className="text-text-muted text-sm">
+                選擇你喜歡的配色方案
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                { id: 'default', name: '專業藍', color: '#3b82f6' },
+                { id: 'cyberpunk', name: '賽博龐克', color: '#e879f9' },
+                { id: 'eye-care', name: '護眼綠', color: '#34d399' },
+                { id: 'elegant', name: '典雅金', color: '#d4a574' },
+                { id: 'ocean', name: '海洋青', color: '#14b8a6' },
+                { id: 'sunset', name: '夕陽橙', color: '#f97316' },
+              ].map((themeOption) => {
+                const isSelected = document.documentElement.getAttribute('data-theme') === themeOption.id
+                return (
+                  <button
+                    key={themeOption.id}
+                    onClick={() => {
+                      document.documentElement.setAttribute('data-theme', themeOption.id)
+                      localStorage.setItem('colorTheme', themeOption.id)
+                      toast.success(`已切換至「${themeOption.name}」主題`)
+                    }}
+                    className={`
+                      flex items-center gap-3 p-3 rounded-lg border
+                      transition-all duration-200
+                      ${isSelected
+                        ? 'border-primary bg-primary/10'
+                        : 'border-border-default hover:border-border-hover hover:bg-bg-elevated'
+                      }
+                    `}
+                  >
+                    <div
+                      className="w-8 h-8 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: themeOption.color }}
+                    />
+                    <div className="text-left flex-1">
+                      <div className={`font-medium ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+                        {themeOption.name}
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <Check size={18} className="text-primary flex-shrink-0" />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
