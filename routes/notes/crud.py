@@ -20,27 +20,6 @@ from ..helpers import parse_tags_json, parse_urls_json
 from db import get_db
 
 
-def get_category_id_by_name(db, type_name):
-    """
-    根據分類名稱取得 category_id (2025-12-11 Audit Fix)
-    解決 Notes.type 與 Notes.category_id 的「雙重事實」分裂問題
-    """
-    if not type_name:
-        type_name = '筆記'  # 預設分類
-    
-    row = db.execute('SELECT id FROM Categories WHERE name = ?', (type_name,)).fetchone()
-    if row:
-        return row[0]
-    
-    # Fallback: 使用預設分類
-    row = db.execute('SELECT id FROM Categories WHERE is_default = 1').fetchone()
-    if row:
-        return row[0]
-    
-    # 最終 Fallback: 返回 NULL (不阻斷流程)
-    return None
-
-
 def _queue_embedding_update(note_id: int, title: str, content: str):
     """
     Phase 0 Step 2: 使用 AI_Tasks 持久化任務隊列
@@ -384,18 +363,20 @@ def create_note():
             prompt_params = data.get('prompt_params')
             if prompt_params and isinstance(prompt_params, dict):
                 prompt_params = json.dumps(prompt_params, ensure_ascii=False)
-            
-            # 取得 category_id (2025-12-11 Audit Fix)
-            type_name = data.get('type', '筆記')
-            category_id = get_category_id_by_name(db, type_name)
-            
+
+            # Phase 0 Step 0.1.2: 直接使用 category_id，不再支援 type 參數
+            category_id = data.get('category_id')
+            if category_id is None:
+                # 獲取預設分類
+                default_cat = db.execute('SELECT id FROM Categories WHERE is_default = 1').fetchone()
+                category_id = default_cat[0] if default_cat else None
+
             cursor = db.execute('''
-                INSERT INTO Notes (title, content, type, category_id, remarks, cover_image, cover_position, editor_layout, prompt_params)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO Notes (title, content, category_id, remarks, cover_image, cover_position, editor_layout, prompt_params)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 title,
                 data.get('content'),
-                type_name,
                 category_id,
                 data.get('remarks', ''),
                 data.get('cover_image'),
@@ -484,21 +465,23 @@ def update_note(note_id):
             prompt_params = data.get('prompt_params')
             if prompt_params and isinstance(prompt_params, dict):
                 prompt_params = json.dumps(prompt_params, ensure_ascii=False)
-            
-            # 取得 category_id (2025-12-11 Audit Fix)
-            type_name = data.get('type', '筆記')
-            category_id = get_category_id_by_name(db, type_name)
-            
+
+            # Phase 0 Step 0.1.2: 直接使用 category_id，不再支援 type 參數
+            category_id = data.get('category_id')
+            if category_id is None:
+                # 保留原有的 category_id（不修改）
+                existing = db.execute('SELECT category_id FROM Notes WHERE id = ?', (note_id,)).fetchone()
+                category_id = existing[0] if existing else None
+
             # 更新 Notes
             db.execute('''
                 UPDATE Notes
-                SET title = ?, content = ?, type = ?, category_id = ?, remarks = ?, cover_image = ?,
+                SET title = ?, content = ?, category_id = ?, remarks = ?, cover_image = ?,
                     cover_position = ?, editor_layout = ?, prompt_params = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             ''', (
                 data.get('title'),
                 data.get('content'),
-                type_name,
                 category_id,
                 data.get('remarks', ''),
                 data.get('cover_image'),

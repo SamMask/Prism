@@ -25,13 +25,18 @@
   - [x] 找不到對應分類的筆記 → 歸類到 `Default/Uncategorized`
   - [x] `ALTER TABLE Notes DROP COLUMN type;` (移除 type 欄位)
   - [x] 移除 `idx_notes_type` 索引 (app.py L235)
-- [ ] **0.1.2 清理程式碼** 🧊 延後至 Step 2/3 完成後
-  - [ ] 刪除 `crud.py` 的 `get_category_id_by_name()` (L23-41)
-  - [ ] 移除所有引用 `Notes.type` 的程式碼 (crud.py, batch.py, system.py)
-  - [ ] 更新 API 端點: 不再接受 `type` 參數，統一使用 `category_id`
-  - [ ] **延後原因**: 需要大規模重構 CRUD 邏輯，優先完成 AI_Tasks 持久化 (Step 2)
+- [x] **0.1.2 清理程式碼** ✅ 2024-12-30
+  - [x] 刪除 `crud.py` 的 `get_category_id_by_name()` (L23-41)
+  - [x] 移除所有引用 `Notes.type` 的程式碼 (crud.py, batch.py)
+  - [x] 更新 API 端點: 不再接受 `type` 參數，統一使用 `category_id`
+  - [x] **Breaking Changes**:
+    - `POST /api/notes` 現在只接受 `category_id`，不再接受 `type`
+    - `PUT /api/notes/<id>` 現在只接受 `category_id`，不再接受 `type`
+    - `POST /api/notes/batch/type` 現在只接受 `category_id`，不再接受 `type`
 
-**預期結果**: 消除同步邏輯，程式碼減少 ~50 行，Bug 減少 50%
+**實際結果**: ✅ 消除雙重事實，移除 ~60 行程式碼，所有測試通過
+
+**狀態**: ✅ Step 0.1 完成 (2024-12-30)
 
 ### 0.2 ⚙️ Step 2: 實作真正的任務隊列 (Proper Task Queue)
 

@@ -32,11 +32,19 @@ ALTER TABLE Notes DROP COLUMN type;
 ```
 
 **影響範圍**:
-- ❌ `crud.py`: 刪除 `get_category_id_by_name()` (L23-41) - **延後**
-- ❌ API 端點: 不再接受 `type` 參數 - **延後**
+- ✅ `crud.py`: 刪除 `get_category_id_by_name()` (L23-41) - **完成**
+- ✅ `crud.py`: `create_note()` 改用 `category_id` 參數 - **完成**
+- ✅ `crud.py`: `update_note()` 改用 `category_id` 參數 - **完成**
+- ✅ `batch.py`: `batch_update_type()` 改用 `category_id` 參數 - **完成**
+- ✅ API 端點: 不再接受 `type` 參數，統一使用 `category_id` - **完成**
 - ✅ Migration v12: 資料庫層面完成 (type 欄位已移除)
 
-**狀態**: ✅ Step 0.1.1 完成 (2024-12-30), Step 0.1.2 延後至 Step 2/3 完成後
+**Breaking Changes**:
+- `POST /api/notes` 現在只接受 `category_id`，不再接受 `type`
+- `PUT /api/notes/<id>` 現在只接受 `category_id`，不再接受 `type`
+- `POST /api/notes/batch/type` 現在只接受 `category_id`，不再接受 `type`
+
+**狀態**: ✅ Step 0.1 完成 (2024-12-30) - 所有子任務完成，測試通過
 
 ### 0.2 實作 AI_Tasks 任務隊列 (Migration v13)
 
