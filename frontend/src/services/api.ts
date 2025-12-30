@@ -9,6 +9,7 @@ export interface Note {
   remarks?: string;
   cover_image?: string;
   cover_position?: "top" | "center" | "bottom";
+  editor_layout?: "single" | "dual";
   is_pinned: boolean;
   is_archived: boolean;
   category_id?: number;
@@ -73,8 +74,9 @@ interface GetNotesParams {
 }
 
 // Create axios instance
+const API_BASE_URL = "/api";
 const client = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -119,7 +121,7 @@ export const api = {
 
   getNote: async (id: number): Promise<Note> => {
     const { data } = await client.get(`/notes/${id}`);
-    return data.note;
+    return data.data;  // Backend returns { status, data: {...} }
   },
 
   createNote: async (note: NotePayload): Promise<{ note_id: number }> => {
@@ -127,9 +129,9 @@ export const api = {
     return data.data; // Backend returns { status, data: { note_id } }
   },
 
-  updateNote: async (id: number, note: NotePayload): Promise<Note> => {
-    const { data } = await client.put(`/notes/${id}`, note);
-    return data.note;
+  updateNote: async (id: number, note: NotePayload): Promise<void> => {
+    await client.put(`/notes/${id}`, note);
+    // Backend returns { status: 'success' } only
   },
 
   deleteNote: async (id: number): Promise<void> => {
@@ -152,16 +154,66 @@ export const api = {
     return data.data;
   },
 
+  // Reorder notes (drag & drop)
+  reorderNotes: async (noteIds: number[]): Promise<void> => {
+    await client.put("/notes/reorder", { note_ids: noteIds });
+  },
+
   // Categories
   getCategories: async (): Promise<Category[]> => {
     const { data } = await client.get("/categories");
     return data.data || [];
   },
 
+  createCategory: async (
+    name: string,
+    icon?: string
+  ): Promise<{ id: number }> => {
+    const { data } = await client.post("/categories", { name, icon });
+    return data.data;
+  },
+
+  updateCategory: async (
+    id: number,
+    updates: { name?: string; icon?: string; sort_order?: number }
+  ): Promise<{ updated_notes_count: number }> => {
+    const { data } = await client.put(`/categories/${id}`, updates);
+    return data.data;
+  },
+
+  deleteCategory: async (
+    id: number,
+    targetCategory?: string
+  ): Promise<{ migrated_notes_count: number }> => {
+    const { data } = await client.delete(`/categories/${id}`, {
+      data: targetCategory ? { target_category: targetCategory } : undefined,
+    });
+    return data.data;
+  },
+
   // Tags
   getTags: async (): Promise<Tag[]> => {
     const { data } = await client.get("/tags");
     return data.data || [];
+  },
+
+  renameTag: async (id: number, name: string): Promise<void> => {
+    await client.put(`/tags/${id}`, { name });
+  },
+
+  deleteTag: async (id: number): Promise<void> => {
+    await client.delete(`/tags/${id}`);
+  },
+
+  mergeTags: async (
+    sourceTagIds: number[],
+    targetTagId: number
+  ): Promise<{ merged_count: number }> => {
+    const { data } = await client.post("/tags/merge", {
+      source_tag_ids: sourceTagIds,
+      target_tag_id: targetTagId,
+    });
+    return data.data;
   },
 
   // File Upload
@@ -172,6 +224,33 @@ export const api = {
     formData.append("file", file);
     const { data } = await client.post("/upload", formData, {
       headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data.data;
+  },
+
+  // Download remote image URL and save locally
+  downloadImageFromUrl: async (
+    imageUrl: string,
+    thumbnailOnly?: boolean
+  ): Promise<{ url: string; filename: string; original_url: string }> => {
+    const { data } = await client.post("/upload/url", {
+      url: imageUrl,
+      thumbnail_only: thumbnailOnly ?? true, // Default to thumbnail only for faster loading
+    });
+    return data.data;
+  },
+
+  // Extract AI prompt from image metadata
+  extractImagePrompt: async (
+    imagePath: string
+  ): Promise<{
+    prompt: string | null;
+    negative_prompt: string | null;
+    source: string | null;
+    has_prompt: boolean;
+  }> => {
+    const { data } = await client.post("/upload/extract-prompt", {
+      image_path: imagePath,
     });
     return data.data;
   },
@@ -462,5 +541,212 @@ export const api = {
   // Restore separated content back to note
   restoreContent: async (noteId: number): Promise<void> => {
     await client.post(`/notes/${noteId}/restore`);
+  },
+
+  // ===================================================================
+  // Cleanup API
+  // ===================================================================
+
+  // Get orphan images (images not referenced by any note)
+  getOrphanImages: async (): Promise<{
+    orphan_images: Array<{ filename: string; size: number; path: string }>;
+    total_count: number;
+    total_size_bytes: number;
+    total_size_mb: number;
+  }> => {
+    const { data } = await client.get("/cleanup/orphan-images");
+    return data.data;
+  },
+
+  // Delete orphan images
+  deleteOrphanImages: async (
+    filenames: string[]
+  ): Promise<{
+    deleted: string[];
+    deleted_count: number;
+    errors: Array<{ filename: string; error: string }>;
+  }> => {
+    const { data } = await client.delete("/cleanup/orphan-images", {
+      data: { filenames },
+    });
+    return data.data;
+  },
+
+  // Get original images stats (images that have thumbnails)
+  getOriginalImages: async (): Promise<{
+    original_count: number;
+    original_size_bytes: number;
+    original_size_mb: number;
+    thumbnail_count: number;
+  }> => {
+    const { data } = await client.get("/cleanup/originals");
+    return data.data;
+  },
+
+  // Delete all originals (keep only thumbnails)
+  deleteOriginalImages: async (): Promise<{
+    deleted_count: number;
+    saved_bytes: number;
+    saved_mb: number;
+    updated_notes: number;
+  }> => {
+    const { data } = await client.delete("/cleanup/originals");
+    return data.data;
+  },
+
+  // Get broken image paths
+  getBrokenImages: async (): Promise<{
+    broken_paths: Array<{
+      note_id: number;
+      original_path: string;
+      thumbnail_path: string | null;
+      can_fix: boolean;
+      reason: string;
+    }>;
+    total_count: number;
+    fixable_count: number;
+  }> => {
+    const { data } = await client.get("/cleanup/broken-images");
+    return data.data;
+  },
+
+  // Fix broken image paths
+  fixBrokenImages: async (): Promise<{
+    fixed_count: number;
+    updated_notes: number;
+  }> => {
+    const { data } = await client.post("/cleanup/broken-images");
+    return data.data;
+  },
+
+  // ===================================================================
+  // Export API
+  // ===================================================================
+
+  // Export all data as JSON (triggers download)
+  exportJSON: async (): Promise<void> => {
+    window.location.href = `${API_BASE_URL}/export/json`;
+  },
+
+  // Export database file (triggers download)
+  exportDB: async (): Promise<void> => {
+    window.location.href = `${API_BASE_URL}/export/db`;
+  },
+
+  // Export images as ZIP
+  exportImages: async (images: string[], noteTitle: string): Promise<void> => {
+    const response = await client.post(
+      "/export/images",
+      { images, note_title: noteTitle },
+      { responseType: "blob" }
+    );
+    
+    // Trigger download
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `${noteTitle}_images.zip`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
+  // Import JSON data
+  importJSON: async (
+    data: unknown,
+    mode: "skip" | "duplicate"
+  ): Promise<{
+    imported: number;
+    skipped: number;
+    duplicates: string[];
+  }> => {
+    const { data: response } = await client.post("/import/json", {
+      data,
+      mode,
+    });
+    return response.data;
+  },
+
+  // ===================================================================
+  // Note Actions API
+  // ===================================================================
+
+  // Toggle pin status
+  togglePin: async (noteId: number): Promise<{ is_pinned: boolean }> => {
+    const { data } = await client.post(`/notes/${noteId}/pin`, {});
+    return data.data;
+  },
+
+  // Toggle archive status
+  toggleArchive: async (noteId: number): Promise<{ is_archived: boolean }> => {
+    const { data } = await client.post(`/notes/${noteId}/archive`, {});
+    return data.data;
+  },
+
+  // ===================================================================
+  // Note History API
+  // ===================================================================
+
+  // Get note history versions
+  getNoteHistory: async (
+    noteId: number
+  ): Promise<{
+    history: Array<{
+      id: number;
+      content: string;
+      diff_summary: string;
+      created_at: string;
+    }>;
+    total: number;
+  }> => {
+    const { data } = await client.get(`/notes/${noteId}/history`);
+    return data.data;
+  },
+
+  // Restore note to a specific version
+  restoreNoteVersion: async (
+    noteId: number,
+    historyId: number
+  ): Promise<void> => {
+    await client.post(
+      `/notes/${noteId}/restore/${historyId}`,
+      {}
+    );
+    // Backend returns { status: 'success', message: ... }
+  },
+
+  // Delete note history
+  deleteNoteHistory: async (
+    noteId: number
+  ): Promise<{ deleted_count: number }> => {
+    const { data } = await client.delete(`/notes/${noteId}/history`);
+    return data.data;
+  },
+
+  // ===================================================================
+  // System Maintenance
+  // ===================================================================
+
+  // WAL Checkpoint
+  walCheckpoint: async (): Promise<{
+    wal_size_before: number;
+    pages_checkpointed: number;
+  }> => {
+    const { data } = await client.post("/system/wal-checkpoint", {});
+    return data.data;
+  },
+
+  // Data Consistency Check
+  checkConsistency: async (): Promise<{
+    orphan_note_tags: number;
+    unused_tags: number;
+    type_category_mismatch: number;
+    null_category_id: number;
+    fk_enabled: boolean;
+    health: 'healthy' | 'warning' | 'critical';
+  }> => {
+    const { data } = await client.get("/system/check-consistency");
+    return data.data;
   },
 };

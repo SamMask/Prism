@@ -21,6 +21,7 @@ interface AppState {
   selectedCategoryId: number | null
   selectedTagId: number | null
   sortBy: 'updated' | 'created' | 'custom'
+  showArchived: boolean
 
   // Data
   categories: Category[]
@@ -37,6 +38,7 @@ interface AppState {
   setSelectedCategory: (id: number | null) => void
   setSelectedTag: (id: number | null) => void
   setSortBy: (sort: 'updated' | 'created' | 'custom') => void
+  setShowArchived: (showArchived: boolean) => void
   toggleNoteSelection: (id: number) => void
   selectAllNotes: () => void
   clearSelection: () => void
@@ -62,6 +64,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedCategoryId: null,
   selectedTagId: null,
   sortBy: 'updated',
+  showArchived: false,
 
   categories: [],
   tags: [],
@@ -92,6 +95,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       if (selectedCategory) {
         params.type = selectedCategory.name
+      }
+      
+      // Include archived if viewing archive
+      if (state.showArchived) {
+        params.include_archived = 'true'
       }
       
       // Tag filtering - use tag ID
@@ -155,6 +163,11 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setSortBy: (sort) => {
     set({ sortBy: sort, currentPage: 1 })
+    get().fetchNotes(true)
+  },
+
+  setShowArchived: (showArchived) => {
+    set({ showArchived, selectedCategoryId: null, selectedTagId: null, currentPage: 1 })
     get().fetchNotes(true)
   },
 

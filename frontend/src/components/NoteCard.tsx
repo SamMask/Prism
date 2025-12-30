@@ -1,6 +1,6 @@
 import { Note, api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
-import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch } from 'lucide-react'
+import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { toast } from './ui/Toast'
 
@@ -101,6 +101,63 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
       fetchNotes(true)
     } catch {
       toast.error('建立變體失敗')
+    }
+    setShowMenu(false)
+  }
+
+  // Handle toggle pin
+  const handleTogglePin = async () => {
+    try {
+      const result = await api.togglePin(note.id)
+      toast.success(result.is_pinned ? '已置頂' : '已取消置頂')
+      // Refresh notes list
+      const { fetchNotes } = useAppStore.getState()
+      fetchNotes(true)
+    } catch {
+      toast.error('切換置頂失敗')
+    }
+    setShowMenu(false)
+  }
+
+  // Handle export images
+  const handleExportImages = async () => {
+    // Extract image URLs from content
+    const imagePattern = /\/static\/uploads\/[^\s\)"\]']+/g
+    const matches: string[] = note.content?.match(imagePattern) || []
+    
+    // Add cover image if exists
+    if (note.cover_image) {
+      matches.unshift(note.cover_image)
+    }
+    
+    // Remove duplicates
+    const uniqueImages = [...new Set(matches)]
+    
+    if (uniqueImages.length === 0) {
+      toast.warning('此筆記沒有圖片可匯出')
+      setShowMenu(false)
+      return
+    }
+    
+    try {
+      await api.exportImages(uniqueImages, note.title || '無標題')
+      toast.success(`已匯出 ${uniqueImages.length} 張圖片`)
+    } catch {
+      toast.error('匯出圖片失敗')
+    }
+    setShowMenu(false)
+  }
+
+  // Handle toggle archive
+  const handleToggleArchive = async () => {
+    try {
+      const result = await api.toggleArchive(note.id)
+      toast.success(result.is_archived ? '已封存' : '已取消封存')
+      // Refresh notes list
+      const { fetchNotes } = useAppStore.getState()
+      fetchNotes(true)
+    } catch {
+      toast.error('切換封存失敗')
     }
     setShowMenu(false)
   }
@@ -302,6 +359,14 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             <Edit2 size={14} /> 編輯
           </button>
           <button 
+            onClick={handleTogglePin}
+            className={`w-full flex items-center gap-2 px-3 py-2
+                       text-sm ${note.is_pinned ? 'text-warning' : 'text-text-secondary'}
+                       hover:bg-bg-hover hover:text-text-primary`}
+          >
+            <Pin size={14} /> {note.is_pinned ? '取消置頂' : '置頂'}
+          </button>
+          <button 
             onClick={handleCopy}
             className="w-full flex items-center gap-2 px-3 py-2
                        text-sm text-text-secondary
@@ -317,10 +382,21 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           >
             <GitBranch size={14} /> 建立變體
           </button>
-          <button className="w-full flex items-center gap-2 px-3 py-2
-                             text-sm text-text-secondary
-                             hover:bg-bg-hover hover:text-text-primary">
-            <Archive size={14} /> 封存
+          <button 
+            onClick={handleToggleArchive}
+            className={`w-full flex items-center gap-2 px-3 py-2
+                       text-sm ${note.is_archived ? 'text-warning' : 'text-text-secondary'}
+                       hover:bg-bg-hover hover:text-text-primary`}
+          >
+            <Archive size={14} /> {note.is_archived ? '取消封存' : '封存'}
+          </button>
+          <button 
+            onClick={handleExportImages}
+            className="w-full flex items-center gap-2 px-3 py-2
+                       text-sm text-text-secondary
+                       hover:bg-bg-hover hover:text-text-primary"
+          >
+            <Download size={14} /> 匯出圖片
           </button>
           <div className="border-t border-border-subtle my-1" />
           <button 

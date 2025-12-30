@@ -13,7 +13,7 @@ export function Sidebar() {
     selectedCategoryId, 
     selectedTagId,
     setSelectedCategory,
-    setSelectedTag 
+    setSelectedTag
   } = useAppStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTags, setShowTags] = useState(true)
