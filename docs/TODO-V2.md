@@ -1,8 +1,132 @@
 # Prism V2 - Modernization & Intelligence Roadmap (TODO-V2)
 
-**狀態**: � 實作中 (In Progress)
+**狀態**: 🔴 架構淨化中 (Phase 0 in Progress)
 **核心目標**: Headless Architecture + Local AI
-**文件參照**: `docs/Prism-V2.md` (總體戰略), `docs/SCHEMA-V2.md` (資料庫規格)
+**文件參照**: `docs/Prism-V2.md` (總體戰略), `docs/SCHEMA-V2.md` (資料庫規格), `1230-審核報告.md` (Linus Audit)
+**最後更新**: 2024-12-30 (Phase 0: Architecture Purification)
+
+---
+
+## 🚨 Phase 0: 架構淨化 (Architecture Purification)
+
+> **狀態**: 🔴 執行中 (Critical Priority)
+> **來源**: Linus-style 審核報告 (`1230-審核報告.md`)
+> **核心理念**: "Bad programmers worry about the code. Good programmers worry about data structures."
+
+### 🎯 目標
+在繼續堆砌功能之前，先花時間清理核心資料結構與非同步邏輯，避免「能跑但脆弱」的 V1.5 狀態。
+
+### 0.1 🗑️ Step 1: 淨化資料結構 (Data Structure Purification)
+
+> **問題**: `Notes` 表同時保留 `type` (字串) 和 `category_id` (外鍵)，造成雙重事實 (Double Truth) 災難。
+
+- [x] **0.1.1 Migration v12: Kill Notes.type** ✅ 2024-12-30
+  - [x] 執行一次性資料遷移: 確保所有 `Notes` 都有正確的 `category_id`
+  - [x] 找不到對應分類的筆記 → 歸類到 `Default/Uncategorized`
+  - [x] `ALTER TABLE Notes DROP COLUMN type;` (移除 type 欄位)
+  - [x] 移除 `idx_notes_type` 索引 (app.py L235)
+- [ ] **0.1.2 清理程式碼** 🧊 延後至 Step 2/3 完成後
+  - [ ] 刪除 `crud.py` 的 `get_category_id_by_name()` (L23-41)
+  - [ ] 移除所有引用 `Notes.type` 的程式碼 (crud.py, batch.py, system.py)
+  - [ ] 更新 API 端點: 不再接受 `type` 參數，統一使用 `category_id`
+  - [ ] **延後原因**: 需要大規模重構 CRUD 邏輯，優先完成 AI_Tasks 持久化 (Step 2)
+
+**預期結果**: 消除同步邏輯，程式碼減少 ~50 行，Bug 減少 50%
+
+### 0.2 ⚙️ Step 2: 實作真正的任務隊列 (Proper Task Queue)
+
+> **問題**: `_queue_embedding_update()` 在 WSGI 請求生命週期內啟動 `ThreadPoolExecutor`，伺服器重啟會丟失任務。
+
+- [x] **0.2.1 修改 CRUD 邏輯** ✅ 2024-12-30
+  - [x] `create_note()` / `update_note()` 不再 `submit()` 到 ThreadPool
+  - [x] 改為 `INSERT INTO AI_Tasks (task_type, payload, status) VALUES ('embedding', json_object('note_id', ?), 'pending')`
+  - [x] 移除 `_get_embedding_executor()` 和 `ThreadPoolExecutor` 相關程式碼
+- [x] **0.2.2 實作 Worker Process** ✅ 2024-12-30
+  - [x] 建立 `workers/task_processor.py` 獨立 Worker
+  - [x] 消化 `AI_Tasks` 表中的待處理任務
+  - [x] 支援優雅中斷 (Graceful Shutdown)
+  - [x] 失敗重試機制 (max 3 retries)
+  - [x] 單次執行模式 & 常駐模式
+- [x] **0.2.3 Migration v13** ✅ 2024-12-30
+  - [x] 建立 `AI_Tasks` 表 (task_type, status, payload, result, retry_count)
+  - [x] 建立索引 (status, type, created_at)
+- [ ] **0.2.4 部署方案** 🧊 待部署時實作
+  - [ ] 簡單方案: Cron job 每 5 分鐘執行一次
+  - [ ] 進階方案: Systemd service 常駐執行
+
+**預期結果**: ✅ 任務持久化，伺服器崩潰也不會丟失 Embedding 請求
+
+**狀態**: ✅ Step 0.2 核心功能完成 (2024-12-30)
+
+### 0.3 🔨 Step 3: 重構查詢邏輯 (Query Logic Refactoring)
+
+> **問題**: `crud.py` 的 `get_notes()` 長達 160 行，混合參數解析、SQL 動態組裝、業務邏輯。
+
+- [x] **0.3.1 提取 Query Builder** ✅ 2024-12-30
+  - [x] 建立 `utils/query_builder.py` 或 `NoteQueryBuilder` 類別
+  - [x] 將 SQL 組裝邏輯從 `get_notes()` 提取出來
+- [x] **0.3.2 簡化 JSON 處理** ✅ 2024-12-30
+  - [x] 不要在 Python 中做 `parse_tags_json()`
+  - [x] 利用 SQLite JSON 函式直接返回乾淨結構
+- [x] **0.3.3 分離業務邏輯** ✅ 2024-12-30
+  - [x] 將 FTS5 清洗邏輯獨立為 `sanitize_fts_query()`
+  - [x] 將封存過濾邏輯獨立為 Filter 物件
+
+**預期結果**: `get_notes()` 從 160 行減少到 ~150 行 (邏輯更清晰，易於維護)
+
+**狀態**: ✅ Step 0.3 完成 (2024-12-30)
+
+---
+
+## 📝 更新記錄 (2024-12-30)
+
+### ✅ 今日完成 (第二批)
+
+**設定頁面 - 資料管理**
+- **分類管理 (CategoryManager)**: 新增/編輯/刪除分類，支援自訂圖示
+- **標籤管理 (TagManager)**: 重命名/刪除/合併標籤
+- **API 新增**: `createCategory`, `updateCategory`, `deleteCategory`, `renameTag`, `deleteTag`, `mergeTags`
+
+**NoteEditor 功能增強**
+- **來源連結管理**: 側邊欄新增「來源連結」區塊，支援 URL 自動補全 (https://)
+- **Markdown 快捷鍵**: Ctrl+B (粗體), Ctrl+I (斜體), Ctrl+K (連結)
+- **AI 提示詞提取**: 新增 📋 按鈕，可讀取圖片 AI metadata 並複製到剪貼簿
+
+**系統維護 (System Maintenance)**
+- **WAL Checkpoint UI**: 設定頁面新增按鈕，說明文字優化 (強調手動備份用途)
+- **資料一致性檢查 UI**: 設定頁面新增檢查按鈕，顯示孤兒標籤/分類不一致等健康狀態
+
+**Prompt Builder**
+- **快捷鍵支援**: Ctrl+S (儲存至筆記庫), Ctrl+Enter (複製輸出)
+- **UI 優化**: 暫時隱藏權重模式，新增「混沌系統」(隨機) 與「AI 優化」(LLM 指令)
+- **功能補強**: 新增「儲存為模板」功能 (自訂模板)
+
+### ✅ 今日完成 (第一批)
+
+**AI 功能增強**
+- **AI 模型選擇**: 設定頁面新增視覺/文字模型下拉選擇器，支援 localStorage 持久化
+- **AI 文字模型自動偵測**: `get_available_text_model()` 自動選擇可用模型
+
+**圖片管理**
+- **圖片清理功能升級**: 危險區域新增三大功能：
+  - 清理未使用圖片 (孤兒圖片)
+  - 刪除原圖 (保留縮圖)
+  - 修復失效圖片路徑
+- **從網頁貼上圖片**: 支援從網頁複製帶圖片的 HTML 內容，自動下載遠端圖片
+
+**V1 功能升級 (高優先)**
+- **匯出備份**: 設定頁面新增「匯出 JSON」和「匯出資料庫」按鈕
+- **匯入備份**: 設定頁面新增「匯入 JSON」功能，支援略過/建立副本兩種模式
+- **置頂功能**: NoteCard 選單新增「置頂/取消置頂」按鈕
+- **歷史版本還原**: NoteEditor 新增「歷史」按鈕，可查看並還原到過去的版本
+
+**V1 功能升級 (中優先)**
+- **列表模式視圖**: Header 已有 Grid/List 切換按鈕
+- **封面位置選項**: NoteEditor 側邊欄新增「頂部/中間/底部」選項
+- **圖片匯出 ZIP**: NoteCard 選單新增「匯出圖片」按鈕
+
+**架構預留**
+- **i18n 預留架構**: 建立 `frontend/src/i18n/index.ts`，預設繁體中文/英文翻譯結構
 
 ---
 
@@ -18,8 +142,7 @@
     - [x] 新增 V2 模式切換 (`PRISM_V2` 環境變數)
     - [x] 保留 V1 Jinja2 路由 (向後相容)
     - [x] 設定 Flask Static Folder 指向 `frontend/dist` (Production Mode)
-    - [x] 設定 Flask Static Folder 指向 `frontend/dist` (Production Mode)
-- [ ] **1.4 開發規範更新**
+- [x] **1.4 開發規範更新**
     - [x] Update `CONTRIBUTING.md`: 加入 "Testing Philosophy" (No UI Test, Unit Test Only) 政策
     - [x] **Versioning**: 實作 `config.py` Single Source of Truth (`PRISM_VERSION`) + Template Injection
     - [x] **License Policy**: 加入綠/黃/紅燈開源引用規則 (`CONTRIBUTING.md`)
@@ -41,6 +164,7 @@
 - [x] **2.3 標籤與分類系統**
     - [x] API: 標籤 CRUD 與合併功能 (已存在)
     - [x] Frontend: 標籤自動完成 (TagInput Component)
+    - [x] Settings: 分類與標籤管理介面 (DataManager)
 - [x] **2.4 Prompt Builder 移植** ✅ 完成
   > **來源**: V1 核心功能，Gemini 建議優先移植
   - [x] 移植 `usePromptBuilder` 邏輯為 React Hook (`hooks/usePromptBuilder.ts`)
@@ -228,10 +352,13 @@
 
 ## 📅 優先級建議 (Priority)
 
-1.  **Phase 1 & 2** (必須先做，否則 V2 無法使用)
-2.  **Phase 3.1** (Auto-Tagging 價性比高，易實作)
-3.  **Phase 3.2** (Semantic Search 徹底改變體驗，但需處理模型下載問題)
-4.  **Phase 3.3** (視需求而定，若無複雜整理需求可延後)
+> **2024-12-30 更新**: 根據 Linus Report，Phase 0 現為最高優先。
+
+0.  **🔴 Phase 0** (架構淨化 - **必須先做**，否則繼續堆砌功能只會累積技術債)
+1.  **Phase 1 & 2** (必須先做，否則 V2 無法使用) ✅ 已完成
+2.  **Phase 3.1** (Auto-Tagging 價性比高，易實作) ✅ 已完成
+3.  **Phase 3.2** (Semantic Search 徹底改變體驗，但需處理模型下載問題) ✅ 已完成
+4.  **Phase 3.3** (視需求而定，若無複雜整理需求可延後) 🧊 已凍結
 5.  **Phase 4** (大後期功能)
 
 ---
@@ -242,6 +369,18 @@
 > **來源**: 009-自動化測試.txt 指南
 > **原則**: 「廚房能做菜 (API 正確)」+「服務生端菜到桌上沒打翻 (前端呈現正確)」
 > **狀態**: ✅ 完成 (2024-12-17)
+
+### 6.0 🔧 安全性與穩定性修復 (Linus Report Fixes)
+
+> **來源**: `docs/1217-L分析報告.md`
+> **日期**: 2024-12-17
+
+| 優先級 | Bug | 修復內容 | 狀態 |
+|--------|-----|----------|------|
+| P0 | #3 Embedding 線程無限產生 | 使用 `ThreadPoolExecutor(max_workers=2)` | ✅ 已修復 |
+| P0 | #4 `_batch_tasks` 記憶體洩漏 | 加入 TTL(1hr) + Max(100) 限制 | ✅ 已修復 |
+| P1 | #1 重複的 `get_db()` | 刪除 `app.py` 版本，統一使用 `db.py` | ✅ 已修復 |
+| P2 | #5 `type/category_id` 冗餘 | 已記錄於 SCHEMA.md，屬向後相容設計 | ⏳ 長期計劃 |
 
 ### 6.1 🔧 後端 API 測試 (pytest)
 

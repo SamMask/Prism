@@ -43,183 +43,125 @@ def get_category_id_by_name(db, type_name):
 
 def _queue_embedding_update(note_id: int, title: str, content: str):
     """
-    Phase 3.2: 非同步更新筆記的 Embedding
-    
-    使用背景線程避免阻塞 API 回應。
-    Graceful degradation: 如果 embedding 服務未安裝，靜默失敗。
+    Phase 0 Step 2: 使用 AI_Tasks 持久化任務隊列
+
+    取代 ThreadPoolExecutor，改為將任務寫入 AI_Tasks 表。
+    優勢: 任務持久化，伺服器崩潰也不會丟失 Embedding 請求。
+
+    [Phase 0 2024-12-30] Linus Report: 實作真正的任務隊列
     """
-    import threading
-    import hashlib
-    
-    def _do_embedding():
-        try:
-            from services.embedding_service import is_model_available, text_to_embedding, embedding_to_blob
-            from config import Config
-            import sqlite3
-            
-            if not is_model_available():
-                return  # Graceful degradation
-            
-            # 計算 content_hash (用於增量更新)
-            text = f"{title}\n{content}"
-            content_hash = hashlib.md5(text.encode('utf-8')).hexdigest()
-            
-            # 獨立連線 (在新線程中)
-            conn = sqlite3.connect(Config.DATABASE)
-            
-            try:
-                # 檢查是否需要更新 (content_hash 比對)
-                cursor = conn.execute(
-                    'SELECT content_hash FROM Embeddings WHERE resource_type = ? AND resource_id = ?',
-                    ('note', note_id)
-                )
-                existing = cursor.fetchone()
-                
-                if existing and existing[0] == content_hash:
-                    return  # 內容未變更，跳過
-                
-                # 產生新 Embedding
-                embedding = text_to_embedding(text)
-                if embedding is None:
-                    return
-                
-                blob = embedding_to_blob(embedding)
-                
-                # 更新或插入 Embeddings 表
-                conn.execute('''
-                    INSERT OR REPLACE INTO Embeddings 
-                    (resource_type, resource_id, chunk_index, model_name, vector, content_hash, dimensions, created_at)
-                    VALUES (?, ?, 0, 'all-MiniLM-L6-v2', ?, ?, 384, datetime('now'))
-                ''', ('note', note_id, blob, content_hash))
-                
-                # 同時更新 Notes.embedding_status (如果欄位存在)
-                try:
-                    conn.execute(
-                        'UPDATE Notes SET embedding_status = ? WHERE id = ?',
-                        ('indexed', note_id)
-                    )
-                except sqlite3.OperationalError:
-                    pass  # 欄位不存在，忽略
-                
-                conn.commit()
-                print(f"[Embedding] Note {note_id} embedded successfully")
-                
-            finally:
-                conn.close()
-                
-        except Exception as e:
-            print(f"[Embedding] Failed to embed note {note_id}: {e}")
-    
-    # 啟動背景線程
-    thread = threading.Thread(target=_do_embedding, daemon=True)
-    thread.start()
+    import json
+    from db import get_db
+
+    try:
+        db = get_db()
+
+        # 檢查 embedding 服務是否可用 (Graceful degradation)
+        from services.embedding_service import is_model_available
+        if not is_model_available():
+            return  # 模型未安裝，靜默失敗
+
+        # 將任務寫入 AI_Tasks 表
+        db.execute("""
+            INSERT INTO AI_Tasks (task_type, payload, status, created_at)
+            VALUES ('embedding', ?, 'pending', datetime('now'))
+        """, (json.dumps({'note_id': note_id, 'title': title, 'content': content}),))
+
+        db.commit()
+        print(f"[AI_Tasks] Queued embedding task for note {note_id}")
+
+    except Exception as e:
+        print(f"[AI_Tasks] Failed to queue embedding task for note {note_id}: {e}")
+
+
+# [Phase 0 2024-12-30] ThreadPoolExecutor 已移除
+# 舊版實作使用 _get_embedding_executor() 和 ThreadPoolExecutor
+# 現已改用 AI_Tasks 表實現任務持久化
 
 
 
 @notes_bp.route('/notes', methods=['GET'])
 def get_notes():
     """
-    取得筆記列表 (包含關聯的 tags 與 urls，支援分頁與篩選)
+    取得筆記列表 (Phase 0 Step 3: 使用 QueryBuilder 重構)
+
+    支援功能:
+    - 分頁 (page, per_page)
+    - 關鍵字搜尋 (q) - FTS5 全文檢索
+    - 分類過濾 (type/category_id)
+    - 標籤過濾 (tags) - AND/OR 模式
+    - 封存篩選 (include_archived)
+    - 排序 (sort) - updated/custom/created
     """
     try:
         db = get_db()
+        from utils.query_builder import NoteQueryBuilder
 
-        # 取得分頁參數
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        
-        # 取得篩選參數 (v0.5 新增)
-        keyword = request.args.get('q', '', type=str)
+        # 1. 解析並驗證參數
+        page = max(1, request.args.get('page', 1, type=int))
+        per_page = min(100, max(1, request.args.get('per_page', 20, type=int)))
+
+        keyword = request.args.get('q', '', type=str)[:200]  # 限制長度防 DoS
         note_type = request.args.get('type', '', type=str)
         tag_ids_str = request.args.get('tags', '', type=str)
-        tag_mode = request.args.get('tag_mode', 'AND', type=str).upper()  # 'AND' or 'OR'
-        include_archived = request.args.get('include_archived', 'false', type=str).lower() == 'true'  # v0.8.9 封存機制
-        sort_by = request.args.get('sort', 'updated', type=str)  # v0.9.0 排序方式: 'updated', 'custom', 'created'
+        tag_mode = request.args.get('tag_mode', 'AND', type=str).upper()
+        include_archived = request.args.get('include_archived', 'false', type=str).lower() == 'true'
+        sort_by = request.args.get('sort', 'updated', type=str)
 
-        # 參數驗證
-        if page < 1:
-            page = 1
-        if per_page < 1:
-            per_page = 20
-        if per_page > 100:
-            per_page = 100
-        if tag_mode not in ('AND', 'OR'):
-            tag_mode = 'AND'
+        # 2. 使用 QueryBuilder 建構 WHERE 子句
+        builder = NoteQueryBuilder()
 
-        # 動態組裝 SQL WHERE 子句
-        where_clauses = []
-        params = []
-        
-        # v0.8.9: 預設排除已封存筆記
-        if not include_archived:
-            where_clauses.append("COALESCE(n.is_archived, 0) = 0")
+        # 封存過濾
+        builder.filter_archived(include_archived)
 
-        # 關鍵字搜尋 (FTS5 全文檢索 v0.6, 修正 v0.8.9)
+        # 關鍵字搜尋 (FTS5)
         if keyword:
-            # v0.8.9: 限制關鍵字長度防止 DoS
-            keyword = keyword[:200]
-            
-            # v0.8.9: 移除 FTS5 特殊語法字元
-            for char in '"()':
-                keyword = keyword.replace(char, '')
-            
-            # 只保留字母數字和空格
-            safe_keyword = "".join([c for c in keyword if c.isalnum() or c.isspace()])
-            tokens = safe_keyword.split()
-            if tokens:
-                fts_query = " ".join([f'"{token}"*' for token in tokens])
-                where_clauses.append("n.id IN (SELECT rowid FROM Notes_FTS WHERE Notes_FTS MATCH ?)")
-                params.append(fts_query)
+            builder.search_fts(keyword)
 
-        # 類型過濾
+        # 分類過濾 (Phase 0: type 欄位已移除，但為向後相容保留 API)
         if note_type and note_type.lower() != 'all':
-            where_clauses.append("n.type = ?")
-            params.append(note_type)
+            # 嘗試將 type 名稱轉為 category_id
+            category = db.execute(
+                'SELECT id FROM Categories WHERE name = ? LIMIT 1',
+                (note_type,)
+            ).fetchone()
+            if category:
+                builder.filter_category(category['id'])
 
-        # 標籤過濾 (支援 AND/OR 模式)
+        # 標籤過濾
         if tag_ids_str:
             try:
                 tag_ids = [int(tid) for tid in tag_ids_str.split(',') if tid.strip()]
                 if tag_ids:
-                    if tag_mode == 'OR':
-                        # OR 模式: 筆記只需包含任一選中標籤
-                        placeholders = ','.join(['?' for _ in tag_ids])
-                        where_clauses.append(f"""
-                            EXISTS (SELECT 1 FROM Note_Tags nt WHERE nt.note_id = n.id AND nt.tag_id IN ({placeholders}))
-                        """)
-                        params.extend(tag_ids)
-                    else:
-                        # AND 模式 (預設): 筆記必須包含所有選中標籤
-                        for tag_id in tag_ids:
-                            where_clauses.append("""
-                                EXISTS (SELECT 1 FROM Note_Tags nt WHERE nt.note_id = n.id AND nt.tag_id = ?)
-                            """)
-                            params.append(tag_id)
+                    tag_mode = 'OR' if tag_mode == 'OR' else 'AND'
+                    builder.filter_tags(tag_ids, mode=tag_mode)
             except ValueError:
                 pass
 
-        # 組合 WHERE 子句
-        where_sql = ""
-        if where_clauses:
-            where_sql = "WHERE " + " AND ".join(where_clauses)
+        # 3. 建構 SQL 查詢
+        where_sql, params = builder.build()
 
-        # 1. 先查詢符合條件的總筆記數
+        # 查詢總數
         count_query = f'SELECT COUNT(*) as count FROM Notes n {where_sql}'
         total = db.execute(count_query, params).fetchone()['count']
 
-        # 計算 OFFSET 與總頁數
+        # 計算分頁
         offset = (page - 1) * per_page
         total_pages = (total + per_page - 1) // per_page
 
-        # 2. 使用子查詢取得分頁筆記及其關聯的標籤與網址
-        # v1.0: 使用 json_group_array 取代 GROUP_CONCAT 序列化
-        # v1.1: JOIN Categories 解決雙重事實問題 (Single Source of Truth)
+        # 查詢資料 (Phase 0 Step 3: SQLite 直接返回 JSON，無需 Python 解析)
+        sort_clause = {
+            'custom': 'COALESCE(n.sort_order, n.id) ASC',
+            'created': 'n.created_at DESC',
+            'updated': 'n.updated_at DESC'
+        }.get(sort_by, 'n.updated_at DESC')
+
         data_query = f'''
             SELECT
                 n.id,
                 n.title,
                 n.content,
-                COALESCE(c.name, n.type) as category_name,
+                COALESCE(c.name, 'Uncategorized') as category_name,
                 n.remarks,
                 n.cover_image,
                 COALESCE(n.cover_position, 'top') as cover_position,
@@ -227,44 +169,47 @@ def get_notes():
                 COALESCE(n.is_pinned, 0) as is_pinned,
                 n.created_at,
                 n.updated_at,
-                (SELECT json_group_array(json_object('id', t2.id, 'name', t2.name))
-                 FROM Note_Tags nt2 
-                 JOIN Tags t2 ON nt2.tag_id = t2.id 
-                 WHERE nt2.note_id = n.id) as tags_json,
-                (SELECT json_group_array(s2.url)
-                 FROM Source_Urls s2 
-                 WHERE s2.note_id = n.id) as urls_json
+                COALESCE(
+                    (SELECT json_group_array(json_object('id', t2.id, 'name', t2.name))
+                     FROM Note_Tags nt2
+                     JOIN Tags t2 ON nt2.tag_id = t2.id
+                     WHERE nt2.note_id = n.id),
+                    json_array()
+                ) as tags,
+                COALESCE(
+                    (SELECT json_group_array(s2.url)
+                     FROM Source_Urls s2
+                     WHERE s2.note_id = n.id),
+                    json_array()
+                ) as urls
             FROM Notes n
             LEFT JOIN Categories c ON n.category_id = c.id
             {where_sql}
-            ORDER BY COALESCE(n.is_pinned, 0) DESC, 
-                     {('COALESCE(n.sort_order, n.id) ASC' if sort_by == 'custom' else 
-                       'n.created_at DESC' if sort_by == 'created' else 
-                       'n.updated_at DESC')}
+            ORDER BY COALESCE(n.is_pinned, 0) DESC, {sort_clause}
             LIMIT ? OFFSET ?
         '''
-        
+
         data_params = params + [per_page, offset]
         rows = db.execute(data_query, data_params).fetchall()
 
-
-        # 3. 處理結果 (v1.0: 使用 JSON 解析取代字串分割)
+        # 4. 組裝結果 (Phase 0 Step 3: 移除 parse_tags_json)
         notes_list = []
         for row in rows:
             note = {
                 'id': row['id'],
                 'title': row['title'],
                 'content': row['content'],
-                'type': row['category_name'],
+                'type': row['category_name'],  # 向後相容
+                'category_name': row['category_name'],
                 'remarks': row['remarks'],
                 'cover_image': row['cover_image'],
-                'cover_position': row['cover_position'] if row['cover_position'] else 'top',
-                'editor_layout': row['editor_layout'] if row['editor_layout'] else 'single',
-                'is_pinned': bool(row['is_pinned']) if row['is_pinned'] else False,
+                'cover_position': row['cover_position'],
+                'editor_layout': row['editor_layout'],
+                'is_pinned': bool(row['is_pinned']),
                 'created_at': row['created_at'],
                 'updated_at': row['updated_at'],
-                'tags': parse_tags_json(row['tags_json']),
-                'urls': parse_urls_json(row['urls_json']),
+                'tags': json.loads(row['tags']) if row['tags'] else [],
+                'urls': json.loads(row['urls']) if row['urls'] else [],
             }
             notes_list.append(note)
 
