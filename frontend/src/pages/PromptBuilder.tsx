@@ -8,14 +8,14 @@
  * - OutputPreview: Result display
  * - QuickTemplates: Preset shortcuts
  */
-import { useEffect } from 'react'
-import { Camera, Palette, Save, RotateCcw, Sparkles, Loader2, Dices, BookmarkPlus } from 'lucide-react'
+import { Camera, Palette, Save, RotateCcw, Sparkles, Loader2 } from 'lucide-react'
 import { usePromptBuilder } from '../hooks/usePromptBuilder'
-import { 
-  ParameterGroup, 
-  ParameterSelect, 
-  OutputPreview, 
-  QuickTemplates 
+import {
+  ParameterGroup,
+  ParameterSelect,
+  OutputPreview,
+  QuickTemplates,
+  WizardModal
 } from '../components/prompt-builder'
 import { Button } from '../components/ui/Button'
 
@@ -34,46 +34,28 @@ export function PromptBuilder() {
     textOutput,
     narrativeOutput,
     jsonOutput,
+    wizardModalOpen,
+    wizardForm,
+    wizardAppend,
+    wizardOptions,
     updateForm,
     updateWeight,
     setUseWeights,
     setOutputMode,
     copyOutput,
+    copyForLLM,
     resetForm,
     applyTemplate,
     randomizeCategory,
-    randomizeAll,
-    copyForLLM,
     saveToLibrary,
-    saveTemplate,
     loadConfig,
+    openWizardModal,
+    closeWizardModal,
+    updateWizardForm,
+    randomizeWizardField,
+    confirmWizard,
+    setWizardAppend,
   } = usePromptBuilder()
-
-  const handleSaveTemplate = () => {
-    const name = prompt('請輸入模板名稱（例如：Cyberpunk City）')
-    if (name) {
-      saveTemplate(name)
-    }
-  }
-
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+S: Save
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault()
-        saveToLibrary()
-      }
-      // Ctrl+Enter: Copy Output
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault()
-        copyOutput()
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [saveToLibrary, copyOutput])
 
   // Loading State
   if (isLoading) {
@@ -122,39 +104,35 @@ export function PromptBuilder() {
             </div>
           </div>
           
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2">
-            <Button 
-              size="sm" 
-              variant="secondary" 
-              className="flex items-center gap-1.5"
-              onClick={randomizeAll}
-              title="隨機生成所有參數 (混沌系統)"
-            >
-              <Dices size={16} />
-              混沌
-            </Button>
-            
-            {/* Weight Toggle (Hidden for now) */}
-            {/* <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={useWeights}
-                onChange={(e) => setUseWeights(e.target.checked)}
-                className="..."
-              />
-              <span>權重模式</span>
-            </label> */}
-          </div>
+          {/* Weight Toggle */}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={useWeights}
+              onChange={(e) => setUseWeights(e.target.checked)}
+              className="w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-text-secondary">權重模式</span>
+          </label>
         </div>
+
         {/* Quick Templates */}
         <QuickTemplates templates={quickTemplates} onApply={applyTemplate} />
 
         {/* Main Description */}
         <div className="glass rounded-xl p-4">
-          <label className="block text-sm font-medium text-text-secondary mb-2">
-            主要描述 *
-          </label>
+          <div className="flex items-center justify-between mb-2">
+            <label className="block text-sm font-medium text-text-secondary">
+              主要描述 *
+            </label>
+            <button
+              onClick={openWizardModal}
+              className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gradient-to-r from-primary to-accent text-white hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-lg shadow-primary/20"
+            >
+              <Sparkles size={14} />
+              靈感引導
+            </button>
+          </div>
           <textarea
             value={form.description}
             onChange={(e) => updateForm('description', e.target.value)}
@@ -294,9 +272,6 @@ export function PromptBuilder() {
             <Save size={18} />
             儲存至筆記庫
           </Button>
-          <Button onClick={handleSaveTemplate} variant="secondary" className="flex items-center gap-2" title="儲存為個人模板">
-            <BookmarkPlus size={18} />
-          </Button>
           <Button onClick={resetForm} variant="ghost" className="flex items-center gap-2">
             <RotateCcw size={18} />
             重置
@@ -318,6 +293,19 @@ export function PromptBuilder() {
           copySuccess={copySuccess}
         />
       </div>
+
+      {/* Wizard Modal */}
+      <WizardModal
+        isOpen={wizardModalOpen}
+        onClose={closeWizardModal}
+        wizardForm={wizardForm}
+        wizardOptions={wizardOptions}
+        wizardAppend={wizardAppend}
+        onUpdateField={updateWizardForm}
+        onRandomizeField={randomizeWizardField}
+        onConfirm={confirmWizard}
+        onSetAppend={setWizardAppend}
+      />
     </div>
   )
 }
