@@ -1,6 +1,10 @@
 # Database
 knowledge.db
 knowledge.db-journal
+local_insight.db
+local_insight.db-journal
+*.db-wal
+*.db-shm
 
 # Python
 __pycache__/
@@ -15,6 +19,7 @@ ENV/
 
 # User uploads
 static/uploads/
+static/test_uploads/
 
 # Temp files
 garbage-can/
