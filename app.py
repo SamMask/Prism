@@ -31,8 +31,16 @@ def create_app(env_name='default'):
     app = CustomFlask(__name__)
     
     # 載入配置
-    app.config.from_object(config[env_name])
+    if isinstance(env_name, str):
+        app.config.from_object(config[env_name])
+    else:
+        app.config.from_object(env_name)
     
+    # [Fix] 強制重新讀取環境變數 (確保 set PRISM_V2=true 生效)
+    if os.environ.get('PRISM_V2', '').lower().strip() == 'true':
+        app.config['V2_MODE'] = True
+        print("[INFO] V2 Mode enabled via environment variable")
+
     # 確保上傳目錄存在
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -92,9 +100,11 @@ def create_app(env_name='default'):
                 host_url,
                 host_url.replace('127.0.0.1', 'localhost'),
                 host_url.replace('localhost', '127.0.0.1'),
-                # V2: Allow Vite dev server (port 5173)
+                # V2: Allow Vite dev server (ports 5173-5174)
                 'http://localhost:5173',
                 'http://127.0.0.1:5173',
+                'http://localhost:5174',
+                'http://127.0.0.1:5174',
             ]
             
             origin_valid = origin and any(origin.startswith(o) for o in allowed_origins)
@@ -114,13 +124,11 @@ def create_app(env_name='default'):
         )
 
     # ===================================================================
-    from routes import register_blueprints
-    register_blueprints(app)
-
-    # ===================================================================
     # V2: React SPA 或 V1: Jinja2 模板
     # ===================================================================
-    if app.config.get('V2_MODE'):
+    v2_mode = app.config.get('V2_MODE')
+    
+    if v2_mode:
         # V2 Mode: Serve React SPA from frontend/dist
         frontend_dist = app.config.get('FRONTEND_DIST')
         
@@ -142,7 +150,13 @@ def create_app(env_name='default'):
             return send_from_directory(frontend_dist, 'index.html')
         
         print("[V2] React SPA 模式已啟用")
-    else:
+    
+    # ===================================================================
+    from routes import register_blueprints
+    register_blueprints(app)
+
+    # V1 Fallback (Only if V2 is not enabled)
+    if not v2_mode:
         # V1 Mode: Traditional Jinja2 templates
         @app.route('/')
         def index():
@@ -183,22 +197,9 @@ def create_app(env_name='default'):
 # 資料庫連線與初始化 (供 Application Context 使用)
 # ===================================================================
 
-def get_db():
-    """取得資料庫連線"""
-    if 'db' not in g:
-        from flask import current_app
-        try:
-            g.db = sqlite3.connect(
-                current_app.config['DATABASE'],
-                detect_types=sqlite3.PARSE_DECLTYPES
-            )
-            g.db.row_factory = sqlite3.Row
-            g.db.execute('PRAGMA foreign_keys = ON')
-            g.db.execute('PRAGMA journal_mode = WAL')  # v0.8.9: 啟用 WAL 模式提升效能
-        except sqlite3.Error as e:
-            print(f"[ERROR] 資料庫連線失敗: {e}")
-            raise
-    return g.db
+# [P1 Fix 2024-12-17] 刪除重複的 get_db()，統一使用 db.py 的版本
+# 原因: db.py 的版本有 Foreign Keys 驗證，這裡的版本沒有
+# 參見: Linus Analysis Report Bug #1 (Dual Source of Truth)
 
 def init_db():
     """
@@ -206,6 +207,7 @@ def init_db():
     
     v1.0: 使用版本化遷移系統，取代 if 分支堆疊
     """
+    from db import get_db  # 使用統一的 get_db
     db = get_db()
     try:
         # ===================================================================
@@ -232,7 +234,7 @@ def init_db():
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        db.execute('CREATE INDEX IF NOT EXISTS idx_notes_type ON Notes(type)')
+        # Phase 0: idx_notes_type removed - Notes.type 欄位已在 Migration v12 中移除
         db.execute('CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON Notes(updated_at DESC)')
 
         # 2. Source_Urls 表
