@@ -148,3 +148,29 @@
 ---
 
 **Next Step**: 請參考 `docs/TODO-V2.md` 查看詳細執行清單。**Phase 0 現為最高優先級**。
+
+---
+
+## 🚀 7. 部署與更新策略 (Deployment & Updates)
+
+> **目標**: 確保本地應用程式 (Local App) 能夠平滑升級，且不丟失使用者數據。
+> **原則**: 程式與數據分離 (Code/Data Separation)。
+
+### 7.1 資料庫遷移 (Startup Migration)
+*   **機制**: 每次應用啟動時 (`create_app()`)，自動檢查資料庫版本。
+*   **實作**: 在 `init_db()` 中比對當前 Schema 與程式碼期望的版本，若落後則自動執行 `ALTER TABLE`。
+*   **優勢**: 安裝包只需替換 `.exe`，無需額外的 SQL 腳本工具，實現「無痛升級」。
+
+### 7.2 安裝包邏輯 (Installer Logic)
+*   **強制覆蓋 (Overwrite)**: 程式本體 (`Prism.exe`, `dist/`, `.pyd`)。
+*   **絕對保留 (Keep)**:
+    *   `prism.db` (資料庫)
+    *   `config.json` (設定檔)
+    *   `uploads/` & `docs/attachments/` (使用者檔案)
+*   **路徑建議**: 
+    *   **Portable Mode**: DB 在安裝目錄 (需設定 Installer `onlyifdoesntexist`)。
+    *   **Standard Mode**: DB 在 `%APPDATA%/Prism` (最安全，強烈建議未來採用)。
+
+### 7.3 在線升級 (Online Update)
+*   **Plan A (簡易版)**: 檢查 GitHub Release -> 提示下載 -> 使用者手動執行安裝包。
+*   **Plan B (體驗版)**: 內建 `updater.exe` -> 下載 ZIP -> 關閉主程式 -> 解壓覆蓋 -> 重啟。

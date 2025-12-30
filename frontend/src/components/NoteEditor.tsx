@@ -3,24 +3,13 @@ import { Modal, Button, toast } from "./ui";
 import { Note, api, Tag } from "../services/api";
 import { useAppStore } from "../stores/appStore";
 import {
-  Save,
-  X,
   Image,
-  Tag as TagIcon,
-  FolderOpen,
-  Eye,
-  Edit3,
-  Sparkles,
-  Loader2,
-  Paperclip,
-  FileText,
-  Trash2,
-  Plus,
+  X,
   History,
-  RotateCcw,
-  Clipboard,
-  Link2,
+  RotateCcw
 } from "lucide-react";
+import { EditorToolbar } from "./editor/EditorToolbar";
+import { EditorSidebar } from "./editor/EditorSidebar";
 import { marked } from "marked";
 
 interface Attachment {
@@ -754,107 +743,21 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
     <Modal isOpen onClose={onClose} size="xl">
       <div className="flex flex-col h-[80vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
-          <h2 className="text-lg font-semibold text-text-primary">
-            {isEditing ? "編輯筆記" : "新增筆記"}
-          </h2>
-          <div className="flex items-center gap-2">
-            {/* AI Analyze Button */}
-            <button
-              onClick={handleAiAnalyze}
-              disabled={isAnalyzing}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
-                         transition-all duration-200
-                         ${
-                           isAnalyzing
-                             ? "bg-accent/20 text-accent cursor-wait"
-                             : "bg-accent/10 text-accent hover:bg-accent/20"
-                         }`}
-              title="AI 智慧分析"
-            >
-              {isAnalyzing ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Sparkles size={16} />
-              )}
-              {isAnalyzing ? "分析中..." : "AI 分析"}
-            </button>
-
-            {/* Extract Prompt Button */}
-            <button
-              onClick={handleCopyPrompt}
-              disabled={isCheckingPrompt}
-              className={`p-2 rounded-lg transition-all duration-200 relative
-                         ${
-                           hasAIPrompt
-                             ? "bg-success/20 text-success hover:bg-success/30 shadow-lg shadow-success/20"
-                             : isCheckingPrompt
-                               ? "bg-bg-elevated text-text-muted cursor-wait"
-                               : "bg-bg-elevated text-text-muted hover:text-text-primary hover:bg-bg-hover"
-                         }`}
-              title={hasAIPrompt ? "複製 AI 提示詞" : "提取圖片提示詞"}
-            >
-              {isCheckingPrompt ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Clipboard size={16} />
-              )}
-              {hasAIPrompt && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-success rounded-full animate-pulse" />
-              )}
-            </button>
-
-            {/* History Button (only for existing notes) */}
-            {isEditing && (
-              <button
-                onClick={loadHistory}
-                disabled={isLoadingHistory}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
-                           transition-all duration-200
-                           ${
-                             isLoadingHistory
-                               ? "bg-warning/20 text-warning cursor-wait"
-                               : "bg-warning/10 text-warning hover:bg-warning/20"
-                           }`}
-                title="歷史版本"
-              >
-                {isLoadingHistory ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <History size={16} />
-                )}
-                歷史
-              </button>
-            )}
-
-            {/* Preview Toggle */}
-            <button
-              onClick={() => setIsPreview(!isPreview)}
-              className={`p-2 rounded-lg transition-colors ${
-                isPreview
-                  ? "bg-primary text-white"
-                  : "text-text-muted hover:bg-bg-hover"
-              }`}
-              title={isPreview ? "編輯模式" : "預覽模式"}
-            >
-              {isPreview ? <Edit3 size={18} /> : <Eye size={18} />}
-            </button>
-
-            {/* Save Button */}
-            <Button onClick={handleSave} variant="primary" disabled={isSaving}>
-              <Save size={16} />
-              {isSaving ? "儲存中..." : "儲存"}
-            </Button>
-
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="p-2 rounded-lg text-text-muted hover:bg-bg-hover"
-            >
-              <X size={18} />
-            </button>
-          </div>
-        </div>
+        <EditorToolbar
+          isEditing={isEditing}
+          isAnalyzing={isAnalyzing}
+          onAiAnalyze={handleAiAnalyze}
+          hasAIPrompt={hasAIPrompt}
+          isCheckingPrompt={isCheckingPrompt}
+          onCopyPrompt={handleCopyPrompt}
+          isLoadingHistory={isLoadingHistory}
+          onLoadHistory={loadHistory}
+          isPreview={isPreview}
+          onTogglePreview={() => setIsPreview(!isPreview)}
+          isSaving={isSaving}
+          onSave={handleSave}
+          onClose={onClose}
+        />
 
         {/* Content */}
         <div className="flex-1 flex overflow-hidden">
@@ -965,343 +868,58 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           </div>
 
           {/* Sidebar */}
-          <div className="w-64 flex-shrink-0 border-l border-border-subtle p-4 space-y-4 overflow-auto">
-            {/* AI Suggestions */}
-            {(aiSuggestions.length > 0 || aiDescription) && (
-              <div className="p-3 rounded-lg bg-accent/5 border border-accent/20">
-                <h4 className="flex items-center gap-2 text-sm font-medium text-accent mb-2">
-                  <Sparkles size={14} />
-                  AI 建議
-                </h4>
-
-                {aiDescription && (
-                  <p className="text-xs text-text-secondary mb-2 leading-relaxed">
-                    {aiDescription}
-                  </p>
-                )}
-
-                {aiSuggestions.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {aiSuggestions.map((tag, i) => (
-                      <button
-                        key={i}
-                        onClick={() => addAiTag(tag)}
-                        className="px-2 py-0.5 text-xs rounded-full
-                                   bg-accent/10 text-accent
-                                   hover:bg-accent/20 transition-colors"
-                        title="點擊添加此標籤"
-                      >
-                        + {tag}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Category */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-                <FolderOpen size={14} /> 分類
-              </label>
-              <select
-                value={categoryId || ""}
-                onChange={(e) =>
-                  setCategoryId(
-                    e.target.value ? Number(e.target.value) : undefined
-                  )
+          <EditorSidebar
+            aiSuggestions={aiSuggestions}
+            aiDescription={aiDescription}
+            onAddAiTag={addAiTag}
+            categoryId={categoryId}
+            onChangeCategory={setCategoryId}
+            tagInput={tagInput}
+            onTagInputChange={setTagInput}
+            onTagInputKeyDown={handleTagKeyDown}
+            selectedTags={selectedTags}
+            onRemoveTag={removeTag}
+            sourceUrls={sourceUrls}
+            urlInput={urlInput}
+            onUrlInputChange={setUrlInput}
+            onUrlInputKeyDown={(e) => {
+                if (e.key === "Enter" && urlInput.trim()) {
+                  e.preventDefault();
+                  let url = urlInput.trim();
+                  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "https://" + url;
+                  }
+                  if (!sourceUrls.includes(url)) {
+                    setSourceUrls([...sourceUrls, url]);
+                  }
+                  setUrlInput("");
                 }
-                className="w-full px-3 py-2 rounded-lg
-                           bg-bg-elevated border border-border-default
-                           text-text-primary text-sm
-                           focus:outline-none focus:border-primary"
-              >
-                <option value="">選擇分類</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.icon} {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Tags */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-                <TagIcon size={14} /> 標籤
-              </label>
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                placeholder="輸入標籤後按 Enter"
-                className="w-full px-3 py-2 rounded-lg
-                           bg-bg-elevated border border-border-default
-                           text-text-primary text-sm
-                           focus:outline-none focus:border-primary"
-              />
-              {selectedTags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {selectedTags.map((tag) => (
-                    <span
-                      key={tag.id}
-                      className="inline-flex items-center gap-1 px-2 py-0.5
-                                 text-xs rounded-full
-                                 bg-primary/10 text-primary-light"
-                    >
-                      {tag.name}
-                      <button
-                        onClick={() => removeTag(tag.id)}
-                        className="hover:text-danger"
-                      >
-                        <X size={12} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Source URLs */}
-            <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-                <Link2 size={14} /> 來源連結
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={urlInput}
-                  onChange={(e) => setUrlInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && urlInput.trim()) {
-                      e.preventDefault();
-                      let url = urlInput.trim();
-                      if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                        url = "https://" + url;
-                      }
-                      if (!sourceUrls.includes(url)) {
-                        setSourceUrls([...sourceUrls, url]);
-                      }
-                      setUrlInput("");
-                    }
-                  }}
-                  onBlur={() => {
-                    if (urlInput.trim()) {
-                      let url = urlInput.trim();
-                      if (!url.startsWith("http://") && !url.startsWith("https://")) {
-                        url = "https://" + url;
-                      }
-                      if (!sourceUrls.includes(url)) {
-                        setSourceUrls([...sourceUrls, url]);
-                      }
-                      setUrlInput("");
-                    }
-                  }}
-                  placeholder="輸入 URL 後按 Enter 或點擊其他地方"
-                  className="flex-1 px-3 py-2 rounded-lg
-                             bg-bg-elevated border border-border-default
-                             text-text-primary text-sm
-                             focus:outline-none focus:border-primary"
-                />
-              </div>
-              {sourceUrls.length > 0 && (
-                <div className="mt-2 space-y-1.5">
-                  {sourceUrls.map((url, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 p-2 rounded-lg bg-bg-elevated group"
-                    >
-                      <a
-                        href={url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex-1 text-xs text-primary truncate hover:underline"
-                      >
-                        {url}
-                      </a>
-                      <button
-                        onClick={() =>
-                          setSourceUrls(sourceUrls.filter((_, i) => i !== index))
-                        }
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-danger/10 text-text-muted hover:text-danger"
-                      >
-                        <X size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Remarks */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
-                備註
-              </label>
-              <textarea
-                value={remarks}
-                onChange={(e) => setRemarks(e.target.value)}
-                placeholder="簡短備註..."
-                rows={3}
-                className="w-full px-3 py-2 rounded-lg
-                           bg-bg-elevated border border-border-default
-                           text-text-primary text-sm resize-none
-                           focus:outline-none focus:border-primary"
-              />
-            </div>
-
-            {/* Cover Position */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
-                封面位置
-              </label>
-              <div className="flex gap-2">
-                {([
-                  { value: "top", label: "頂部" },
-                  { value: "center", label: "中間" },
-                  { value: "bottom", label: "底部" },
-                ] as const).map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setCoverPosition(option.value)}
-                    className={`flex-1 px-3 py-1.5 rounded-lg text-sm transition-colors
-                               ${coverPosition === option.value
-                                 ? "bg-primary text-white"
-                                 : "bg-bg-elevated text-text-secondary hover:bg-bg-hover"
-                               }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Editor Layout */}
-            <div>
-              <label className="text-sm font-medium text-text-secondary mb-2 block">
-                編輯版面
-              </label>
-              <div className="flex gap-2">
-                {([
-                  { value: "single", label: "單欄" },
-                  { value: "dual", label: "雙欄" },
-                ] as const).map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setEditorLayout(option.value)}
-                    className={`flex-1 px-3 py-1.5 rounded-lg text-sm transition-colors
-                               ${editorLayout === option.value
-                                 ? "bg-primary text-white"
-                                 : "bg-bg-elevated text-text-secondary hover:bg-bg-hover"
-                               }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-              {editorLayout === "dual" && (
-                <p className="text-xs text-text-muted mt-1.5">
-                  圖片會顯示在左側，編輯區在右側
-                </p>
-              )}
-            </div>
-
-            {/* Attachments (Phase 3.4) */}
-            {isEditing && (
-              <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-                  <Paperclip size={14} /> 附件
-                  {attachments.length > 0 && (
-                    <span className="text-xs bg-bg-elevated px-1.5 py-0.5 rounded">
-                      {attachments.length}
-                    </span>
-                  )}
-                </label>
-
-                {/* Attachment List */}
-                {attachments.length > 0 && (
-                  <div className="space-y-1.5 mb-2">
-                    {attachments.map((att) => (
-                      <div
-                        key={att.id}
-                        className={`flex items-center gap-2 px-2 py-1.5 rounded-lg
-                                   bg-bg-elevated text-text-secondary text-xs
-                                   hover:bg-bg-hover group cursor-pointer
-                                   ${
-                                     att.is_auto_extracted
-                                       ? "border-l-2 border-primary"
-                                       : ""
-                                   }`}
-                        onClick={() =>
-                          handleLoadAttachment(att.id, att.is_auto_extracted)
-                        }
-                        title={
-                          att.is_auto_extracted
-                            ? "點擊還原完整內容"
-                            : "點擊查看附件"
-                        }
-                      >
-                        <FileText
-                          size={14}
-                          className={`flex-shrink-0 ${
-                            att.is_auto_extracted
-                              ? "text-accent"
-                              : "text-primary"
-                          }`}
-                        />
-                        <span className="truncate flex-1" title={att.title}>
-                          {att.title}
-                          {att.is_auto_extracted && (
-                            <span className="text-accent ml-1">(完整內容)</span>
-                          )}
-                        </span>
-                        <span className="text-text-muted">
-                          {(att.size_bytes / 1024).toFixed(0)}KB
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent opening file
-                            handleDeleteAttachment(att.id);
-                          }}
-                          className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger
-                                     transition-opacity"
-                          title="刪除附件"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Upload Button */}
-                <input
-                  ref={attachmentInputRef}
-                  type="file"
-                  accept=".md,.txt,.markdown"
-                  onChange={handleAttachmentSelect}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => attachmentInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2
-                             rounded-lg border border-dashed border-border-default
-                             text-text-muted text-sm
-                             hover:border-primary hover:text-primary
-                             transition-colors"
-                >
-                  <Plus size={14} />
-                  新增 .md 附件
-                </button>
-                <p className="text-xs text-text-muted mt-1.5">
-                  支援拖曳 .md 檔案到編輯區
-                </p>
-              </div>
-            )}
-          </div>
+            }}
+            onUrlInputBlur={() => {
+                if (urlInput.trim()) {
+                  let url = urlInput.trim();
+                  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+                    url = "https://" + url;
+                  }
+                  if (!sourceUrls.includes(url)) {
+                    setSourceUrls([...sourceUrls, url]);
+                  }
+                  setUrlInput("");
+                }
+            }}
+            onRemoveUrl={(index) => setSourceUrls(sourceUrls.filter((_, i) => i !== index))}
+            remarks={remarks}
+            onChangeRemarks={setRemarks}
+            coverPosition={coverPosition}
+            onChangeCoverPosition={setCoverPosition}
+            editorLayout={editorLayout}
+            onChangeEditorLayout={setEditorLayout}
+            isEditing={isEditing}
+            attachments={attachments}
+            onLoadAttachment={handleLoadAttachment}
+            onDeleteAttachment={handleDeleteAttachment}
+            onUploadAttachment={handleAttachmentSelect}
+          />
         </div>
       </div>
     </Modal>

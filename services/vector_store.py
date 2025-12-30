@@ -94,21 +94,22 @@ class VectorStore:
 
     def refresh_from_db(self, app=None):
         """Load all vectors from SQLite into RAM (Cold Start)"""
-        print("[VectorStore] Loading vectors from DB...")
-        
-        try:
-            if app:
-                with app.app_context():
+        with self._lock:  # Thread safety
+            print("[VectorStore] Loading vectors from DB...")
+            
+            try:
+                if app:
+                    with app.app_context():
+                        db = get_db()
+                        self._load_vectors(db)
+                else:
                     db = get_db()
                     self._load_vectors(db)
-            else:
-                db = get_db()
-                self._load_vectors(db)
-        except Exception as e:
-            print(f"[VectorStore] Failed to load: {e}")
-            self.matrix = np.zeros((0, EMBEDDING_DIM), dtype=np.float32)
-            self.ids = []
-            self.id_map = {}
+            except Exception as e:
+                print(f"[VectorStore] Failed to load: {e}")
+                self.matrix = np.zeros((0, EMBEDDING_DIM), dtype=np.float32)
+                self.ids = []
+                self.id_map = {}
 
     def _load_vectors(self, db):
         """Internal: Load vectors from database connection"""

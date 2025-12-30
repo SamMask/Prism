@@ -160,14 +160,14 @@ db.execute("""
 | 問題 | 位置 | 說明 | 狀態 |
 |------|------|------|------|
 | PRAGMA 重複查詢 | `crud.py:217-219` | 每次 `get_note()` 都執行 `PRAGMA table_info(Notes)` | ✅ 已修復 |
-| 重複 SQL 查詢 | `crud.py:217-269` | 同一 SQL 出現兩次 (has_parent_id 分支) | ⏳ 待修復 |
+| 重複 SQL 查詢 | `crud.py:217-269` | 同一 SQL 出現兩次 (has_parent_id 分支) | ✅ 已修復 |
 
 #### 🟢 P2: 長期改善
 
 | 問題 | 位置 | 說明 | 狀態 |
 |------|------|------|------|
 | FTS5 DoS 風險 | `query_builder.py` | `sanitize_fts_query()` 無 token 數量限制 | ✅ 已修復 |
-| VectorStore 執行緒安全 | `vector_store.py` | `refresh_from_db()` 缺少寫入鎖 | ⏳ 待修復 |
+| VectorStore 執行緒安全 | `vector_store.py` | `refresh_from_db()` 缺少寫入鎖 | ✅ 已修復 |
 
 **追蹤文件**: `docs/TODO-V2.md` Phase 0.5
 
@@ -470,7 +470,11 @@ CREATE VIRTUAL TABLE Notes_FTS USING fts5(
     *   Prism V2 首次啟動時，檢查 Schema 版本。
     *   執行 `ALTER TABLE` 語句。
     *   初始化 `Embeddings` 表。
-2.  **Re-indexing**:
+2.  **Startup Migration (啟動遷移)**:
+    *   **機制**: 每次應用啟動時，自動檢查資料庫結構是否符合當前程式碼需求。
+    *   **目的**: 支援無感升級 (Drop-in Upgrade)，使用者替換新版 EXE 後，首次啟動自動升級資料庫。
+    *   **原則**: 遷移操作必須是冪等的 (Idempotent)，重複執行不會報錯。
+3.  **Re-indexing**:
     *   背景執行緒啟動，掃描所有 `embedding_status IS NULL` 的筆記，進行計算並寫入。
 
 ---
