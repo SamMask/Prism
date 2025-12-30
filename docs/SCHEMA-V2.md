@@ -143,6 +143,34 @@ db.execute("""
 
 **狀態**: ✅ Step 0.3 完成 (2024-12-30)
 
+### 0.4 殘留問題追蹤 (Residual Issues - Post-Audit)
+
+> **來源**: `1230-綜合分析報告.md` (Linus-style 深度分析)
+> **日期**: 2024-12-30
+
+#### 🔴 P0: Schema 相關關鍵修復
+
+| 問題 | 位置 | 說明 | 狀態 |
+|------|------|------|------|
+| `init_db()` 仍建立 type 欄位 | `app.py:223` | 新資料庫會建立已廢棄的 `type TEXT NOT NULL DEFAULT '筆記'` 欄位 | ✅ 已修復 |
+| `auto_fix_consistency()` type 同步 | `app.py:420-427` | 仍在嘗試同步已移除的 `Notes.type` 欄位 | ✅ 已修復 |
+
+#### 🟡 P1: 查詢效能問題
+
+| 問題 | 位置 | 說明 | 狀態 |
+|------|------|------|------|
+| PRAGMA 重複查詢 | `crud.py:217-219` | 每次 `get_note()` 都執行 `PRAGMA table_info(Notes)` | ✅ 已修復 |
+| 重複 SQL 查詢 | `crud.py:217-269` | 同一 SQL 出現兩次 (has_parent_id 分支) | ⏳ 待修復 |
+
+#### 🟢 P2: 長期改善
+
+| 問題 | 位置 | 說明 | 狀態 |
+|------|------|------|------|
+| FTS5 DoS 風險 | `query_builder.py` | `sanitize_fts_query()` 無 token 數量限制 | ✅ 已修復 |
+| VectorStore 執行緒安全 | `vector_store.py` | `refresh_from_db()` 缺少寫入鎖 | ⏳ 待修復 |
+
+**追蹤文件**: `docs/TODO-V2.md` Phase 0.5
+
 ---
 
 ## 1. 新增資料表 (New Tables)

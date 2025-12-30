@@ -213,10 +213,13 @@ def get_note(note_id):
     try:
         db = get_db()
 
-        # v2.0: 檢查 parent_id 欄位是否存在
-        cursor = db.execute("PRAGMA table_info(Notes)")
-        columns = [col[1] for col in cursor.fetchall()]
-        has_parent_id = 'parent_id' in columns
+        # v2.0: 檢查 parent_id 欄位是否存在 (Cached)
+        global _HAS_PARENT_ID
+        if _HAS_PARENT_ID is None:
+            cursor = db.execute("PRAGMA table_info(Notes)")
+            columns = [col[1] for col in cursor.fetchall()]
+            _HAS_PARENT_ID = 'parent_id' in columns
+        has_parent_id = _HAS_PARENT_ID
 
         # v1.0: 使用 json_group_array 取代 GROUP_CONCAT
         # v1.1: JOIN Categories 解決雙重事實問題 (Single Source of Truth)

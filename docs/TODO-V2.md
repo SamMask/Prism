@@ -3,7 +3,7 @@
 **狀態**: 🔴 架構淨化中 (Phase 0 in Progress)
 **核心目標**: Headless Architecture + Local AI
 **文件參照**: `docs/Prism-V2.md` (總體戰略), `docs/SCHEMA-V2.md` (資料庫規格), `1230-審核報告.md` (Linus Audit)
-**最後更新**: 2024-12-30 (Phase 0: Architecture Purification)
+**最後更新**: 2024-12-31 (Phase 0: Architecture Purification)
 
 ---
 
@@ -135,11 +135,80 @@
 
 **狀態**: ✅ Phase 0.4 完成 (2024-12-30) - 所有 5 個 V1 功能設定已移植完成
 
+### 0.5 🧹 Step 5: 殘留清理 (Residual Cleanup)
+
+> **來源**: `1230-綜合分析報告.md` (Linus-style 深度分析)
+> **發現**: Phase 0 核心完成後，仍有遺留的技術債需要清理
+
+#### 🔴 P0: 關鍵修復 (Must Fix)
+
+- [x] **0.5.1 清理 `auto_fix_consistency()` 中的 type 同步** ✅ 2024-12-31
+  > `app.py:420-427` - 仍在嘗試同步已移除的 `Notes.type` 欄位
+  - [x] 移除 type 欄位相關的檢查與修復邏輯
+  - [x] 保留 category_id 相關的一致性檢查
+
+- [x] **0.5.2 修復 `init_db()` CREATE TABLE 語句** ✅ 2024-12-31
+  > `app.py:223` - 新資料庫仍會建立 `type` 欄位 (與 Migration 後的 Schema 不一致)
+  - [x] 移除 `type TEXT NOT NULL DEFAULT '筆記'` 欄位定義
+  - [x] 確保新安裝與遷移後的 Schema 一致
+
+#### 🟡 P1: 重要優化 (Should Fix)
+
+- [x] **0.5.3 快取 `has_parent_id` 欄位檢查** ✅ 2024-12-31
+  > `crud.py:217-219` - 每次 `get_note()` 都執行 `PRAGMA table_info(Notes)` 查詢
+  - [x] 使用模組層級變數快取結果
+  - [x] 僅在首次呼叫時執行 PRAGMA 查詢
+
+- [x] **0.5.4 新增 NoteQueryBuilder 單元測試** ✅ 2024-12-31
+  > `utils/query_builder.py` - 核心查詢邏輯缺乏測試覆蓋
+  - [x] 建立 `tests/test_query_builder.py`
+  - [x] 測試各種過濾條件組合
+  - [x] 測試 FTS5 查詢清洗邏輯
+
+- [x] **0.5.5 FTS5 查詢安全性強化** ✅ 2024-12-31
+  > `utils/query_builder.py` - `sanitize_fts_query()` 缺少 token 數量限制
+  - [x] 新增 `max_tokens=20` 參數
+  - [x] 防止惡意超長查詢 (DoS 風險)
+
+#### 🟢 P2: 長期改善 (Nice to Have)
+
+- [ ] **0.5.6 拆分 NoteEditor.tsx**
+  > 1365 行，違反單一職責原則
+  - [ ] 提取 `EditorToolbar` 組件
+  - [ ] 提取 `EditorSidebar` 組件
+  - [ ] 提取 `AttachmentPanel` 組件
+
+- [ ] **0.5.7 拆分 SettingsPage.tsx**
+  > 1314 行，過於龐大
+  - [ ] 提取 `CategoryManager` 組件
+  - [ ] 提取 `TagManager` 組件
+  - [ ] 提取 `AISettings` 組件
+
+- [ ] **0.5.8 消除 get_note() 重複 SQL**
+  > `crud.py` - 同一 SQL 出現兩次 (L217-269)
+  - [ ] 重構為單一查詢函式
+  - [ ] 動態處理 parent_id 欄位
+
+- [ ] **0.5.9 VectorStore 執行緒安全**
+  > `services/vector_store.py` - `refresh_from_db()` 缺少寫入鎖
+  - [ ] 新增 `_refresh_lock = threading.Lock()`
+  - [ ] 在 `refresh_from_db()` 中使用 with lock
+
+**狀態**: 🟡 進行中 (Step 0.5 P0 完成) - 2024-12-31
+
 ---
 
-## 📝 更新記錄 (2024-12-30)
+## 📝 更新記錄 (Update Log)
 
-### ✅ 今日完成 (第二批)
+### ✅ 2024-12-31: Phase 0.5 Residual Cleanup (P0 Completed)
+
+**核心修復 (Critical Fixes)**:
+- **Schema 淨化**:
+  - `init_db()`: 移除 `CREATE TABLE Notes` 中已廢棄的 `type` 欄位定義。
+  - `auto_fix_consistency()`: 移除同步 `type` 與 `category_id` 的過時邏輯。
+  - **影響**: 徹底消除「雙重事實」風險，確保新安裝與遷移後的 DB Schema 一致。
+
+### ✅ 2024-12-30: Phase 0 Architecture Purification (Core)
 
 **設定頁面 - 資料管理**
 - **分類管理 (CategoryManager)**: 新增/編輯/刪除分類，支援自訂圖示

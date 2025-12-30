@@ -220,7 +220,6 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
-                type TEXT NOT NULL DEFAULT '筆記',
                 remarks TEXT,
                 cover_image TEXT,
                 cover_position TEXT DEFAULT 'top',
@@ -359,10 +358,16 @@ def init_db():
 
 所有資料皆儲存在本地端的 `knowledge.db` 資料庫中，您可以隨時備份此檔案。
 """
+            # 取得 '教學' 分類 ID
+            cat_cursor = db.execute("SELECT id FROM Categories WHERE name LIKE '%教學%' LIMIT 1")
+            cat_result = cat_cursor.fetchone()
+            # 若找不到則使用 ID 3 (預設) 或 NULL
+            welcome_cat_id = cat_result[0] if cat_result else 3
+
             db.execute('''
-                INSERT INTO Notes (title, content, type, remarks, created_at, updated_at)
+                INSERT INTO Notes (title, content, category_id, remarks, created_at, updated_at)
                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ''', (welcome_title, welcome_content, '教學', '系統自動生成'))
+            ''', (welcome_title, welcome_content, welcome_cat_id, '系統自動生成'))
             
             # 取得剛插入的 Note ID
             cursor = db.execute('SELECT last_insert_rowid()')
@@ -401,8 +406,7 @@ def auto_fix_consistency(db):
     
     修復項目:
     1. 孤兒 Note_Tags (引用不存在的 Notes)
-    2. type 與 category_id 不一致
-    3. NULL category_id 設為預設分類
+    2. NULL category_id 設為預設分類
     """
     fixes = []
     
@@ -415,16 +419,7 @@ def auto_fix_consistency(db):
         if cursor.rowcount > 0:
             fixes.append(f"刪除 {cursor.rowcount} 個孤兒標籤關聯")
         
-        # 2. 同步 type 與 category_id
-        # 如果 category_id 有值但 type 不匹配，更新 type
-        cursor = db.execute('''
-            UPDATE Notes 
-            SET type = (SELECT name FROM Categories WHERE id = Notes.category_id)
-            WHERE category_id IS NOT NULL 
-              AND type != (SELECT name FROM Categories WHERE id = Notes.category_id)
-        ''')
-        if cursor.rowcount > 0:
-            fixes.append(f"同步 {cursor.rowcount} 則筆記的 type 欄位")
+        # 2. (已移除) Notes.type 同步邏輯 - Phase 0 Step 5 移除
         
         # 3. NULL category_id 設為預設分類
         default_cat = db.execute('''
@@ -434,9 +429,9 @@ def auto_fix_consistency(db):
         if default_cat:
             cursor = db.execute('''
                 UPDATE Notes 
-                SET category_id = ?, type = ?
+                SET category_id = ?
                 WHERE category_id IS NULL
-            ''', (default_cat[0], default_cat[1]))
+            ''', (default_cat[0],))
             if cursor.rowcount > 0:
                 fixes.append(f"修復 {cursor.rowcount} 則筆記的空分類")
         

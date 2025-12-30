@@ -14,12 +14,13 @@ Phase 0 Step 3: 重構查詢邏輯
 from typing import List, Tuple, Any, Optional
 
 
-def sanitize_fts_query(keyword: str) -> str:
+def sanitize_fts_query(keyword: str, max_tokens: int = 20) -> str:
     """
     清洗 FTS5 查詢字串，防止注入
 
     Args:
         keyword: 原始搜尋關鍵字
+        max_tokens: 最大允許的關鍵字數量 (預設 20)，防止 DoS
 
     Returns:
         清洗後的 FTS5 查詢字串 (e.g., '"hello"* "world"*')
@@ -33,6 +34,10 @@ def sanitize_fts_query(keyword: str) -> str:
 
     if not tokens:
         return ""
+
+    # 限制 token 數量防止 DoS
+    if len(tokens) > max_tokens:
+        tokens = tokens[:max_tokens]
 
     # 每個 token 加上前綴匹配 (*)
     return " ".join([f'"{token}"*' for token in tokens])
