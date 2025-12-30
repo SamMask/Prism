@@ -75,6 +75,27 @@
 *   **✅ E2E 自動化 (Playwright)**: 核心流程測試
 *   **🟡 手動測試**: UI 互動與體驗驗證 (詳見 `TODO-V2.md` Phase 6.4)
 
+### 2.6 🔄 V1 功能移植 (V1 Feature Porting)
+> **來源**: V1.4.2 功能對比分析 (2024-12-30)
+> **原則**: 保持 V2 與 V1 功能對等，避免功能回歸
+
+| 優先級 | 功能 | V1 位置 | V2 狀態 |
+|--------|------|---------|---------|
+| 🟡 P1 | **主題色彩 (Color Theme)** | `useSettings.js` L66-84 | 待實作 |
+| 🟢 P2 | 卡片開啟模式 (preview/reading/edit) | `useSettings.js` L63 | 待實作 |
+| 🟢 P3 | 圖片保存模式 (both/thumbnail_only) | `useSettings.js` L60 | 待實作 |
+| 🟢 P4 | 快速新增預設分類 | `useSettings.js` L52 | 待實作 |
+| 🟢 P5 | 自動載入更多 (無限滾動) | `useSettings.js` L49 | 待實作 |
+| 🧊 | i18n 多語系 | `useI18n.js` | 已預留架構 |
+| 🧊 | 啟動時自動開啟瀏覽器 | `useSettings.js` L391 | EXE 打包時處理 |
+
+**實作順序**:
+1. **主題色彩**: 新增 6 個 `data-theme` CSS 變體 + 設定 UI
+2. **卡片開啟模式**: 新增 localStorage 偏好 + 套用到 NoteCard
+3. **圖片保存模式**: 新增設定 + 傳遞給 upload API
+4. **快速新增預設分類**: 新增設定 + 套用到 Header 新增按鈕
+5. **無限滾動**: 新增設定 + 實作 scroll 監聽
+
 ---
 
 ## 🎒 3. 技術堆疊清單 (Tech Stack)

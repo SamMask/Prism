@@ -86,6 +86,52 @@
 
 **狀態**: ✅ Step 0.3 完成 (2024-12-30)
 
+### 0.4 🔄 Step 4: V1 功能移植 (V1 Feature Porting)
+
+> **目標**: 保持 V2 與 V1 功能對等，避免使用者升級後功能回歸
+> **來源**: V1.4.2 功能對比分析 (2024-12-30)
+
+- [ ] **0.4.1 主題色彩系統 (Color Theme)** 🟡 P1
+  > V1 位置: `static/js/composables/useSettings.js` L66-84
+  - [ ] 新增 CSS 變數 (`index.css`) 支援 6 個主題: default, cyberpunk, eye-care, elegant, ocean, sunset
+  - [ ] 實作 `data-theme` 屬性切換機制
+  - [ ] 在 `SettingsPage.tsx` 新增主題色彩選擇器 UI
+  - [ ] localStorage 持久化 (`colorTheme` key)
+  
+- [ ] **0.4.2 卡片開啟模式 (Card Open Mode)** 🟢 P2
+  > V1 位置: `static/js/composables/useSettings.js` L63
+  - [ ] 新增設定: preview (預覽) / reading (閱讀) / edit (編輯)
+  - [ ] 在 `SettingsPage.tsx` 新增下拉選擇器
+  - [ ] `NoteCard.tsx` 讀取設定並套用開啟模式
+  - [ ] localStorage 持久化 (`cardOpenMode` key)
+  
+- [ ] **0.4.3 圖片保存模式 (Image Save Mode)** 🟢 P3
+  > V1 位置: `static/js/composables/useSettings.js` L60
+  - [ ] 新增設定: both (原圖+縮圖) / thumbnail_only (僅縮圖)
+  - [ ] 在 `SettingsPage.tsx` 新增切換開關
+  - [ ] 圖片上傳 API 接收 `save_mode` 參數
+  - [ ] localStorage 持久化 (`imageSaveMode` key)
+  
+- [ ] **0.4.4 快速新增預設分類 (Quick Add Default Category)** 🟢 P4
+  > V1 位置: `static/js/composables/useSettings.js` L52
+  - [ ] 新增設定: 選擇預設快速新增的分類
+  - [ ] 在 `SettingsPage.tsx` 新增分類下拉選擇器
+  - [ ] Header 新增按鈕讀取設定並帶入預設分類
+  - [ ] localStorage 持久化 (`quickAddDefaultCategory` key)
+  
+- [ ] **0.4.5 自動載入更多 (Auto Load More / Infinite Scroll)** 🟢 P5
+  > V1 位置: `static/js/composables/useSettings.js` L49
+  - [ ] 新增設定: 開啟/關閉無限滾動
+  - [ ] 在 `SettingsPage.tsx` 新增切換開關
+  - [ ] `HomePage.tsx` 根據設定決定是否啟用 scroll 監聽
+  - [ ] localStorage 持久化 (`autoLoadMore` key)
+
+**延遲項目 (Deferred)**:
+- 🧊 **i18n 多語系**: 已預留架構 (`i18n/index.ts`)，正式版本再啟用
+- 🧊 **啟動時自動開啟瀏覽器**: EXE 打包時再處理
+
+**狀態**: 🔴 待執行 (Next Priority)
+
 ---
 
 ## 📝 更新記錄 (2024-12-30)
