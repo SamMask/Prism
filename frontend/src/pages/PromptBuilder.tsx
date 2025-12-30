@@ -8,7 +8,8 @@
  * - OutputPreview: Result display
  * - QuickTemplates: Preset shortcuts
  */
-import { Camera, Palette, Save, RotateCcw, Sparkles, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
+import { Camera, Palette, Save, RotateCcw, Sparkles, Loader2, Dices, BookmarkPlus } from 'lucide-react'
 import { usePromptBuilder } from '../hooks/usePromptBuilder'
 import { 
   ParameterGroup, 
@@ -41,9 +42,38 @@ export function PromptBuilder() {
     resetForm,
     applyTemplate,
     randomizeCategory,
+    randomizeAll,
+    copyForLLM,
     saveToLibrary,
+    saveTemplate,
     loadConfig,
   } = usePromptBuilder()
+
+  const handleSaveTemplate = () => {
+    const name = prompt('請輸入模板名稱（例如：Cyberpunk City）')
+    if (name) {
+      saveTemplate(name)
+    }
+  }
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S: Save
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault()
+        saveToLibrary()
+      }
+      // Ctrl+Enter: Copy Output
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault()
+        copyOutput()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [saveToLibrary, copyOutput])
 
   // Loading State
   if (isLoading) {
@@ -92,18 +122,31 @@ export function PromptBuilder() {
             </div>
           </div>
           
-          {/* Weight Toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={useWeights}
-              onChange={(e) => setUseWeights(e.target.checked)}
-              className="w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary"
-            />
-            <span className="text-sm text-text-secondary">權重模式</span>
-          </label>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2">
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              className="flex items-center gap-1.5"
+              onClick={randomizeAll}
+              title="隨機生成所有參數 (混沌系統)"
+            >
+              <Dices size={16} />
+              混沌
+            </Button>
+            
+            {/* Weight Toggle (Hidden for now) */}
+            {/* <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useWeights}
+                onChange={(e) => setUseWeights(e.target.checked)}
+                className="..."
+              />
+              <span>權重模式</span>
+            </label> */}
+          </div>
         </div>
-
         {/* Quick Templates */}
         <QuickTemplates templates={quickTemplates} onApply={applyTemplate} />
 
@@ -251,6 +294,9 @@ export function PromptBuilder() {
             <Save size={18} />
             儲存至筆記庫
           </Button>
+          <Button onClick={handleSaveTemplate} variant="secondary" className="flex items-center gap-2" title="儲存為個人模板">
+            <BookmarkPlus size={18} />
+          </Button>
           <Button onClick={resetForm} variant="ghost" className="flex items-center gap-2">
             <RotateCcw size={18} />
             重置
@@ -268,6 +314,7 @@ export function PromptBuilder() {
           outputMode={outputMode}
           onModeChange={setOutputMode}
           onCopy={copyOutput}
+          onOptimize={copyForLLM}
           copySuccess={copySuccess}
         />
       </div>

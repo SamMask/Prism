@@ -1,7 +1,7 @@
 /**
  * OutputPreview - Display generated prompt output
  */
-import { Copy, Check, FileJson, AlignLeft, BookOpen } from 'lucide-react'
+import { Copy, Check, FileJson, AlignLeft, BookOpen, Wand2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 
 interface OutputPreviewProps {
@@ -12,6 +12,7 @@ interface OutputPreviewProps {
   outputMode: 'text' | 'narrative' | 'json'
   onModeChange: (mode: 'text' | 'narrative' | 'json') => void
   onCopy: () => void
+  onOptimize: () => void
   copySuccess: boolean
 }
 
@@ -23,6 +24,7 @@ export function OutputPreview({
   outputMode,
   onModeChange,
   onCopy,
+  onOptimize,
   copySuccess
 }: OutputPreviewProps) {
   const getCurrentOutput = () => {
@@ -87,25 +89,38 @@ export function OutputPreview({
         )}
       </div>
 
-      {/* Copy Button */}
-      <Button
-        onClick={onCopy}
-        variant={copySuccess ? 'ghost' : 'primary'}
-        className="w-full flex items-center justify-center gap-2"
-        disabled={!getCurrentOutput()}
-      >
-        {copySuccess ? (
-          <>
-            <Check size={18} />
-            已複製！
-          </>
-        ) : (
-          <>
-            <Copy size={18} />
-            複製到剪貼簿
-          </>
-        )}
-      </Button>
+      {/* Action Buttons */}
+      <div className="flex gap-3">
+        <Button
+          onClick={onOptimize}
+          variant="secondary"
+          className="flex-1 flex items-center justify-center gap-2"
+          disabled={!getCurrentOutput() || outputMode === 'json'}
+          title="複製優化指令 (給 ChatGPT/Claude)"
+        >
+          <Wand2 size={18} />
+          AI 優化
+        </Button>
+
+        <Button
+          onClick={onCopy}
+          variant={copySuccess ? 'ghost' : 'primary'}
+          className="flex-[2] flex items-center justify-center gap-2"
+          disabled={!getCurrentOutput()}
+        >
+          {copySuccess ? (
+            <>
+              <Check size={18} />
+              已複製！
+            </>
+          ) : (
+            <>
+              <Copy size={18} />
+              複製
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   )
 }

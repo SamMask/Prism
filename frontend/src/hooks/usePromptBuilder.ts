@@ -478,6 +478,47 @@ export function usePromptBuilder() {
     [options]
   );
 
+  // Randomize All (Chaos System)
+  const randomizeAll = useCallback(() => {
+    const getRandomOpt = (opts: PromptOption[]) => {
+      if (!opts || opts.length === 0) return "";
+      return getOptOutput(opts[Math.floor(Math.random() * opts.length)]);
+    };
+
+    setForm((prev) => ({
+      ...prev,
+      // Camera
+      shotSize: Math.random() > 0.3 ? getRandomOpt(options.shotSize) : "",
+      cameraMovement: Math.random() > 0.5 ? getRandomOpt(options.cameraMovement) : "",
+      angle: Math.random() > 0.5 ? getRandomOpt(options.angle) : "",
+      focus: Math.random() > 0.5 ? getRandomOpt(options.focus) : "",
+      // Style
+      style: Math.random() > 0.2 ? getRandomOpt(options.style) : "",
+      lighting: Math.random() > 0.3 ? getRandomOpt(options.lighting) : "",
+      colorPalette: Math.random() > 0.5 ? getRandomOpt(options.colorPalette) : "",
+      quality: getRandomOpt(options.quality), // Quality is usually good to have
+    }));
+  }, [options]);
+
+  // Copy for LLM Optimization
+  const copyForLLM = useCallback(async () => {
+    const instruction = `Act as an expert AI art prompter. Please optimize the following prompt for Stable Diffusion XL to enhance visual quality, detail, and artistic style. Keep the original intent but improve the parameter selection.
+
+[Original Prompt]
+${textOutput}
+
+${form.negativePrompt ? `[Negative Prompt]\n${form.negativePrompt}` : ''}`;
+    
+    try {
+      await navigator.clipboard.writeText(instruction);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+      alert("複製失敗");
+    }
+  }, [textOutput, form.negativePrompt]);
+
   // Save to Library
   const saveToLibrary = useCallback(async () => {
     if (!form.description) {
@@ -543,6 +584,31 @@ export function usePromptBuilder() {
     }
   }, [form, weights, textOutput]);
 
+  // Save as Template
+  const saveTemplate = useCallback(async (name: string) => {
+    try {
+      const response = await fetch("/api/prompt-options/template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name,
+          preset: form, // Save current form as preset
+        }),
+      });
+
+      const result = await response.json();
+      if (result.status === "success") {
+        alert("模板已建立成功！");
+        loadConfig(); // Reload to see new template
+      } else {
+        alert("建立失敗: " + (result.message || "未知錯誤"));
+      }
+    } catch (err) {
+      console.error("Save template error:", err);
+      alert("儲存失敗，請檢查網路連線");
+    }
+  }, [form, loadConfig]);
+
   return {
     // State
     isLoading,
@@ -572,7 +638,10 @@ export function usePromptBuilder() {
     resetForm,
     applyTemplate,
     randomizeCategory,
+    randomizeAll,
+    copyForLLM,
     saveToLibrary,
+    saveTemplate,
     loadConfig,
 
     // Helpers
