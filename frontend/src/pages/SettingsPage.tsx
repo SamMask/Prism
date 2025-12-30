@@ -808,6 +808,38 @@ export function SettingsPage() {
               </select>
             </div>
           </div>
+
+          {/* Quick Add Default Category */}
+          <div className="pt-6 border-t border-border-subtle">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-text-primary">快速新增預設分類</p>
+                <p className="text-text-muted text-sm">
+                  Header 新增按鈕預設選擇的分類
+                </p>
+              </div>
+              <select
+                value={localStorage.getItem('quickAddDefaultCategory') || ''}
+                onChange={(e) => {
+                  localStorage.setItem('quickAddDefaultCategory', e.target.value)
+                  const categoryName = categories.find(c => c.id === Number(e.target.value))?.name || '無分類'
+                  toast.success(`快速新增預設分類設定為「${categoryName}」`)
+                }}
+                className="px-4 py-2 rounded-lg
+                           bg-bg-elevated border border-border-default
+                           text-text-primary
+                           focus:outline-none focus:border-primary
+                           transition-colors"
+              >
+                <option value="">無（每次選擇）</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.icon} {cat.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
 
         {/* Database Stats */}
