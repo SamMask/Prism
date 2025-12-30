@@ -131,6 +131,45 @@ MIGRATIONS: List[Tuple[int, str, List[str]]] = [
         """,
         "CREATE INDEX IF NOT EXISTS idx_embeddings_resource ON Embeddings(resource_type, resource_id)",
     ]),
+
+    # Phase 0: Kill Notes.type (Architecture Purification)
+    # 移除雙重事實 (Double Truth) - type 欄位已由 category_id 取代
+    (12, "kill_notes_type", [
+        # 1. 最後檢查：確保所有筆記都有 category_id
+        """
+        UPDATE Notes
+        SET category_id = (SELECT id FROM Categories WHERE is_default = 1 LIMIT 1)
+        WHERE category_id IS NULL
+        """,
+        # 2. 如果預設分類不存在，使用第一個分類
+        """
+        UPDATE Notes
+        SET category_id = (SELECT id FROM Categories ORDER BY sort_order LIMIT 1)
+        WHERE category_id IS NULL
+        """,
+        # 3. 移除 type 欄位 (需要 SQLite 3.35.0+)
+        "ALTER TABLE Notes DROP COLUMN type",
+    ]),
+
+    # Phase 0 Step 2: Create AI_Tasks table (Proper Task Queue)
+    # 取代 ThreadPoolExecutor，實現任務持久化
+    (13, "create_ai_tasks_table", [
+        """
+        CREATE TABLE IF NOT EXISTS AI_Tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_type TEXT NOT NULL,              -- 'embedding', 'transcription', 'tagging'
+            status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
+            payload TEXT NOT NULL,                 -- JSON, 任務參數 (e.g., {"note_id": 123})
+            result TEXT,                           -- JSON, 執行結果或錯誤訊息
+            retry_count INTEGER DEFAULT 0,         -- 重試次數 (max 3)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_ai_tasks_status ON AI_Tasks(status)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_tasks_type ON AI_Tasks(task_type)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_tasks_created ON AI_Tasks(created_at)",
+    ]),
 ]
 
 

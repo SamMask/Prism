@@ -30,7 +30,7 @@ class Config:
     FRONTEND_DIST = os.path.join(BASE_DIR, 'frontend', 'dist')
     
     # V2: Enable React SPA mode (set via environment variable)
-    V2_MODE = os.environ.get('PRISM_V2', 'false').lower() == 'true'
+    V2_MODE = os.environ.get('PRISM_V2', 'false').lower().strip() == 'true'
 
 class DevelopmentConfig(Config):
     DEBUG = True

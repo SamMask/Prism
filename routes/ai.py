@@ -299,8 +299,31 @@ def analyze_note():
 # Phase 3.1.4: Batch Processing
 # =============================================================================
 
-# In-memory task storage (simple approach for single-instance deployment)
-_batch_tasks = {}
+# [P0 Fix 2024-12-17] 使用 OrderedDict + TTL/Max 限制防止記憶體洩漏
+from collections import OrderedDict
+import time
+
+_batch_tasks = OrderedDict()
+_BATCH_TASK_MAX = 100  # 最多保留 100 個任務記錄
+_BATCH_TASK_TTL = 3600  # 1 小時過期
+
+
+def _cleanup_old_tasks():
+    """清理過期或超過數量限制的舊任務"""
+    global _batch_tasks
+    now = time.time()
+    
+    # 刪除過期任務
+    expired_keys = [
+        k for k, v in _batch_tasks.items()
+        if now - v.get('created_at', now) > _BATCH_TASK_TTL
+    ]
+    for k in expired_keys:
+        del _batch_tasks[k]
+    
+    # 刪除超過數量限制的舊任務 (FIFO)
+    while len(_batch_tasks) > _BATCH_TASK_MAX:
+        _batch_tasks.popitem(last=False)
 
 
 @ai_bp.route('/ai/batch_tag', methods=['POST'])
@@ -366,6 +389,9 @@ def batch_tag():
         
         # Create task
         task_id = str(uuid.uuid4())[:8]
+        
+        # [P0 Fix] 清理舊任務 + 加入時間戳
+        _cleanup_old_tasks()
         _batch_tasks[task_id] = {
             'status': 'running',
             'total': len(notes),
@@ -373,7 +399,8 @@ def batch_tag():
             'success': 0,
             'failed': 0,
             'stopped': False,
-            'results': []
+            'results': [],
+            'created_at': time.time()  # TTL 計算用
         }
         
         # Start background thread
@@ -447,7 +474,7 @@ def stop_batch_task(task_id):
 def _run_batch_tagging(task_id: str, notes: list):
     """Background worker for batch tagging"""
     from flask import Flask
-    from services.ai_service import analyze_image_for_tags
+    from services.ai_service import analyze_image_for_tags, extract_tags_from_text
     import re
     import sqlite3
     from config import Config
@@ -466,6 +493,7 @@ def _run_batch_tagging(task_id: str, notes: list):
             
             try:
                 all_tags = []
+                has_image = False
                 
                 # Analyze cover image
                 if cover_image:
@@ -475,6 +503,7 @@ def _run_batch_tagging(task_id: str, notes: list):
                     
                     full_path = os.path.join(Config.BASE_DIR, img_path)
                     if os.path.exists(full_path):
+                        has_image = True
                         result = analyze_image_for_tags(full_path, language='zh')
                         if result['success']:
                             all_tags.extend(result['tags'])
@@ -493,9 +522,16 @@ def _run_batch_tagging(task_id: str, notes: list):
                         
                         full_path = os.path.join(Config.BASE_DIR, img_path)
                         if os.path.exists(full_path):
+                            has_image = True
                             result = analyze_image_for_tags(full_path, language='zh')
                             if result['success']:
                                 all_tags.extend(result['tags'])
+                
+                # If no images, analyze text content for tags
+                if not has_image and content and len(content) > 50:
+                    text_result = extract_tags_from_text(content)
+                    if text_result['success']:
+                        all_tags.extend(text_result['tags'])
                 
                 # Dedupe and apply tags
                 all_tags = list(dict.fromkeys(all_tags))[:10]
@@ -511,8 +547,11 @@ def _run_batch_tagging(task_id: str, notes: list):
                                     (note_id, tag_row[0])
                                 )
                     conn.commit()
-                
-                task['success'] += 1
+                    task['success'] += 1
+                else:
+                    # No tags found - still count as processed but not successful
+                    task['failed'] += 1
+                    task['results'].append({'note_id': note_id, 'error': 'No tags extracted'})
                 
             except Exception as e:
                 task['failed'] += 1

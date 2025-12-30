@@ -19,7 +19,34 @@ from flask import current_app
 # Default configuration
 DEFAULT_OLLAMA_URL = "http://localhost:11434"
 DEFAULT_VISION_MODEL = "llava"  # or "bakllava", "llava:13b"
-DEFAULT_TEXT_MODEL = "llama3.2"  # For text-only tasks
+DEFAULT_TEXT_MODEL = "llama3.2"  # For text-only tasks (fallback)
+
+
+def get_available_text_model() -> str:
+    """Get the first available text model from Ollama"""
+    try:
+        response = requests.get(f"{DEFAULT_OLLAMA_URL}/api/tags", timeout=5)
+        if response.status_code == 200:
+            models = response.json().get('models', [])
+            model_names = [m.get('name', '') for m in models]
+            
+            # Prefer llama, then gemma, then mistral
+            for name in model_names:
+                if name.startswith('llama') and 'llava' not in name:
+                    return name
+            for name in model_names:
+                if name.startswith('gemma'):
+                    return name
+            for name in model_names:
+                if name.startswith('mistral') or name.startswith('ministral'):
+                    return name
+            # Fallback: return any non-vision model
+            for name in model_names:
+                if 'llava' not in name and 'bakllava' not in name:
+                    return name
+    except:
+        pass
+    return DEFAULT_TEXT_MODEL
 
 class OllamaClient:
     """Client for interacting with Ollama API"""
@@ -288,4 +315,85 @@ def get_ollama_status() -> Dict[str, Any]:
         'vision_ready': vision_ready,
         'text_ready': text_ready,
         'error': None
+    }
+
+
+def extract_tags_from_text(content: str, 
+                           model: str = None,
+                           max_tags: int = 10) -> Dict[str, Any]:
+    """
+    Extract tags from text content using AI
+    
+    Args:
+        content: Text content to analyze
+        model: Text model to use (auto-detect if None)
+        max_tags: Maximum number of tags to return
+    
+    Returns:
+        {
+            'success': bool,
+            'tags': List[str],
+            'error': Optional[str]
+        }
+    """
+    # Auto-detect available model if not specified
+    if model is None:
+        model = get_available_text_model()
+    
+    client = OllamaClient()
+    
+    if not client.is_available():
+        return {
+            'success': False,
+            'tags': [],
+            'error': 'Ollama server is not running.'
+        }
+    
+    # Truncate content if too long
+    content_truncated = content[:3000] if len(content) > 3000 else content
+    
+    prompt = f"""請從以下文字中提取 5-10 個描述性標籤（關鍵詞）。
+標籤應該是名詞或形容詞，能夠概括文章主題、地點、食物類型等。
+
+文字內容：
+{content_truncated}
+
+請用以下 JSON 格式回覆：
+{{"tags": ["標籤1", "標籤2", "標籤3", ...]}}
+
+只回覆 JSON，不要其他文字。"""
+    
+    response = client.generate(prompt, model=model)
+    
+    if not response:
+        return {
+            'success': False,
+            'tags': [],
+            'error': 'No response from AI model.'
+        }
+    
+    # Parse JSON response
+    try:
+        json_start = response.find('{')
+        json_end = response.rfind('}') + 1
+        if json_start >= 0 and json_end > json_start:
+            json_str = response[json_start:json_end]
+            result = json.loads(json_str)
+            tags = result.get('tags', [])
+            # Filter and limit tags
+            tags = [t.strip() for t in tags if t.strip() and len(t.strip()) > 1][:max_tags]
+            return {
+                'success': True,
+                'tags': tags,
+                'error': None
+            }
+    except json.JSONDecodeError:
+        pass
+    
+    # Fallback: try to extract comma-separated tags
+    tags = [t.strip() for t in response.split(',') if t.strip() and len(t.strip()) > 1][:max_tags]
+    return {
+        'success': len(tags) > 0,
+        'tags': tags,
+        'error': None if tags else 'Failed to parse response'
     }

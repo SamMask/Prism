@@ -193,3 +193,145 @@ def export_images():
             'message': str(e)
         }), 500
 
+
+@export_bp.route('/import/json', methods=['POST'])
+def import_json():
+    """
+    匯入 JSON 資料
+    
+    Request Body:
+    {
+        "data": { ... },  // 匯出的 JSON 資料
+        "mode": "skip" | "duplicate"  // skip = 略過重複, duplicate = 建立副本
+    }
+    
+    Response:
+    {
+        "imported": 10,
+        "skipped": 5,
+        "duplicates": ["標題1", "標題2"]
+    }
+    """
+    try:
+        request_data = request.get_json()
+        
+        if not request_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'No data provided'
+            }), 400
+        
+        import_data = request_data.get('data')
+        mode = request_data.get('mode', 'skip')  # 預設略過重複
+        
+        if not import_data or 'notes' not in import_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid import data format'
+            }), 400
+        
+        db = get_db()
+        
+        imported_count = 0
+        skipped_count = 0
+        duplicate_titles = []
+        
+        notes = import_data.get('notes', [])
+        
+        for note in notes:
+            title = note.get('title', '').strip()
+            content = note.get('content', '').strip()
+            
+            # 檢查重複 (根據標題 + 內容前 100 字)
+            content_preview = content[:100] if content else ''
+            existing = db.execute('''
+                SELECT id, title FROM Notes 
+                WHERE title = ? AND SUBSTR(content, 1, 100) = ?
+            ''', (title, content_preview)).fetchone()
+            
+            if existing:
+                if mode == 'skip':
+                    skipped_count += 1
+                    duplicate_titles.append(title or '無標題')
+                    continue
+                elif mode == 'duplicate':
+                    # 建立副本，標題加上 (Import)
+                    title = f"{title} (Import)" if title else "(Imported)"
+            
+            # 插入新筆記
+            try:
+                cursor = db.execute('''
+                    INSERT INTO Notes (title, content, type, remarks, cover_image, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    title or '無標題',
+                    content,
+                    note.get('type', 'note'),
+                    note.get('remarks', ''),
+                    note.get('cover_image', ''),
+                    note.get('created_at', datetime.now().isoformat()),
+                    note.get('updated_at', datetime.now().isoformat())
+                ))
+                
+                new_note_id = cursor.lastrowid
+                
+                # 處理標籤
+                tags = note.get('tags', [])
+                for tag_name in tags:
+                    if not tag_name:
+                        continue
+                    # 確保標籤存在
+                    existing_tag = db.execute(
+                        'SELECT id FROM Tags WHERE name = ?', 
+                        (tag_name,)
+                    ).fetchone()
+                    
+                    if existing_tag:
+                        tag_id = existing_tag['id']
+                    else:
+                        tag_cursor = db.execute(
+                            'INSERT INTO Tags (name) VALUES (?)', 
+                            (tag_name,)
+                        )
+                        tag_id = tag_cursor.lastrowid
+                    
+                    # 建立筆記-標籤關聯
+                    db.execute(
+                        'INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)',
+                        (new_note_id, tag_id)
+                    )
+                
+                # 處理 URLs
+                urls = note.get('urls', [])
+                for url in urls:
+                    if url:
+                        db.execute(
+                            'INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)',
+                            (new_note_id, url)
+                        )
+                
+                imported_count += 1
+                
+            except Exception as e:
+                print(f"[IMPORT] Error importing note: {e}")
+                continue
+        
+        db.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'imported': imported_count,
+                'skipped': skipped_count,
+                'duplicates': duplicate_titles[:10]  # 最多顯示 10 個
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
