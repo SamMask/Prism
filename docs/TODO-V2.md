@@ -139,6 +139,7 @@
 - [x] **6.0 安全性與穩定性修復**: 修復 1217 報告中的 P0/P1/P2 問題
 
 ### 📦 Phase 7: 打包與更新 (Packaging & Updates)
+- [x] **7.0 建置腳本**: 建立 `build_release.py` 自動化打包流程 (Frontend Build + PyInstaller)
 - [ ] **7.1 下載更新機制 (Plan A)**:
   - [ ] 檢查 GitHub Release API
   - [ ] 前端顯示「發現新版本」Modal

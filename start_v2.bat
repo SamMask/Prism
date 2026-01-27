@@ -32,12 +32,16 @@ if not exist "frontend\dist\index.html" (
 echo [2/2] Starting Prism V2 Server...
 echo.
 echo ===================================
-echo   Access: http://127.0.0.1:5000
+echo   Access: http://127.0.0.1:8000
 echo ===================================
 echo.
 
+REM Auto-open browser after 2 seconds delay
+start "" cmd /c "timeout /t 2 >nul && start http://127.0.0.1:8000"
+
 REM Start Flask with V2 mode enabled
 set PRISM_V2=true
+set PORT=8000
 python app.py
 
 pause

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Sun, Moon, Check } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { Category } from '../../services/api';

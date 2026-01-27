@@ -278,9 +278,14 @@ def run_migrations(db) -> int:
                     try:
                         db.execute(sql_clean)
                     except sqlite3.OperationalError as e:
+                        err_msg = str(e).lower()
                         # 欄位已存在的錯誤可以忽略 (冪等性)
-                        if "duplicate column name" in str(e).lower():
+                        if "duplicate column name" in err_msg:
                             print(f"  [SKIP] 欄位已存在，跳過")
+                            continue
+                        # 欄位不存在的錯誤也可以忽略 (DROP COLUMN 冪等性)
+                        if "no such column" in err_msg:
+                            print(f"  [SKIP] 欄位已不存在，跳過")
                             continue
                         raise
                 

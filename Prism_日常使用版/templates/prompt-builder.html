@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prompt Builder - Prism</title>
+    <meta name="description" content="結構化提示詞組裝器 - 快速生成專業級 AI 提示詞" />
+
+    <!-- Local Vue.js 3 -->
+    <script src="/static/js/vue.global.js"></script>
+    <!-- Local Tailwind CSS -->
+    <script src="/static/css/tailwind.js"></script>
+    <!-- Typography & Micro-interactions (v0.8.9) -->
+    <link rel="stylesheet" href="/static/css/styles.css" />
+    
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ["Inter Tight", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "system-ui", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="min-h-screen bg-gray-950 text-gray-100 font-sans antialiased"
+  >
+    <div id="app" v-cloak class="min-h-screen flex flex-col">
+      {% include 'prompt-builder/_header.html' %}
+      
+      <!-- Loading State -->
+      <div v-if="configLoading" class="absolute inset-0 z-50 flex items-center justify-center bg-gray-950/80 backdrop-blur-sm">
+        <div class="flex flex-col items-center gap-3">
+          <svg class="animate-spin w-8 h-8 text-purple-500" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          <p class="text-gray-300 font-medium animate-pulse">{{ t('common.loading', 'Loading...') }}</p>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div v-if="configError" class="absolute top-24 left-1/2 -translate-x-1/2 z-50 bg-red-900/90 border border-red-500/50 text-red-200 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-md flex items-center gap-3">
+        <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <h3 class="font-semibold text-red-100">Error Loading Configuration</h3>
+          <p class="text-sm text-red-300">{{ configError }}</p>
+        </div>
+        <button @click="initialize" class="ml-4 px-3 py-1 bg-red-800 hover:bg-red-700 rounded-lg text-xs font-medium transition-colors">
+          Retry
+        </button>
+        <a href="/" class="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded-lg text-xs font-medium transition-colors text-white">
+          {{ t('common.backToHome', '返回首頁') }}
+        </a>
+      </div>
+
+      {# ================== Main Content - Two Column Layout ================== #}
+      <main class="flex-1 flex overflow-hidden">
+        {# Left Panel: Configuration #}
+        {% include 'prompt-builder/_left-panel.html' %}
+
+        {# Right Panel: Output Preview #}
+        {% include 'prompt-builder/_right-panel.html' %}
+      </main>
+
+      {# ================== Modals ================== #}
+      {% include 'prompt-builder/_modals.html' %}
+    </div>
+
+    <!-- v1.0: ES Module for Prompt Builder -->
+    <script type="module">
+      import { usePromptBuilder } from '/static/js/composables/usePromptBuilder.js?v=1.0';
+      
+      const { createApp, onMounted } = Vue;
+      
+      const app = createApp({
+        setup() {
+          const promptBuilder = usePromptBuilder();
+          onMounted(() => {
+            promptBuilder.initialize();
+          });
+          return promptBuilder; // Spread to template
+        },
+      });
+
+      // Global Error Handler
+      app.config.errorHandler = (err, instance, info) => {
+        console.error("Global Vue Error:", err);
+        alert("系統發生錯誤: " + err.message + "\n請嘗試重新整理頁面。");
+      };
+
+      app.mount('#app');
+    </script>
+  </body>
+</html>

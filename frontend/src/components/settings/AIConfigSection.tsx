@@ -1,8 +1,8 @@
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Sparkles, Loader2, Check, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button, toast } from '../ui';
-import { api } from '../../services/api';
+
 
 interface AIStatus {
   available: boolean;

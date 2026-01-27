@@ -1,0 +1,1087 @@
+{
+  "version": "1.0",
+  "lastUpdated": "2025-12-09",
+  "i18nEnabled": true,
+  "defaultLocale": "zh-TW",
+  "categories": {
+    "shotSize": {
+      "label": "景別",
+      "icon": "📷",
+      "options": [
+        {
+          "key": "ews",
+          "display": "超遠景",
+          "output": "Extreme Wide Shot (EWS)"
+        },
+        {
+          "key": "ws",
+          "display": "遠景",
+          "output": "Wide Shot (WS)"
+        },
+        {
+          "key": "mws",
+          "display": "中遠景",
+          "output": "Medium Wide Shot (MWS)"
+        },
+        {
+          "key": "ms",
+          "display": "中景",
+          "output": "Medium Shot (MS)"
+        },
+        {
+          "key": "mcu",
+          "display": "中近景",
+          "output": "Medium Close-up (MCU)"
+        },
+        {
+          "key": "cu",
+          "display": "近景",
+          "output": "Close-up (CU)"
+        },
+        {
+          "key": "ecu",
+          "display": "特寫",
+          "output": "Extreme Close-up (ECU)"
+        },
+        {
+          "key": "ots",
+          "display": "過肩鏡頭",
+          "output": "Over the Shoulder (OTS)"
+        },
+        {
+          "key": "pov",
+          "display": "主觀視角",
+          "output": "Point of View (POV)"
+        }
+      ]
+    },
+    "cameraMovement": {
+      "label": "鏡頭運動",
+      "icon": "🎬",
+      "options": [
+        {
+          "key": "static",
+          "display": "靜止",
+          "output": "Static"
+        },
+        {
+          "key": "pan_left",
+          "display": "左搖",
+          "output": "Pan Left"
+        },
+        {
+          "key": "pan_right",
+          "display": "右搖",
+          "output": "Pan Right"
+        },
+        {
+          "key": "tilt_up",
+          "display": "上仰",
+          "output": "Tilt Up"
+        },
+        {
+          "key": "tilt_down",
+          "display": "下俯",
+          "output": "Tilt Down"
+        },
+        {
+          "key": "dolly_in",
+          "display": "推進",
+          "output": "Dolly In"
+        },
+        {
+          "key": "dolly_out",
+          "display": "拉遠",
+          "output": "Dolly Out"
+        },
+        {
+          "key": "dolly_zoom",
+          "display": "推拉變焦",
+          "output": "Dolly Zoom"
+        },
+        {
+          "key": "tracking",
+          "display": "跟蹤",
+          "output": "Tracking Shot"
+        },
+        {
+          "key": "crane",
+          "display": "升降鏡頭",
+          "output": "Crane Shot"
+        },
+        {
+          "key": "jib",
+          "display": "搖臂",
+          "output": "Jib Shot"
+        },
+        {
+          "key": "handheld",
+          "display": "手持",
+          "output": "Handheld"
+        },
+        {
+          "key": "steadicam",
+          "display": "穩定器",
+          "output": "Steadicam"
+        },
+        {
+          "key": "aerial",
+          "display": "航拍",
+          "output": "Aerial Shot"
+        },
+        {
+          "key": "360_rotation",
+          "display": "360度旋轉",
+          "output": "360 Rotation"
+        },
+        {
+          "key": "whip_pan",
+          "display": "甩鏡",
+          "output": "Whip Pan"
+        },
+        {
+          "key": "zoom_in",
+          "display": "變焦推進",
+          "output": "Zoom In"
+        },
+        {
+          "key": "zoom_out",
+          "display": "變焦拉遠",
+          "output": "Zoom Out"
+        },
+        {
+          "key": "fpv_drone",
+          "display": "FPV穿越機",
+          "output": "FPV Drone footage, fast moving, dynamic angle"
+        },
+        {
+          "key": "bullet_time",
+          "display": "子彈時間",
+          "output": "Bullet time, frozen motion, slow motion"
+        },
+        {
+          "key": "shaky_cam",
+          "display": "手持晃動",
+          "output": "Shaky cam, found footage style, chaotic"
+        },
+        {
+          "key": "gopro",
+          "display": "GoPro視角",
+          "output": "GoPro view, wide angle, fisheye effect"
+        },
+        {
+          "key": "cctv",
+          "display": "監視器視角",
+          "output": "CCTV footage, grainy, high angle, surveillance"
+        }
+      ]
+    },
+    "angle": {
+      "label": "拍攝角度",
+      "icon": "📐",
+      "options": [
+        {
+          "key": "eye_level",
+          "display": "平視",
+          "output": "Eye Level"
+        },
+        {
+          "key": "low_angle",
+          "display": "仰視",
+          "output": "Low Angle"
+        },
+        {
+          "key": "high_angle",
+          "display": "俯視",
+          "output": "High Angle"
+        },
+        {
+          "key": "birds_eye",
+          "display": "鳥瞰",
+          "output": "Birds Eye View"
+        },
+        {
+          "key": "worms_eye",
+          "display": "蟲視",
+          "output": "Worms Eye View"
+        },
+        {
+          "key": "dutch_angle",
+          "display": "傾斜角度",
+          "output": "Dutch Angle (Tilted)"
+        },
+        {
+          "key": "overhead",
+          "display": "頂視",
+          "output": "Overhead Shot"
+        },
+        {
+          "key": "ground_level",
+          "display": "地面視角",
+          "output": "Ground Level"
+        }
+      ]
+    },
+    "lens": {
+      "label": "鏡頭技術",
+      "icon": "🔭",
+      "options": [
+        {
+          "key": "fisheye",
+          "display": "魚眼",
+          "output": "Fisheye Lens, distorted wide angle"
+        },
+        {
+          "key": "macro",
+          "display": "微距",
+          "output": "Macro Lens, extreme close-up details"
+        },
+        {
+          "key": "telephoto",
+          "display": "長焦壓縮",
+          "output": "Telephoto Lens, compression effect"
+        },
+        {
+          "key": "polaroid",
+          "display": "拍立得",
+          "output": "Polaroid, instant film aesthetic"
+        },
+        {
+          "key": "go_pro",
+          "display": "運動相機",
+          "output": "GoPro Footage, wide angle action"
+        },
+        {
+          "key": "drone",
+          "display": "無人機視角",
+          "output": "Drone Photography, top-down view"
+        },
+        {
+          "key": "night_vision",
+          "display": "夜視鏡",
+          "output": "Night Vision, green phosphor screen"
+        },
+        {
+          "key": "tilt_shift",
+          "display": "移軸鏡頭",
+          "output": "Tilt-Shift Lens, miniature effect"
+        },
+        {
+          "key": "anamorphic",
+          "display": "變形鏡頭",
+          "output": "Anamorphic Lens, cinematic flares"
+        }
+      ]
+    },
+    "focus": {
+      "label": "對焦",
+      "icon": "🎯",
+      "options": [
+        {
+          "key": "deep_focus",
+          "display": "全景深",
+          "output": "Deep Focus"
+        },
+        {
+          "key": "shallow_dof",
+          "display": "淺景深",
+          "output": "Shallow Depth of Field"
+        },
+        {
+          "key": "rack_focus",
+          "display": "移焦",
+          "output": "Rack Focus"
+        },
+        {
+          "key": "split_diopter",
+          "display": "分屈光度",
+          "output": "Split Diopter"
+        },
+        {
+          "key": "soft_focus",
+          "display": "柔焦",
+          "output": "Soft Focus"
+        },
+        {
+          "key": "tilt_shift",
+          "display": "移軸",
+          "output": "Tilt-Shift"
+        },
+        {
+          "key": "bokeh",
+          "display": "散景",
+          "output": "Bokeh Effect"
+        }
+      ]
+    },
+    "style": {
+      "label": "藝術風格",
+      "icon": "🎨",
+      "options": [
+        {
+          "key": "photorealistic",
+          "display": "照片寫實",
+          "output": "Photorealistic"
+        },
+        {
+          "key": "cinematic",
+          "display": "電影感",
+          "output": "Cinematic"
+        },
+        {
+          "key": "film_noir",
+          "display": "黑色電影",
+          "output": "Film Noir"
+        },
+        {
+          "key": "anime",
+          "display": "動畫",
+          "output": "Anime"
+        },
+        {
+          "key": "manga",
+          "display": "漫畫",
+          "output": "Manga"
+        },
+        {
+          "key": "ghibli",
+          "display": "吉卜力風格",
+          "output": "Studio Ghibli style, anime style, detailed background"
+        },
+        {
+          "key": "pixar",
+          "display": "皮克斯風格",
+          "output": "Pixar style, 3d animation, cute, vibrant"
+        },
+        {
+          "key": "cel_shading",
+          "display": "賽璐珞/卡通渲染",
+          "output": "Cel shading, toon shading, flat colors, anime style"
+        },
+        {
+          "key": "oil_painting",
+          "display": "油畫",
+          "output": "Oil Painting"
+        },
+        {
+          "key": "watercolor",
+          "display": "水彩",
+          "output": "Watercolor"
+        },
+        {
+          "key": "gouache",
+          "display": "不透明水彩",
+          "output": "Gouache painting, opaque watercolor, matte finish"
+        },
+        {
+          "key": "acrylic",
+          "display": "壓克力畫",
+          "output": "Acrylic painting, vibrant colors, fast drying texture"
+        },
+        {
+          "key": "sketch",
+          "display": "素描",
+          "output": "Sketch"
+        },
+        {
+          "key": "charcoal",
+          "display": "炭筆畫",
+          "output": "Charcoal drawing, smudge texture, monochrome"
+        },
+        {
+          "key": "pastel",
+          "display": "粉彩畫",
+          "output": "Pastel painting, soft texture, chalky"
+        },
+        {
+          "key": "line_art",
+          "display": "線條藝術",
+          "output": "Line Art"
+        },
+        {
+          "key": "palette_knife",
+          "display": "刮刀畫",
+          "output": "Palette knife painting, thick texture, impasto"
+        },
+        {
+          "key": "cyber_impasto",
+          "display": "厚塗賽博",
+          "output": "Thick impasto oil painting, cyberpunk theme"
+        },
+        {
+          "key": "ink_wash",
+          "display": "水墨畫",
+          "output": "Ink wash painting, shuimo, traditional Chinese art"
+        },
+        {
+          "key": "shanshui",
+          "display": "山水畫",
+          "output": "Shanshui painting, Chinese landscape painting, mountains and water"
+        },
+        {
+          "key": "gongbi",
+          "display": "工筆畫",
+          "output": "Gongbi style, meticulous brushwork, detailed Chinese painting"
+        },
+        {
+          "key": "baimiao",
+          "display": "白描畫",
+          "output": "Baimiao style, fine line drawing, ink outline"
+        },
+        {
+          "key": "flower_bird",
+          "display": "花鳥畫",
+          "output": "Flower and bird painting, traditional Chinese art"
+        },
+        {
+          "key": "dunhuang",
+          "display": "敦煌壁畫",
+          "output": "Dunhuang mural style, Buddhist art, flying apsaras, ancient fresco"
+        },
+        {
+          "key": "gold_lacquer",
+          "display": "泥金畫漆",
+          "output": "Gold lacquer, makie, gold powder texture, luxurious"
+        },
+        {
+          "key": "ukiyo_e",
+          "display": "浮世繪",
+          "output": "Ukiyo-e style, Japanese woodblock print"
+        },
+        {
+          "key": "realism",
+          "display": "寫實主義",
+          "output": "Realism, realistic painting, true to life"
+        },
+        {
+          "key": "impressionism",
+          "display": "印象派",
+          "output": "Impressionism"
+        },
+        {
+          "key": "expressionism",
+          "display": "表現主義",
+          "output": "Expressionism, emotional distortion, Edvard Munch style"
+        },
+        {
+          "key": "fauvism",
+          "display": "野獸派",
+          "output": "Fauvism, wild brush work, strident colors, Matisse style"
+        },
+        {
+          "key": "cubism",
+          "display": "立體派",
+          "output": "Cubism, geometric shapes, fragmented objects, Picasso style"
+        },
+        {
+          "key": "surrealism",
+          "display": "超現實主義",
+          "output": "Surrealism"
+        },
+        {
+          "key": "pop_art",
+          "display": "普普藝術",
+          "output": "Pop Art"
+        },
+        {
+          "key": "art_nouveau",
+          "display": "新藝術風格",
+          "output": "Art Nouveau, Mucha style, intricate curves"
+        },
+        {
+          "key": "art_deco",
+          "display": "裝飾藝術",
+          "output": "Art Deco, geometric patterns, bold lines, 1920s style"
+        },
+        {
+          "key": "bauhaus",
+          "display": "包豪斯",
+          "output": "Bauhaus style, geometric minimalism"
+        },
+        {
+          "key": "minimalist",
+          "display": "極簡主義",
+          "output": "Minimalist"
+        },
+        {
+          "key": "digital_art",
+          "display": "數位藝術",
+          "output": "Digital Art"
+        },
+        {
+          "key": "concept_art",
+          "display": "概念藝術",
+          "output": "Concept Art"
+        },
+        {
+          "key": "vector_art",
+          "display": "向量藝術",
+          "output": "Vector art, clean lines, flat illustration, Adobe Illustrator style"
+        },
+        {
+          "key": "3d_render",
+          "display": "3D渲染",
+          "output": "3D Render"
+        },
+        {
+          "key": "unreal_engine",
+          "display": "虛幻引擎5",
+          "output": "Unreal Engine 5 Render, Lumen, Nanite"
+        },
+        {
+          "key": "pixel_art",
+          "display": "像素藝術",
+          "output": "Pixel Art"
+        },
+        {
+          "key": "low_poly",
+          "display": "低多邊形",
+          "output": "Low poly, isometric, 3d art"
+        },
+        {
+          "key": "isometric",
+          "display": "等距視角",
+          "output": "Isometric 3D, low poly"
+        },
+        {
+          "key": "glitch_art",
+          "display": "故障藝術",
+          "output": "Glitch Art, datamoshing, digital noise, VHS effect"
+        },
+        {
+          "key": "vaporwave",
+          "display": "蒸氣波",
+          "output": "Vaporwave Aesthetic, 90s retro, neon aesthetic"
+        },
+        {
+          "key": "synthwave",
+          "display": "合成波",
+          "output": "Synthwave, retrowave, neon grid"
+        },
+        {
+          "key": "cyberpunk",
+          "display": "賽博龐克",
+          "output": "Cyberpunk"
+        },
+        {
+          "key": "steampunk",
+          "display": "蒸汽龐克",
+          "output": "Steampunk"
+        },
+        {
+          "key": "fantasy_art",
+          "display": "奇幻藝術",
+          "output": "Fantasy Art"
+        },
+        {
+          "key": "scifi_art",
+          "display": "科幻藝術",
+          "output": "Sci-Fi Art"
+        },
+        {
+          "key": "printmaking",
+          "display": "版畫",
+          "output": "Printmaking, woodcut, linocut, block print"
+        },
+        {
+          "key": "stippling",
+          "display": "點描派",
+          "output": "Stippling, dotwork, pointillism"
+        },
+        {
+          "key": "paper_cutout",
+          "display": "剪紙藝術",
+          "output": "Paper Cutout Art, layered paper"
+        },
+        {
+          "key": "collage",
+          "display": "拼貼藝術",
+          "output": "Mixed Media Collage, dadaism"
+        },
+        {
+          "key": "claymation",
+          "display": "黏土動畫",
+          "output": "Claymation, Aardman style, plasticine texture"
+        },
+        {
+          "key": "comic_book",
+          "display": "漫畫書",
+          "output": "Comic Book"
+        },
+        {
+          "key": "gothic",
+          "display": "哥德式",
+          "output": "Gothic Art, dark and brooding"
+        },
+        {
+          "key": "lovecraftian",
+          "display": "克蘇魯",
+          "output": "Lovecraftian, cosmic horror, eldritch"
+        }
+      ]
+    },
+    "lighting": {
+      "label": "光線",
+      "icon": "💡",
+      "options": [
+        {
+          "key": "natural_light",
+          "display": "自然光",
+          "output": "Natural Light"
+        },
+        {
+          "key": "golden_hour",
+          "display": "黃金時刻",
+          "output": "Golden Hour"
+        },
+        {
+          "key": "blue_hour",
+          "display": "藍調時刻",
+          "output": "Blue Hour"
+        },
+        {
+          "key": "magic_hour",
+          "display": "魔幻時刻",
+          "output": "Magic Hour"
+        },
+        {
+          "key": "studio_lighting",
+          "display": "攝影棚燈光",
+          "output": "Studio Lighting"
+        },
+        {
+          "key": "rembrandt",
+          "display": "倫勃朗光",
+          "output": "Rembrandt Lighting"
+        },
+        {
+          "key": "rim_lighting",
+          "display": "輪廓光",
+          "output": "Rim Lighting"
+        },
+        {
+          "key": "backlighting",
+          "display": "逆光",
+          "output": "Backlighting"
+        },
+        {
+          "key": "silhouette",
+          "display": "剪影",
+          "output": "Silhouette"
+        },
+        {
+          "key": "neon_lighting",
+          "display": "霓虹燈光",
+          "output": "Neon Lighting"
+        },
+        {
+          "key": "volumetric",
+          "display": "體積光",
+          "output": "Volumetric Lighting"
+        },
+        {
+          "key": "god_rays",
+          "display": "神聖光線",
+          "output": "God Rays"
+        },
+        {
+          "key": "chiaroscuro",
+          "display": "明暗對比",
+          "output": "Chiaroscuro"
+        },
+        {
+          "key": "high_key",
+          "display": "高調光",
+          "output": "High Key"
+        },
+        {
+          "key": "low_key",
+          "display": "低調光",
+          "output": "Low Key"
+        },
+        {
+          "key": "dramatic",
+          "display": "戲劇性光線",
+          "output": "Dramatic Lighting"
+        },
+        {
+          "key": "soft_lighting",
+          "display": "柔光",
+          "output": "Soft Lighting"
+        },
+        {
+          "key": "hard_lighting",
+          "display": "硬光",
+          "output": "Hard Lighting"
+        },
+        {
+          "key": "ambient_occlusion",
+          "display": "環境遮蔽",
+          "output": "Ambient Occlusion"
+        },
+        {
+          "key": "bioluminescence",
+          "display": "生物螢光",
+          "output": "Bioluminescence, glowing organic light"
+        },
+        {
+          "key": "cinematic_haze",
+          "display": "電影霧氣",
+          "output": "Cinematic Haze, atmospheric fog"
+        },
+        {
+          "key": "lens_flare",
+          "display": "鏡頭光暈",
+          "output": "Anamorphic Lens Flare, JJ Abrams style"
+        },
+        {
+          "key": "candle_light",
+          "display": "燭光",
+          "output": "Candle Light, warm flickering glow"
+        },
+        {
+          "key": "strobe_light",
+          "display": "頻閃燈",
+          "output": "Strobe Lighting, frozen motion"
+        },
+        {
+          "key": "caustics",
+          "display": "焦散光(水紋)",
+          "output": "Water Caustics, underwater light refraction"
+        },
+        {
+          "key": "infrared",
+          "display": "紅外線",
+          "output": "Infrared Photography, false color"
+        },
+        {
+          "key": "black_light",
+          "display": "黑光燈(UV)",
+          "output": "Black Light, UV reactive glowing"
+        },
+        {
+          "key": "eclipse",
+          "display": "日蝕光",
+          "output": "Eclipse lighting, ring of fire, dark atmosphere"
+        },
+        {
+          "key": "projector",
+          "display": "投影機光",
+          "output": "Projector light overlay, pattern on face"
+        }
+      ]
+    },
+    "colorPalette": {
+      "label": "色調",
+      "icon": "🌈",
+      "options": [
+        {
+          "key": "warm_tones",
+          "display": "暖色調",
+          "output": "Warm Tones"
+        },
+        {
+          "key": "cool_tones",
+          "display": "冷色調",
+          "output": "Cool Tones"
+        },
+        {
+          "key": "pastel",
+          "display": "粉彩色",
+          "output": "Pastel Colors"
+        },
+        {
+          "key": "vibrant",
+          "display": "鮮豔色彩",
+          "output": "Vibrant Colors"
+        },
+        {
+          "key": "muted",
+          "display": "柔和色彩",
+          "output": "Muted Colors"
+        },
+        {
+          "key": "monochrome",
+          "display": "單色",
+          "output": "Monochrome"
+        },
+        {
+          "key": "bw",
+          "display": "黑白",
+          "output": "Black and White"
+        },
+        {
+          "key": "sepia",
+          "display": "復古棕",
+          "output": "Sepia"
+        },
+        {
+          "key": "high_contrast",
+          "display": "高對比",
+          "output": "High Contrast"
+        },
+        {
+          "key": "low_contrast",
+          "display": "低對比",
+          "output": "Low Contrast"
+        },
+        {
+          "key": "desaturated",
+          "display": "去飽和",
+          "output": "Desaturated"
+        },
+        {
+          "key": "oversaturated",
+          "display": "過飽和",
+          "output": "Oversaturated"
+        },
+        {
+          "key": "complementary",
+          "display": "互補色",
+          "output": "Complementary Colors"
+        },
+        {
+          "key": "analogous",
+          "display": "類似色",
+          "output": "Analogous Colors"
+        },
+        {
+          "key": "triadic",
+          "display": "三角配色",
+          "output": "Triadic Colors"
+        },
+        {
+          "key": "earth_tones",
+          "display": "大地色",
+          "output": "Earth Tones"
+        },
+        {
+          "key": "neon_colors",
+          "display": "霓虹色",
+          "output": "Neon Colors"
+        },
+        {
+          "key": "wes_anderson",
+          "display": "魏斯安德森",
+          "output": "Wes Anderson style color palette, pastel, symmetrical"
+        },
+        {
+          "key": "cyber_neon",
+          "display": "賽博霓虹",
+          "output": "Cyan and Magenta, neon palette"
+        },
+        {
+          "key": "gothic_dark",
+          "display": "哥德暗黑",
+          "output": "Black and Red, gothic palette, desaturated"
+        },
+        {
+          "key": "vintage_film",
+          "display": "復古底片",
+          "output": "Kodak Portra 400, vintage film look, grain"
+        },
+        {
+          "key": "infrared_colors",
+          "display": "紅外線色調",
+          "output": "Infrared photography, pink foliage, surreal colors"
+        }
+      ]
+    },
+    "quality": {
+      "label": "品質強調",
+      "icon": "⭐",
+      "options": [
+        {
+          "key": "8k",
+          "display": "8K解析度",
+          "output": "8K"
+        },
+        {
+          "key": "4k",
+          "display": "4K解析度",
+          "output": "4K"
+        },
+        {
+          "key": "ultra_hd",
+          "display": "超高清",
+          "output": "Ultra HD"
+        },
+        {
+          "key": "high_res",
+          "display": "高解析度",
+          "output": "High Resolution"
+        },
+        {
+          "key": "high_detail",
+          "display": "高細節",
+          "output": "High Detail"
+        },
+        {
+          "key": "masterpiece",
+          "display": "傑作",
+          "output": "Masterpiece"
+        },
+        {
+          "key": "best_quality",
+          "display": "最佳品質",
+          "output": "Best Quality"
+        },
+        {
+          "key": "professional",
+          "display": "專業級",
+          "output": "Professional"
+        },
+        {
+          "key": "award_winning",
+          "display": "得獎作品",
+          "output": "Award Winning"
+        },
+        {
+          "key": "trending",
+          "display": "專業藝術風格",
+          "output": "Trending on ArtStation"
+        },
+        {
+          "key": "highly_detailed",
+          "display": "極度精細",
+          "output": "Highly Detailed"
+        },
+        {
+          "key": "sharp_focus",
+          "display": "銳利對焦",
+          "output": "Sharp Focus"
+        },
+        {
+          "key": "intricate",
+          "display": "精緻細節",
+          "output": "Intricate Details"
+        }
+      ]
+    }
+  },
+  "quickTemplates": [
+    {
+      "id": "cinematic-poster",
+      "name": "🎬 電影海報",
+      "nameEN": "🎬 Cinematic Poster",
+      "preset": {
+        "style": "Cinematic",
+        "lighting": "Rembrandt Lighting",
+        "quality": "Masterpiece",
+        "colorPalette": "High Contrast"
+      }
+    },
+    {
+      "id": "portrait",
+      "name": "👤 人像攝影",
+      "nameEN": "👤 Portrait Photography",
+      "preset": {
+        "shotSize": "Medium Close-up (MCU)",
+        "style": "Photorealistic",
+        "lighting": "Natural Light",
+        "focus": "Shallow Depth of Field"
+      }
+    },
+    {
+      "id": "landscape",
+      "name": "🏞️ 風景照",
+      "nameEN": "🏞️ Landscape",
+      "preset": {
+        "shotSize": "Extreme Wide Shot (EWS)",
+        "style": "Photorealistic",
+        "lighting": "Golden Hour",
+        "focus": "Deep Focus"
+      }
+    },
+    {
+      "id": "anime",
+      "name": "🎌 動漫風格",
+      "nameEN": "🎌 Anime Style",
+      "preset": {
+        "style": "Anime",
+        "colorPalette": "Vibrant Colors",
+        "quality": "High Detail"
+      }
+    },
+    {
+      "id": "concept-art",
+      "name": "🖼️ 概念藝術",
+      "nameEN": "🖼️ Concept Art",
+      "preset": {
+        "style": "Concept Art",
+        "lighting": "Volumetric Lighting",
+        "quality": "Masterpiece"
+      }
+    },
+    {
+      "id": "cyberpunk",
+      "name": "🌃 賽博龐克",
+      "nameEN": "🌃 Cyberpunk",
+      "preset": {
+        "style": "Cyberpunk",
+        "lighting": "Neon Lighting",
+        "colorPalette": "Neon Colors",
+        "quality": "High Detail"
+      }
+    },
+    {
+      "id": "fantasy",
+      "name": "🧙 奇幻風格",
+      "nameEN": "🧙 Fantasy Style",
+      "preset": {
+        "style": "Fantasy Art",
+        "lighting": "Volumetric Lighting",
+        "colorPalette": "Vibrant Colors",
+        "quality": "Masterpiece"
+      }
+    },
+    {
+      "id": "noir",
+      "name": "🎩 黑色電影",
+      "nameEN": "🎩 Film Noir",
+      "preset": {
+        "style": "Film Noir",
+        "lighting": "Low Key",
+        "colorPalette": "Black and White",
+        "angle": "Low Angle"
+      }
+    },
+    {
+      "id": "ghibli",
+      "name": "🎨 吉卜力風格",
+      "nameEN": "🎨 Ghibli Style",
+      "preset": {
+        "style": "Studio Ghibli style, anime style, detailed background",
+        "colorPalette": "Pastel Colors",
+        "lighting": "Natural Light"
+      }
+    },
+    {
+      "id": "glitch",
+      "name": "📺 故障藝術",
+      "nameEN": "📺 Glitch Art",
+      "preset": {
+        "style": "Glitch Art, datamoshing, digital noise, VHS effect",
+        "colorPalette": "Neon Colors",
+        "quality": "High Detail"
+      }
+    }
+  ],
+  "negativePromptPresets": [
+    {
+      "id": "general",
+      "name": "通用排除",
+      "value": "blurry, low quality, watermark, signature, text, logo, bad anatomy, distorted"
+    },
+    {
+      "id": "photo",
+      "name": "照片專用",
+      "value": "blurry, grainy, overexposed, underexposed, out of focus, bad lighting, amateur"
+    },
+    {
+      "id": "anime",
+      "name": "動漫專用",
+      "value": "bad anatomy, extra limbs, missing fingers, deformed, ugly, poorly drawn"
+    }
+  ]
+}

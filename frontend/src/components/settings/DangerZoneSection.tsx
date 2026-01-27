@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react'; // Added import for useState
+import { useState } from 'react';
 import { Trash2, Image, Loader2, AlertCircle } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { api } from '../../services/api';

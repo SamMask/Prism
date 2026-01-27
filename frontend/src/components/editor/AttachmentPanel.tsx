@@ -1,6 +1,6 @@
-import React, { useRef } from "react";
+import React from "react";
 import { Paperclip, FileText, Trash2, Plus } from "lucide-react";
-import { toast } from "../ui";
+
 
 export interface Attachment {
   id: number;
@@ -25,7 +25,7 @@ export function AttachmentPanel({
   onDeleteAttachment,
   onUpload,
 }: AttachmentPanelProps) {
-  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const attachmentInputRef = React.useRef<HTMLInputElement>(null);
 
   // Wrapper to clean up input after selection (if needed by parent, handled here)
   const handleUploadWrapper = (e: React.ChangeEvent<HTMLInputElement>) => {
