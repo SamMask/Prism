@@ -135,17 +135,19 @@ if %errorlevel% neq 0 (
 :DEPS_OK
 
 REM ===== Check port =====
-echo [3/4] Checking port 5000...
-netstat -ano | findstr :5000 | findstr LISTENING >nul 2>&1
+REM v1.4.2: Changed to port 8000 (Windows reserves 4913-5012 for Hyper-V)
+set PORT=8000
+echo [3/4] Checking port %PORT%...
+netstat -ano | findstr :%PORT% | findstr LISTENING >nul 2>&1
 if %errorlevel% equ 0 (
-    echo Found process using port 5000 - closing...
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5000 ^| findstr LISTENING') do (
+    echo Found process using port %PORT% - closing...
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :%PORT% ^| findstr LISTENING') do (
         taskkill /F /PID %%a >nul 2>&1
     )
     timeout /t 1 /nobreak >nul
     echo Old process closed
 ) else (
-    echo Port 5000 available
+    echo Port %PORT% available
 )
 
 REM ===== Start Flask =====
@@ -153,10 +155,10 @@ echo [4/4] Starting server...
 echo.
 
 if "%OPEN_BROWSER%"=="1" (
-    start "" http://127.0.0.1:5000
-    echo Browser opened: http://127.0.0.1:5000
+    start "" http://127.0.0.1:%PORT%
+    echo Browser opened: http://127.0.0.1:%PORT%
 ) else (
-    echo Please open browser and visit: http://127.0.0.1:5000
+    echo Please open browser and visit: http://127.0.0.1:%PORT%
 )
 
 echo.
