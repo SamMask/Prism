@@ -196,6 +196,12 @@ MIGRATIONS: List[Tuple[int, str, List[str]]] = [
     (15, "add_prompt_params", [
         "ALTER TABLE Notes ADD COLUMN prompt_params TEXT",
     ]),
+
+    # v2.4.10: Normalize legacy editor layout values after the schema contract
+    # settled on single/dual only.
+    (16, "normalize_editor_layout", [
+        "UPDATE Notes SET editor_layout = 'single' WHERE editor_layout IS NULL OR editor_layout = 'full'",
+    ]),
 ]
 
 

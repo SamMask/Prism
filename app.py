@@ -237,7 +237,7 @@ def init_db():
                 sort_order INTEGER,
                 category_id INTEGER,
                 prompt_params TEXT,
-                editor_layout TEXT DEFAULT 'full',
+                editor_layout TEXT DEFAULT 'single',
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             )

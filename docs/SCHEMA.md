@@ -1,8 +1,8 @@
 # Prism — 資料庫綱要 (Database Schema)
 
 > **用途**: 共享資料綱要 — 所有資料表的現行定義，開發時的唯一真實來源。
-> **版本**: Migration v15 (Headless KMS)
-> **最後更新**: 2026-05-05
+> **版本**: Migration v16 (Headless KMS)
+> **最後更新**: 2026-05-26
 > **改 DB 前必讀**: 新增欄位請在 `migrations/__init__.py` 追加 Migration，並更新本文件。
 
 ---
@@ -174,7 +174,7 @@ CREATE TABLE Schema_Meta (
     value TEXT NOT NULL
 )
 -- 目前唯一紀錄:
--- key='schema_version', value='15'
+-- key='schema_version', value='16'
 ```
 
 > 由 `migrations/__init__.py` 的 `run_migrations()` 管理，啟動時自動執行待處理遷移。
@@ -250,6 +250,7 @@ Schema_Meta (獨立，無 FK)
 | v13 | `create_ai_tasks_table` | 新增 AI_Tasks 表（⚠️ v14 DROP）|
 | v14 | `strip_ai_features` | **拔除 AI** — DROP Embeddings / AI_Tasks 表，DROP 5 個 AI 欄位 |
 | v15 | `add_prompt_params` | 補上 `Notes.prompt_params` 遷移，修正舊 DB 升級漏欄位問題 |
-| v16+ | （預留） | 下一次 Schema 變更接續此版本號 |
+| v16 | `normalize_editor_layout` | 將既有 `Notes.editor_layout` 的 `NULL` / 舊值 `full` 正規化為 `single` |
+| v17+ | （預留） | 下一次 Schema 變更接續此版本號 |
 
 > **v14 完整 SQL** 見 `migrations/__init__.py` 的 `strip_ai_features` tuple。

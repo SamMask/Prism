@@ -143,6 +143,8 @@ npx tsc --noEmit
 
 ## 打包發布 (Packaging)
 
+> **狀態說明**: v2.4.9 的穩定主線是 Source / Dev mode 與既有 Raspberry Pi 部署。PyInstaller / Portable 目前僅保留為實驗性或內部打包流程；正式「零依賴、解壓即用、一鍵啟動」發佈要等 UI 改版與 Go 模組基底重構後再重新定義。
+
 ### 版本號 (Single Source of Truth)
 
 ```python
@@ -160,14 +162,14 @@ PRISM_VERSION = "2.4.5"
 cd frontend
 npm run build
 
-# 2. 打包 EXE (PyInstaller)
+# 2. 實驗性 / 內部打包 EXE (PyInstaller)
 python build_release.py
 ```
 
 | 產出 | 說明 |
 |------|------|
-| `Prism_v*_*.zip` | 輕量版，需安裝 Python |
-| `Prism_v*_Portable_*.zip` | 完整版，內嵌 Python，解壓即用 |
+| `Prism_v*_*.zip` | 內部打包目標，需安裝 Python；不是目前推薦使用方式 |
+| `Prism_v*_Portable_*.zip` | 實驗性 Portable 目標；只有正式 release artifacts 存在時才可視為可交付版本 |
 
 ### Release Checklist（每次發版前必確認）
 

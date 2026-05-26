@@ -79,6 +79,12 @@ Debug 模式啟用時會產生以下風險:
 2. 開發環境才設定 `FLASK_DEBUG=True`
 3. 使用 WSGI 伺服器 (如 Gunicorn, uWSGI) 部署生產環境，而非 `app.run()`
 
+### API 暴露邊界
+
+Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制，預設適合 `localhost`、trusted LAN、VPN，或 SSH tunnel / 受認證保護的 reverse proxy 使用。不要把 Flask 服務或 Caddy 入口直接暴露到 public internet / 公網。
+
+若需要遠端存取，請先在外層加入 VPN、SSH tunnel、reverse proxy auth（例如 Caddy auth）或等效保護；Prism 內部尚未實作 OAuth、JWT、API key、RBAC 或使用者系統。
+
 ---
 
 ## 系統需求
@@ -88,25 +94,41 @@ Debug 模式啟用時會產生以下風險:
 - SQLite 3.x（內建）
 - 依賴套件請參考 `requirements.txt`
 
+> **目前穩定主線**: v2.4.9 推薦使用 Source / Dev mode，或依本文件與 `DEPLOY-PI.md` 走本機 / Raspberry Pi 部署。Portable / PyInstaller / 一鍵啟動仍屬後續發佈目標或內部打包流程；除非 repo / GitHub Releases 已提供正式 artifacts，請不要把它當作目前推薦安裝方式。
+
 ## 安裝步驟
 
-### 生產環境（使用預建置前端）
+### 本機整合模式（使用預建置前端）
 
-1. 安裝 Python 依賴:
+1. 建置前端:
+
+```bash
+cd frontend
+npm install
+npm run build
+cd ..
+```
+
+2. 安裝 Python 依賴:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. 設定環境變數（參考上方說明）
+3. 設定環境變數（參考上方說明）
 
-3. 執行應用程式:
+```bash
+set PRISM_V2=true      # Windows
+export PRISM_V2=true   # Linux / macOS
+```
+
+4. 執行應用程式:
 
 ```bash
 python app.py
 ```
 
-4. 開啟瀏覽器訪問:
+5. 開啟瀏覽器訪問:
 
 ```
 http://localhost:5000
@@ -139,10 +161,11 @@ npm run build
 
 > **目標**: 在區域網路內以 `https://prism.local` 存取 Prism，無需記 IP 或 Port。
 > **前提**: Raspberry Pi OS (Debian-based) 或任何支援 systemd 的 Linux。
+> **安全邊界**: `prism.local` / Caddy 部署預設是 trusted LAN 用途；不要將 443 / 5000 直接 port-forward 到公網，除非外層已有 VPN、SSH tunnel 或受認證保護的 reverse proxy。
 >
 > **詳細操作步驟（含日常更新）請見根目錄 [`DEPLOY-PI.md`](../DEPLOY-PI.md)**。
 
-### 一鍵安裝（首次）
+### Pi 一鍵安裝（首次）
 
 ```bash
 cd /path/to/prism

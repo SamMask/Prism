@@ -1,8 +1,8 @@
 # Prism
 
 > 🔒 **本地優先** | 📴 **離線可用** | 🧠 **Headless KMS**
-> 🚀 **Portable 版**：零依賴，解壓即用
-> 📦 **Source 版**：需 Python 3.10+ / Node.js 18+
+> 📦 **目前推薦**：Source / Dev mode（Python 3.10+ / Node.js 18+）
+> 🚧 **Portable / 一鍵啟動**：後續發佈目標；目前僅保留實驗性 / 內部打包流程
 
 ![Version](https://img.shields.io/badge/version-2.4.9-blue)
 ![Python](https://img.shields.io/badge/python-3.10+-green)
@@ -42,23 +42,14 @@
 - **📎 附件系統** — 拖曳上傳、長文自動分離、Markdown 雙向同步
 - **🌳 卡片譜系** — Parent / Variant 關聯，追蹤 Prompt 演化
 - **🔄 時光機** — 每次儲存自動快照，可隨時回滾
-- **🍓 樹莓派友善** — Phase 8 提供 avahi mDNS + Caddy 反向代理 + systemd 一鍵部署
+- **🍓 樹莓派友善** — Phase 8 提供 avahi mDNS + Caddy 反向代理 + systemd 一鍵部署；定位為 trusted LAN / VPN 使用，不建議直接對公網開放
 - **🔒 隱私優先** — 所有資料在本機 `knowledge.db` 單檔 (WAL Mode)，無雲端、無遙測
 
 ---
 
 ## 🚀 快速開始
 
-### Portable 版（零依賴，**推薦給使用者**）
-
-```bash
-# 1. 下載最新 Release
-# 2. 解壓
-# 3. 雙擊 start.bat
-# → 自動開啟瀏覽器至 http://127.0.0.1:5000
-```
-
-### Source 版（**推薦給開發者**）
+### Source / Dev mode（目前推薦）
 
 ```bash
 # 後端
@@ -75,6 +66,26 @@ npm run dev                      # → http://localhost:5173
 # 或 npm run build → 產出 dist/，後端設 PRISM_V2=true 即可整合
 ```
 
+### Portable / PyInstaller / 一鍵啟動（後續發佈目標）
+
+目前 repo 保留 PyInstaller 相關程式碼與內部打包腳本，但 v2.4.9 的穩定主線不是正式 Portable release。正式「零依賴、解壓即用、一鍵啟動」發佈會等 UI 改版與 Go 模組基底重構後再重新定義；除非 GitHub Releases 已提供對應 artifacts，請不要把 Portable 視為目前推薦安裝方式。
+
+### 本機整合模式（已建置前端）
+
+```bash
+# 先建置前端
+cd frontend
+npm install
+npm run build
+
+# 回到專案根目錄
+cd ..
+set PRISM_V2=true                # Windows
+export PRISM_V2=true             # Linux/Mac
+pip install -r requirements.txt
+python app.py                    # → http://127.0.0.1:5000
+```
+
 ### 啟用 V2 React SPA 模式
 
 ```bash
@@ -83,7 +94,7 @@ export PRISM_V2=true             # Linux/Mac
 python app.py
 ```
 
-PyInstaller 打包後會自動進入 V2 模式 + PyWebView 桌面視窗。
+PyInstaller 打包路徑目前視為實驗性 / 內部發佈流程，不是 v2.4.9 的穩定使用入口。
 
 ---
 
@@ -117,7 +128,7 @@ curl http://127.0.0.1:5000/api/system/check-consistency
 | Frontend | React 18 / TypeScript / Vite 5 / Zustand / Tailwind CSS |
 | Search | SQLite FTS5（純關鍵字，無向量） |
 | Image | Pillow（可選，無則降級不生縮圖） |
-| Deploy | PyInstaller (.exe) / Raspberry Pi (systemd + Caddy + avahi) |
+| Deploy | Source / Dev mode、Raspberry Pi (systemd + Caddy + avahi)；PyInstaller 為實驗性內部打包流程 |
 | Test | pytest（後端）/ Playwright（前端 E2E） |
 
 ---
@@ -156,6 +167,8 @@ Prism/
 ---
 
 ## 🔐 安全與隱私
+
+> ⚠️ **API 暴露邊界**：Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制。預設使用場景是 `localhost`、trusted LAN、VPN，或 SSH tunnel / 受認證保護的 reverse proxy（例如 Caddy auth）。不要把 Flask 或 Caddy 入口直接暴露到 public internet / 公網。
 
 - ✅ **CSRF 防護**：驗證 Origin / Referer
 - ✅ **路徑穿越防護**：圖片 API 三層防禦 (basename + `..` 過濾 + abspath prefix)

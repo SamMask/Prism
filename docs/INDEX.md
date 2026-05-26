@@ -24,7 +24,7 @@
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
 | [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已重寫 (2026-05-05) |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | 環境變數設定、Windows / Raspberry Pi 部署流程、PyInstaller 打包 | ✅ 仍適用 |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | 環境變數設定、Source / Dev mode、Raspberry Pi 部署流程；PyInstaller 僅作內部打包參考 | ✅ 仍適用 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 本地開發環境建置、依賴安裝、PR 規範 | ✅ 仍適用 |
 
 ---

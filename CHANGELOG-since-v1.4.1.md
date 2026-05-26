@@ -1,6 +1,6 @@
-# Prism — V1.4.1 → v2.4.7 重大演進
+# Prism — V1.4.1 → v2.4.9 重大演進
 
-> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-05-13（v2.4.7 本地 / Pi）
+> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-05-26（v2.4.9 本地 / Pi）
 > **目的**：給「只記得 GitHub 上 V1.4.1」的人一份可讀的重點追溯。
 > **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（仍停在 V1.4.1）
 
@@ -8,18 +8,18 @@
 
 ## 🎯 一句話總結
 
-V1.4.1 是「**個人 Prompt 管理工具**」，v2.4.7 是「**個人 Headless 知識中樞 + 樹莓派常駐服務**」，中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線。
+V1.4.1 是「**個人 Prompt 管理工具**」，v2.4.9 是「**個人 Headless 知識中樞 + 樹莓派常駐服務**」，中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線，並在 v2.4.8–v2.4.9 補上 Preview 就地編輯與側邊欄篩選導覽修正。
 
 ---
 
 ## 📊 兩個版本快速對照
 
-| 維度 | V1.4.1 | v2.4.7 |
+| 維度 | V1.4.1 | v2.4.9 |
 |---|---|---|
 | 前端 | Vanilla JS + Tailwind（無 build） | React 18 + TS + Vite + Zustand + Tailwind |
 | 後端 | Flask 單體 + SQLite FTS5 | Flask Blueprint 模組化 + 統一 db.py + 版本化遷移 v1→v15 |
 | AI | 無 | 中途引入 NIM / Ollama / sentence-transformers，**v2.3.0 全部拔除** |
-| 部署 | Windows Portable `.zip` | Windows Portable + **Raspberry Pi**（systemd + Caddy mDNS + 每週自動備份 timer） |
+| 部署 | Windows Portable `.zip` | Source / Dev mode + **Raspberry Pi**（systemd + Caddy mDNS + 每週自動備份 timer）；Windows Portable / PyInstaller 保留為內部打包流程與後續發佈目標 |
 | 對外 API | 內部用 | **Headless KMS REST API**（外部 Agent 可直連，含對接文件） |
 | 搜尋範圍 | title + content | title + content + remarks + 附件內容 + tags |
 | 匯出 | JSON 備份 | JSON / SQLite DB / **Markdown zip (frontmatter)** / 圖片 zip |
@@ -55,12 +55,22 @@ cco 審計後一次性補完：SSRF 防護（拒絕內網 / loopback IP）、`/a
 
 Pi systemd timer 每週日 03:00 自動 `curl /api/server/backup/download` + `/rotate?keep=8`，保留最近 8 份（約 2 個月歷史）。**踩過的坑**：Caddy → Werkzeug HTTP/2 stream 收尾不乾淨會讓 curl exit 92，必須強制 `--http1.1`。
 
+### 7. Preview 編輯體驗修補（v2.4.8, 2026-05-26）
+
+Preview 模式從純閱讀面板變成可互動編輯面：文字區塊可在 Preview 中就地切入小型 Markdown textarea 修改；獨立 Markdown / HTML 圖片可直接移除內容引用；圖片引用移除邏輯與側欄圖片管理共用 helper，避免重複維護。
+
+### 8. Sidebar 篩選導覽修補（v2.4.9, 2026-05-26）
+
+分類 / 標籤點擊被明確收斂成首頁卡片篩選器：在非首頁點擊會回到首頁並套用篩選；首頁仍保留再次點同一篩選可取消的互動。前端 notes 查詢改送 `category_id`，降低對已移除 `Notes.type` 名稱相容層的依賴風險。
+
 ---
 
 ## 📅 版本歷程（精簡）
 
 | 版本 | 日期 | 主軸 |
 |---|---|---|
+| **v2.4.9** | 2026-05-26 | Sidebar filter navigation：非首頁點分類 / 標籤會回首頁並套用篩選；notes 查詢改送 `category_id` |
+| **v2.4.8** | 2026-05-26 | Preview Editing UX：Preview 可就地編輯文字區塊、移除 Markdown / HTML 圖片引用，並共用圖片引用移除 helper |
 | **v2.4.7** | 2026-05-13 | Markdown 匯出 + 自動備份 timer |
 | **v2.4.6** | 2026-05-13 | 深度審計修補（文件對齊 / 安全回歸測試 / 殭屍清理） |
 | **v2.4.5** | 2026-05-05 | 搜尋範圍擴充（覆蓋備註 / 附件 / 標籤） |

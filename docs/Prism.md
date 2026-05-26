@@ -124,7 +124,7 @@
 | **UI** | TailwindCSS + CSS 變數 | `--color-*` 主題系統，6 套色盤 |
 | **Search** | SQLite FTS5 + SQL 關聯 + 文字附件檔案比對 | 純關鍵字卡片搜尋，零額外依賴，無 AI |
 | **Database** | SQLite (WAL Mode) | 單檔、高效、可攜，Migration v1–v14 |
-| **Deploy** | PyInstaller / Raspberry Pi | EXE 打包 / systemd + Caddy 無頭伺服器 |
+| **Deploy** | Source / Dev mode、Raspberry Pi；PyInstaller 為歷史規劃 / 內部打包方向 | systemd + Caddy 無頭伺服器；EXE / Portable 非目前穩定主線 |
 
 ---
 
@@ -173,6 +173,7 @@
 
 > **目標**: 確保本地應用程式 (Local App) 能夠平滑升級，且不丟失使用者數據。
 > **原則**: 程式與數據分離 (Code/Data Separation)。
+> **現況補註 (2026-05-26)**: 以下安裝包 / Portable / PyInstaller 內容屬 V2 規劃期歷史與內部打包方向，不代表 v2.4.9 已有正式「零依賴、一鍵啟動」發佈。現行穩定使用方式以 README.md 的 Source / Dev mode 與 DEPLOY-PI.md 的 Pi 部署為準。
 
 ### 7.1 資料庫遷移 (Startup Migration)
 *   **機制**: 每次應用啟動時 (`create_app()`)，自動檢查資料庫版本。

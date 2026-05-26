@@ -35,7 +35,9 @@
 
 ### 安全限制
 
-- Prism 沒有獨立 API Token 機制，預設定位是本機 / 區網內受信環境。
+- Prism 沒有獨立 API Token / Bearer Token / 使用者認證機制，預設定位是本機 / 區網內受信環境。
+- 不要把 Prism API 直接暴露到 public internet / 公網。
+- 外部 Agent 對接建議在同機、trusted LAN、VPN、SSH tunnel，或受認證保護的 reverse proxy（例如 Caddy auth）下使用。
 - `POST` / `PUT` / `DELETE` / `PATCH` 在生產模式會做簡易 CSRF 檢查：
   - 需要合法 `Origin` 或 `Referer`
   - 本機 dev server `localhost:5173/5174` 已在白名單

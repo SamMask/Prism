@@ -337,6 +337,7 @@
 - **[4.4] 圖片 alt 文字** — 非公開網站，無 a11y/SEO 需求
 
 ### 其他延遲項目 🧊
+- **可選 API token / auth layer** — 未實作；目前 Prism API 適用 `localhost` / trusted LAN / VPN / SSH tunnel / 受認證保護的 reverse proxy。只有需要遠端公網存取時才重新評估，不列為目前 P0。
 - **i18n 多語系** — 目前唯一語系繁中，待用戶群擴大再啟動
 - **啟動時自動開瀏覽器** — PyInstaller 打包後行為不穩定，等 7.0 穩定後處理
 
@@ -349,6 +350,9 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **docs-only** | 2026-05-26 | 明確標示 Prism API 安全邊界：目前沒有內建 API Token / Bearer Token / 使用者認證機制，適用 `localhost`、trusted LAN、VPN、SSH tunnel 或受認證保護的 reverse proxy；不建議直接暴露到 public internet / 公網。新增 future item「可選 API token / auth layer」，未實作且非目前 P0。 |
+| **docs-only** | 2026-05-26 | 同步 `CHANGELOG-since-v1.4.1.md` 的 V1.4.1 → V2 演進追溯到 v2.4.9：更新標題、時間範圍、摘要與對照表，補入 v2.4.8 Preview Editing UX 與 v2.4.9 Sidebar Filter Navigation 條目，對齊 README 最近版本敘述。 |
+| **docs-only** | 2026-05-26 | 修正 README / DEPLOYMENT / docs 索引與演進摘要中 Portable、PyInstaller、零依賴、一鍵啟動的過度承諾：目前推薦使用 Source / Dev mode 或既有本機 / Raspberry Pi 部署；Portable / PyInstaller 標為實驗性、內部打包流程或後續發佈目標。 |
 | **v2.4.9** | 2026-05-26 | Phase 17 Sidebar Filter Navigation — 非首頁點擊側邊欄分類/標籤會導回首頁並套用該篩選；首頁維持再次點擊同一篩選可取消；`GET /api/notes` 前端查詢改送 `category_id`，降低分類改名後依賴 `type` 名稱相容層的風險。**收尾驗證**：`cd frontend && npx tsc --noEmit` / `cd frontend && npm run build` / `pytest tests/ -v` / Browser flow |
 | **v2.4.8** | 2026-05-26 | Phase 16 Preview Editing UX — Preview 模式改為可互動：文字區塊可在預覽中切入小型 Markdown textarea 直接修改，獨立 Markdown / HTML 圖片可在預覽中移除引用，封面圖被移除時同步清空 `cover_image`；側欄 `ImageManagementPanel` 與 Preview 共用圖片引用移除 helper。**收尾驗證**：`cd frontend && npx tsc --noEmit` / `cd frontend && npm run build` / `pytest tests/ -v` 全通過；Browser flow 實測 Preview 內可改文字、刪圖片引用且 console 無 warn/error；PRISM_VERSION → 2.4.8 |
 | **v2.4.7** | 2026-05-13 | Phase 15 維護模式雜項 — **Markdown 匯出**：`GET /api/export/markdown` 回傳 zip（每筆記一個 `.md` + YAML frontmatter + `_manifest.json`），Settings 加「下載 .zip」按鈕；補 4 個 pytest（zip 結構 / frontmatter 欄位 / manifest 計數 / 空標題 edge case）；API_REFERENCE.md 補端點說明。**自動備份**：Pi 加 `prism-backup.timer`（每週日 03:00）+ `prism-backup.service` 觸發既有 `/api/server/backup/download` + `/rotate?keep=8`；DEPLOY-PI.md 補章節。**Dead folder 清理**：`git rm -r 資料庫備份/`（V1 殘留中文資料夾，實際備份都在 `backups/`）。**收尾**：80 passed (+4) / tsc 零錯誤 / build 成功 / PRISM_VERSION → 2.4.7 |
