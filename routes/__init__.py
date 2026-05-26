@@ -40,7 +40,9 @@ def register_blueprints(app):
     from . import tags, categories, export, upload, cleanup, system
     from .prompt_options import prompt_options_bp
     from .wizard_options import wizard_options_bp
-    
+    from .attachments import attachments_bp  # V2 Phase 3.4: Attachments
+    from .server import server_bp  # V2 Phase 8.2: Server Dashboard
+
     app.register_blueprint(notes_bp)
     app.register_blueprint(tags_bp)
     app.register_blueprint(categories_bp)
@@ -50,3 +52,6 @@ def register_blueprints(app):
     app.register_blueprint(prompt_options_bp)
     app.register_blueprint(wizard_options_bp)
     app.register_blueprint(system_bp)
+    app.register_blueprint(attachments_bp, url_prefix='/api')  # V2 Phase 3.4
+    app.register_blueprint(server_bp, url_prefix='/api')  # V2 Phase 8.2
+

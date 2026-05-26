@@ -40,7 +40,7 @@ def toggle_pin_note(note_id):
                 'message': 'Note not found'
             }), 404
 
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         
         # 決定新的 pinned 狀態
         if 'pinned' in data:
@@ -91,7 +91,7 @@ def toggle_archive_note(note_id):
                 'message': 'Note not found'
             }), 404
 
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         
         # 決定新的 archived 狀態
         if 'archived' in data:
@@ -121,11 +121,40 @@ def toggle_archive_note(note_id):
 
 @notes_bp.route('/notes/<int:note_id>/duplicate', methods=['POST'])
 def duplicate_note(note_id):
-    """複製筆記"""
+    """
+    複製筆記 / 建立變體 (Fork)
+    
+    Phase 3.7: 卡片譜系 (Card Lineage)
+    - 當 as_variant=true 時，設定 parent_id 建立父子關係
+    - 變體不複製圖片 (僅引用 cover_image 路徑)
+    
+    Request Body (optional):
+    {
+        "as_variant": true,          # 是否作為變體 (設定 parent_id)
+        "title_suffix": " (v2)"      # 標題後綴 (預設 " (Copy)" 或 " (Variant)")
+    }
+    """
     try:
         db = get_db()
+        data = request.get_json(silent=True) or {}
+        
+        as_variant = data.get('as_variant', False)
+        title_suffix = data.get('title_suffix', ' (Variant)' if as_variant else ' (Copy)')
 
-        original = db.execute('SELECT * FROM Notes WHERE id = ?', (note_id,)).fetchone()
+        original = db.execute('''
+            SELECT
+                id,
+                title,
+                content,
+                remarks,
+                cover_image,
+                cover_position,
+                editor_layout,
+                category_id,
+                prompt_params
+            FROM Notes
+            WHERE id = ?
+        ''', (note_id,)).fetchone()
         if original is None:
             return jsonify({
                 'status': 'error',
@@ -133,16 +162,45 @@ def duplicate_note(note_id):
             }), 404
 
         try:
-            cursor = db.execute('''
-                INSERT INTO Notes (title, content, type, remarks, cover_image)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (
-                original['title'] + ' (Copy)',
-                original['content'],
-                original['type'],
-                original['remarks'],
-                original['cover_image']
-            ))
+            new_title = original['title'] + title_suffix
+
+            if as_variant:
+                # 變體模式: 設定 parent_id，不重複複製圖片
+                cursor = db.execute('''
+                    INSERT INTO Notes (
+                        title, content, remarks, cover_image, cover_position,
+                        editor_layout, category_id, prompt_params, parent_id
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_title,
+                    original['content'],
+                    original['remarks'],
+                    original['cover_image'],  # 引用，不複製
+                    original['cover_position'],
+                    original['editor_layout'],
+                    original['category_id'],
+                    original['prompt_params'],
+                    note_id
+                ))
+            else:
+                # 傳統複製模式
+                cursor = db.execute('''
+                    INSERT INTO Notes (
+                        title, content, remarks, cover_image, cover_position,
+                        editor_layout, category_id, prompt_params
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    new_title,
+                    original['content'],
+                    original['remarks'],
+                    original['cover_image'],
+                    original['cover_position'],
+                    original['editor_layout'],
+                    original['category_id'],
+                    original['prompt_params'],
+                ))
 
             new_note_id = cursor.lastrowid
 
@@ -162,7 +220,11 @@ def duplicate_note(note_id):
 
             return jsonify({
                 'status': 'success',
-                'data': {'note_id': new_note_id}
+                'data': {
+                    'note_id': new_note_id,
+                    'parent_id': note_id if as_variant else None,
+                    'is_variant': as_variant
+                }
             }), 201
 
         except sqlite3.Error as e:

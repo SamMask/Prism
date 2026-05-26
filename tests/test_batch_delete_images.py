@@ -30,10 +30,13 @@ def test_batch_delete_cleans_images(client, app):
     # 2. 建立含圖片的筆記
     with app.app_context():
         db = get_db(app)
+        default_category_id = db.execute(
+            "SELECT id FROM Categories WHERE is_default = 1 LIMIT 1"
+        ).fetchone()['id']
         db.execute("""
-            INSERT INTO Notes (title, content, type) 
-            VALUES ('BatchDeleteWithImage', '![img](/static/uploads/batch_delete_test.jpg)', '筆記')
-        """)
+            INSERT INTO Notes (title, content, category_id) 
+            VALUES (?, ?, ?)
+        """, ('BatchDeleteWithImage', '![img](/static/uploads/batch_delete_test.jpg)', default_category_id))
         db.commit()
         
         note = db.execute("SELECT id FROM Notes WHERE title = 'BatchDeleteWithImage'").fetchone()
@@ -68,16 +71,19 @@ def test_batch_delete_preserves_shared_images(client, app):
     
     with app.app_context():
         db = get_db(app)
+        default_category_id = db.execute(
+            "SELECT id FROM Categories WHERE is_default = 1 LIMIT 1"
+        ).fetchone()['id']
         
         # 建立兩個引用同一圖片的筆記
         db.execute("""
-            INSERT INTO Notes (title, content, type) 
-            VALUES ('SharedImageNote1', '![img](/static/uploads/shared_image.jpg)', '筆記')
-        """)
+            INSERT INTO Notes (title, content, category_id) 
+            VALUES (?, ?, ?)
+        """, ('SharedImageNote1', '![img](/static/uploads/shared_image.jpg)', default_category_id))
         db.execute("""
-            INSERT INTO Notes (title, content, type) 
-            VALUES ('SharedImageNote2', '![img](/static/uploads/shared_image.jpg)', '筆記')
-        """)
+            INSERT INTO Notes (title, content, category_id) 
+            VALUES (?, ?, ?)
+        """, ('SharedImageNote2', '![img](/static/uploads/shared_image.jpg)', default_category_id))
         db.commit()
         
         note1 = db.execute("SELECT id FROM Notes WHERE title = 'SharedImageNote1'").fetchone()

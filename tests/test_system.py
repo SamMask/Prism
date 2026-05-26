@@ -50,9 +50,10 @@ def test_consistency_check(client, app):
     result = data['data']
     assert 'orphan_note_tags' in result
     assert 'unused_tags' in result
-    assert 'type_category_mismatch' in result
     assert 'fk_enabled' in result
     assert result['fk_enabled'] == True
+    assert 'null_category_id' in result
+    assert 'health' in result
 
 
 def test_clear_history(client, app):
@@ -64,7 +65,13 @@ def test_clear_history(client, app):
         db = get_db(app)
         
         # 建立測試筆記
-        db.execute("INSERT INTO Notes (title, content, type) VALUES ('HistoryTest', 'v1', '筆記')")
+        default_category = db.execute(
+            "SELECT id FROM Categories WHERE is_default = 1 LIMIT 1"
+        ).fetchone()
+        db.execute(
+            "INSERT INTO Notes (title, content, category_id) VALUES (?, ?, ?)",
+            ('HistoryTest', 'v1', default_category['id'])
+        )
         db.commit()
         
         note = db.execute("SELECT id FROM Notes WHERE title = 'HistoryTest'").fetchone()
@@ -106,3 +113,32 @@ def test_wal_checkpoint(client, app):
     data = response.get_json()
     
     assert data['status'] == 'success'
+
+
+def test_migration_status(client):
+    """驗證 migration status API 存在且回傳版本資訊"""
+    response = client.get('/api/system/migration-status')
+
+    assert response.status_code == 200
+    data = response.get_json()
+
+    assert data['status'] == 'success'
+    assert data['data']['current_version'] >= 1
+    assert data['data']['latest_version'] >= data['data']['current_version']
+    assert isinstance(data['data']['completed'], list)
+    assert isinstance(data['data']['pending'], list)
+
+
+def test_check_update_without_configured_source(client, app):
+    """未設定更新來源時，API 仍應回穩定 JSON 而不是 404"""
+    app.config['PRISM_RELEASE_API_URL'] = ''
+
+    response = client.get('/api/system/check-update')
+
+    assert response.status_code == 200
+    data = response.get_json()
+
+    assert data['status'] == 'success'
+    assert data['data']['has_update'] is False
+    assert 'current_version' in data['data']
+    assert 'message' in data['data']

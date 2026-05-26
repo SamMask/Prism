@@ -1,90 +1,59 @@
 # Prism 文檔中心
 
-> **版本**: v1.4.1  
-> **更新日期**: 2025-12-15
+> **版本**: v2.4.5
+> **更新日期**: 2026-05-05
+> **狀態**: 🟢 穩定運行 — Headless KMS，AI 功能已移除
 
-歡迎來到 Prism 專案文檔。本資料夾包含所有技術文檔與開發指南。
-
----
-
-## 📚 文檔索引
-
-### 入門指南
-
-| 文檔 | 說明 | 適合對象 |
-|------|------|----------|
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | 部署與環境設定 | 使用者、運維 |
-| [CONTRIBUTING.md](./CONTRIBUTING.md) | 開發者貢獻指南 | 開發者 |
-
-### 技術文檔
-
-| 文檔 | 說明 | 適合對象 |
-|------|------|----------|
-| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 完整參考 | 開發者 |
-| [SCHEMA.md](./SCHEMA.md) | 資料庫結構與遷移歷程 | 開發者、DBA |
-
-### 專案管理
-
-| 文檔 | 說明 | 適合對象 |
-|------|------|----------|
-| [TODO.md](./TODO.md) | 開發進度與版本歷程 | 專案管理、開發者 |
-| [Prism.md](./Prism.md) | 專案完整說明書 | 所有人 |
+主文檔索引請見 [INDEX.md](./INDEX.md)。
 
 ---
 
 ## 🚀 快速開始
 
-### 使用者 (User)
+### 使用者（已打包版本）
 
-1. 下載發布的 ZIP 檔案
-2. 解壓縮後執行 `start.bat`
+1. 下載 Release ZIP，解壓縮
+2. 執行 `Prism.exe` 或 `python app.py`
 3. 瀏覽器開啟 `http://127.0.0.1:5000`
 
-### 開發者 (Developer)
+### 開發者
 
 ```bash
-# 安裝依賴
+# 後端
 pip install -r requirements.txt
-
-# 啟動開發伺服器
 python app.py
-```
 
-詳細說明請參考 [CONTRIBUTING.md](./CONTRIBUTING.md)
+# 前端（另開終端機）
+cd frontend
+npm install
+npm run dev   # → http://localhost:5173
+```
 
 ---
 
 ## 🧪 測試
 
 ```bash
-# 建立虛擬環境並執行測試
-python -m venv venv
-venv\Scripts\activate
-pip install flask pytest requests python-magic-bin Pillow
 pytest tests/ -v
+# 預期: 61 passed, 1 xfailed, 1 xpassed
 ```
-
-測試覆蓋 Notes, Tags, Categories, Upload, System API 等核心功能。
 
 ---
 
-## 📁 目錄結構
+## 📁 文件結構
 
 ```
 docs/
-├── README.md          # 本文件 (文檔索引)
-├── API_REFERENCE.md   # REST API 參考
-├── CONTRIBUTING.md    # 開發者指南
-├── DEPLOYMENT.md      # 部署說明
-├── SCHEMA.md          # 資料庫結構
-├── TODO.md            # 開發進度
-└── Prism.md           # 專案說明書
+├── INDEX.md            # 文檔索引（主入口）
+├── TODO.md             # 待辦清單 + 版本 Changelog  ← 持續更新
+├── SCHEMA.md           # DB Schema + Migration 歷程  ← 持續更新
+├── ARCHITECTURE.md     # C4 架構圖
+├── Prism.md            # 專案總體戰略
+├── API_REFERENCE.md    # REST API 完整參考
+├── CONTRIBUTING.md     # 開發者指南
+├── DEPLOYMENT.md       # 部署與環境設定
+├── ER-DIAGRAM.md       # 資料表 ER 圖
+├── SEQUENCE-UPLOAD.md  # 上傳流程 Sequence Diagram
+├── docs-V1.41/         # V1.41 舊版文件（歷史備份）
+└── 過期/               # 已封存的分析報告
 ```
-
----
-
-## 📝 文檔維護
-
-- 新增功能時請更新 `TODO.md`
-- 修改資料庫結構請更新 `SCHEMA.md`
-- API 變更請更新 `API_REFERENCE.md`

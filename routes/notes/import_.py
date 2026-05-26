@@ -142,17 +142,20 @@ def import_markdown():
             title = file.filename.replace('.md', '')
         
         # 解析 YAML front matter（如果存在）
-        note_type = '筆記'
+        category_name = '筆記'
         tags = []
-        thumbnail_only = False
         
         yaml_match = re.match(r'^---\s*\n(.*?)\n---\s*\n', content, re.DOTALL)
         if yaml_match:
             yaml_content = yaml_match.group(1)
-            # 簡單解析 type 和 tags
+            # 相容舊匯出：接受 type/category 作為分類名稱
             type_match = re.search(r'^type:\s*(.+)$', yaml_content, re.MULTILINE)
             if type_match:
-                note_type = type_match.group(1).strip()
+                category_name = type_match.group(1).strip()
+
+            category_match = re.search(r'^category:\s*(.+)$', yaml_content, re.MULTILINE)
+            if category_match:
+                category_name = category_match.group(1).strip()
             
             tags_match = re.search(r'^tags:\s*\[(.+)\]$', yaml_content, re.MULTILINE)
             if tags_match:
@@ -187,10 +190,22 @@ def import_markdown():
         # 建立筆記
         db = get_db()
         
+        category = db.execute(
+            'SELECT id FROM Categories WHERE name = ? LIMIT 1',
+            (category_name,)
+        ).fetchone()
+        if category:
+            category_id = category['id']
+        else:
+            default_category = db.execute(
+                'SELECT id FROM Categories WHERE is_default = 1 LIMIT 1'
+            ).fetchone()
+            category_id = default_category['id'] if default_category else None
+
         cursor = db.execute('''
-            INSERT INTO Notes (title, content, type, created_at, updated_at)
+            INSERT INTO Notes (title, content, category_id, created_at, updated_at)
             VALUES (?, ?, ?, datetime('now'), datetime('now'))
-        ''', (title, content, note_type))
+        ''', (title, content, category_id))
         
         note_id = cursor.lastrowid
         

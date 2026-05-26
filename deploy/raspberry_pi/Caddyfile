@@ -1,0 +1,14 @@
+# Prism - Caddy Reverse Proxy Configuration
+# 用途: 將 80 port 流量導向 Prism 的 5000 port
+#       使用者只需輸入 http://prism.local 即可連線，無需記 IP 或 Port
+#
+# 安裝位置: /etc/caddy/Caddyfile
+# 套用設定: sudo systemctl reload caddy
+#
+# 若需 HTTPS (自簽憑證，區網使用):
+#   將 ":80" 改為 "prism.local" 並確認 avahi-daemon 已設定
+#   Caddy 會自動處理 TLS (需要 443 port 開放)
+
+:80 {
+    reverse_proxy localhost:5000
+}

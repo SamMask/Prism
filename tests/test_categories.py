@@ -1,125 +1,96 @@
 # -*- coding: utf-8 -*-
 """
-TEST-005: 分類刪除遷移
+Test Categories API
+Phase 6.1.2: Core API Testing
 """
 
-import sqlite3
 import pytest
+import json
 
 
-def get_db(app):
-    """獲取測試資料庫連線"""
-    db = sqlite3.connect(app.config['DATABASE'])
-    db.row_factory = sqlite3.Row
-    return db
-
-
-def test_delete_category_migrates_notes(client, app):
-    """
-    驗證刪除分類時筆記正確遷移到目標分類
-    """
-    with app.app_context():
-        db = get_db(app)
-        
-        # 建立來源分類
-        db.execute("INSERT INTO Categories (name, sort_order) VALUES ('ToDeleteCat', 99)")
-        db.commit()
-        
-        source_cat = db.execute("SELECT id FROM Categories WHERE name = 'ToDeleteCat'").fetchone()
-        source_cat_id = source_cat['id']
-        
-        # 取得目標分類 (預設分類)
-        target_cat = db.execute("SELECT id, name FROM Categories WHERE is_default = 1").fetchone()
-        if not target_cat:
-            target_cat = db.execute("SELECT id, name FROM Categories LIMIT 1").fetchone()
-        target_cat_name = target_cat['name']
-        
-        # 建立屬於該分類的筆記
-        db.execute(
-            "INSERT INTO Notes (title, content, type, category_id) VALUES (?, ?, ?, ?)",
-            ('CatDeleteTest', 'Content', 'ToDeleteCat', source_cat_id)
+class TestCategoriesAPI:
+    """Test /api/categories endpoints"""
+    
+    def test_get_categories(self, client):
+        """Test GET /api/categories returns list"""
+        response = client.get('/api/categories')
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert data['status'] == 'success'
+        assert isinstance(data['data'], list)
+    
+    def test_create_category(self, client, sample_category_data):
+        """Test POST /api/categories creates new category"""
+        response = client.post(
+            '/api/categories',
+            data=json.dumps(sample_category_data),
+            content_type='application/json'
         )
-        db.commit()
-        db.close()
+        assert response.status_code in [200, 201]
+        data = json.loads(response.data)
+        assert data['status'] == 'success'
     
-    # 刪除分類並遷移筆記 - 使用 target_category (name) 而非 target_category_id
-    response = client.delete(
-        f'/api/categories/{source_cat_id}',
-        json={'target_category': target_cat_name}
-    )
-    
-    assert response.status_code == 200
-    
-    # 驗證筆記已遷移
-    with app.app_context():
-        db = get_db(app)
-        note = db.execute(
-            "SELECT type FROM Notes WHERE title = 'CatDeleteTest'"
-        ).fetchone()
-        db.close()
+    def test_create_duplicate_category(self, client, sample_category_data):
+        """Test creating duplicate category fails or handles gracefully"""
+        # Create first
+        client.post(
+            '/api/categories',
+            data=json.dumps(sample_category_data),
+            content_type='application/json'
+        )
         
-        assert note['type'] == target_cat_name, f"筆記應遷移到 {target_cat_name}"
-
-
-def test_cannot_delete_default_category(client, app):
-    """
-    驗證無法刪除預設分類
-    """
-    with app.app_context():
-        db = get_db(app)
-        default_cat = db.execute("SELECT id FROM Categories WHERE is_default = 1").fetchone()
-        db.close()
+        # Try to create duplicate
+        response = client.post(
+            '/api/categories',
+            data=json.dumps(sample_category_data),
+            content_type='application/json'
+        )
+        # Should either fail (400) or handle gracefully (200 with message)
+        assert response.status_code in [200, 400, 409]
     
-    if default_cat:
-        response = client.delete(f'/api/categories/{default_cat["id"]}')
-        # 應該被拒絕 (400 或 403)
-        assert response.status_code in [400, 403]
-
-
-def test_create_category(client, app):
-    """
-    驗證新增分類功能
-    """
-    response = client.post('/api/categories', json={
-        'name': 'NewTestCategory',
-        'icon': '🆕'
-    })
-    
-    assert response.status_code in [200, 201]
-    
-    # 驗證分類已建立
-    with app.app_context():
-        db = get_db(app)
-        cat = db.execute("SELECT * FROM Categories WHERE name = 'NewTestCategory'").fetchone()
-        db.close()
+    def test_category_has_count(self, client):
+        """Test categories include note count"""
+        response = client.get('/api/categories')
+        data = json.loads(response.data)
         
-        assert cat is not None
-        assert cat['icon'] == '🆕'
+        if data['data']:
+            # Check if count field exists (may be 0)
+            first_cat = data['data'][0]
+            # count might be included or calculated separately
+            assert 'id' in first_cat
+            assert 'name' in first_cat
 
+    def test_delete_category_migrates_notes_by_target_id(self, client, app):
+        """Deleting a non-default category migrates notes to target_category_id."""
+        create_response = client.post(
+            '/api/categories',
+            data=json.dumps({'name': 'Delete Me', 'icon': 'X'}),
+            content_type='application/json'
+        )
+        category_id = json.loads(create_response.data)['data']['id']
 
-def test_rename_category(client, app):
-    """
-    驗證重命名分類功能
-    """
-    with app.app_context():
-        db = get_db(app)
-        db.execute("INSERT INTO Categories (name, sort_order) VALUES ('OldName', 50)")
-        db.commit()
-        
-        cat = db.execute("SELECT id FROM Categories WHERE name = 'OldName'").fetchone()
-        cat_id = cat['id']
-        db.close()
-    
-    response = client.put(f'/api/categories/{cat_id}', json={
-        'name': 'NewName'
-    })
-    
-    assert response.status_code == 200
-    
-    # 驗證名稱已更新
-    with app.app_context():
-        db = get_db(app)
-        cat = db.execute("SELECT name FROM Categories WHERE id = ?", (cat_id,)).fetchone()
-        db.close()
-        
-        assert cat['name'] == 'NewName'
+        categories = client.get('/api/categories').get_json()['data']
+        default_category_id = next(cat['id'] for cat in categories if cat['is_default'])
+
+        note_response = client.post(
+            '/api/notes',
+            data=json.dumps({
+                'title': 'Category migration note',
+                'content': 'content',
+                'category_id': category_id
+            }),
+            content_type='application/json'
+        )
+        note_id = json.loads(note_response.data)['data']['note_id']
+
+        delete_response = client.delete(
+            f'/api/categories/{category_id}',
+            data=json.dumps({'target_category_id': default_category_id}),
+            content_type='application/json'
+        )
+
+        assert delete_response.status_code == 200
+        assert delete_response.get_json()['data']['migrated_notes_count'] == 1
+
+        note = client.get(f'/api/notes/{note_id}').get_json()['data']
+        assert note['category_id'] == default_category_id

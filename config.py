@@ -1,11 +1,29 @@
 import os
+import sys
+
+def get_base_dir():
+    """Get base directory - handles both dev and PyInstaller frozen mode"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled exe - use exe's directory
+        return os.path.dirname(sys.executable)
+    else:
+        # Running as script
+        return os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     """
     Base Configuration
     """
     # 專案根目錄
-    BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+    BASE_DIR = get_base_dir()
+
+    # Versioning (Single Source of Truth)
+    PRISM_VERSION = "2.4.9"
+
+    # Optional update check endpoint. If unset, the backend tries to derive a
+    # GitHub releases endpoint from GITHUB_REPOSITORY or the local git remote.
+    PRISM_RELEASE_API_URL = os.environ.get('PRISM_RELEASE_API_URL', '')
+
 
     # 資料庫路徑
     DATABASE = os.environ.get('DATABASE_PATH') or os.path.join(BASE_DIR, 'knowledge.db')
@@ -21,6 +39,13 @@ class Config:
 
     # JSON 回應支援 Unicode (顯示中文)
     JSON_AS_ASCII = False
+
+    # V2: Frontend dist directory
+    FRONTEND_DIST = os.path.join(BASE_DIR, 'frontend', 'dist')
+    
+    # V2: Enable React SPA mode (set via environment variable)
+    V2_MODE = os.environ.get('PRISM_V2', '').lower().strip() in ('true', '1', 'yes')
+
 
 class DevelopmentConfig(Config):
     DEBUG = True

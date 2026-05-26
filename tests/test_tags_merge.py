@@ -72,7 +72,13 @@ def test_merge_tags_transfers_notes(client, app):
         db.execute("INSERT OR IGNORE INTO Tags (name) VALUES ('merge_target')")
         
         # 建立測試筆記
-        db.execute("INSERT INTO Notes (title, content, type) VALUES ('MergeTestNote', 'Content', '筆記')")
+        default_category_id = db.execute(
+            "SELECT id FROM Categories WHERE is_default = 1 LIMIT 1"
+        ).fetchone()['id']
+        db.execute(
+            "INSERT INTO Notes (title, content, category_id) VALUES (?, ?, ?)",
+            ('MergeTestNote', 'Content', default_category_id)
+        )
         db.commit()
         
         source_tag = db.execute("SELECT id FROM Tags WHERE name = 'merge_source'").fetchone()

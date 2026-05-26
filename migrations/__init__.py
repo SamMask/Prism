@@ -78,6 +78,124 @@ MIGRATIONS: List[Tuple[int, str, List[str]]] = [
         ) WHERE category_id IS NULL
         """,
     ]),
+    
+    # v2.0.0 Phase 3.4: 新增附件系統
+    (8, "add_note_attachments", [
+        """
+        CREATE TABLE IF NOT EXISTS Note_Attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            note_id INTEGER NOT NULL,
+            file_path TEXT NOT NULL,
+            file_type TEXT DEFAULT 'md',
+            title TEXT,
+            size_bytes INTEGER,
+            is_auto_extracted INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (note_id) REFERENCES Notes(id) ON DELETE CASCADE
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_attachments_note_id ON Note_Attachments(note_id)",
+    ]),
+    
+    # v2.0.0 Phase 3.2: 語意搜尋 - Embedding 欄位
+    (9, "add_text_embedding", [
+        "ALTER TABLE Notes ADD COLUMN text_embedding BLOB",
+        "ALTER TABLE Notes ADD COLUMN embedding_updated_at DATETIME",
+    ]),
+
+    # v2.1.0: AI Metadata & Lineage (SCHEMA-V2 Section 2.1)
+    (10, "add_ai_metadata_and_lineage", [
+        "ALTER TABLE Notes ADD COLUMN ai_summary TEXT",       # AI 生成的摘要
+        "ALTER TABLE Notes ADD COLUMN ai_tags TEXT",          # AI 建議的標籤 (JSON Array)
+        "ALTER TABLE Notes ADD COLUMN embedding_status TEXT", # 'pending', 'indexed'
+        "ALTER TABLE Notes ADD COLUMN parent_id INTEGER REFERENCES Notes(id)", # Prompt Versioning
+        "CREATE INDEX IF NOT EXISTS idx_notes_parent_id ON Notes(parent_id)",
+    ]),
+    
+    # v2.2.0: Embeddings Table (SCHEMA-V2 Section 1.1)
+    # 獨立的向量表，支援多資源類型 (notes, images, attachments)
+    (11, "create_embeddings_table", [
+        """
+        CREATE TABLE IF NOT EXISTS Embeddings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resource_type TEXT NOT NULL,      -- 'note', 'image', 'attachment'
+            resource_id INTEGER NOT NULL,     -- 對應 Notes.id / Attachment.id
+            chunk_index INTEGER DEFAULT 0,    -- 0=全文, 1,2,3...=長文切塊 (RAG 預留)
+            model_name TEXT NOT NULL,         -- e.g., 'all-MiniLM-L6-v2'
+            vector BLOB NOT NULL,             -- 二進位向量數據
+            content_hash TEXT,                -- MD5 Hash 用於增量更新
+            dimensions INTEGER,               -- 向量維度 (e.g., 384)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(resource_type, resource_id, chunk_index)
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_embeddings_resource ON Embeddings(resource_type, resource_id)",
+    ]),
+
+    # Phase 0: Kill Notes.type (Architecture Purification)
+    # 移除雙重事實 (Double Truth) - type 欄位已由 category_id 取代
+    (12, "kill_notes_type", [
+        # 1. 最後檢查：確保所有筆記都有 category_id
+        """
+        UPDATE Notes
+        SET category_id = (SELECT id FROM Categories WHERE is_default = 1 LIMIT 1)
+        WHERE category_id IS NULL
+        """,
+        # 2. 如果預設分類不存在，使用第一個分類
+        """
+        UPDATE Notes
+        SET category_id = (SELECT id FROM Categories ORDER BY sort_order LIMIT 1)
+        WHERE category_id IS NULL
+        """,
+        # 3. 移除相關索引與欄位
+        "DROP INDEX IF EXISTS idx_notes_type",
+        "ALTER TABLE Notes DROP COLUMN type",
+    ]),
+
+    # Phase 0 Step 2: Create AI_Tasks table (Proper Task Queue)
+    # 取代 ThreadPoolExecutor，實現任務持久化
+    (13, "create_ai_tasks_table", [
+        """
+        CREATE TABLE IF NOT EXISTS AI_Tasks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_type TEXT NOT NULL,              -- 'embedding', 'transcription', 'tagging'
+            status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'processing', 'completed', 'failed'
+            payload TEXT NOT NULL,                 -- JSON, 任務參數 (e.g., {"note_id": 123})
+            result TEXT,                           -- JSON, 執行結果或錯誤訊息
+            retry_count INTEGER DEFAULT 0,         -- 重試次數 (max 3)
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+        """,
+        "CREATE INDEX IF NOT EXISTS idx_ai_tasks_status ON AI_Tasks(status)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_tasks_type ON AI_Tasks(task_type)",
+        "CREATE INDEX IF NOT EXISTS idx_ai_tasks_created ON AI_Tasks(created_at)",
+    ]),
+
+    # v2.3.0: Strip AI features — drop AI columns and tables
+    # Prism 轉型為純筆記 + Headless KMS，移除所有 AI/Embedding 依賴
+    (14, "strip_ai_features", [
+        # 1. Drop AI columns from Notes
+        "ALTER TABLE Notes DROP COLUMN text_embedding",
+        "ALTER TABLE Notes DROP COLUMN embedding_updated_at",
+        "ALTER TABLE Notes DROP COLUMN ai_summary",
+        "ALTER TABLE Notes DROP COLUMN ai_tags",
+        "ALTER TABLE Notes DROP COLUMN embedding_status",
+        # 2. Drop AI-related tables
+        "DROP TABLE IF EXISTS AI_Tasks",
+        "DROP TABLE IF EXISTS Embeddings",
+        # 3. Drop related indexes (safe even if already gone)
+        "DROP INDEX IF EXISTS idx_ai_tasks_status",
+        "DROP INDEX IF EXISTS idx_ai_tasks_type",
+        "DROP INDEX IF EXISTS idx_ai_tasks_created",
+        "DROP INDEX IF EXISTS idx_embeddings_resource",
+    ]),
+
+    # v2.4.3: prompt_params was created in init_db but never backfilled via migration.
+    # Existing upgraded databases could therefore miss this column.
+    (15, "add_prompt_params", [
+        "ALTER TABLE Notes ADD COLUMN prompt_params TEXT",
+    ]),
 ]
 
 
@@ -185,9 +303,14 @@ def run_migrations(db) -> int:
                     try:
                         db.execute(sql_clean)
                     except sqlite3.OperationalError as e:
+                        err_msg = str(e).lower()
                         # 欄位已存在的錯誤可以忽略 (冪等性)
-                        if "duplicate column name" in str(e).lower():
+                        if "duplicate column name" in err_msg:
                             print(f"  [SKIP] 欄位已存在，跳過")
+                            continue
+                        # 欄位不存在的錯誤也可以忽略 (DROP COLUMN 冪等性)
+                        if "no such column" in err_msg:
+                            print(f"  [SKIP] 欄位已不存在，跳過")
                             continue
                         raise
                 

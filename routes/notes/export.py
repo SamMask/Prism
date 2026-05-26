@@ -49,10 +49,17 @@ def export_batch():
             
             for note_id in note_ids:
                 # 取得筆記資料
-                note = db.execute(
-                    'SELECT id, title, content, type, remarks FROM Notes WHERE id = ?',
-                    (note_id,)
-                ).fetchone()
+                note = db.execute('''
+                    SELECT
+                        n.id,
+                        n.title,
+                        n.content,
+                        COALESCE(c.name, 'Uncategorized') AS category_name,
+                        n.remarks
+                    FROM Notes n
+                    LEFT JOIN Categories c ON n.category_id = c.id
+                    WHERE n.id = ?
+                ''', (note_id,)).fetchone()
                 
                 if not note:
                     continue
@@ -106,7 +113,8 @@ def build_markdown(note, tags):
     """建立 Markdown 內容 (含 YAML Front Matter)"""
     frontmatter = f"""---
 title: "{note['title']}"
-type: {note['type']}
+type: {note['category_name']}
+category: {note['category_name']}
 tags: [{', '.join(tags)}]
 ---
 

@@ -1,6 +1,10 @@
 # Database
 knowledge.db
 knowledge.db-journal
+local_insight.db
+local_insight.db-journal
+*.db-wal
+*.db-shm
 
 # Python
 __pycache__/
@@ -15,6 +19,13 @@ ENV/
 
 # User uploads
 static/uploads/
+static/test_uploads/
+docs/attachments/
+docs/notes/
+docs/蜜拉記憶宮殿同步到筆電.md
+
+# Local agent/runtime state
+.omx/
 
 # Temp files
 garbage-can/
@@ -36,7 +47,7 @@ build/
 *.egg-info/
 
 # IDE & Editor
-.vscode/
+# .vscode/
 .idea/
 *.swp
 *.bak

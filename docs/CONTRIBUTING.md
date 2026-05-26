@@ -1,101 +1,182 @@
-# Contributing to Prism (Local Insight)
+# Contributing to Prism
 
-感謝您有興趣參與 Prism 的開發！這份文件將引導您了解專案結構與開發流程。
+## 快速開始 (Getting Started)
 
-## 🚀 快速開始 (Getting Started)
+### 環境需求
 
-### 1. 環境需求
+| 軟體 | 版本 | 說明 |
+|------|------|------|
+| Python | 3.10+ | 後端運行環境 |
+| Node.js | 18+ | 前端建置工具 (Vite) |
+| SQLite | 內建 | 無需額外安裝 |
 
-| 軟體         | 必要性   | 說明                               |
-| ------------ | -------- | ---------------------------------- |
-| Python 3.10+ | **必要** | 核心運行環境                       |
-| Flask        | 必要     | 由 `requirements.txt` 安裝         |
-| Pillow       | 選用     | 圖片縮圖功能，未安裝時只能上傳原圖 |
-| SQLite       | 內建     | 無需額外安裝                       |
-
-### 2. 安裝依賴
+### 安裝依賴
 
 ```bash
+# 後端
 pip install -r requirements.txt
-pip install Pillow  # 選用：啟用縮圖功能
+
+# 前端
+cd frontend
+npm install
 ```
 
-### 3. 啟動開發伺服器
+### 啟動開發伺服器
 
 ```bash
+# 後端 (Flask API Server)
 python app.py
+# → http://127.0.0.1:5000
+
+# 前端 (Vite HMR，另開終端機)
+cd frontend
+npm run dev
+# → http://127.0.0.1:5173
 ```
 
-伺服器預設於 `http://127.0.0.1:5000` 啟動。詳細環境變數設定請參考 [部署指南](./DEPLOYMENT.md)。
+> **V2 模式說明**: 環境變數 `PRISM_V2=true` 讓 Flask 以 React SPA 模式服務。
+> 開發時前後端分別啟動；生產部署先 `npm run build`，再 `python app.py`。
 
-## 📂 專案結構 (Project Structure)
+---
+
+## 專案結構 (Project Structure)
 
 ```
-/
-├── app.py                 # Flask 應用程式入口與主要路由
-├── routes/                # 路由模組 (Blueprints)
-│   ├── notes/             # 筆記相關 (CRUD, History)
-│   ├── tags.py            # 標籤管理
-│   └── ...
-├── templates/             # Jinja2 模板 (HTML)
-│   ├── components/        # 可重用元件 (Modals, Grids)
-│   └── prompt-builder/    # 提示詞產生器元件
-├── static/                # 靜態資源
-│   ├── css/               # Tailwind (CDN) + Custom CSS
-│   ├── js/                # Vue.js 邏輯
-│   └── locales/           # i18n 翻譯檔
-└── knowledge.db           # SQLite 資料庫 (自動建立)
+D:/AI/Prism/
+├── app.py                  # Flask 應用程式入口 (create_app)
+├── config.py               # 設定常數 (PRISM_VERSION, port)
+├── db.py                   # 資料庫連線 (get_db / close_db)
+├── migrations/             # 版本化 DB 遷移 (v1–v15，啟動時自動執行)
+├── routes/                 # Flask Blueprints
+│   ├── notes/              # 筆記子模組
+│   │   ├── crud.py         # GET/POST/PUT/DELETE /api/notes
+│   │   ├── actions.py      # pin / archive / duplicate / reorder
+│   │   ├── batch.py        # 批次 category / tags / delete
+│   │   ├── history.py      # 版本歷史 / 還原
+│   │   ├── import_.py      # 匯入 Markdown
+│   │   └── export.py       # 匯出 ZIP
+│   ├── tags.py             # 標籤 CRUD + 合併
+│   ├── categories.py       # 分類 CRUD
+│   ├── upload.py           # 圖片上傳 / 刪除 / URL 下載 / prompt 擷取
+│   ├── attachments.py      # 附件管理 + 長文分離
+│   ├── cleanup.py          # 孤兒圖片 / 原圖清理 / 斷圖修復
+│   ├── system.py           # VACUUM / 統計 / 端口設定 / WAL
+│   ├── server.py           # 硬體監控 / 日誌 / 備份 / 版本 (Headless)
+│   ├── prompt_options.py   # Prompt Builder 選項配置
+│   └── export.py           # JSON / DB / 圖片 匯出入
+├── frontend/               # React SPA (Vite)
+│   ├── src/
+│   │   ├── components/     # UI 組件 (含 ui/ 設計系統)
+│   │   ├── hooks/editor/   # NoteEditor 拆分 hooks (6 個)
+│   │   ├── pages/          # 路由頁面
+│   │   ├── services/api.ts # axios API 客戶端
+│   │   └── stores/         # Zustand 狀態 (appStore / toastStore)
+│   ├── dist/               # 建置產出 (Flask 靜態服務)
+│   └── package.json
+├── tests/                  # pytest 測試套件
+├── knowledge.db            # SQLite 資料庫 (WAL mode)
+└── docs/                   # 技術文件
 ```
 
-## 🛠 開發規範 (Development Guidelines)
+---
 
-### 1. 程式碼風格 (Code Style)
+## 開發規範 (Development Guidelines)
 
-- **Python**: 遵循 PEP 8。變數命名使用 `snake_case`。
-- **JavaScript (Vue)**: 使用 Composition API。變數命名使用 `camelCase`。
-- **CSS**: 使用 Tailwind CSS Utility classes 為主，特殊樣式寫在 `styles.css`。
+### 程式碼風格
 
-### 2. 資料庫遷移 (Database Migrations)
+| 層 | 規範 |
+|----|------|
+| **Python** | PEP 8，`snake_case`，縮排 ≤ 3 層 |
+| **TypeScript / React** | `camelCase` 變數，`PascalCase` 組件，Composition 優先 |
+| **CSS** | Tailwind Utility Class 為主；CSS 變數 `--color-*` 定義於 `index.css` |
 
-- 本專案使用輕量級遷移系統。
-- 若修改了 `schema.sql`，請確保在 `migrations/` 目錄下建立相應的遷移腳本。
-- 使用 `python migrations/manage.py migrate` 執行遷移。
+### 核心原則
 
-### 3. 國際化 (i18n)
+- **函式單一職責** — 只做一件事，長度 < 50 行為佳
+- **不破壞現有 API 契約** — 新增端點可以，修改現有簽名需建 Migration
+- **不直接操作 DB** — 統一使用 `db.py` 的 `get_db()`
+- **不引入 AI/ML 依賴** — numpy、torch、sentence-transformers 等已全面移除
+- **不使用 CDN** — 所有前端資源必須本地化（離線優先）
 
-- 所有使用者介面文字**必須**支援多語系。
-- 新增文字時，請同步更新 `static/locales/zh-TW.json` 與 `en.json`。
+### 資料庫遷移
 
-## 🧪 測試 (Testing)
+- 遷移腳本位於 `migrations/__init__.py`，依版本號順序執行
+- 每個 Migration 必須**冪等**（重複執行結果相同）
+- 修改 Schema 前必讀 `docs/SCHEMA.md`
 
-提交修復或新功能前，請確保：
+---
 
-1. **Server 啟動正常**: 執行 `python -c "from app import create_app; print(create_app())"` 無錯誤。
-2. **基本功能運作**: 新增/編輯/刪除筆記功能正常。
-3. **無主控台錯誤**: 瀏覽器 Console 無紅色錯誤訊息。
+## 測試 (Testing)
 
-## 📝 提交變更 (Submitting Changes)
+### 後端 (pytest)
 
-- 請保持 Commit 訊息簡潔明確 (例如: `fix: text contrast issue` 或 `feat: auto-title generation`)。
-- 重大變更請先更新 `docs/TODO.md` 或 `implementation_plan.md`。
+```bash
+pytest tests/ -v
+# 預期: 全綠（以 test_run.log 為準）
+```
 
-## 📦 打包發布 (Packaging)
+測試檔案位於 `tests/`，涵蓋：CRUD、批次操作、標籤合併、上傳安全性、SQL 注入防護。
 
-發布新版本時，執行以下腳本：
+### 前端 (TypeScript)
 
-| 腳本                        | 產出                              | 說明                          |
-| --------------------------- | --------------------------------- | ----------------------------- |
-| `scripts\pack.bat`          | `Prism_v*_*.zip` (~8MB)           | 輕量版，用戶需先安裝 Python   |
-| `scripts\pack_portable.bat` | `Prism_v*_Portable_*.zip` (~80MB) | 完整版，內嵌 Python，解壓即用 |
+```bash
+cd frontend
+npx tsc --noEmit
+# 零錯誤才算通過
+```
 
-### 版本號更新
+### E2E (Playwright)
 
-發布前請更新以下檔案中的版本號：
+位於 `tests/e2e/`，測試核心流程（新增 / 編輯 / 刪除 / 搜尋）。
 
-- `scripts/pack.bat` 和 `scripts/pack_portable.bat` 中的 `VERSION`
-- `start.bat` 標題
-- `README.md` 徽章
+---
 
-## 🤝 行為準則 (Code of Conduct)
+## 授權規範 (License Compliance)
 
-保持友善、尊重。我們致力於打造一個開放、包容的開發環境。
+| 燈號 | 協議 | 策略 |
+|------|------|------|
+| 🟢 | MIT, Apache 2.0 | 可複製，需保留版權聲明 |
+| 🟡 | GPL-3.0 | 僅參考架構，禁止直接複製 |
+| 🛑 | AGPL-3.0 | 完全禁止，僅限學習思路 |
+
+---
+
+## 打包發布 (Packaging)
+
+### 版本號 (Single Source of Truth)
+
+```python
+# config.py
+PRISM_VERSION = "2.4.5"
+```
+
+> ⚠️ **發版前必檢**：`config.py` 的 `PRISM_VERSION` 必須與 `docs/TODO.md` Changelog 最新一列、`README.md` 開頭 badge 三處同步。
+> 過去曾發生 `config.py` 卡在 `2.0.0-alpha.1` 而 Changelog 已到 `v2.4.1` 的長期 desync，詳見 [`docs/過期/20260412-cco-綜合分析報告.md`](./過期/20260412-cco-綜合分析報告.md) §3 P2-10.7。
+
+### 建置流程
+
+```bash
+# 1. 建置前端
+cd frontend
+npm run build
+
+# 2. 打包 EXE (PyInstaller)
+python build_release.py
+```
+
+| 產出 | 說明 |
+|------|------|
+| `Prism_v*_*.zip` | 輕量版，需安裝 Python |
+| `Prism_v*_Portable_*.zip` | 完整版，內嵌 Python，解壓即用 |
+
+### Release Checklist（每次發版前必確認）
+
+- [ ] `config.py` 的 `PRISM_VERSION` 與 `docs/TODO.md` Changelog 最新版本一致
+- [ ] `docs/TODO.md` Changelog 已新增本版條目（版本號、日期、摘要）
+- [ ] `README.md` 開頭的版本 badge 已同步
+- [ ] `pytest tests/ -v` 全部通過（含 `test_schema_regression.py`）
+- [ ] `cd frontend && npx tsc --noEmit` 零錯誤
+- [ ] `cd frontend && npm run build` 成功，`frontend/dist/` 已更新
+- [ ] 若有新 Migration：確認版本號遞增，且遷移為冪等操作
+- [ ] `docs/INDEX.md`、`docs/Prism.md`、`docs/SEQUENCE-UPLOAD.md`、`docs/CONTRIBUTING.md`、`docs/DEPLOYMENT.md` 的版本 / 日期 / 「最後更新」標記已同步本版
+- [ ] `AGENTS.md` 與 `CLAUDE.md` 內容已同步（兩份互為鏡像，diff 應僅有檔名相關差異）：`diff AGENTS.md CLAUDE.md`

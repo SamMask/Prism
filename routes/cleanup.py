@@ -13,37 +13,70 @@ from db import get_db  # v1.8.9: 統一資料庫連線層
 
 
 def get_all_referenced_images():
-    """從資料庫取得所有被引用的圖片路徑"""
+    """從資料庫取得所有被引用的圖片路徑
+
+    來源：
+    1. Notes.content       — 筆記本文中的內嵌圖片
+    2. Notes.cover_image   — 封面圖
+    3. Note_Attachments    — 附件 .md 檔內的圖片引用（修正：避免誤刪附件圖片）
+    """
     db = get_db()
-    
-    # 查詢所有筆記的 content 和 cover_image
-    rows = db.execute('''
-        SELECT content, cover_image FROM Notes
-    ''').fetchall()
-    
     referenced = set()
-    
-    # 正則表達式匹配圖片路徑
-    # 匹配: ![...](/static/uploads/xxx.jpg) 或 src="/static/uploads/xxx.jpg"
+
+    # 正則表達式匹配 /static/uploads/ 路徑
     image_pattern = re.compile(r'/static/uploads/([^"\'\)\s]+)')
-    
+
+    # --- 來源 1 & 2：Notes 表 ---
+    rows = db.execute('SELECT content, cover_image FROM Notes').fetchall()
     for row in rows:
-        # 從 content 中提取圖片
         content = row['content'] or ''
-        matches = image_pattern.findall(content)
-        for match in matches:
+        for match in image_pattern.findall(content):
             referenced.add(match)
-        
-        # cover_image 可能是完整路徑或只是檔名
+
         cover = row['cover_image']
         if cover:
-            # 提取檔名
             if '/static/uploads/' in cover:
                 filename = cover.split('/static/uploads/')[-1]
             else:
                 filename = cover
             referenced.add(filename)
-    
+
+    # --- 來源 3：Note_Attachments 附件 ---
+    # 3a. 附件本身是 static/uploads/ 內的圖片（直接保護）
+    # 3b. 附件 .md/.txt/.html 檔案內嵌的 /static/uploads/ 圖片連結
+    try:
+        att_rows = db.execute('SELECT file_path FROM Note_Attachments').fetchall()
+        base_dir = current_app.root_path
+        image_exts = {'.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'}
+        for att in att_rows:
+            file_path = att['file_path']
+            if not file_path:
+                continue
+
+            # 3a: 附件本身是圖片且路徑在 static/uploads/ 內
+            if '/static/uploads/' in file_path:
+                filename = file_path.split('/static/uploads/')[-1]
+                referenced.add(filename)
+                continue
+
+            # 3b: 讀取文字型附件內容，掃內嵌圖片連結
+            full_path = os.path.join(base_dir, file_path)
+            if not os.path.isfile(full_path):
+                continue
+            ext = os.path.splitext(full_path)[1].lower()
+            if ext not in ('.md', '.txt', '.html'):
+                continue
+            try:
+                with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    content = f.read()
+                for match in image_pattern.findall(content):
+                    referenced.add(match)
+            except OSError:
+                pass
+    except Exception:
+        # Note_Attachments 表不存在（舊版 DB）時靜默跳過
+        pass
+
     return referenced
 
 

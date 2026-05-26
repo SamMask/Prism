@@ -13,9 +13,21 @@ def test_batch_delete_notes(client, app):
     # 1. Create a few notes with unique titles
     with app.app_context():
         db = sqlite3.connect(app.config['DATABASE'])
-        db.execute("INSERT INTO Notes (title, content, type) VALUES ('BatchDeleteTest1', 'Content 1', '筆記')")
-        db.execute("INSERT INTO Notes (title, content, type) VALUES ('BatchDeleteTest2', 'Content 2', '筆記')")
-        db.execute("INSERT INTO Notes (title, content, type) VALUES ('BatchDeleteTest3', 'Content 3', '筆記')")
+        default_category_id = db.execute(
+            "SELECT id FROM Categories WHERE is_default = 1 LIMIT 1"
+        ).fetchone()[0]
+        db.execute(
+            "INSERT INTO Notes (title, content, category_id) VALUES (?, ?, ?)",
+            ('BatchDeleteTest1', 'Content 1', default_category_id)
+        )
+        db.execute(
+            "INSERT INTO Notes (title, content, category_id) VALUES (?, ?, ?)",
+            ('BatchDeleteTest2', 'Content 2', default_category_id)
+        )
+        db.execute(
+            "INSERT INTO Notes (title, content, category_id) VALUES (?, ?, ?)",
+            ('BatchDeleteTest3', 'Content 3', default_category_id)
+        )
         db.commit()
         
         # Get only the test notes IDs (not the welcome note)

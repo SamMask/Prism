@@ -25,19 +25,20 @@ def export_json():
                 n.id,
                 n.title,
                 n.content,
-                n.type,
+                COALESCE(c.name, 'Uncategorized') as category,
                 n.remarks,
                 n.cover_image,
                 n.created_at,
                 n.updated_at,
                 (SELECT GROUP_CONCAT(t2.name, '||')
-                 FROM Note_Tags nt2 
-                 JOIN Tags t2 ON nt2.tag_id = t2.id 
+                 FROM Note_Tags nt2
+                 JOIN Tags t2 ON nt2.tag_id = t2.id
                  WHERE nt2.note_id = n.id) as tags,
                 (SELECT GROUP_CONCAT(s2.url, '||')
-                 FROM Source_Urls s2 
+                 FROM Source_Urls s2
                  WHERE s2.note_id = n.id) as urls
             FROM Notes n
+            LEFT JOIN Categories c ON n.category_id = c.id
             ORDER BY n.updated_at DESC
         '''
         notes_rows = db.execute(notes_query).fetchall()
@@ -48,7 +49,7 @@ def export_json():
                 'id': row['id'],
                 'title': row['title'],
                 'content': row['content'],
-                'type': row['type'],
+                'category': row['category'],
                 'remarks': row['remarks'],
                 'cover_image': row['cover_image'],
                 'created_at': row['created_at'],
@@ -94,6 +95,95 @@ def export_json():
             'status': 'error',
             'message': str(e)
         }), 500
+
+
+@export_bp.route('/export/markdown', methods=['GET'])
+def export_markdown():
+    """匯出所有筆記為 Markdown zip (每筆一個 .md，frontmatter + body)"""
+    try:
+        import zipfile
+        import io
+        import re
+
+        db = get_db()
+        rows = db.execute('''
+            SELECT
+                n.id, n.title, n.content, n.remarks,
+                n.is_pinned, n.is_archived,
+                n.created_at, n.updated_at,
+                COALESCE(c.name, 'Uncategorized') as category,
+                (SELECT GROUP_CONCAT(t.name, '||')
+                 FROM Note_Tags nt JOIN Tags t ON nt.tag_id = t.id
+                 WHERE nt.note_id = n.id) as tags
+            FROM Notes n
+            LEFT JOIN Categories c ON n.category_id = c.id
+            ORDER BY n.id
+        ''').fetchall()
+
+        def slug(s, limit=40):
+            s = re.sub(r'[^\w一-鿿\-]+', '-', (s or '').strip())
+            s = re.sub(r'-+', '-', s).strip('-')
+            return s[:limit] or 'untitled'
+
+        def yaml_escape(s):
+            if s is None:
+                return '""'
+            s = str(s).replace('"', '\\"').replace('\n', ' ')
+            return f'"{s}"'
+
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for row in rows:
+                tags = row['tags'].split('||') if row['tags'] else []
+                tags_yaml = '[' + ', '.join(yaml_escape(t) for t in tags) + ']' if tags else '[]'
+
+                frontmatter = (
+                    '---\n'
+                    f'id: {row["id"]}\n'
+                    f'title: {yaml_escape(row["title"])}\n'
+                    f'category: {yaml_escape(row["category"])}\n'
+                    f'tags: {tags_yaml}\n'
+                    f'is_pinned: {bool(row["is_pinned"])}\n'
+                    f'is_archived: {bool(row["is_archived"])}\n'
+                    f'created_at: {yaml_escape(row["created_at"])}\n'
+                    f'updated_at: {yaml_escape(row["updated_at"])}\n'
+                )
+                if row['remarks']:
+                    frontmatter += f'remarks: {yaml_escape(row["remarks"])}\n'
+                frontmatter += '---\n\n'
+
+                body = row['content'] or ''
+                filename = f'{row["id"]:04d}-{slug(row["title"])}.md'
+                zf.writestr(filename, frontmatter + body)
+
+            # Manifest 索引
+            manifest = {
+                'export_info': {
+                    'version': '1.0',
+                    'format': 'markdown',
+                    'exported_at': datetime.now().isoformat(),
+                    'notes_count': len(rows),
+                },
+            }
+            zf.writestr('_manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2))
+
+        memory_file.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        zip_filename = f'prism_markdown_{timestamp}.zip'
+
+        from flask import Response
+        return Response(
+            memory_file.getvalue(),
+            mimetype='application/zip',
+            headers={
+                'Content-Disposition': f'attachment; filename={zip_filename}'
+            }
+        )
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @export_bp.route('/export/db', methods=['GET'])
@@ -188,6 +278,164 @@ def export_images():
         )
     
     except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@export_bp.route('/import/json', methods=['POST'])
+def import_json():
+    """
+    匯入 JSON 資料
+    
+    Request Body:
+    {
+        "data": { ... },  // 匯出的 JSON 資料
+        "mode": "skip" | "duplicate"  // skip = 略過重複, duplicate = 建立副本
+    }
+    
+    Response:
+    {
+        "imported": 10,
+        "skipped": 5,
+        "duplicates": ["標題1", "標題2"]
+    }
+    """
+    try:
+        request_data = request.get_json()
+        
+        if not request_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'No data provided'
+            }), 400
+        
+        import_data = request_data.get('data')
+        mode = request_data.get('mode', 'skip')  # 預設略過重複
+        
+        if not import_data or 'notes' not in import_data:
+            return jsonify({
+                'status': 'error',
+                'message': 'Invalid import data format'
+            }), 400
+        
+        db = get_db()
+        
+        imported_count = 0
+        skipped_count = 0
+        duplicate_titles = []
+        
+        notes = import_data.get('notes', [])
+        default_category = db.execute(
+            'SELECT id FROM Categories WHERE is_default = 1 LIMIT 1'
+        ).fetchone()
+        default_category_id = default_category['id'] if default_category else None
+        
+        for note in notes:
+            title = note.get('title', '').strip()
+            content = note.get('content', '').strip()
+            
+            # 檢查重複 (根據標題 + 內容前 100 字)
+            content_preview = content[:100] if content else ''
+            existing = db.execute('''
+                SELECT id, title FROM Notes 
+                WHERE title = ? AND SUBSTR(content, 1, 100) = ?
+            ''', (title, content_preview)).fetchone()
+            
+            if existing:
+                if mode == 'skip':
+                    skipped_count += 1
+                    duplicate_titles.append(title or '無標題')
+                    continue
+                elif mode == 'duplicate':
+                    # 建立副本，標題加上 (Import)
+                    title = f"{title} (Import)" if title else "(Imported)"
+            
+            category_name = (note.get('category') or note.get('type') or '').strip()
+            category_id = default_category_id
+            if category_name:
+                category = db.execute(
+                    'SELECT id FROM Categories WHERE name = ? LIMIT 1',
+                    (category_name,)
+                ).fetchone()
+                if category:
+                    category_id = category['id']
+
+            # 插入新筆記
+            try:
+                cursor = db.execute('''
+                    INSERT INTO Notes (
+                        title, content, category_id, remarks, cover_image, created_at, updated_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    title or '無標題',
+                    content,
+                    category_id,
+                    note.get('remarks', ''),
+                    note.get('cover_image', ''),
+                    note.get('created_at', datetime.now().isoformat()),
+                    note.get('updated_at', datetime.now().isoformat())
+                ))
+                
+                new_note_id = cursor.lastrowid
+                
+                # 處理標籤
+                tags = note.get('tags', [])
+                for tag_name in tags:
+                    if not tag_name:
+                        continue
+                    # 確保標籤存在
+                    existing_tag = db.execute(
+                        'SELECT id FROM Tags WHERE name = ?', 
+                        (tag_name,)
+                    ).fetchone()
+                    
+                    if existing_tag:
+                        tag_id = existing_tag['id']
+                    else:
+                        tag_cursor = db.execute(
+                            'INSERT INTO Tags (name) VALUES (?)', 
+                            (tag_name,)
+                        )
+                        tag_id = tag_cursor.lastrowid
+                    
+                    # 建立筆記-標籤關聯
+                    db.execute(
+                        'INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)',
+                        (new_note_id, tag_id)
+                    )
+                
+                # 處理 URLs
+                urls = note.get('urls', [])
+                for url in urls:
+                    if url:
+                        db.execute(
+                            'INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)',
+                            (new_note_id, url)
+                        )
+                
+                imported_count += 1
+                
+            except Exception as e:
+                print(f"[IMPORT] Error importing note: {e}")
+                continue
+        
+        db.commit()
+        
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'imported': imported_count,
+                'skipped': skipped_count,
+                'duplicates': duplicate_titles[:10]  # 最多顯示 10 個
+            }
+        })
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({
             'status': 'error',
             'message': str(e)

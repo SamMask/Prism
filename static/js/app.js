@@ -231,6 +231,16 @@ const app = createApp({
             exportImages: editorComposable.exportImages,
             isDeletingImage: editorComposable.isDeletingImage,
             
+            // Image Management (v1.5.0)
+            selectedImageUrls: editorComposable.selectedImageUrls,
+            toggleImageSelection: editorComposable.toggleImageSelection,
+            selectAllImages: editorComposable.selectAllImages,
+            clearImageSelection: editorComposable.clearImageSelection,
+            isImageSelected: editorComposable.isImageSelected,
+            setAsCover: editorComposable.setAsCover,
+            clearCover: editorComposable.clearCover,
+            deleteSelectedImages: editorComposable.deleteSelectedImages,
+            
             // Settings (camelCase)
             isSettingsOpen: settingsComposable.isSettingsOpen,
             isExporting: settingsComposable.isExporting,
@@ -303,6 +313,13 @@ const app = createApp({
             // Startup Preference (v1.1)
             startupAutoOpen: settingsComposable.startupAutoOpen,
             toggleAutoOpenBrowser: settingsComposable.toggleAutoOpenBrowser,
+
+            // Port Configuration (v1.5.0)
+            portConfig: settingsComposable.portConfig,
+            portConfigLoading: settingsComposable.portConfigLoading,
+            portConfigSaving: settingsComposable.portConfigSaving,
+            loadPortConfig: settingsComposable.loadPortConfig,
+            savePortConfig: settingsComposable.savePortConfig,
 
             // i18n (v0.8.8)
             t: i18nComposable.t,

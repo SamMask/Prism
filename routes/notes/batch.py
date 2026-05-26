@@ -13,24 +13,27 @@ import sqlite3
 from flask import request, jsonify
 
 from . import notes_bp
-from .crud import get_category_id_by_name  # BUG-001 Fix: 引入同步函數
 from db import get_db
 
 
 @notes_bp.route('/notes/batch/type', methods=['POST'])
 def batch_update_type():
-    """批量修改筆記分類"""
+    """
+    批量修改筆記分類
+
+    Phase 0 Step 0.1.2: 改用 category_id 參數，不再支援 type 參數
+    """
     try:
         data = request.get_json()
 
-        if not data or not data.get('note_ids') or not data.get('type'):
+        if not data or not data.get('note_ids') or not data.get('category_id'):
             return jsonify({
                 'status': 'error',
-                'message': 'note_ids and type are required'
+                'message': 'note_ids and category_id are required'
             }), 400
 
         note_ids = data.get('note_ids')
-        new_type = data.get('type').strip()
+        category_id = data.get('category_id')
 
         if not isinstance(note_ids, list) or len(note_ids) == 0:
             return jsonify({
@@ -54,15 +57,24 @@ def batch_update_type():
         db = get_db()
 
         try:
-            # BUG-001 Fix: 同步取得 category_id
-            category_id = get_category_id_by_name(db, new_type)
-            
+            # Phase 0 Step 0.1.2: 驗證 category_id 存在
+            category_exists = db.execute(
+                'SELECT id FROM Categories WHERE id = ?',
+                (category_id,)
+            ).fetchone()
+
+            if not category_exists:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Category {category_id} does not exist'
+                }), 400
+
             placeholders = ','.join('?' * len(note_ids))
             cursor = db.execute(f'''
-                UPDATE Notes 
-                SET type = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
+                UPDATE Notes
+                SET category_id = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE id IN ({placeholders})
-            ''', [new_type, category_id] + note_ids)
+            ''', [category_id] + note_ids)
             
             db.commit()
 

@@ -33,6 +33,9 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
     const isDeletingImage = ref(false);
     const isQuickAddOpen = ref(false); // v0.9.0 Quick Add Modal
 
+    // v1.5.0: Image Management - batch selection
+    const selectedImageUrls = ref([]);
+
     // Editor Loading States
     const isSaving = ref(false);
     const isDeleting = ref(false);
@@ -187,6 +190,81 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
             } catch (error) {
                 console.error('Download image error:', error);
             }
+        }
+    };
+
+    // v1.5.0: Image Management - batch selection & cover
+    const toggleImageSelection = (imageUrl) => {
+        const index = selectedImageUrls.value.indexOf(imageUrl);
+        if (index === -1) {
+            selectedImageUrls.value.push(imageUrl);
+        } else {
+            selectedImageUrls.value.splice(index, 1);
+        }
+    };
+
+    const selectAllImages = () => {
+        selectedImageUrls.value = contentImages.value.map(img => img.url);
+    };
+
+    const clearImageSelection = () => {
+        selectedImageUrls.value = [];
+    };
+
+    const isImageSelected = (imageUrl) => {
+        return selectedImageUrls.value.includes(imageUrl);
+    };
+
+    const setAsCover = (imageUrl) => {
+        currentNote.value.cover_image = imageUrl;
+        console.log('[Editor] Cover image set to:', imageUrl);
+    };
+
+    const clearCover = () => {
+        currentNote.value.cover_image = null;
+        console.log('[Editor] Cover image cleared');
+    };
+
+    const deleteSelectedImages = async (deleteFiles = false) => {
+        if (selectedImageUrls.value.length === 0) return;
+
+        const count = selectedImageUrls.value.length;
+        const msg = deleteFiles 
+            ? t('messages.confirmDeleteSelectedFiles', `確定要刪除選中的 ${count} 張圖片檔案嗎？\n\n這將從內容中移除引用，並刪除原圖和縮圖。`).replace('{count}', count)
+            : t('messages.confirmRemoveSelectedImages', `確定要從內容中移除選中的 ${count} 張圖片嗎？`).replace('{count}', count);
+        
+        if (!confirm(msg)) return;
+
+        isDeletingImage.value = true;
+        try {
+            // Process each image
+            for (const imageUrl of [...selectedImageUrls.value]) {
+                // Remove from content
+                let content = currentNote.value.content || '';
+                const escapedUrl = imageUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const mdPattern = new RegExp(`!\\[[^\\]]*\\]\\(${escapedUrl}\\)\\n?`, 'g');
+                content = content.replace(mdPattern, '');
+                const htmlPattern = new RegExp(`<img[^>]+src=["']${escapedUrl}["'][^>]*>\\n?`, 'g');
+                content = content.replace(htmlPattern, '');
+                currentNote.value.content = content;
+
+                // If cover image was deleted, clear it
+                if (currentNote.value.cover_image === imageUrl) {
+                    currentNote.value.cover_image = null;
+                }
+
+                // Delete file if requested
+                if (deleteFiles) {
+                    try {
+                        await api.deleteImage(imageUrl);
+                    } catch (error) {
+                        console.error('Delete image file error:', error);
+                    }
+                }
+            }
+            selectedImageUrls.value = [];
+        } finally {
+            isDeletingImage.value = false;
         }
     };
 
@@ -542,11 +620,16 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
         }
     };
 
-    // Clipboard Paste
+    // Clipboard Paste - Optimized: Text appears immediately, images download in background
     const handlePasteInEditor = async (event) => {
-        const items = event.clipboardData?.items;
-        if (!items) return;
+        const clipboardData = event.clipboardData;
+        if (!clipboardData) return;
+        
+        const items = clipboardData.items;
+        const htmlData = clipboardData.getData('text/html');
+        const textData = clipboardData.getData('text/plain');
 
+        // Priority 1: Handle direct image paste (screenshot, copied image file)
         let imageFile = null;
         for (let item of items) {
             if (item.type.startsWith('image/')) {
@@ -555,56 +638,209 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
             }
         }
 
-        if (!imageFile) return;
+        if (imageFile) {
+            event.preventDefault();
+            
+            const validation = validateImageFile(imageFile);
+            if (!validation.valid) {
+                alert(validation.message);
+                return;
+            }
 
-        event.preventDefault();
+            const textarea = event.target;
+            const cursorPosition = textarea.selectionStart;
 
-        const validation = validateImageFile(imageFile);
-        if (!validation.valid) {
-            alert(validation.message);
+            isUploading.value = true;
+
+            try {
+                // 根據設定決定是否僅保存縮圖 (v0.8.9)
+                const thumbnailOnly = getImageSaveMode() === 'thumbnail_only';
+                const result = await api.uploadFile(imageFile, { thumbnailOnly });
+
+                if (result.status === 'success') {
+                    const fileName = imageFile.name || 'image';
+                    const imageMarkdown = `![${fileName}](${result.data.url})`;
+
+                    const content = currentNote.value.content;
+                    const before = content.substring(0, cursorPosition);
+                    const after = content.substring(cursorPosition);
+
+                    currentNote.value.content = before + imageMarkdown + after;
+
+                    setTimeout(() => {
+                        const newPosition = cursorPosition + imageMarkdown.length;
+                        textarea.setSelectionRange(newPosition, newPosition);
+                        textarea.focus();
+                    }, 0);
+                    
+                    // 追蹤上傳的圖片 (v0.8.7): 取消時需要清理
+                    sessionUploadedImages.value.push(result.data.url);
+                    
+                    // 智能佈局切換 (v0.8.6): 只有新增筆記時，第一次插入圖片才自動切到雙欄
+                    if (!currentNote.value.id && currentNote.value.editor_layout === 'single') {
+                        currentNote.value.editor_layout = 'dual';
+                    }
+                }
+            } catch (error) {
+                console.error('Paste upload error:', error);
+                alert(t('messages.pasteFailed'));
+            } finally {
+                isUploading.value = false;
+            }
             return;
         }
-
-        const textarea = event.target;
-        const cursorPosition = textarea.selectionStart;
-
-        isUploading.value = true;
-
-        try {
-            // 根據設定決定是否僅保存縮圖 (v0.8.9)
-            const thumbnailOnly = getImageSaveMode() === 'thumbnail_only';
-            const result = await api.uploadFile(imageFile, { thumbnailOnly });
-
-            if (result.status === 'success') {
-                const fileName = imageFile.name || 'image';
-                const imageMarkdown = `![${fileName}](${result.data.url})`;
-
+        
+        // Priority 2: Handle HTML content with images (from web pages)
+        // Optimized: Immediately insert text with images in original positions, then download in background
+        if (htmlData && htmlData.includes('<img')) {
+            event.preventDefault();
+            
+            const textarea = event.target;
+            const cursorPosition = textarea.selectionStart;
+            
+            try {
+                // Parse HTML to extract images and convert to structured content
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(htmlData, 'text/html');
+                
+                // Walk through the DOM and build markdown with images in correct positions
+                const processNode = (node) => {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        return node.textContent || '';
+                    }
+                    
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const tagName = node.tagName.toLowerCase();
+                        
+                        // Handle images - insert markdown syntax with original URL
+                        if (tagName === 'img') {
+                            const src = node.getAttribute('src');
+                            if (src && (src.startsWith('http://') || src.startsWith('https://'))) {
+                                return `\n![image](${src})\n`;
+                            }
+                            return '';
+                        }
+                        
+                        // Handle block elements - add line breaks
+                        const blockElements = ['p', 'div', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'tr'];
+                        const isBlock = blockElements.includes(tagName);
+                        
+                        // Process children
+                        let content = '';
+                        for (const child of Array.from(node.childNodes)) {
+                            content += processNode(child);
+                        }
+                        
+                        // Add appropriate formatting
+                        if (tagName === 'br') return '\n';
+                        if (tagName === 'strong' || tagName === 'b') return `**${content}**`;
+                        if (tagName === 'em' || tagName === 'i') return `*${content}*`;
+                        if (tagName === 'a') {
+                            const href = node.getAttribute('href');
+                            if (href) return `[${content}](${href})`;
+                            return content;
+                        }
+                        if (tagName.match(/^h[1-6]$/)) {
+                            const level = parseInt(tagName[1]);
+                            return '\n' + '#'.repeat(level) + ' ' + content + '\n';
+                        }
+                        if (tagName === 'li') return '\n- ' + content;
+                        if (isBlock) return '\n' + content + '\n';
+                        
+                        return content;
+                    }
+                    
+                    return '';
+                };
+                
+                // Process the DOM to get markdown with images in correct positions
+                let markdown = processNode(doc.body);
+                
+                // Clean up excessive newlines
+                markdown = markdown.replace(/\n{3,}/g, '\n\n').trim();
+                
+                // Find all remote image URLs in the content
+                const imageUrlPattern = /!\[image\]\((https?:\/\/[^)]+)\)/g;
+                const remoteImages = [];
+                let match;
+                while ((match = imageUrlPattern.exec(markdown)) !== null) {
+                    remoteImages.push({ match: match[0], url: match[1] });
+                }
+                
+                // Immediately insert the content with original URLs
+                const contentBefore = currentNote.value.content;
+                const before = contentBefore.substring(0, cursorPosition);
+                const after = contentBefore.substring(cursorPosition);
+                
+                if (before.trim() || after.trim()) {
+                    currentNote.value.content = before + '\n\n' + markdown + after;
+                } else {
+                    currentNote.value.content = markdown;
+                }
+                
+                // Auto switch to dual layout if images found
+                if (remoteImages.length > 0 && !currentNote.value.id && currentNote.value.editor_layout === 'single') {
+                    currentNote.value.editor_layout = 'dual';
+                }
+                
+                // If there are remote images, download them in the background (non-blocking)
+                if (remoteImages.length > 0) {
+                    // Start background download immediately (no await, non-blocking)
+                    (async () => {
+                        let successCount = 0;
+                        let failCount = 0;
+                        const urlMapping = {};
+                        
+                        // Download all images in parallel for speed
+                        const downloadPromises = remoteImages.map(async ({ url }) => {
+                            try {
+                                const thumbnailOnly = getImageSaveMode() === 'thumbnail_only';
+                                const result = await api.downloadImageFromUrl(url, thumbnailOnly);
+                                if (result.status === 'success' && result.data?.url) {
+                                    urlMapping[url] = result.data.url;
+                                    // Track uploaded images for cleanup on cancel
+                                    sessionUploadedImages.value.push(result.data.url);
+                                    successCount++;
+                                }
+                            } catch (error) {
+                                console.error(`Background download failed: ${url}`, error);
+                                failCount++;
+                            }
+                        });
+                        
+                        await Promise.all(downloadPromises);
+                        
+                        // Replace URLs in content with local URLs
+                        if (successCount > 0) {
+                            let updatedContent = currentNote.value.content;
+                            for (const { url } of remoteImages) {
+                                if (urlMapping[url]) {
+                                    // Replace all occurrences of this URL
+                                    updatedContent = updatedContent.split(url).join(urlMapping[url]);
+                                }
+                            }
+                            currentNote.value.content = updatedContent;
+                            
+                            // Show subtle success notification
+                            console.log(`[Paste] Downloaded ${successCount} images${failCount > 0 ? `, ${failCount} failed` : ''}`);
+                        }
+                    })();
+                }
+                
+            } catch (error) {
+                console.error('Failed to process HTML paste:', error);
+                // Fallback: just paste the text
                 const content = currentNote.value.content;
                 const before = content.substring(0, cursorPosition);
                 const after = content.substring(cursorPosition);
-
-                currentNote.value.content = before + imageMarkdown + after;
-
-                setTimeout(() => {
-                    const newPosition = cursorPosition + imageMarkdown.length;
-                    textarea.setSelectionRange(newPosition, newPosition);
-                    textarea.focus();
-                }, 0);
-                
-                // 追蹤上傳的圖片 (v0.8.7): 取消時需要清理
-                sessionUploadedImages.value.push(result.data.url);
-                
-                // 智能佈局切換 (v0.8.6): 只有新增筆記時，第一次插入圖片才自動切到雙欄
-                if (!currentNote.value.id && currentNote.value.editor_layout === 'single') {
-                    currentNote.value.editor_layout = 'dual';
-                }
+                currentNote.value.content = before + textData + after;
             }
-        } catch (error) {
-            console.error('Paste upload error:', error);
-            alert(t('messages.pasteFailed'));
-        } finally {
-            isUploading.value = false;
+            
+            return;
         }
+        
+        // Priority 3: Let browser handle plain text paste normally
+        // (No preventDefault, browser will handle it)
     };
 
     // History
@@ -752,6 +988,16 @@ export function useEditor(getQuickAddDefaultType, getNewNoteDefaultType, getImag
         copyImageSyntax,
         exportImages,
         isDeletingImage,
+        
+        // Image Management (v1.5.0)
+        selectedImageUrls,
+        toggleImageSelection,
+        selectAllImages,
+        clearImageSelection,
+        isImageSelected,
+        setAsCover,
+        clearCover,
+        deleteSelectedImages,
         
         // Computed
         markedContent,

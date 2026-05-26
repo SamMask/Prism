@@ -24,10 +24,8 @@ def get_categories():
                 c.icon,
                 c.sort_order,
                 c.is_default,
-                COUNT(n.id) as count
+                (SELECT COUNT(*) FROM Notes n WHERE n.category_id = c.id) as count
             FROM Categories c
-            LEFT JOIN Notes n ON n.type = c.name
-            GROUP BY c.id
             ORDER BY c.sort_order ASC
         ''').fetchall()
 
@@ -152,13 +150,8 @@ def update_category(category_id):
                     UPDATE Categories SET name = ? WHERE id = ?
                 ''', (new_name, category_id))
 
-            # 一致性同步
+            # 注意：Notes 現在使用 category_id，不需要同步 type 欄位
             updated_notes_count = 0
-            if new_name != old_name:
-                cursor = db.execute('''
-                    UPDATE Notes SET type = ? WHERE type = ?
-                ''', (new_name, old_name))
-                updated_notes_count = cursor.rowcount
 
             db.commit()
 
@@ -205,29 +198,29 @@ def delete_category(category_id):
         
         # 檢查該分類下有多少筆記
         notes_count = db.execute(
-            'SELECT COUNT(*) FROM Notes WHERE type = ?', (old_name,)
+            'SELECT COUNT(*) FROM Notes WHERE category_id = ?', (category_id,)
         ).fetchone()[0]
         
         # 從請求中取得目標分類
         data = request.get_json() or {}
-        target_category = data.get('target_category')
+        target_category_id = data.get('target_category_id')
         
         # 如果有筆記但沒有指定目標分類，返回錯誤
-        if notes_count > 0 and not target_category:
+        if notes_count > 0 and not target_category_id:
             return jsonify({
                 'status': 'error',
                 'message': 'Target category required',
                 'notes_count': notes_count
             }), 400
         
-        print(f"[Delete Category] 刪除分類 '{old_name}', 目標分類: '{target_category}', 筆記數: {notes_count}")
+        print(f"[Delete Category] 刪除分類 '{old_name}', 目標分類ID: '{target_category_id}', 筆記數: {notes_count}")
 
         try:
             migrated_count = 0
-            if notes_count > 0 and target_category:
+            if notes_count > 0 and target_category_id:
                 cursor = db.execute('''
-                    UPDATE Notes SET type = ? WHERE type = ?
-                ''', (target_category, old_name))
+                    UPDATE Notes SET category_id = ? WHERE category_id = ?
+                ''', (target_category_id, category_id))
                 migrated_count = cursor.rowcount
                 print(f"[Delete Category] 實際遷移的筆記數: {migrated_count}")
 

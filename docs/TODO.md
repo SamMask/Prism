@@ -1,684 +1,370 @@
-# Prism - 開發待辦清單 (TODO)
+# Prism - Modernization & Intelligence Roadmap (TODO)
 
-**版本**: v1.3.0
-**最後更新**: 2025-12-13
-**修訂**: Phase 17 - 安全強化 (CSRF 防護與本機綁定)
-
----
-
-## 📊 專案進度總覽
-
-| Phase | 名稱                              | 狀態      | 完成日期   |
-| ----- | --------------------------------- | --------- | ---------- |
-| 1     | 環境建置與資料庫初始化            | ✅ 已完成 | 2025-11-27 |
-| 2     | 後端 API 開發 + 安全性修復        | ✅ 已完成 | 2025-11-28 |
-| 3     | 前端介面與瀑布流實作              | ✅ 已完成 | 2025-12-05 |
-| 4     | 編輯器與進階功能                  | ✅ 已完成 | 2025-12-06 |
-| 5     | 測試與優化                        | ✅ 已完成 | 2025-12-06 |
-| 6     | 審計修復與架構補強                | ✅ 已完成 | 2025-12-07 |
-| 7     | 進階功能與商務化 (Prompt Builder) | ✅ 已完成 | 2025-12-07 |
-| 8     | UX 優化與維護功能                 | ✅ 已完成 | 2025-12-08 |
-| 9     | 視覺優化與儲存效能                | ✅ 已完成 | 2025-12-09 |
-| 10    | 架構重構 (Linus 式瘦身)           | ✅ 已完成 | 2025-12-09 |
-| 11    | 文件與部署                        | ✅ 已完成 | 2025-12-10 |
-| 12    | 無障礙與技術債清理                | ✅ 已完成 | 2025-12-09 |
-| 13    | 功能擴展                          | 🚧 規劃中 | -          |
+**狀態**: 🟢 穩定運行 (Stable)
+**核心目標**: Headless KMS API + 純關鍵字 FTS 搜尋
+**文件參照**: `docs/Prism.md` (歷史背景), `docs/SCHEMA.md` (資料庫規格), `garbage-can/1230-審核報告.md` (Linus Audit)
+**最後更新**: 2026-05-26
 
 ---
 
-## ✅ 已完成功能摘要 (Phase 1-8)
+## ✅ 已完成項目 (Completed Projects)
 
-### Phase 1-2: 基礎架構 (v0.1)
+### 🚨 Phase 0: 架構淨化 (Architecture Purification) ✅ 2024-12-31
+> **來源**: Linus-style 審核報告 (`1230-審核報告.md`)
 
-- Flask + SQLite + Vue.js 3 架構建立
-- Notes/Tags/Source_Urls CRUD API
-- 分頁機制、Magic Numbers 檢查、離線優先
+- [x] **0.1 淨化資料結構** — Migration v12: 移除 `Notes.type` 雙重事實，統一用 `category_id`
+- [x] **0.2 任務隊列** — Migration v13: `AI_Tasks` 表 + `workers/task_processor.py` 取代 ThreadPoolExecutor
+- [x] **0.3 重構查詢** — 提取 `NoteQueryBuilder`，分離 `sanitize_fts_query()` 與 Filter
+- [x] **0.4 V1 功能移植** — 主題色彩、卡片開啟模式、圖片保存模式、快速新增預設分類、自動載入更多
+- [x] **0.5 殘留清理** — Schema 淨化、FTS5 安全性、拆分 NoteEditor/SettingsPage、VectorStore 執行緒安全
 
-### Phase 3-4: 前端 UI 與編輯器 (v0.1-0.4)
+### 🟢 Phase 1: 現代化地基 (The Big Rewrite) ✅
+> **目標**: 建立 Vite + React + Flask 的混合開發環境，打通 API 通訊。
 
-- 瀑布流卡片介面 (Grid/List 切換)
-- Modal 編輯器 (Markdown + 預覽)
-- Tags 管理 (重命名/刪除/合併)
-- 複選模式 + 批量操作 (Ctrl+A)
-- 圖片上傳 + 剪貼簿貼上
-- 快速提示詞模式
+- [x] **1.1 前端專案初始化** — Vite + React + TS + Tailwind + Zustand
+- [x] **1.2 後端 API 改造** — `PRISM_V2` 模式切換，保留 V1 向後相容
+- [x] **1.3 核心組件移植** — `Button`, `Input`, `Modal`, `Toast` 設計系統
+- [x] **1.4 開發規範更新** — Versioning、Testing Philosophy、License Policy
 
-### Phase 5-6: 安全性與架構優化 (v0.5)
+### 🟡 Phase 2: 功能復刻 (Feature Parity) ✅
+> **目標**: 讓 React 版本擁有 v1.x 的核心功能 (CRUD)。
 
-- XSS 防護 (DOMPurify)
-- SQL Injection 防護 (參數化查詢)
-- 後端 API 分頁 + 伺服器端過濾
-- 前端 JS 模組化拆分
+- [x] **2.1 筆記管理** — MasonryGrid + NoteCard (懸停預覽、快速操作)
+- [x] **2.2 編輯器 V2** — 貼上圖片、拖曳上傳
+- [x] **2.3 標籤與分類** — TagInput 自動完成、DataManager 管理介面
+- [x] **2.4 Prompt Builder** — React Hook 移植、結構化參數表單、權重滑桿
 
-### Phase 7: Prompt Builder (v0.6)
+### 🔴 Phase 3: 本地智慧 (Local Intelligence) — ⚠️ AI 已拔除 (2026-04-04)
+> **原目標**: 引入 PyTorch / Ollama / Sentence-Transformers。
+> **現況**: AI 功能已全部拔除，Prism 轉型為純筆記 + Headless KMS。參見 `docs/20260404-重構評估報告.md`。
 
-- 獨立組裝器頁面 `/prompt-builder`
-- 結構化參數配置 (JSON 驅動)
-- 靈感引導精靈 (4 維度隨機)
-- 模板系統、權重滑桿
-- 技術要求區塊 (長寬比/解析度)
+- [x] ~~**3.1 智慧標籤**~~ — 已拔除 (Ollama / NVIDIA NIM)
+- [x] ~~**3.2 語意搜尋**~~ — 已拔除 (Embeddings / Vector Store / Hybrid Search)
+- [x] **3.4 附件系統** — Note_Attachments 表 + 拖曳上傳 + 長文自動分離 (保留)
+- [x] ~~**3.5 RAG Knowledge API**~~ — 已拔除
+- [x] **3.7 卡片譜系** — 父子繼承 (`as_variant`) + 單表關聯 (保留)
 
-### Phase 8: UX 優化 (v0.7-0.8.8)
+### 🧪 Phase 6: 自動化測試 ✅
+- [x] **6.0 安全性修復** — P0/P1/P2 問題
+- [x] **6.1 後端 API 測試** — CRUD, Search, AI 服務
+- [x] **6.2 前端 E2E** — Playwright 核心流程
 
-- 分類管理 CRUD + 同步
-- 歷史版本還原 (筆記時光機)
-- 孤兒圖片清理
-- 編輯器雙欄模式 (圖文並列)
-- 封面圖片位置選項
-- 無限滾動 + 自動載入設定
-- 提示詞擴充包 (160+ 選項)
-- 混沌係數隨機生成器
-- 國際化 i18n (zh-TW / en)
+### 📦 Phase 7: 打包與更新 ✅ (部分凍結)
+- [x] **7.0 建置腳本** — `build_release.py` (Frontend Build + PyInstaller)
+- [x] **7.1 下載更新 (Plan A)** ✅ 2026-03-15 — `check-update` API + `UpdateSection.tsx`
+- [x] **7.3 啟動遷移** ✅ 2026-03-15 — `init_db()` 移入 `create_app()`，冪等遷移
 
----
+### 🍓 Phase 8: 樹莓派與無頭部署 ✅ 2026-03-15
+> **目標**: 無頭伺服器環境的連線、維運與遠端管理。
 
-## ✅ Phase 9: 視覺優化與儲存效能 (已完成)
+- [x] **8.1 反向代理與 mDNS** — avahi-daemon + Caddy (80→5000) + systemd + 一鍵安裝腳本
+- [x] **8.2 伺服器管理面板** — 硬體監控 / 日誌檢視 / 服務重啟 / 備份管理 / 版本資訊
 
-### 9.1 UX 視覺優化 (基於 UX 報告 2025-12-07)
+### 🖼️ v1.5.0 圖片管理增強 + 端口自選 ✅ 2026-02-27
+- [x] **圖片管理** — 批次選取/刪除、設為封面、個別操作 (複製語法/移除引用/刪除檔案)
+- [x] **端口自選** — Settings 端口設定 + `.port_config` + WinError 10013 處理 + 智能 fallback
 
-#### 🟢 P0 - Quick Wins (立竿見影)
+### 🛡️ v1.5.1 未儲存變更防護 ✅ 2026-02-27
+- [x] **Unsaved Changes Guard** — 原始快照 + 變更偵測 + 關閉攔截 (背景/ESC/X)
 
-- [x] **9.1.1** Web Fonts 導入 ✅ (2025-12-08)
-
-  - 導入 Inter Tight 字體 (本地 woff2 檔案)
-  - 建立 `static/css/styles.css` 定義 @font-face
-  - 配置 Tailwind fontFamily 使用 Inter Tight
-  - 支援 400/500/600/700/800 五種字重
-
-- [x] **9.1.2** 微互動增強 ✅ (2025-12-08)
-  - 所有按鈕添加 `active:scale(0.95)` 動畫
-  - 卡片 hover 添加 lift 效果
-  - 輸入框 focus 添加平滑過渡
-  - 定義 CSS 變數：`--transition-fast/normal/slow`
-
-#### 🟡 P1 - 體驗優化
-
-- [x] **9.1.3** 品牌色彩系統定義 ✅ (2025-12-08)
-
-  - CSS Root 定義 6 組主題色 (default/cyberpunk/eye-care/elegant/ocean/sunset)
-  - `data-theme` 屬性切換主題
-  - 設定存入 localStorage (`colorTheme`)
-  - 設定視窗新增主題色選擇器 UI
-  - 統一首頁與 Prompt Builder 色系
-
-- [x] **9.1.4** 移動端優化 ✅ (2025-12-08)
-  - 新增漢堡菜單按鈕 (md 以下顯示)
-  - 側邊欄滑入動畫 + 背景遮罩
-  - 響應式卡片間距 (gap-4 / md:gap-6)
-- [x] **9.1.4** 移動端優化 ✅ (2025-12-08)
-
-  - 新增漢堡菜單按鈕 (md 以下顯示)
-  - 側邊欄滑入動畫 + 背景遮罩
-  - 響應式卡片間距 (gap-4 / md:gap-6)
-  - 移動端 CSS 優化 (觸控目標、內距)
-
-- [x] **9.1.5** 優化複選操作 UI (Sub-header) ✅ _(2025-12-09)_
-
-  - ✅ 實作獨立的第二排工具列 (`_selection-bar.html`)
-  - ✅ 將複選狀態與操作按鈕移出 Header，解決擁擠問題
-  - ✅ 實作滑入/滑出動畫 (Transition)
-  - ✅ 修復 Dropdown 閃退與標籤計數同步問題
-
-- [x] **9.1.6** 導覽列與預設分類優化 ✅ _(2025-12-09)_
-  - ✅ 導覽列按鈕重構：「新增卡片」(藍) 與「快速新增」(紫/閃電) 樣式區分
-  - ✅ 預設分類設定拆分邏輯：
-    - 下拉選單控制「快速新增」預設值
-    - 分類管理「星號」控制「新增卡片」預設值
-  - ✅ UI 優化：系統預設分類改為鎖頭圖示，使用者預設標籤跟隨星號移動
-  - ✅ 修正複選模式多語系失效問題
+### 🎨 Phase 9: 前端 UX 強化 ✅ 2026-03-15
+> **來源**: Claude 4.6 UI/UX 綜合檢閱報告
+- [x] **9.1 全域錯誤攔截器** — axios interceptor 統一處理網路錯誤 / 5xx / 404
+- [x] **9.2 ConfirmDialog** — 取代全部 11 處 `window.confirm()`，支援暗色主題 + danger/warning 變體
+- [x] **9.3 標題 autoFocus** — NoteEditor 開啟時自動聚焦標題欄位
+- [x] **9.4 標籤自動補全** — EditorSidebar 模糊匹配現有標籤 + 鍵盤導覽 + 使用次數顯示
+- [x] **9.5 色彩對比度修正** — `--color-text-muted` 暗色 #6b7280→#848b98 (≈5.0:1)、亮色 #666→#525252 (≈4.7:1)，達 WCAG AA
 
 ---
 
-### 9.8 完整主題色彩系統 (v0.9.0)
+## 🩹 Phase 10: 體檢報告修補 (cco audit) — ✅ 已完成 v2.4.2
 
-**問題背景**: 目前主題色彩只定義了 CSS 變數，但模板中仍大量使用 Tailwind 硬編碼顏色  
-（如 `bg-gray-900`, `bg-blue-600`），導致切換主題時只有部分顏色變化。
+> **來源**: [`docs/過期/20260412-cco-綜合分析報告.md`](./過期/20260412-cco-綜合分析報告.md) (Linus-mode 深度體檢, 2026-04-12)
+> **目標**: 清理 v2.3.0 AI 拔除 + v12 `Notes.type` 移除後遺留的殭屍程式碼，補上 SSRF 防護，修正測試地基。
+> **執行順序**: P0 → P1 → P2，禁止跳級。
 
-#### 🔴 P0 - CSS 設計系統
+### 🔴 P0 — Critical (上線即炸 / 殭屍欄位)
 
-- [x] **9.8.1** 擴展 CSS 變數定義 ✅ _(2024-12-09)_
+- [x] **10.1** `routes/system.py` — 移除 `type_category_mismatch` 殭屍 query，`issues` 計算與 response 同步清除
+- [x] **10.2** `routes/export.py` — `export_json()` SELECT 改用 `LEFT JOIN Categories c` 取 `c.name as category`，移除 `n.type`
 
-  - ✅ 新增背景色系統：`--color-bg-base`, `--color-bg-surface`, `--color-bg-elevated`, `--color-bg-hover`
-  - ✅ 新增邊框色系統：`--color-border-default`, `--color-border-subtle`, `--color-border-hover`
-  - ✅ 為 6 套主題定義完整色盤 (含主題特有的背景色調)
+### 🟠 P1 — High (系統性風險)
 
-- [x] **9.8.2** 新增主題感知 Utility Classes ✅ _(2024-12-09)_
-  - ✅ 背景類別：`.bg-theme-base`, `.bg-theme-surface`, `.bg-theme-elevated`, `.bg-theme-hover`
-  - ✅ 邊框類別：`.border-theme-default`, `.border-theme-subtle`, `.border-theme-hover`
-  - ✅ 文字類別：`.text-theme-primary`, `.text-theme-secondary`, `.text-theme-muted`
-  - ✅ 漸層類別：`.brand-gradient`, `.brand-gradient-text`
-  - ✅ 狀態類別：`.bg-theme-success/warning/danger`
+- [x] **10.3** `tests/conftest.py` — `temp_db()` 改為建立最小 pre-migration base schema，再呼叫 `migrations.run_migrations(conn)` 走真實遷移路徑；移除 `sample_note_data` 中的死欄位 `type`
+- [x] **10.4** `routes/upload.py` — 新增 `_is_ssrf_target()` helper，`download_from_url()` 在 scheme 驗證後解析 hostname IP，拒絕 loopback/private/link-local/reserved 目標
+- [x] **10.5** `routes/notes/crud.py` — 刪除 `_HAS_PARENT_ID` 模組全域快取，`get_note()` 直接設 `parent_cols`/`parent_join`（schema 已穩定）
+- [x] **10.6** `routes/notes/crud.py` — 移除 `delete_note()` 手動 cascade DELETEs，依賴 `ON DELETE CASCADE`；更新過時註解
 
-#### 🟡 P1 - 模板替換
+### 🟡 P2 — Medium (品質 / 一致性)
 
-- [x] **9.8.3** 主頁模板替換 (`index.html` 及 components) ✅ _(2024-12-09)_
+- [x] **10.7** `config.py` — `PRISM_VERSION` 同步為 `2.4.1`（將在本版完成後升 `2.4.2`）
+- [x] **10.8** `frontend/src/services/api.ts` — `ConsistencyCheckResponse` 移除 `type_category_mismatch: number` 死碼
+- [x] **10.9** `routes/notes/crud.py` — `update_note()` 內 `existing` 改名 `existing_note`
+- [x] **10.10** `routes/upload.py` — `extract_prompt()` 改用 `with Image.open(...) as img` context manager，消除 file handle 洩漏
+- [x] **10.11** `routes/server.py` — 新增 `@server_bp.before_request` localhost-only guard，非 `127.0.0.1/::1` 回傳 403
+- [x] **10.12** `app.py` — `csrf_protect()` 在生產模式（`V2_MODE=true` + `not debug`）拒絕無 Origin 的 unsafe method
 
-  - ✅ `index.html` - 滾動條、背景色使用 CSS 變數
-  - ✅ `_header.html` - 導航欄、按鈕、搜尋框
-  - ✅ `_sidebar.html` - 側邊欄、標籤過濾
-  - ✅ `_note-grid.html` - 卡片、狀態提示、漸層
-  - ✅ `_editor-modal.html` - 編輯器模態框
-  - ✅ `_settings-modal.html` - 設定模態框
-  - ✅ `_context-menus.html` - 右鍵選單
+### 📋 補充
 
-- [x] **9.8.4** Prompt Builder 模板替換 ✅ _(2024-12-09)_
-  - ✅ `_header.html` - 導航欄、語言切換
-  - ✅ `_left-panel.html` - 配置表單、所有選項區塊
-  - ✅ `_right-panel.html` - 輸出預覽、按鈕樣式
-  - ✅ `_modals.html` - 所有彈出視窗
-
-#### 🟢 P2 - 驗證與文件
-
-- [x] **9.8.5** 驗證所有主題 ✅ _(2024-12-09)_
-
-  - ✅ 已驗證 6 套主題切換效果 (default, cyberpunk, eye-care, elegant, ocean, sunset)
-  - ✅ 所有 UI 元素正確響應主題變化
-  - ✅ 截圖記錄各主題效果 (6 張截圖已保存)
-
-- [x] **9.8.6** 更新文件 ✅ _(2024-12-09)_
-  - ✅ SCHEMA.md 新增 CSS 設計系統規範
-  - ✅ 更新 Local Insight.md 功能說明 (v0.9.0)
-  - ✅ 版本號統一更新為 v0.9.0
-
-### 9.2 圖片儲存優化
-
-- [x] **9.2.1** 新增設定：貼上圖片時只保存縮圖 ✅ (2025-12-08)
-
-  - 後端 `/api/upload` 支援 `thumbnail_only` 參數
-  - 前端 `imageSaveMode` 設定保存到 localStorage
-  - 設定視窗新增選項：原圖+縮圖 / 僅縮圖
-  - `useEditor` 和 `api.js` 整合完成
-
-- [x] **9.2.2** 一鍵刪除所有原圖功能 ✅ (2025-12-08)
-
-  - 後端 API: `GET/DELETE /api/cleanup/originals`
-  - 掃描 `static/uploads/`，找出有縮圖備份的原圖
-  - 刪除前自動更新筆記中的圖片路徑為縮圖
-  - 設定視窗新增掃描與刪除按鈕
-  - 顯示釋放空間大小
-
-- [x] **9.2.3** 圖片路徑自動修正與縮圖降級 ✅ (2025-12-08)
-
-  - 後端 API: `GET/POST /api/cleanup/broken-images`
-  - 掃描筆記中原圖不存在但有縮圖可用的路徑
-  - 一鍵修正：自動將失效路徑替換為縮圖路徑
-  - 設定視窗新增掃描與修正按鈕
+- [x] **10.13** 新增 `tests/test_schema_regression.py` — 4 個測試：`type` 欄位已移除、必要欄位存在、AI 欄位已清除、fixture schema 與 migration 輸出一致
+- [x] **10.14** `docs/CONTRIBUTING.md` — 加上 Release Checklist（版本同步 / 測試 / build / migration 確認）
 
 ---
 
-### 9.3 編輯器進階功能
+## 📘 Phase 11: 外部 Agent API 對接文件整理 ✅ 2026-04-24
 
-#### 🟡 P1 - 拖放排序
+> **目標**: 以目前實際後端契約為準，整理可直接提供外部 Agent（如 murmur厭世貓）使用的 API 對接文件，並順手清掉阻礙對接的 schema 漂移問題。
 
-- [x] **9.3.2** 拖放排序功能 ✅ _(2024-12-09)_
-
-  - ✅ 新增 `sort_order` 欄位到 Notes 表 (自動遷移)
-  - ✅ 後端 API: `PUT /api/notes/reorder` (Mock 測試驗證通過)
-  - ✅ `get_notes` API 支援 `sort` 參數 (updated/custom/created)
-  - ✅ 前端 `useNotes.js` 新增拖放狀態與函數
-  - ✅ Header 排序模式切換按鈕 (時鐘/箭頭/日曆圖示)
-  - ✅ 卡片支援拖曳 (僅在自訂排序模式下啟用)
-  - ✅ 修復縮圖路徑重複疊加 BUG (`utils.js`)
-
-- [x] **9.3.3** 快速新增編輯器簡化 ✅ _(2025-12-09)_
-  - 重構為單欄垂直佈局，移除 Tabs
-  - 內容優先設計，支援自動聚焦與 Ctrl+V 貼圖
-  - 標題可留空（自動生成日期標題）
-  - 標籤輸入優化與智能推薦 (Frequency-based)
-
-### 9.5 前端架構重構 (index.html 模組化)
-
-#### 🟢 P0 - 高優先
-
-- [x] **9.5.1** index.html 拆分為 Jinja2 組件 ✅ _(2024-12-08)_
-
-  - ✅ 建立 `templates/components/` 目錄
-  - ✅ 拆分 7 個組件檔案：
-    - ✅ `_header.html` (400 行) - Header 含搜尋、按鈕、選擇工具列
-    - ✅ `_sidebar.html` (170 行) - 側邊欄含類型/標籤篩選
-    - ✅ `_note-grid.html` (521 行) - 筆記卡片網格/列表
-    - ✅ `_editor-modal.html` (1,294 行) - 編輯器彈窗
-    - ✅ `_settings-modal.html` (852 行) - 設定彈窗
-    - ✅ `_context-menus.html` (102 行) - 右鍵選單
-    - ✅ `_scripts.html` (113 行) - ES Modules 載入
-  - ✅ index.html 從 3,544 行減至 115 行
-  - 📄 備用：`tools/extract_components.py` 提取腳本
-
-- [x] **9.5.2** 組件整合驗證 ✅ _(2024-12-08)_
-  - ✅ 所有路由正常運作
-  - ✅ Vue.js 綁定正常 (標籤右鍵選單、重命名/合併彈窗)
-  - ✅ 主題切換/移動端功能正常
-
-### 9.4 資料庫效能優化 (SQLite Tuning)
-
-> 📄 參考: `9.4 資料庫效能規劃-建議.md`
-
-#### 🟡 P1 - 中優先
-
-- [x] **9.4.1** 啟用 WAL 模式 ⚡ ✅ _(2024-12-08)_
-
-  - ✅ 在 `app.py` `get_db()` 加入 `PRAGMA journal_mode=WAL`
-  - 支援高併發讀寫，效能大幅提升
-
-- [x] **9.4.2** 確認索引覆蓋率 ✅ _(2024-12-08)_
-
-  - ✅ 所有建議索引已在 `init_db()` 實作：
-    - `idx_notes_type` - 分類過濾
-    - `idx_notes_updated_at DESC` - 排序分頁
-    - `idx_source_urls_note_id` - 來源網址查詢
-    - `idx_tags_name` - 標籤搜尋
-    - `idx_note_history_note_id` - 歷史記錄
-  - ✅ FTS5 全文檢索已啟用 (含 INSERT/UPDATE/DELETE Triggers)
-
-- [x] **9.4.3** 封存機制 (Archiving) ✅ _(2024-12-08)_
-
-  - ✅ 新增 `is_archived` 欄位 + 自動遷移 (`app.py`)
-  - ✅ `get_notes()` 預設 `WHERE is_archived = 0`
-  - ✅ 支援 `?include_archived=true` 參數查看封存筆記
-  - ✅ 新增 API: `POST /api/notes/<id>/archive` 封存/取消封存
-
-- [x] **9.4.4** 資料庫緊縮 (VACUUM) 功能 ✅ _(2024-12-08)_
-  - ✅ 後端 API: `POST /api/system/vacuum` (`routes/system.py`)
-  - ✅ 設定視窗新增「整理資料庫」按鈕 (`_settings-modal.html`)
-  - ✅ 確認對話框防止誤觸
-  - ✅ 顯示操作前後空間變化 (MB)
-
-> **決策說明**:
->
-> - ❌ 方案 A (時間分表): 不適合筆記應用
-> - ❌ 方案 B (.md 檔案): 增加 I/O 複雜度，除非需要 Obsidian 同步
-> - ✅ 方案 C (附件分離): 現行架構，維持不變
-> - ✅ WAL Mode + FTS5: 效能優化首選
-
-### 9.5 MVP 審查修復 ✅ _(2024-12-09)_
-
-- [x] **9.5.1** 路徑穿越漏洞修復 (`upload.py`)
-- [x] **9.5.2** 空異常捕捉修復 (`notes.py`, `system.py`)
-- [x] **9.5.3** FTS5 搜尋輸入清理 (`notes.py`)
-- [x] **9.5.4** 交易隔離修復 (`tags.py`)
-- [x] **9.5.5** 輸入驗證強化 (批量操作限 500 筆, 圖片匯出限 100 張)
-
-### 9.6 架構重構 ✅ _(2024-12-09)_
-
-- [x] **9.6.1** 統一資料庫層 (`db.py`)
-
-  - ✅ `get_db()` - 共用連線
-  - ✅ `transaction()` - Context Manager
-  - ✅ `close_db()` - 連線關閉
-  - ✅ 所有 routes 模組已更新
-
-- [x] **9.6.2** i18n Provide/Inject 模式 (`useI18n.js`)
-
-  - ✅ `provideI18n()` - 根組件使用
-  - ✅ `injectT()` - composables 自動注入
-  - ✅ 不再需要逐層傳遞 `t()` 函數
-
-- [x] **9.6.3** Jinja2 分隔符 (維持現狀)
-
-  - 現狀: 使用 `[{ }]` 避免與 Vue `{{ }}` 衝突
-  - 維持至 Phase 3 前後端分離
-
-- [x] **9.6.4** 測試腳本標準化整理 ✅ _(2025-12-09)_
-  - ✅ 建立 `tests/` 目錄，優化根目錄結構
-  - ✅ 將根目錄散落的 `test_*.py` 腳本全數移入
-  - ✅ 建立 `tests/README.md` 說明腳本用途與執行方式
+- [x] **11.1** 修正 `routes/notes/crud.py` 單筆讀取 `has_parent_id` 未定義造成的 500
+- [x] **11.2** 修正 `routes/notes/actions.py` duplicate 仍引用已移除 `Notes.type` 欄位
+- [x] **11.3** 修正 `routes/notes/import_.py` / `routes/notes/export.py` / `routes/export.py` 殘留 `Notes.type` 寫法，改回 `category_id` / `category` 相容層
+- [x] **11.4** 更新 `docs/API_REFERENCE.md`，重寫為可直接交付外部 Agent 的對接文件，標明限制、回應格式、已知不建議端點
 
 ---
 
-### 9.7 Prompt Builder 改進 ✅ _(2025-12-09)_
+## 🔧 Phase 12: 前後端 API 契約修補 ✅ 2026-04-24
 
-#### 🔴 P1 - 新功能 (優先)
+> **目標**: 修正前端 API wrapper 與 Flask 路由之間的實際落差，讓設定頁、分類管理、封存/置頂篩選與 migration 診斷都能對上後端契約。
 
-- [x] **9.7.1** 自動造句 (`narrativeOutput`) ✅ _(2024-12-09)_
-
-  - ✅ 新增 computed 屬性，將參數組成通順句子
-  - ✅ Style 前綴 + Lighting + Camera + Quality
-
-- [x] **9.7.2** LLM 潤飾指令 (`copyMetaPrompt`) ✅ _(2024-12-09)_
-  - ✅ 新增「複製 Gemini/ChatGPT 優化指令」按鈕
-  - ✅ 支援針織、黏土、微縮模型等特殊風格 (Material-Specific)
-
-#### 🟡 P2 - 模板拆分 (Phase 2)
-
-- [x] **9.7.3** 拆分 `prompt-builder.html` ✅ _(2024-12-09)_
-  - ✅ `templates/prompt-builder/_header.html` - Header 區塊
-  - ✅ `templates/prompt-builder/_left-panel.html` - 左側配置面板
-  - ✅ `templates/prompt-builder/_right-panel.html` - 右側輸出預覽
-  - ✅ `templates/prompt-builder/_modals.html` - 所有 Modal 對話框
-  - ✅ 主模板使用 Jinja2 `{% include %}` 引入組件
-
-#### 🟢 P3 - JS 模組化 (Phase 3)
-
-- [x] **9.7.4** 拆分 inline script 為 ES Module ✅ _(2024-12-09)_
-  - ✅ `static/js/composables/usePromptBuilder.js` - 完整 composable (~1000 行)
-  - ✅ 主模板從 ~1100 行內聯 JS 減少到 ~20 行 ES Module import
-  - ✅ 包含 i18n、表單狀態、輸出生成、Wizard、Modal 等所有功能
+- [x] **12.1** 補回 `GET /api/system/check-update`，支援環境設定、GitHub repository 推導與網路失敗降級回應
+- [x] **12.2** 補回 `GET /api/system/migration-status`，直接回傳 `migrations.get_migration_status()`
+- [x] **12.3** 修正前端 `deleteCategory()` 改送 `target_category_id`，DataManager 改用預設分類 ID 遷移筆記
+- [x] **12.4** 修正 `GET /api/notes` 查詢契約，支援 `archived` / `include_archived` / `pinned_only` / `category_id`
+- [x] **12.5** 擴充 note create/update 對 `is_pinned`、`is_archived` 的支援，並保持未傳欄位時不覆寫既有狀態
+- [x] **12.6** 補測試覆蓋 system 缺路由、分類刪除遷移、封存/置頂篩選
 
 ---
 
-## ✅ Phase 10: 架構重構 (Linus 式瘦身) - 已完成 2025-12-09
+## 🔎 Phase 13: 搜尋範圍擴充 ✅ 2026-05-05
 
-### 10.1 版本化遷移系統 (Phase A) ✅
+> **目標**: 搜尋欄維持同一個 `GET /api/notes?q=...` 契約，但命中範圍從卡片標題 / 內文擴充到備註、附件、標籤。
 
-- [x] **10.1.1** 建立 `migrations/__init__.py` 遷移執行器
-  - 聲明式遷移定義 (7 個版本)
-  - 自動偵測現有欄位
-  - 冪等執行 + 交易回滾
-- [x] **10.1.2** 移除 `app.py` 的 5 個 if 分支遷移邏輯
-- [x] **10.1.3** 新增 `Schema_Meta` 表追蹤版本
-- [x] **10.1.4** 新增 `Notes.category_id` FK 欄位
-- [x] **10.1.5** 填充所有筆記的 `category_id` 值
-
-### 10.2 查詢重構 (Phase B) ✅
-
-- [x] **10.2.1** 建立 `routes/helpers.py` JSON 解析模組
-- [x] **10.2.2** `get_notes()` 改用 `json_group_array()`
-- [x] **10.2.3** `get_note()` 改用 `json_group_array()`
-- [x] **10.2.4** 消除 `GROUP_CONCAT(id:name, '||')` 特殊字元風險
-
-### 10.3 模組拆分 (Phase C) ✅
-
-- [x] **10.3.1** 將 `routes/notes.py` (1,028 行) 拆分為 4 個子模組:
-  - `routes/notes/__init__.py` - Blueprint 註冊
-  - `routes/notes/crud.py` (~420 行) - CRUD 操作
-  - `routes/notes/actions.py` (~230 行) - pin/archive/duplicate/reorder
-  - `routes/notes/history.py` (~110 行) - 版本歷史
-  - `routes/notes/batch.py` (~220 行) - 批量操作
-- [x] **10.3.2** 更新 `routes/__init__.py` 導入結構
-- [x] **10.3.3** 驗證所有 14 個 API 端點正常運作
+- [x] **13.1** 擴充 `GET /api/notes` 搜尋條件，覆蓋 `Notes.title`、`Notes.content`、`Notes.remarks`、`Note_Attachments`、`Tags.name`
+- [x] **13.2** 補 pytest 覆蓋標題、內文、備註、附件內容、標籤搜尋
+- [x] **13.3** 同步更新 `AGENTS.md`、`docs/API_REFERENCE.md`、`docs/SCHEMA.md`、`docs/ARCHITECTURE.md`、`docs/Prism.md`
+- [x] **13.4** 部署到 Raspberry Pi 並驗證 live API
 
 ---
 
-## ✅ Phase 11: 文件與部署 - 已完成 2025-12-10
+## 🧭 Phase 17: Sidebar Filter Navigation — ✅ 已完成 v2.4.9 (2026-05-26)
 
-- [x] **11.1** 撰寫 README.md (專案介紹/安裝/使用) ✅
-- [x] **11.2** 撰寫開發者文件 (API/資料庫) ✅ → `docs/API_REFERENCE.md`
-- [x] **11.3** 建立初始化腳本 (一鍵安裝) ✅ → `install.bat` / `install.sh`
-- [x] **11.4** 批量匯出 (Markdown + Assets ZIP) ✅
-  - 複選模式下打包匯出為 ZIP (含 .md + 圖片)
+> **觸發**: 分類/標籤本質是首頁卡片篩選器；在設定頁或其他非首頁頁面點擊時，篩選狀態會變但頁面不跳回首頁，看起來像按鈕失效。
+> **目標**: 非首頁點分類/標籤時自動回到首頁並套用篩選；首頁上保留再次點擊同一分類/標籤可取消篩選的原互動。
 
----
-
-## ✅ Phase 12: 無障礙與技術債清理 (源自審核報告) - 已完成 2025-12-09
-
-> 📄 來源: `Gemini3Pro-High-綜合報告-1209.md`, `Performance_Audit_1209.md`
-> 篩選原則: Linus 風格 - 只修真正的 bug，拒絕純審美變更
-
-### 12.1 🔴 P0 - 必修 Bug ✅
-
-- [x] **12.1.1** 移除 CSS `!important` 暴力覆蓋
-
-  - 位置: `static/css/styles.css` Line ~622
-  - 問題: `.p-6 { padding: 1rem !important; }` 破壞 Tailwind 響應式設計
-  - 修復: 已移除，改用 HTML class `p-4 md:p-6 lg:p-8`
-
-- [x] **12.1.2** 修復隱形 Focus State (無障礙)
-
-  - 問題: `focus:ring-0` 移除可見焦點環，違反 WCAG 2.1
-  - 修復: 已加入 `focus:bg-white/5 focus:ring-1 focus:ring-purple-500/30`
-  - 影響範圍: Quick Add Modal 的 Title/URL/Tag 輸入框
-
-- [x] **12.1.3** ESC 關閉所有 Modal (鍵盤可及性)
-
-  - 問題: Modal 缺少 `@keydown.esc` 監聽
-  - 修復: 已在 Quick Add, Editor, Settings Modal 加上 `@keydown.esc.prevent`
-
-- [x] **12.1.4** 修復 Prompt Builder 黑屏崩潰
-
-  - 問題: Vue Template 中字串表達式換行導致編譯錯誤
-  - 修復: 修正 `_right-panel.html` 中的 `t()` 函數調用
-
-- [x] **12.1.5** 歷史紀錄資料一致性
-  - 問題: 刪除筆記未連帶刪除歷史紀錄 (Orphan Data)
-  - 修復: 後端實作 Cascade Delete，並新增「清空單一筆記歷史」功能 (Frontend + Backend)
-
-### 12.2 🟡 P1 - 改進 ✅
-
-- [x] **12.2.1** Hover 按鈕補 focus 可見性
-
-  - 問題: `opacity-0 group-hover:opacity-100` 缺少 `focus:opacity-100`
-  - 修復: 已加入 `focus:opacity-100`
-  - 影響範圍: Prompt Builder 自定義模板刪除按鈕
-
-- [x] **12.2.2** Toggle Switch 焦點指示器
-  - 問題: `sr-only` checkbox 被 focus 時無視覺回饋
-  - 修復: 已加入 `peer-focus:ring-2 peer-focus:ring-purple-500`
-  - 影響範圍: Prompt Builder 權重模式開關
-
-### 12.3 🟢 P2 - 長期規劃
-
-- [x] **12.3.1** Prompt Builder 快捷鍵
-
-  - 功能: `Ctrl+Enter` 複製結果, `Ctrl+S` 儲存至筆記庫
-  - 狀態: 已實作 (v1.0)
-
-- [x] **12.3.2** DOM 虛擬化 (Virtualization) - 延後至 v1.X
-  - 目前資料量不足，無需行動，改列入未來規劃
+- [x] **17.1** Sidebar filter routing — `Sidebar` 對分類/標籤 click 加上 route-aware handler；非首頁一律導回 `/` 並套用該篩選。
+- [x] **17.2** Category query contract — notes 查詢改送 `category_id`，不再依賴分類名稱 `type` 相容層，避免分類改名後的篩選風險。
+- [x] **17.3** 收尾驗證 — `cd frontend && npx tsc --noEmit` / `cd frontend && npm run build` / `pytest tests/ -v` / Browser flow 驗證。
 
 ---
 
-## ✅ Phase 13: 功能擴展 (v1.1) - 已完成
+## ✏️ Phase 16: Preview Editing UX — ✅ 已完成 v2.4.8 (2026-05-26)
 
-- [x] **13.1** 匯入功能 ✅
+> **觸發**: Preview 模式只能看渲染結果，實際修字或移除圖片仍要切回 Markdown 原始編輯 / 側欄圖片管理；日常編輯流程不夠順手。
+> **目標**: 保持 Preview 的閱讀感，同時允許就地修改文字區塊與移除圖片引用；不新增後端 API、不改 DB schema。
 
-  - 設定頁新增匯入 `.md` 按鈕
-  - 支援單檔或批量匯入（不含子資料夾）
-  - YAML front matter 解析 (type, tags)
-  - 自動下載外部圖片並儲存至本地
+- [x] **16.1** `EditablePreview` — Preview 模式改為可互動：文字區塊 hover 後可切入小型 Markdown textarea 直接修改內容，離焦回到預覽。
+- [x] **16.2** Preview 圖片移除 — 對獨立 Markdown / HTML 圖片渲染刪除按鈕，直接從內容移除引用；若該圖是封面，同步清空 `cover_image`。
+- [x] **16.3** 圖片移除 helper 共用 — 側欄 `ImageManagementPanel` 與 Preview 圖片刪除共用同一套 Markdown / HTML image reference 移除邏輯。
+- [x] **16.4** 收尾驗證 — `cd frontend && npx tsc --noEmit` / `cd frontend && npm run build` / `pytest tests/ -v` 全通過；Browser flow 實測 Preview 內可改文字、刪圖片引用且 console 無 warn/error；`PRISM_VERSION` / README badge / TODO Changelog 同步至 v2.4.8。
 
-- [x] **13.2** 首次啟動引導 ✅
+### ⏸️ 本輪不處理
 
-  - 首次執行詢問：自動開啟瀏覽器 / 手動開啟
-  - 偏好儲存至 `.auto_open_yes` / `.auto_open_no`
-  - 設定頁「啟動設定」可切換偏好
-
-- [x] **13.3** 資料庫維護增強 ✅
-  - 整理資料庫（VACUUM）+ 結果顯示
-  - 清空歷史版本（新功能）
+- 完整 WYSIWYG Markdown round-trip（例如直接在渲染後的 bold / table / list DOM 上保留所有 Markdown 語法細節）— 目前採用「預覽中就地切入小型 Markdown 區塊」以避免引入大型 editor 依賴。
+- 實體圖片檔案刪除 — Preview 只移除內容引用；永久刪檔仍由既有側欄「圖片管理」與確認對話處理。
 
 ---
 
-## ✅ Phase 14: 審計修復 (v1.1.0 - 2025-12-11)
+## 💾 Phase 15: 維護模式雜項 (Maintenance Sundries) — ✅ 已完成 v2.4.7 (2026-05-13)
 
-### 14.1 🔴 P0 - 技術阻斷
+> **觸發**: Phase 14 收尾後用戶確認啟動兩項：(a) 自動備份排程確認、(b) Markdown 匯出。
+> **背景發現** (2026-05-13 重新驗證)：
+> - 真正的備份位置是 `backups/`（不是中文 `資料庫備份/`）；Pi `backups/` 目前有 3 份：4/4、4/24、5/13，**用戶手動點 UI 觸發、間隔約 3 週**
+> - 後端 `routes/server.py` 已有 `/api/server/backup/download` + `/rotate (keep=3)`，但**完全靠手動觸發**——crontab 空、systemd timer 空
+> - 頂層中文資料夾 `資料庫備份/` 是 V1 殘留 dead folder（4/4 後就沒動），實際使用的是英文 `backups/`
+> - **Pi 儲存媒介是 SSD 不是 SD 卡**（用戶 2026-05-13 確認）——失效機率比 SD 卡低一個量級，無寫入次數疲勞集中、無 SD 卡控制器悲劇
+> **真實風險**（最終版）：SSD 仍是單點故障（控制器、檔案系統損毀、電源異常 / 雷擊）。手動備份 ~3 週習慣已覆蓋大部分情境；自動化純粹是「假期 / 出差 / 忘記時的便宜保險」。**整個 Phase 15 沒有 P0/P1**。
 
-- [x] **14.1.1** 分類資料一致性修復 (Category Split Brain) ✅ _(2025-12-11)_
+### 🟢 自動備份排程（便宜的保險）
 
-  - 新增 `get_category_id_by_name()` Helper，同步寫入 `category_id`
+- [x] **15.1** Pi 加 `prism-backup.timer` (每週日 03:00) + `prism-backup.service` 觸發 `/home/mask070924/prism/scripts/auto-backup.sh`
+- [x] **15.2** 腳本內 `--http1.1 --fail` 下載 + `Origin: https://prism.local` POST rotate keep=8（**踩過的坑**：Caddy → Werkzeug HTTP/2 stream 收尾不乾淨會讓 curl exit 92，必須強制 HTTP/1.1）
+- [x] **15.3** 手動 `systemctl start prism-backup.service` 驗證通過（產出完整 4MB 備份 + rotate 成功）
+- [x] **15.4** `DEPLOY-PI.md` 補「自動備份排程」章節（含 service / timer / script 完整安裝指令 + 還原備份範例）
 
-- [x] **14.1.2** Schema 雙重事實修復 (Single Source of Truth) ✅ _(2025-12-12)_
-  - `get_notes`/`get_note` 改用 `LEFT JOIN Categories` 取得分類名稱
+### 🟢 Dead folder 清理
 
----
+- [x] **15.5** Windows + Pi 雙端 `git rm -r 資料庫備份/` / `rm -rf 資料庫備份/`，audit §4.5 path encoding 隱患同步清除
 
-### 14.2 🔴 P0 - UX 阻斷
+### 🟢 Markdown 匯出（可離線、跨工具可讀）
 
-- [x] **14.2.1** Prompt Builder 錯誤死胡同修復 ✅ _(2025-12-11)_
-- [x] **14.2.2** 搜尋空狀態誤導修復 ✅ _(2025-12-11)_
-- [x] **14.2.3** 手機版側邊欄自動收合 ✅ _(2025-12-11)_
+- [x] **15.6** `routes/export.py` 新增 `GET /api/export/markdown` — 回傳 zip：`{id:04d}-{slug(title)}.md` + YAML frontmatter (`id` / `title` / `category` / `tags` / `is_pinned` / `is_archived` / `created_at` / `updated_at` / 可選 `remarks`) + body + `_manifest.json`
+- [x] **15.7** `tests/test_export_markdown.py` — 4 測試（zip 結構 / frontmatter 欄位 / manifest 計數 / 空標題 edge case），全綠
+- [x] **15.8** `BackupImportSection.tsx` 加「下載 .zip」按鈕，呼叫 `api.exportMarkdown()`
+- [x] **15.9** `docs/API_REFERENCE.md` §12 加 `/api/export/markdown` 端點說明（含 frontmatter 規格）
 
----
+### 📋 收尾驗證
 
-### 14.3 🟢 新功能 (2025-12-12)
+- [x] **15.10** `pytest tests/ -v` → **80 passed** (+4)，test_run.log 已覆寫
+- [x] **15.11** `npx tsc --noEmit` 零錯誤；`npm run build` 1509 modules / 2.26s
+- [x] **15.12** `PRISM_VERSION` → `2.4.7`；README badge 同步；Changelog v2.4.7 已加
+- [x] **15.13** 部署到 Pi 驗證：timer next run = Sun 2026-05-17 03:00；markdown export 透過 Caddy 取得 178 檔 zip（177 筆 + manifest），中文檔名保留正確
 
-- [x] **14.3.1** 專案更名 (Local Insight -> Prism) ✅
+### ⏸️ 本輪不處理
 
-  - README, app.py, 所有模板標題已更新
-
-- [x] **14.3.2** Demo DB 生成腳本 ✅
-
-  - `tools/create_demo_db.py` - 生成 51 則範例筆記
-
-- [x] **14.3.3** README 文檔優化 ✅
-
-  - 新增「馬上體驗 10 秒」快速開始
-  - 新增「Ctrl+V 貼圖」小撇步
-
-- [x] **14.3.4** 編輯器 Ctrl+V 提示 (i18n) ✅
-
-  - 在 Markdown 編輯標題右方新增提示文字
-
-- [x] **14.3.5** 文件版本對齊 ✅
-  - TODO.md, SCHEMA.md, Prism.md 統一為 v1.1.0
+- 雙向 markdown 匯入（write-back）— 寫端是 1-way 比較安全，避免外部編輯造成 schema 漂移；若有需求再開 Phase 15.5
+- markdown frontmatter 包含附件二進位 — 附件用獨立 `attachments/` 資料夾在 zip 內，若太複雜本輪先跳過、frontmatter 只記附件路徑
 
 ---
 
-## 📅 開發里程碑
+## 🧹 Phase 14: 深度審計修補 (Deep Audit Fixes) — ✅ 已完成 v2.4.6 (2026-05-13)
 
-| 日期       | 版本   | 里程碑                         |
-| ---------- | ------ | ------------------------------ |
-| 2025-11-27 | v0.1   | Phase 1 環境建置完成           |
-| 2025-11-28 | v0.2   | Phase 2 API + 安全性修復       |
-| 2025-12-05 | v0.3   | Phase 3-4 前端 UI + 編輯器     |
-| 2025-12-06 | v0.5   | Phase 5-7 進階功能 + XSS 修復  |
-| 2025-12-07 | v0.6   | Prompt Builder 完整功能        |
-| 2025-12-08 | v0.8.8 | Phase 8 UX 優化 + i18n         |
-| 2025-12-09 | v0.9.1 | Phase 9 視覺優化 + 儲存效能    |
-| 2025-12-09 | v1.0.0 | Phase 10-12 架構重構 + 無障礙  |
-| 2025-12-11 | v1.1.0 | Phase 13 匯入功能 + DB 維護    |
-| 2025-12-12 | v1.1.0 | Phase 14 審計修復 + 更名 Prism |
+> **來源**: [`docs/20260513-deep-audit-report.md`](./20260513-deep-audit-report.md) (Claude Opus 4.7 read-only audit, 2026-05-13)
+> **目標**: 修補 v2.4.5 後文件層的時差（README/INDEX/TODO/Prism 引用 404、雙頭真理、殭屍 docstring/腳本、測試文件脫節），補上 SSRF / localhost / production-CSRF 的回歸測試。**程式地基已乾淨，本輪以「修承諾對齊事實」為主。**
+> **執行順序**: P1 文件閘門 → P1 回歸測試 → P2 殘留清理 → 收尾驗證。禁止跳級。
 
----
+### 🔴 P1 — 文件導航閘門修補（純文件，不碰程式）
 
-## ✅ Phase 17: 安全強化 (v1.3 - 2025-12-13)
+- [x] **14.1** `README.md` / `docs/INDEX.md` / `docs/CONTRIBUTING.md` — 把所有 `docs/20260412-cco-綜合分析報告.md` 引用統一為 `docs/過期/20260412-cco-綜合分析報告.md`（5 條死連結，見審計 §3.2）
+- [x] **14.2** `docs/INDEX.md` — 修正維護狀態欄位：cco 報告改 ✅ 已完成 v2.4.2、`SEQUENCE-UPLOAD.md` 改 ✅ 已更新、`API_REFERENCE.md` 改 ✅ 已重寫 (2026-05-05)（見審計 §3.6）
+- [x] **14.3** `docs/TODO.md` 頭部 — line 4 移除「Local AI」改為「Headless KMS API + 純關鍵字 FTS 搜尋」；line 5 `1230-審核報告.md` 補 `garbage-can/` prefix；line 6 日期改 `2026-05-13`；line 80 Phase 10 從 🔴 Pending 改 ✅ 已完成 v2.4.2（見審計 §3.3）
+- [x] **14.4** `AGENTS.md` ↔ `CLAUDE.md` 雙份完整同步（2026-05-13 補做）：兩份內容對齊（合併 AGENTS 的 Search 欄位描述 + CLAUDE 的 DEPLOY-PI.md 列、Prism.md 標為已凍結、執行規則改為「兩份都要改」）；兩份頂部加 sync banner；`docs/CONTRIBUTING.md` Release Checklist 補 `diff AGENTS.md CLAUDE.md` 比對行；`diff` 驗證僅有 banner 互指對方檔名的差異
+- [x] **14.5** `docs/Prism.md` — **明確標記為歷史檔案**（決議：用戶現處純使用模式，戰略路線圖維護不下去；保留 V1→V2 重構決策脈絡的歷史價值）
+- [x] **14.6** `tests/README.md` — 刪除過期的 10 檔表格（實際 24+ 檔），改為 `pytest --collect-only` 自動導覽 + 「以 test_run.log 為實際參考」（見審計 §3.7）
+- [x] **14.7** `docs/CONTRIBUTING.md` — line 49 `v1–v14` 改 `v1–v15`；line 115 `61 passed` 改「全綠（以 test_run.log 為準）」；Release Checklist 末尾加一行「文件版本 / 日期同步檢查」（見審計 §3.9）
 
-> 📄 來源: `MVP_Audit_Report-1213.md`
+### 🔴 P1 — 安全回歸測試（先加測試，不改程式）
 
-### 17.1 🔴 P0 - 阻斷性問題
+- [x] **14.8** 新增 `tests/test_security_guards.py` — 4 個測試（`test_ssrf_blocks_loopback` / `test_ssrf_blocks_private_range` / `test_server_api_localhost_only` / `test_csrf_production_blocks_anonymous`）
 
-- [x] **17.1.1** 未經驗證遠端存取風險修復 ✅ _(2025-12-13)_
+### 🟡 P2 — 殭屍 / docstring 殘留清理（在 14.8 測試保護下動 code）
 
-  - 預設綁定 `127.0.0.1` (僅本機訪問)
-  - 透過 `HOST` 環境變數可覆蓋 (警告提示)
-  - 位置: `app.py` 最後數行
+- [x] **14.9** `routes/system.py:284-296` — `check_consistency()` docstring 與 Response 範例移除 `type_category_mismatch` 殭屍描述，改寫為現況（v12 已移除 `Notes.type`）（見審計 §3.4）
+- [x] **14.10** 刪除 `scripts/check_deps.py`（殭屍：仍 import 已拔除的 `numpy` / `sentence_transformers`）
+- [x] **14.11** 刪除 `tests/test_offline_mode.py`（V1 Jinja2 遺物，不被 pytest 收集）
 
-- [x] **17.1.2** CSRF 防護機制 ✅ _(2025-12-13)_
-  - 新增 `before_request` 中介軟體
-  - 驗證 `Origin`/`Referer` 標頭是否為同源
-  - 允許無標頭的本機請求 (curl/Postman)
-  - 位置: `app.py` `create_app()` 內
+### 📋 收尾驗證 (Closure)
 
----
+- [x] **14.12** 執行 `pytest tests/ -v 2>&1 | tee test_run.log` 重新留下證據（76 passed，2026-05-13 22:24）
+- [x] **14.13** 執行 `cd frontend && npx tsc --noEmit && npm run build`，確認 tsc 零錯誤、build 成功
+- [x] **14.14** `config.py` `PRISM_VERSION` 升 `2.4.6`；`README.md` 開頭 badge 同步
+- [x] **14.15** TODO.md Changelog 新增 v2.4.6 條目（合併 14.1–14.16 摘要）
 
-## ✅ Phase 18: UI 2.0 Redesign (v1.4 - 2025-12-14)
+### 📁 目錄歸檔（依用戶決議）
 
-### 18.1 視覺與互動升級 (Glassmorphism)
+- [x] **14.16** （2026-05-13 補做）`git mv demo docs/過期/demo`；`README.md` 「專案結構」章節新增 `garbage-can/`（個人歸檔）+ `docs/過期/` 註記，順手把 `migrations/ (v1 → v14)` 修為 `v15`、`tests/ (61+)` 改為「執行 pytest --collect-only 列出，全綠以 test_run.log 為準」
 
-- [x] **18.1.1** 全局玻璃化 (Glassmorphism Core) ✅ _(2025-12-14)_
-  - 新增 `styles.css` 玻璃變數 (`--glass-opacity`, `--glass-blur`)
-  - 實作 `.glass-panel` 統一風格
-- [x] **18.1.2** Bento Grid 佈局重構 ✅ _(2025-12-14)_
+### 💡 未來功能候選（未承諾）
 
-  - Header/Sidebar 改為懸浮面板
-  - 主內容區與側邊欄形成獨立區塊
+> 已決議啟動的見 Phase 15。其餘想法暫不列入。
 
-- [x] **18.1.3** 3D 微互動 (Micro-interactions) ✅ _(2025-12-14)_
-  - 引入 `vanilla-tilt.js` 實現卡片 3D 傾斜與反光
-  - 新增按鈕與邊框的流光效果 (Glow)
+- ~~**Prism MCP Server wrapper**~~ — 已評估排除（2026-05-13）：用戶日常工作流為「Web UI 查筆記 + Claude Code 寫程式」兩條線不交集；MCP 不省 token（response 內容照計），單次查詢僅省 ~50 token，需月呼叫 100+ 次才有感，使用模式不符。
 
 ---
 
-## 🔮 未來規劃 (Future Roadmap)
+### ⏸️ 本輪不處理（已評估，列入未來追蹤）
 
-> 以下項目尚未實作，列入長期規劃。
+- **R10 / §4.2** `init_db()` 與 migrations 雙寫 schema（v9 ADD → v14 DROP `text_embedding` 對 fresh DB 是空操作）— 屬品味債，不是 bug，未來重寫 init_db 時一併處理
+- **R11** `auto_fix_consistency()` 每次冷啟動掃全表 — cco 已決議「等規模到一萬筆再優化」
+- **§5.3** `tests/test_batch_type_sync.py` 自定 `get_db()` 繞過 db.py — 雖違反 CLAUDE.md 精神但測試本身有效，列入未來重構
+- **§4.3 / §4.4 / §4.5** `frontend/src/i18n/`、`services/` 空殼、`tools/` `build/` `資料庫備份/` 文件未涵蓋 — 待 Phase 15 目錄盤點
 
-### Phase 15: 系統可靠性與維運 (v1.2)
+### ✅ 已決議（2026-05-13 用戶確認）
 
-#### ✅ 高風險技術債 (P1) - 已完成
-
-- [x] **15.1** 圖片刪除引用計數檢查 (🟡-1) ✅ _(2025-12-12)_
-
-  - `_cleanup_note_images()` 刪除前檢查其他筆記是否引用
-
-- [x] **15.2** WAL Checkpoint 機制 (🟡-2) ✅ _(2025-12-12)_
-
-  - 整合到 VACUUM 函數 (API 保留: `POST /api/system/wal-checkpoint`)
-  - UI 按鈕已移除，「整理資料庫」一併執行 WAL + FTS + VACUUM
-
-- [x] **15.3** 資料一致性檢查 (🟡-3) ✅ _(2025-12-12)_
-  - 啟動時自動修復 `auto_fix_consistency()` in `app.py`
-  - API 保留: `GET /api/system/check-consistency`
-
-#### ✅ 設定頁簡化 _(2025-12-12)_
-
-- [x] 移除「匯出資料庫」按鈕 (README 有說明 knowledge.db 位置)
-- [x] 移除「合併 WAL 日誌」按鈕 (整合到 VACUUM)
-- [x] 新增 cardOpenMode 英文翻譯
-
-
-
-### Phase 16: UX 細緻化與 UX 審計修復 (v1.3) ✅ _(2025-12-12)_
-
-#### ✅ 阻斷性問題 (Critical) - 已完成
-
-- [x] **16.1** 全域視覺對比度優化 (C-01) ✅
-
-  - 修正 `--color-text-muted` 顏色 (#6b7280 -> #94a3b8)
-  - 改善 WCAG AA 對比度合規性
-
-- [x] **16.2** 標籤輸入邏輯優化 (C-02/S-01) ✅
-
-  - 實作失焦自動加入 (Auto-add on blur)
-  - 更新 Placeholder 提示文字
-
-- [x] **16.3** Prompt Builder 權重模式隱藏 (C-03/S-02) ✅
-  - 暫時隱藏 Weights Toggle 與相關 UI
-  - 避免出現 `(keyword:1.2)` 格式困擾新手
-
-#### ✅ 體驗優化 (Friction) - 已完成
-
-- [x] **16.4** 拖曳排序提示 (F-02) ✅
-
-  - Grid View 卡片 tooltip 顯示「切換至自訂排序以拖曳」
-
-- [x] **16.5** Prompt Builder 工具提示 (F-03) ✅ (已有 title 屬性)
-
-### Phase 19: Gemini3 審計修復 (v1.4.1 - 2025-12-15) ✅
-
-> **來源**: `docs/Gemini3綜合評估-Bug.md`
-
-#### ✅ 🔴 P0 - 阻斷性問題
-
-- [x] **19.1** 批量修改類型同步 `category_id` (BUG-001) ✅
-  - `routes/notes/batch.py` 的 `batch_update_type()` 新增 `category_id` 同步更新
-  - 解決 `type` 與 `category_id` 雙重事實不一致問題
-
-#### ✅ 🟡 P1 - 中優先
-
-- [x] **19.2** 標籤合併交易一致性 (BUG-002) ✅
-  - `routes/tags.py` 改用 `transaction()` context manager
-  - 移除手動 `BEGIN TRANSACTION`
-
-- [x] **19.3** 啟動偏好檔案路徑安全 (SEC-001) ✅
-  - `routes/system.py` 使用 `current_app.root_path` 絕對路徑
-
-#### ✅ 🟢 P2 - 低優先
-
-- [x] **19.4** 版本標記更新 (NAMING-002) ✅
-  - `db.py`, `batch.py`, `tags.py`, `system.py` 標題改為 `Prism v1.4.1`
-
-### 長期優化 (v2.0+)
-
-#### 效能優化
-- [ ] 廢棄 `Notes.type` 欄位，完全依賴 `category_id`
-- [ ] 批量操作查詢優化 (N+1 → 批量 INSERT) - 原 PERF-001
-- [ ] Cleanup 全表掃描優化 - 原 PERF-002
-- [ ] DOM 虛擬化 (Virtual Scrolling) - 觸發條件: 筆記數 > 500
-
-#### 備份與日誌
-- [ ] 資料庫自動備份與回滾 (定期備份、一鍵回滾)
-- [ ] 應用層日誌管理 (log 檢視器、日誌輪替)
-
-#### 功能擴充
-- [ ] Quick Add vs New Note 視覺區分
+1. ✅ **體檢報告位置**：保留在 `docs/過期/`，所有引用統一指向該路徑（見 14.1）
+2. ✅ **AGENTS.md / CLAUDE.md**：保留雙份完整內容並要求同步（理由：Codex 可作另一視角 debug）（見 14.4）
+3. ✅ **garbage-can / demo**：garbage-can 保留為個人歸檔；demo 搬至 `docs/過期/`（見 14.16）
+4. ✅ **Prism.md**：明確標記為歷史檔案，不再更新（見 14.5）
+5. ✅ **新 epic**：v2.4.6 後仍維護模式；新功能候選暫列 backlog（見下方「未來功能候選」）
 
 ---
 
-## 📚 相關文件
+## 🧊 待辦 / 凍結項目 (Backlog / Icebox)
 
-- **SCHEMA.md** - 資料庫結構與 API 規格
-- **Prism.md** - 技術規格書
+### ~~Phase 3: 本地智慧 (剩餘)~~ — ❌ 已全部拔除 (2026-04-04)
+
+#### ~~3.6 🔌 AI Gateway (Pluggable AI Providers)~~ — 已拔除
+> **結果**: v2.3.0 全面拔除 AI 功能。NVIDIA NIM、Ollama、sentence-transformers、numpy 等依賴已移除。
+> **原因**: 參見 `docs/20260404-重構評估報告.md` — Prism 轉型為純 Headless KMS，AI 交由外部 Agent 處理。
+- [x] ~~**3.6.1 NVIDIA NIM Provider**~~ — 已拔除
+- [x] ~~**3.6.2 AI Prompt Optimizer**~~ — 已取消 (AI 全面移除)
+- [x] ~~**3.6.3 OpenAI-Compatible Client**~~ — 已取消 (AI 全面移除)
+- [x] ~~**3.6.4 AI 依賴剝離評估**~~ — 已完成 (numpy/sentence-transformers 已移除)
+
+#### 3.3 🗺️ 知識畫布 (Canvas / Graph View) ❌ 已廢棄 (2026-05-13)
+> **廢棄原因**: 個人 KMS（規模 ~200 筆）視覺化價值近零——你早知道自己有什麼；Obsidian graph view 公認雞肋。Bundle 500KB 增量無法回收。
+
+#### 3.7.3 參數差異比對 (Diff View) ❌ 已廢棄 (2026-05-13)
+> **廢棄原因**: 個人不會回頭比對 prompt 變體；Parent/Child 連結 + git log 已覆蓋實際需求。
+
+### Phase 7: 打包 (剩餘)
+
+#### 7.2 內建更新器 (Plan B) ❌ 已廢棄 (2026-05-13)
+> **廢棄原因**: Plan A（download + UpdateSection）已可用；Windows EXE 自覆蓋 + SmartScreen + updater.exe 自我更新三重悖論，個人工具不該背這成本。
+
+### Phase 4: 進階多媒體 ❌ 已廢棄 (2026-05-13)
+> **廢棄原因**: Whisper >1GB + SD 需 GPU 與 v2.3.0「拔除 AI / 轉型 Headless KMS」核心戰略直接矛盾。
+
+### Phase 5: 外掛生態 ❌ 已廢棄 (2026-05-13)
+> **廢棄原因**: 個人工具沒有外部開發者，外掛市場成立前提不存在。
+
+### 前端技術債 🧊
+> **來源**: `docs/20260315-claude4.6-綜合報告.md` — 決策日期 2026-03-16
+
+#### 待實作 (📋 Backlog)
+*(已清空)*
+
+#### 已完成 (✅ 2026-04-04)
+- [x] **[2.1-IconButton]** — 建立 `ui/IconButton.tsx`（4 variants × 3 sizes），替換 10 個檔案共 29 處 icon button；涵蓋 `DataManager` / `Header` / `NoteCard` / `EditorToolbar` / `Modal` / `Toast` / `PortConfigSection` / `EditorSidebar`
+- [x] **[2.4] NoteEditor 拆分** — 拆為 5 個 custom hooks: `useNoteForm` / `usePasteHandler` / `useDragDrop` / `useNoteAttachments` / `useNoteHistory` / `usePromptExtraction`；位於 `hooks/editor/`
+- [x] **[5.1] Toast 狀態管理** — 模組級變數遷移至 `stores/toastStore.ts` (Zustand)，對外介面不變
+- [x] **[5.2] TypeScript `any` 清理** — `api.ts` 新增 `HardwareStatus` / `VersionInfo` / `BackupItem` / `ServerLogsResponse` / `RotateBackupsResponse` / `RestartServiceResponse` 完整型別
+- [x] **[5.3] Light Theme glass border** — `index.css` `.light .glass` 補 `border-color: rgba(0,0,0,0.1)`
+
+#### 刻意略過 (⏭️ Won't Do — 個人工具，無對應需求)
+- **[1.2] 載入狀態 Skeleton** — 本地/區網延遲極低，體感無差
+- **[1.3] Empty State 不一致** — 低頻場景，不影響使用
+- **[1.5] 批次刪除進度回饋** — 筆記量少，批次操作罕見
+- **[2.1] 共用 UI 元件庫不完整 (Dropdown/Badge/Select)** — 功能穩定後再統一，目前不影響使用
+- **[2.2] Tailwind class 重複** — 不影響功能，維護時順手整理
+- **[2.3] Heading 語意錯誤** — 非公開網站，無 SEO 需求
+- **[3.1] 搜尋即時篩選 (Debounce)** — Enter 觸發已習慣，且語意搜尋已移除，需求消失
+- **[3.4] 404 頁面** — 3 條路由，觸發機率趨近零
+- **[3.5] PromptBuilder 響應式** — 僅桌面端使用
+- **[3.6] 快捷鍵指南** — 個人使用已熟悉
+- **[4.1] ARIA 標籤缺失** — 個人工具，無外部使用者，無 WCAG 合規需求
+- **[4.2] 鍵盤導覽** — 同上
+- **[4.3] 側邊欄響應式** — 固定桌面端使用，無 mobile/tablet 場景
+- **[4.4] 圖片 alt 文字** — 非公開網站，無 a11y/SEO 需求
+
+### 其他延遲項目 🧊
+- **i18n 多語系** — 目前唯一語系繁中，待用戶群擴大再啟動
+- **啟動時自動開瀏覽器** — PyInstaller 打包後行為不穩定，等 7.0 穩定後處理
+
+### 🧪 Phase 6.4: 手動測試
+> **狀態**: 遇到問題再修 (Issue-Driven)
 
 ---
 
-**END OF TODO.md (v1.4.1 - 2025-12-15)**
+## 📝 更新記錄 (Changelog)
+
+| 版本 | 日期 | 內容 |
+|------|------|------|
+| **v2.4.9** | 2026-05-26 | Phase 17 Sidebar Filter Navigation — 非首頁點擊側邊欄分類/標籤會導回首頁並套用該篩選；首頁維持再次點擊同一篩選可取消；`GET /api/notes` 前端查詢改送 `category_id`，降低分類改名後依賴 `type` 名稱相容層的風險。**收尾驗證**：`cd frontend && npx tsc --noEmit` / `cd frontend && npm run build` / `pytest tests/ -v` / Browser flow |
+| **v2.4.8** | 2026-05-26 | Phase 16 Preview Editing UX — Preview 模式改為可互動：文字區塊可在預覽中切入小型 Markdown textarea 直接修改，獨立 Markdown / HTML 圖片可在預覽中移除引用，封面圖被移除時同步清空 `cover_image`；側欄 `ImageManagementPanel` 與 Preview 共用圖片引用移除 helper。**收尾驗證**：`cd frontend && npx tsc --noEmit` / `cd frontend && npm run build` / `pytest tests/ -v` 全通過；Browser flow 實測 Preview 內可改文字、刪圖片引用且 console 無 warn/error；PRISM_VERSION → 2.4.8 |
+| **v2.4.7** | 2026-05-13 | Phase 15 維護模式雜項 — **Markdown 匯出**：`GET /api/export/markdown` 回傳 zip（每筆記一個 `.md` + YAML frontmatter + `_manifest.json`），Settings 加「下載 .zip」按鈕；補 4 個 pytest（zip 結構 / frontmatter 欄位 / manifest 計數 / 空標題 edge case）；API_REFERENCE.md 補端點說明。**自動備份**：Pi 加 `prism-backup.timer`（每週日 03:00）+ `prism-backup.service` 觸發既有 `/api/server/backup/download` + `/rotate?keep=8`；DEPLOY-PI.md 補章節。**Dead folder 清理**：`git rm -r 資料庫備份/`（V1 殘留中文資料夾，實際備份都在 `backups/`）。**收尾**：80 passed (+4) / tsc 零錯誤 / build 成功 / PRISM_VERSION → 2.4.7 |
+| **v2.4.6** | 2026-05-13 | Phase 14 深度審計修補 (v2.4.5 後文件 / 測試 / 殭屍清理) — **文件對齊**：修補 5 條 404 cco 報告連結（README / INDEX / CONTRIBUTING）；修正 INDEX 三處維護狀態欄位；TODO 頭部移除「Local AI」/ 日期更新 / Phase 10 已完成標記；Prism.md 加歷史 banner + §1.2 刪除線；CONTRIBUTING 補 v1–v15 / 全綠期望 / 文件同步 checklist；tests/README 改 `--collect-only` 自動導覽。**安全回歸測試**：新增 `tests/test_security_guards.py`（`test_ssrf_blocks_loopback` / `test_ssrf_blocks_private_range` / `test_server_api_localhost_only` / `test_csrf_production_blocks_anonymous`）。**P2 殭屍清理**：`check_consistency` docstring 移除 `type_category_mismatch`；刪除 `scripts/check_deps.py`；刪除 `tests/test_offline_mode.py`。**收尾驗證**：76 passed / tsc 零錯誤 / Vite build 成功 / PRISM_VERSION → 2.4.6。**補做（2026-05-13 第二輪）**：`AGENTS.md` ↔ `CLAUDE.md` 還原為雙份完整鏡像 + sync banner + Release Checklist diff 比對行（修正初版誤改為 stub）；`git mv demo docs/過期/demo`；README「專案結構」補 `garbage-can/` 與 `migrations v15` / `tests` 自動導覽 |
+| **v2.4.5** | 2026-05-05 | Phase 13 搜尋範圍擴充 — `GET /api/notes?q=...` 覆蓋標題、內文、備註、附件標題/路徑/文字內容、標籤；補 pytest 回歸測試並同步 API / 架構 / schema 文件 |
+| **v2.4.4** | 2026-04-24 | Phase 12 前後端 API 契約修補 — 補回 check-update / migration-status；修正分類刪除 target_category_id；補齊 notes archived/include_archived/pinned_only/category_id 查詢；create/update 支援 pin/archive 狀態 |
+| **v2.4.3** | 2026-04-24 | Phase 11 外部 Agent API 對接整理 — 修正單筆讀取/duplicate/import-export 的 `Notes.type` schema 漂移，重寫 API 對接文件供外部 Agent 使用 |
+| **v2.4.2** | 2026-04-12 | Phase 10 體檢報告修補 — P0: 殭屍 `n.type` query 清除 (system/export)；P1: SSRF 防護 + real migration fixture + `_HAS_PARENT_ID` 刪除 + 手動 cascade 清除；P2: 版本同步 + api.ts 死碼 + file handle 修復 + server localhost-only + prod CSRF 收緊；補: schema regression 測試 + release checklist |
+| **v2.4.1** | 2026-04-04 | [2.1-IconButton] — 建立 `ui/IconButton.tsx`，統一 10 個檔案 29 處 icon button，tsc 零錯誤 |
+| **v2.4.0** | 2026-04-04 | 前端技術債清償 — NoteEditor 拆分 hooks、Toast → Zustand、api.ts 完整型別、glass border 修正 |
+| **v2.3.0** | 2026-04-04 | AI 全面拔除 — 移除 NVIDIA NIM / Ollama / Embeddings / Vector Store / AI Tagging / Semantic Search，Migration v14，轉型 Headless KMS |
+| **v2.2.0** | 2026-03-15 | Phase 9 UX 強化 — 全域錯誤攔截器 + ConfirmDialog + 標題 autoFocus + 標籤自動補全 |
+| **v2.1.2** | 2026-03-15 | Phase 8.2 Server Dashboard — 硬體監控、日誌檢視、備份管理、服務重啟、版本資訊 |
+| **v2.1.1** | 2026-03-15 | Phase 8.1 Raspberry Pi — avahi mDNS + Caddy 反向代理 + systemd 自啟 + 一鍵腳本 |
+| **v2.1.0** | 2026-03-15 | Phase 7.1/7.3 — check-update API + UpdateSection + init_db 移入 create_app |
+| **v1.5.1** | 2026-02-27 | Unsaved Changes Guard — 未儲存變更偵測與關閉攔截 |
+| **v1.5.0** | 2026-02-27 | 圖片管理增強 + 端口自選 — 批次操作、封面設定、WinError 10013 處理 |
+| **v0.5** | 2024-12-31 | Phase 0.5 — 拆分 NoteEditor/SettingsPage、Schema 淨化 |
+| **v0.1** | 2024-12-30 | Phase 0 — 架構淨化 (Kill Notes.type、AI_Tasks、QueryBuilder、V1 移植) |

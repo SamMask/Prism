@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
 System API Routes - Database Maintenance & System Info
-Prism v1.4.1
+Prism v1.5.0
 """
 
 import os
+import json
 import sqlite3
+import subprocess
 from flask import jsonify, current_app
 
 from . import system_bp
@@ -282,16 +284,9 @@ def wal_checkpoint():
 @system_bp.route('/system/check-consistency', methods=['GET'])
 def check_consistency():
     """
-    資料一致性檢查
-    檢查 Notes.type 與 category_id 的不一致記錄
-    
-    Response: { 
-        orphan_note_tags, 
-        unused_tags, 
-        type_category_mismatch, 
-        null_category_id,
-        fk_status 
-    }
+    資料一致性檢查（不檢查 type，因為 Notes.type 已於 v12 移除）
+
+    Response: { orphan_note_tags, unused_tags, null_category_id, fk_status, fk_enabled, health }
     """
     try:
         db = get_db()
@@ -310,14 +305,7 @@ def check_consistency():
             WHERE nt.tag_id IS NULL
         ''').fetchone()[0]
         
-        # 3. type 與 category_id 不一致
-        type_category_mismatch = db.execute('''
-            SELECT COUNT(*) FROM Notes n
-            LEFT JOIN Categories c ON n.category_id = c.id
-            WHERE c.name IS NOT NULL AND n.type != c.name
-        ''').fetchone()[0]
-        
-        # 4. 缺少 category_id 的筆記
+        # 3. 缺少 category_id 的筆記
         null_category_id = db.execute('''
             SELECT COUNT(*) FROM Notes WHERE category_id IS NULL
         ''').fetchone()[0]
@@ -326,15 +314,14 @@ def check_consistency():
         fk_status = db.execute('PRAGMA foreign_keys').fetchone()[0]
         
         # 計算整體健康狀態
-        issues = orphan_note_tags + type_category_mismatch
+        issues = orphan_note_tags
         health = 'healthy' if issues == 0 else 'warning' if issues < 5 else 'critical'
-        
+
         return jsonify({
             'status': 'success',
             'data': {
                 'orphan_note_tags': orphan_note_tags,
                 'unused_tags': unused_tags,
-                'type_category_mismatch': type_category_mismatch,
                 'null_category_id': null_category_id,
                 'fk_status': fk_status,
                 'fk_enabled': fk_status == 1,
@@ -342,6 +329,253 @@ def check_consistency():
             }
         })
         
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# ===================================================================
+# Update / Migration Status
+# ===================================================================
+
+def _normalize_version(version):
+    """Convert 'v2.4.3' or '2.4.3-beta' to a comparable tuple."""
+    import re
+    parts = re.findall(r'\d+', version or '')
+    return tuple(int(part) for part in parts[:3])
+
+
+def _get_release_api_url():
+    configured_url = current_app.config.get('PRISM_RELEASE_API_URL')
+    if configured_url:
+        return configured_url
+
+    github_repository = os.environ.get('GITHUB_REPOSITORY', '').strip()
+    if github_repository:
+        return f'https://api.github.com/repos/{github_repository}/releases/latest'
+
+    try:
+        result = subprocess.run(
+            ['git', 'remote', 'get-url', 'origin'],
+            cwd=current_app.root_path,
+            capture_output=True,
+            text=True,
+            timeout=2
+        )
+    except Exception:
+        return None
+
+    if result.returncode != 0:
+        return None
+
+    remote = result.stdout.strip()
+    if 'github.com' not in remote:
+        return None
+
+    repo = remote.removesuffix('.git')
+    if repo.startswith('git@github.com:'):
+        repo = repo.replace('git@github.com:', '', 1)
+    elif repo.startswith('https://github.com/'):
+        repo = repo.replace('https://github.com/', '', 1)
+    else:
+        return None
+
+    return f'https://api.github.com/repos/{repo}/releases/latest'
+
+
+@system_bp.route('/system/check-update', methods=['GET'])
+def check_update():
+    """
+    Check latest release metadata.
+
+    Network failure is returned as a successful API response with error details
+    so the settings UI can show a controlled status instead of a 404/500.
+    """
+    from config import Config
+
+    current_version = Config.PRISM_VERSION
+    release_api_url = _get_release_api_url()
+
+    if not release_api_url:
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'current_version': current_version,
+                'latest_version': None,
+                'has_update': False,
+                'release_url': '',
+                'release_notes': '',
+                'message': '未設定更新來源',
+            }
+        })
+
+    try:
+        import requests
+        response = requests.get(
+            release_api_url,
+            timeout=10,
+            headers={'Accept': 'application/vnd.github+json'}
+        )
+        response.raise_for_status()
+        release = response.json()
+    except Exception as e:
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'current_version': current_version,
+                'latest_version': None,
+                'has_update': False,
+                'release_url': '',
+                'release_notes': '',
+                'message': '無法檢查更新',
+                'error': str(e),
+            }
+        })
+
+    latest_version = release.get('tag_name') or release.get('name')
+    has_update = _normalize_version(latest_version) > _normalize_version(current_version)
+
+    return jsonify({
+        'status': 'success',
+        'data': {
+            'current_version': current_version,
+            'latest_version': latest_version,
+            'has_update': has_update,
+            'release_url': release.get('html_url', ''),
+            'release_notes': release.get('body', ''),
+            'message': '發現新版本' if has_update else '已是最新版本',
+        }
+    })
+
+
+@system_bp.route('/system/migration-status', methods=['GET'])
+def migration_status():
+    """Return current database migration status."""
+    try:
+        from migrations import get_migration_status
+        db = get_db()
+        return jsonify({
+            'status': 'success',
+            'data': get_migration_status(db)
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+# ===================================================================
+# Port Configuration (v1.5.0)
+# ===================================================================
+
+def _get_port_config_path():
+    """Get the port config file path"""
+    return os.path.join(current_app.root_path, '.port_config')
+
+
+@system_bp.route('/system/port-config', methods=['GET'])
+def get_port_config():
+    """
+    取得端口設定
+    Response: { 
+        preferred_port: int,
+        fallback_enabled: bool,
+        fallback_range: int,
+        current_port: int
+    }
+    """
+    try:
+        config_path = _get_port_config_path()
+        config = {
+            'preferred_port': 5000,
+            'fallback_enabled': True,
+            'fallback_range': 20
+        }
+        
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                saved = json.load(f)
+                config.update(saved)
+        
+        # Get current running port from environment or request
+        from flask import request
+        current_port = request.host.split(':')[-1] if ':' in request.host else '80'
+        config['current_port'] = int(current_port)
+        
+        return jsonify({
+            'status': 'success',
+            'data': config
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+
+@system_bp.route('/system/port-config', methods=['POST'])
+def set_port_config():
+    """
+    設定端口偏好
+    Body: { 
+        preferred_port: int,
+        fallback_enabled: bool,
+        fallback_range: int
+    }
+    """
+    try:
+        from flask import request
+        data = request.get_json() or {}
+        
+        config_path = _get_port_config_path()
+        
+        # Load existing config
+        config = {}
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+        
+        # Update with new values
+        if 'preferred_port' in data:
+            port = int(data['preferred_port'])
+            if port < 1024 or port > 65535:
+                return jsonify({
+                    'status': 'error',
+                    'message': '端口必須在 1024-65535 之間'
+                }), 400
+            config['preferred_port'] = port
+        
+        if 'fallback_enabled' in data:
+            config['fallback_enabled'] = bool(data['fallback_enabled'])
+        
+        if 'fallback_range' in data:
+            fb_range = int(data['fallback_range'])
+            if fb_range < 1 or fb_range > 100:
+                return jsonify({
+                    'status': 'error',
+                    'message': '備用範圍必須在 1-100 之間'
+                }), 400
+            config['fallback_range'] = fb_range
+        
+        # Save config
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=2)
+        
+        return jsonify({
+            'status': 'success',
+            'data': config,
+            'message': '端口設定已儲存，下次啟動時生效'
+        })
+        
+    except ValueError:
+        return jsonify({
+            'status': 'error',
+            'message': '無效的數值'
+        }), 400
     except Exception as e:
         return jsonify({
             'status': 'error',

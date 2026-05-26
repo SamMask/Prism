@@ -423,6 +423,60 @@ export function useSettings() {
   // 初始載入啟動偏好
   loadStartupPreference();
 
+  // Port Configuration (v1.5.0)
+  const portConfig = ref({
+    preferred_port: 5000,
+    fallback_enabled: true,
+    fallback_range: 20,
+    current_port: null
+  });
+  const portConfigLoading = ref(false);
+  const portConfigSaving = ref(false);
+
+  const loadPortConfig = async () => {
+    portConfigLoading.value = true;
+    try {
+      const response = await fetch('/api/system/port-config');
+      const result = await response.json();
+      if (result.status === 'success') {
+        portConfig.value = result.data;
+      }
+    } catch (error) {
+      console.error('Load port config error:', error);
+    } finally {
+      portConfigLoading.value = false;
+    }
+  };
+
+  const savePortConfig = async () => {
+    portConfigSaving.value = true;
+    try {
+      const response = await fetch('/api/system/port-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          preferred_port: portConfig.value.preferred_port,
+          fallback_enabled: portConfig.value.fallback_enabled,
+          fallback_range: portConfig.value.fallback_range
+        })
+      });
+      const result = await response.json();
+      if (result.status === 'success') {
+        alert(result.message || t('settings.portConfigSaved', '端口設定已儲存，下次啟動時生效'));
+      } else {
+        alert(t('settings.portConfigFailed', '儲存失敗') + ': ' + result.message);
+      }
+    } catch (error) {
+      console.error('Save port config error:', error);
+      alert(t('settings.portConfigFailed', '儲存失敗') + ': ' + error.message);
+    } finally {
+      portConfigSaving.value = false;
+    }
+  };
+
+  // 初始載入端口設定
+  loadPortConfig();
+
   // Clear History (v1.1)
   const clearingHistory = ref(false);
 
@@ -844,5 +898,12 @@ export function useSettings() {
     startupAutoOpen,
     toggleAutoOpenBrowser,
     loadStartupPreference,
+
+    // Port Configuration (v1.5.0)
+    portConfig,
+    portConfigLoading,
+    portConfigSaving,
+    loadPortConfig,
+    savePortConfig,
   };
 }

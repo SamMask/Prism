@@ -1,11 +1,14 @@
 """
 Prism - 本機端 AI 提示詞與知識管理中樞
 Flask 應用入口與資料庫初始化 (Blueprint 架構)
+
+V2: Headless API + React SPA 支援
 """
 
 import os
+import sys
 import sqlite3
-from flask import Flask, g, render_template, jsonify
+from flask import Flask, g, render_template, jsonify, send_from_directory, abort, current_app
 from config import config
 
 from werkzeug.exceptions import HTTPException
@@ -29,8 +32,19 @@ def create_app(env_name='default'):
     app = CustomFlask(__name__)
     
     # 載入配置
-    app.config.from_object(config[env_name])
+    if isinstance(env_name, str):
+        app.config.from_object(config[env_name])
+    else:
+        app.config.from_object(env_name)
     
+    # [Fix] 強制重新讀取環境變數或偵測打包模式
+    is_frozen = getattr(sys, 'frozen', False)  # PyInstaller 打包後
+    v2_env = os.environ.get('PRISM_V2', '').lower().strip() in ('true', '1', 'yes')
+    
+    if is_frozen or v2_env:
+        app.config['V2_MODE'] = True
+        print("[INFO] V2 Mode enabled (React SPA)")
+
     # 確保上傳目錄存在
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
@@ -80,16 +94,26 @@ def create_app(env_name='default'):
             origin = request.headers.get('Origin')
             referer = request.headers.get('Referer')
             
-            # 無 Origin/Referer 的請求 (如 curl/Postman) 放行
+            # 無 Origin/Referer 的請求：生產模式下拒絕，開發模式放行 (curl/Postman)
             if not origin and not referer:
+                is_prod = current_app.config.get('V2_MODE') and not current_app.debug
+                if is_prod:
+                    app.logger.warning('[CSRF] Blocked anonymous unsafe request in production mode')
+                    abort(403, description='CSRF validation failed: Origin header required')
                 return
             
             # 驗證 Origin 或 Referer 是否為本機
             host_url = request.host_url.rstrip('/')  # e.g., http://127.0.0.1:5000
             allowed_origins = [
                 host_url,
+                host_url.replace('http://', 'https://'),  # Caddy HTTPS termination
                 host_url.replace('127.0.0.1', 'localhost'),
-                host_url.replace('localhost', '127.0.0.1')
+                host_url.replace('localhost', '127.0.0.1'),
+                # V2: Allow Vite dev server (ports 5173-5174)
+                'http://localhost:5173',
+                'http://127.0.0.1:5173',
+                'http://localhost:5174',
+                'http://127.0.0.1:5174',
             ]
             
             origin_valid = origin and any(origin.startswith(o) for o in allowed_origins)
@@ -99,22 +123,57 @@ def create_app(env_name='default'):
                 app.logger.warning(f"[CSRF] Blocked request: Origin={origin}, Referer={referer}")
                 abort(403, description='CSRF validation failed: Origin mismatch')
 
+
+    # Global Template Variables
+    @app.context_processor
+    def inject_global_vars():
+        return dict(
+            version=app.config.get('PRISM_VERSION', '2.0.0-dev'),
+            is_v2=app.config.get('V2_MODE', False)
+        )
+
     # ===================================================================
-    # 註冊 Blueprints
+    # V2: React SPA 或 V1: Jinja2 模板
+    # ===================================================================
+    v2_mode = app.config.get('V2_MODE')
+    
+    if v2_mode:
+        # V2 Mode: Serve React SPA from frontend/dist
+        frontend_dist = app.config.get('FRONTEND_DIST')
+        
+        # V1 Prompt Builder page (still served via Jinja2 for now)
+        @app.route('/prompt-builder.html')
+        def prompt_builder_v1():
+            return render_template('prompt-builder.html')
+        
+        @app.route('/')
+        @app.route('/<path:path>')
+        def serve_spa(path=''):
+            # Skip API routes (handled by blueprints)
+            if path.startswith('api/'):
+                abort(404)
+            # Serve static files if they exist
+            if path and os.path.exists(os.path.join(frontend_dist, path)):
+                return send_from_directory(frontend_dist, path)
+            # Otherwise serve index.html for client-side routing
+            return send_from_directory(frontend_dist, 'index.html')
+        
+        print("[V2] React SPA 模式已啟用")
+    
     # ===================================================================
     from routes import register_blueprints
     register_blueprints(app)
 
-    # ===================================================================
-    # 首頁路由 (Frontend Entry Points)
-    # ===================================================================
-    @app.route('/')
-    def index():
-        return render_template('index.html')
+    # V1 Fallback (Only if V2 is not enabled)
+    if not v2_mode:
+        # V1 Mode: Traditional Jinja2 templates
+        @app.route('/')
+        def index():
+            return render_template('index.html')
 
-    @app.route('/prompt-builder')
-    def prompt_builder():
-        return render_template('prompt-builder.html')
+        @app.route('/prompt-builder')
+        def prompt_builder():
+            return render_template('prompt-builder.html')
     
     @app.route('/favicon.ico')
     def favicon():
@@ -122,7 +181,24 @@ def create_app(env_name='default'):
     
     @app.route('/api/test')
     def test_api():
-        return jsonify({'status': 'success', 'message': 'Prism API is running!'})
+        """Health check with database statistics"""
+        from db import get_db
+        try:
+            db = get_db()
+            notes_count = db.execute('SELECT COUNT(*) FROM Notes').fetchone()[0]
+            categories_count = db.execute('SELECT COUNT(*) FROM Categories').fetchone()[0]
+            tags_count = db.execute('SELECT COUNT(*) FROM Tags').fetchone()[0]
+            return jsonify({
+                'status': 'ok',
+                'message': 'Prism API is running!',
+                'stats': {
+                    'notes_count': notes_count,
+                    'categories_count': categories_count,
+                    'tags_count': tags_count
+                }
+            })
+        except Exception as e:
+            return jsonify({'status': 'ok', 'message': 'Prism API is running!', 'error': str(e)})
 
     return app
 
@@ -130,22 +206,9 @@ def create_app(env_name='default'):
 # 資料庫連線與初始化 (供 Application Context 使用)
 # ===================================================================
 
-def get_db():
-    """取得資料庫連線"""
-    if 'db' not in g:
-        from flask import current_app
-        try:
-            g.db = sqlite3.connect(
-                current_app.config['DATABASE'],
-                detect_types=sqlite3.PARSE_DECLTYPES
-            )
-            g.db.row_factory = sqlite3.Row
-            g.db.execute('PRAGMA foreign_keys = ON')
-            g.db.execute('PRAGMA journal_mode = WAL')  # v0.8.9: 啟用 WAL 模式提升效能
-        except sqlite3.Error as e:
-            print(f"[ERROR] 資料庫連線失敗: {e}")
-            raise
-    return g.db
+# [P1 Fix 2024-12-17] 刪除重複的 get_db()，統一使用 db.py 的版本
+# 原因: db.py 的版本有 Foreign Keys 驗證，這裡的版本沒有
+# 參見: Linus Analysis Report Bug #1 (Dual Source of Truth)
 
 def init_db():
     """
@@ -153,6 +216,7 @@ def init_db():
     
     v1.0: 使用版本化遷移系統，取代 if 分支堆疊
     """
+    from db import get_db  # 使用統一的 get_db
     db = get_db()
     try:
         # ===================================================================
@@ -165,7 +229,6 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
                 content TEXT NOT NULL,
-                type TEXT NOT NULL DEFAULT '筆記',
                 remarks TEXT,
                 cover_image TEXT,
                 cover_position TEXT DEFAULT 'top',
@@ -179,7 +242,7 @@ def init_db():
                 updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
         ''')
-        db.execute('CREATE INDEX IF NOT EXISTS idx_notes_type ON Notes(type)')
+        # Phase 0: idx_notes_type removed - Notes.type 欄位已在 Migration v12 中移除
         db.execute('CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON Notes(updated_at DESC)')
 
         # 2. Source_Urls 表
@@ -304,10 +367,16 @@ def init_db():
 
 所有資料皆儲存在本地端的 `knowledge.db` 資料庫中，您可以隨時備份此檔案。
 """
+            # 取得 '教學' 分類 ID
+            cat_cursor = db.execute("SELECT id FROM Categories WHERE name LIKE '%教學%' LIMIT 1")
+            cat_result = cat_cursor.fetchone()
+            # 若找不到則使用 ID 3 (預設) 或 NULL
+            welcome_cat_id = cat_result[0] if cat_result else 3
+
             db.execute('''
-                INSERT INTO Notes (title, content, type, remarks, created_at, updated_at)
+                INSERT INTO Notes (title, content, category_id, remarks, created_at, updated_at)
                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ''', (welcome_title, welcome_content, '教學', '系統自動生成'))
+            ''', (welcome_title, welcome_content, welcome_cat_id, '系統自動生成'))
             
             # 取得剛插入的 Note ID
             cursor = db.execute('SELECT last_insert_rowid()')
@@ -346,8 +415,7 @@ def auto_fix_consistency(db):
     
     修復項目:
     1. 孤兒 Note_Tags (引用不存在的 Notes)
-    2. type 與 category_id 不一致
-    3. NULL category_id 設為預設分類
+    2. NULL category_id 設為預設分類
     """
     fixes = []
     
@@ -360,16 +428,7 @@ def auto_fix_consistency(db):
         if cursor.rowcount > 0:
             fixes.append(f"刪除 {cursor.rowcount} 個孤兒標籤關聯")
         
-        # 2. 同步 type 與 category_id
-        # 如果 category_id 有值但 type 不匹配，更新 type
-        cursor = db.execute('''
-            UPDATE Notes 
-            SET type = (SELECT name FROM Categories WHERE id = Notes.category_id)
-            WHERE category_id IS NOT NULL 
-              AND type != (SELECT name FROM Categories WHERE id = Notes.category_id)
-        ''')
-        if cursor.rowcount > 0:
-            fixes.append(f"同步 {cursor.rowcount} 則筆記的 type 欄位")
+        # 2. (已移除) Notes.type 同步邏輯 - Phase 0 Step 5 移除
         
         # 3. NULL category_id 設為預設分類
         default_cat = db.execute('''
@@ -379,9 +438,9 @@ def auto_fix_consistency(db):
         if default_cat:
             cursor = db.execute('''
                 UPDATE Notes 
-                SET category_id = ?, type = ?
+                SET category_id = ?
                 WHERE category_id IS NULL
-            ''', (default_cat[0], default_cat[1]))
+            ''', (default_cat[0],))
             if cursor.rowcount > 0:
                 fixes.append(f"修復 {cursor.rowcount} 則筆記的空分類")
         
@@ -398,17 +457,47 @@ def auto_fix_consistency(db):
 
 def find_available_port(start_port=5000, max_attempts=10):
     """
-    R-01: 自動端口搜尋
-    如果 start_port 被佔用，自動遞增嘗試直到找到可用端口
+    R-01: 智能端口搜尋 (v1.5.0)
+    1. 先讀取 .port_config 中的偏好端口
+    2. 嘗試偏好端口，若被佔用則自動遞增嘗試
+    3. 支援自訂 fallback 範圍
     """
     import socket
-    for port in range(start_port, start_port + max_attempts):
+    import json
+    
+    # 讀取用戶端口設定
+    config_path = os.path.join(os.path.dirname(__file__), '.port_config')
+    fallback_enabled = True
+    fallback_range = max_attempts
+    
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                port_config = json.load(f)
+            start_port = port_config.get('preferred_port', start_port)
+            fallback_enabled = port_config.get('fallback_enabled', True)
+            fallback_range = port_config.get('fallback_range', max_attempts)
+            fb_status = '開' if fallback_enabled else '關'
+            print(f"[INFO] 讀取端口設定: 偏好端口={start_port}, 自動備用={fb_status}, 備用範圍={fallback_range}")
+        except Exception as e:
+            print(f"[WARNING] 讀取端口設定失敗: {e}")
+    
+    # 嘗試綁定端口
+    actual_range = fallback_range if fallback_enabled else 1
+    for port in range(start_port, start_port + actual_range):
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 s.bind(('127.0.0.1', port))
                 return port
-        except OSError:
+        except OSError as e:
+            error_code = getattr(e, 'winerror', None) or e.errno
+            if error_code == 10013:
+                print(f"[WARNING] Port {port} 被 Windows 保留或權限不足 (WinError 10013)，跳過")
+            else:
+                print(f"[WARNING] Port {port} 被佔用 (Error: {error_code})，跳過")
             continue
+    
     return None
 
 
@@ -454,18 +543,18 @@ if __name__ == '__main__':
     with app.app_context():
         init_db()
 
-    # R-01: 自動尋找可用端口
-    preferred_port = int(os.environ.get('PORT', 5000))
-    port = find_available_port(preferred_port)
+    # R-01: 智能端口搜尋 (v1.5.0: 讀取 .port_config)
+    env_port = int(os.environ.get('PORT', 5000))
+    port = find_available_port(env_port, max_attempts=20)
     
     if port is None:
-        print(f"[ERROR] 無法找到可用端口 ({preferred_port}-{preferred_port+9})")
-        app.logger.error(f"無法找到可用端口 ({preferred_port}-{preferred_port+9})")
+        print(f"[ERROR] 無法找到可用端口，請在設定中調整端口範圍")
+        app.logger.error(f"無法找到可用端口")
         exit(1)
     
-    if port != preferred_port:
-        print(f"[WARNING] Port {preferred_port} 被佔用，改用 Port {port}")
-        app.logger.warning(f"Port {preferred_port} 被佔用，改用 Port {port}")
+    if port != env_port:
+        print(f"[WARNING] Port {env_port} 不可用，自動切換至 Port {port}")
+        app.logger.warning(f"Port {env_port} 不可用，自動切換至 Port {port}")
     
     # 讀取 Debug 設定
     debug = os.environ.get('FLASK_DEBUG', 'False') == 'True'
@@ -478,10 +567,47 @@ if __name__ == '__main__':
     app.logger.info(startup_msg)
     
     # 啟動應用
-    # v1.3: 預設綁定 127.0.0.1 (僅本機訪問)，可透過 HOST 環境變數覆蓋
     host = os.environ.get('HOST', '127.0.0.1')
-    if host == '0.0.0.0':
-        print(f"[WARNING] 綁定到所有網路介面 (0.0.0.0)。請確保您信任此網路環境！")
-        app.logger.warning("Binding to all interfaces (0.0.0.0). Ensure you trust this network!")
     
-    app.run(host=host, port=port, debug=debug)
+    # PyWebView 桌面模式 (打包後自動啟用)
+    is_frozen = getattr(sys, 'frozen', False)
+    desktop_env = os.environ.get('PRISM_DESKTOP', '').lower() in ('1', 'true', 'yes')
+    use_webview = is_frozen or desktop_env
+    
+    if use_webview:
+        try:
+            import webview
+            import threading
+            
+            # 在背景線程啟動 Flask
+            def start_flask():
+                app.run(host=host, port=port, debug=False, use_reloader=False)
+            
+            flask_thread = threading.Thread(target=start_flask, daemon=True)
+            flask_thread.start()
+            
+            # 等待 Flask 啟動
+            import time
+            time.sleep(1)
+            
+            # 建立 PyWebView 視窗
+            print("[INFO] 啟動桌面模式 (PyWebView)")
+            webview.create_window(
+                'Prism - 知識管理中樞',
+                f'http://127.0.0.1:{port}/',
+                width=1280,
+                height=800,
+                min_size=(800, 600)
+            )
+            webview.start()
+        except ImportError:
+            print("[WARNING] pywebview 未安裝，使用瀏覽器模式")
+            print("[INFO] 安裝方式: pip install pywebview")
+            app.run(host=host, port=port, debug=debug)
+    else:
+        if host == '0.0.0.0':
+            print(f"[WARNING] 綁定到所有網路介面 (0.0.0.0)。請確保您信任此網路環境！")
+            app.logger.warning("Binding to all interfaces (0.0.0.0). Ensure you trust this network!")
+        
+        app.run(host=host, port=port, debug=debug)
+

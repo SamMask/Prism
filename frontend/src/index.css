@@ -1,0 +1,307 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===================================================================
+   Prism V2 - Design System CSS Variables
+   Migrated from v1.x static/css/styles.css
+   =================================================================== */
+
+/* Default Theme (Professional Blue) */
+:root,
+[data-theme="default"] {
+  /* Background Colors (Dark Theme Default) */
+  --color-bg-base: #030712;
+  --color-bg-surface: #111827;
+  --color-bg-elevated: #1f2937;
+  --color-bg-hover: #374151;
+
+  /* Primary Colors (Professional Blue) */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #60a5fa;
+  --color-primary-rgb: 59, 130, 246;
+
+  /* Accent Colors (Purple) */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #7c3aed;
+  --color-accent-light: #a78bfa;
+  --color-accent-rgb: 139, 92, 246;
+
+  /* Text Colors */
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #848b98;
+
+  /* Border Colors */
+  --color-border-default: #374151;
+  --color-border-subtle: #1f2937;
+
+  /* Status Colors */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-error: #ef4444;
+}
+
+/* Cyberpunk Theme (Neon Purple/Pink) */
+[data-theme="cyberpunk"] {
+  --color-bg-base: #0a0612;
+  --color-bg-surface: #150d1f;
+  --color-bg-elevated: #1e1430;
+  --color-bg-hover: #2d1f45;
+
+  --color-primary: #e879f9;
+  --color-primary-hover: #d946ef;
+  --color-primary-light: #f0abfc;
+  --color-primary-rgb: 232, 121, 249;
+
+  --color-accent: #22d3ee;
+  --color-accent-hover: #06b6d4;
+  --color-accent-light: #67e8f9;
+  --color-accent-rgb: 34, 211, 238;
+
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #848b98;
+
+  --color-border-default: #3d2a5c;
+  --color-border-subtle: #2d1f45;
+
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #f43f5e;
+  --color-error: #f43f5e;
+}
+
+/* Eye-Care Theme (Soft Green) */
+[data-theme="eye-care"] {
+  --color-bg-base: #060a07;
+  --color-bg-surface: #0d1610;
+  --color-bg-elevated: #141f17;
+  --color-bg-hover: #1f2d22;
+
+  --color-primary: #34d399;
+  --color-primary-hover: #10b981;
+  --color-primary-light: #6ee7b7;
+  --color-primary-rgb: 52, 211, 153;
+
+  --color-accent: #a3e635;
+  --color-accent-hover: #84cc16;
+  --color-accent-light: #bef264;
+  --color-accent-rgb: 163, 230, 53;
+
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #848b98;
+
+  --color-border-default: #2a3b2e;
+  --color-border-subtle: #1f2d22;
+
+  --color-success: #22c55e;
+  --color-warning: #eab308;
+  --color-danger: #f87171;
+  --color-error: #f87171;
+}
+
+/* Elegant Theme (Gold/Warm Gray) */
+[data-theme="elegant"] {
+  --color-bg-base: #0c0a08;
+  --color-bg-surface: #1a1613;
+  --color-bg-elevated: #28231d;
+  --color-bg-hover: #3a3328;
+
+  --color-primary: #d4a574;
+  --color-primary-hover: #c9956a;
+  --color-primary-light: #e8c4a0;
+  --color-primary-rgb: 212, 165, 116;
+
+  --color-accent: #a1887f;
+  --color-accent-hover: #8d6e63;
+  --color-accent-light: #bcaaa4;
+  --color-accent-rgb: 161, 136, 127;
+
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #848b98;
+
+  --color-border-default: #3a3328;
+  --color-border-subtle: #28231d;
+
+  --color-success: #81c784;
+  --color-warning: #ffb74d;
+  --color-danger: #e57373;
+  --color-error: #e57373;
+}
+
+/* Ocean Theme (Teal/Deep Blue) */
+[data-theme="ocean"] {
+  --color-bg-base: #031318;
+  --color-bg-surface: #0a1e26;
+  --color-bg-elevated: #122b36;
+  --color-bg-hover: #1d3a47;
+
+  --color-primary: #14b8a6;
+  --color-primary-hover: #0d9488;
+  --color-primary-light: #2dd4bf;
+  --color-primary-rgb: 20, 184, 166;
+
+  --color-accent: #0ea5e9;
+  --color-accent-hover: #0284c7;
+  --color-accent-light: #38bdf8;
+  --color-accent-rgb: 14, 165, 233;
+
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #848b98;
+
+  --color-border-default: #1d3a47;
+  --color-border-subtle: #122b36;
+
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-error: #ef4444;
+}
+
+/* Sunset Theme (Orange/Coral) */
+[data-theme="sunset"] {
+  --color-bg-base: #0c0705;
+  --color-bg-surface: #1a120d;
+  --color-bg-elevated: #281b14;
+  --color-bg-hover: #3a281d;
+
+  --color-primary: #f97316;
+  --color-primary-hover: #ea580c;
+  --color-primary-light: #fb923c;
+  --color-primary-rgb: 249, 115, 22;
+
+  --color-accent: #f472b6;
+  --color-accent-hover: #ec4899;
+  --color-accent-light: #f9a8d4;
+  --color-accent-rgb: 244, 114, 182;
+
+  --color-text-primary: #f3f4f6;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #848b98;
+
+  --color-border-default: #3a281d;
+  --color-border-subtle: #281b14;
+
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-danger: #ef4444;
+  --color-error: #ef4444;
+}
+
+/* ===================================================================
+   Light Theme (Gray 15% - Soft, not too bright)
+   =================================================================== */
+
+html.light,
+.light {
+  /* Background Colors (Light Theme - Gray 15) */
+  --color-bg-base: #e5e5e5;
+  --color-bg-surface: #d9d9d9;
+  --color-bg-elevated: #cccccc;
+  --color-bg-hover: #bfbfbf;
+
+  /* Primary Colors (Same) */
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-primary-light: #93c5fd;
+  --color-primary-rgb: 59, 130, 246;
+
+  /* Accent Colors (Same) */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #7c3aed;
+  --color-accent-light: #c4b5fd;
+
+  /* Text Colors (Dark text on gray background) */
+  --color-text-primary: #1a1a1a;
+  --color-text-secondary: #404040;
+  --color-text-muted: #525252;
+
+  /* Border Colors (Light gray) */
+  --color-border-default: #a6a6a6;
+  --color-border-subtle: #b3b3b3;
+
+  /* Status Colors (Same) */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-error: #ef4444;
+}
+
+/* ===================================================================
+   Base Styles
+   =================================================================== */
+
+body {
+  font-family: "Inter", "Noto Sans TC", sans-serif;
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ===================================================================
+   Scrollbar Styles
+   =================================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* ===================================================================
+   Utility Classes
+   =================================================================== */
+
+@layer utilities {
+  .glass {
+    background: rgba(17, 24, 39, 0.8);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--color-border-subtle);
+  }
+
+  .light .glass {
+    background: rgba(255, 255, 255, 0.8);
+    border-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .gradient-text {
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-accent)
+    );
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

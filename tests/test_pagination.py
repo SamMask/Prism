@@ -25,22 +25,31 @@ def populated_client(app):
         # 為了效率，我們可以直接操作 DB，因為這只是測試分頁，不是測試創建
         from db import get_db
         db = get_db()
+        db.execute(
+            "INSERT OR IGNORE INTO Categories (name, icon, sort_order, is_default) VALUES (?, ?, ?, 0)",
+            ("測試", "🧪", 999)
+        )
+        db.commit()
+        test_category_id = db.execute(
+            "SELECT id FROM Categories WHERE name = ? LIMIT 1",
+            ("測試",)
+        ).fetchone()[0]
         
         # 只有在資料為空時才建立 (避免重複)
-        cursor = db.execute("SELECT COUNT(*) FROM Notes WHERE type='測試'")
+        cursor = db.execute("SELECT COUNT(*) FROM Notes WHERE category_id = ?", (test_category_id,))
         if cursor.fetchone()[0] < notes_count:
             notes_data = []
             for i in range(1, notes_count + 1):
                 notes_data.append((
                     f"Test Note {i:03d}",
                     f"# Test Content {i}\n\nThis is test note number {i}.",
-                    "測試",
+                    test_category_id,
                     f"Test note {i}"
                 ))
             
             # 使用 executemany 加速
             db.executemany('''
-                INSERT INTO Notes (title, content, type, remarks, created_at, updated_at)
+                INSERT INTO Notes (title, content, category_id, remarks, created_at, updated_at)
                 VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ''', notes_data)
             db.commit()

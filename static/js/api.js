@@ -238,6 +238,17 @@ class ApiService {
         });
     }
 
+    // Download remote image URL and save locally
+    downloadImageFromUrl(imageUrl, thumbnailOnly = true) {
+        return this.request('/upload/url', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                url: imageUrl, 
+                thumbnail_only: thumbnailOnly 
+            })
+        });
+    }
+
     // Cleanup (v0.8)
     getOrphanImages() {
         return this.request('/cleanup/orphan-images');

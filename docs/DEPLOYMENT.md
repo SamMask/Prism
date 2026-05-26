@@ -83,19 +83,22 @@ Debug 模式啟用時會產生以下風險:
 
 ## 系統需求
 
-- Python 3.8+
-- SQLite 3.x
+- Python 3.10+
+- Node.js 18+（僅開發 / 重新建置前端時需要）
+- SQLite 3.x（內建）
 - 依賴套件請參考 `requirements.txt`
 
 ## 安裝步驟
 
-1. 安裝依賴套件:
+### 生產環境（使用預建置前端）
+
+1. 安裝 Python 依賴:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-2. 設定環境變數 (參考上方說明)
+2. 設定環境變數（參考上方說明）
 
 3. 執行應用程式:
 
@@ -109,8 +112,96 @@ python app.py
 http://localhost:5000
 ```
 
+### 開發環境（前後端分離）
+
+```bash
+# 終端機 1：後端
+python app.py
+
+# 終端機 2：前端 (Vite HMR)
+cd frontend
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+### 重新建置前端
+
+```bash
+cd frontend
+npm run build
+# 建置產出至 frontend/dist/，由 Flask 靜態服務
+```
+
 ---
 
-**版本**: v1.4.1
-**更新日期**: 2025-12-15
-**安全性增強**: 環境變數控制 Debug 模式
+## 🍓 樹莓派 / 無頭伺服器部署 (Phase 8.1)
+
+> **目標**: 在區域網路內以 `https://prism.local` 存取 Prism，無需記 IP 或 Port。
+> **前提**: Raspberry Pi OS (Debian-based) 或任何支援 systemd 的 Linux。
+>
+> **詳細操作步驟（含日常更新）請見根目錄 [`DEPLOY-PI.md`](../DEPLOY-PI.md)**。
+
+### 一鍵安裝（首次）
+
+```bash
+cd /path/to/prism
+bash deploy/raspberry_pi/setup.sh
+```
+
+腳本自動完成以下步驟（冪等，可重複執行）：
+
+| 步驟 | 工具 | 效果 |
+|------|------|------|
+| 1 | `avahi-daemon` | 讓區網裝置可 ping `prism.local` |
+| 2 | `Caddy` | 443 (HTTPS/TLS internal) → localhost:5000 反向代理 |
+| 3 | `systemd` | 開機自動啟動 Prism |
+
+設定完成後，區網內任何裝置皆可直接開啟：
+
+```
+https://prism.local
+```
+
+### Linux venv（必要，v2.4.2+）
+
+> `requirements.txt` 包含 Windows 專用套件 `python-magic-bin`，**不可在 Pi 上使用**。
+> Pi 必須使用 `requirements-pi.txt` + `linux-venv/`。
+
+```bash
+# 在 Pi 上執行（首次）
+sudo apt-get install -y libmagic1 python3-venv
+python3 -m venv linux-venv
+linux-venv/bin/pip install -r requirements-pi.txt
+```
+
+systemd service 的 `ExecStart` 必須指向：
+```
+ExecStart=/home/<user>/prism/linux-venv/bin/python app.py
+```
+
+### Port 設定（`.port_config`）
+
+`.port_config` 必須為 **JSON 格式**：
+
+```json
+{"preferred_port": 5000, "fallback_enabled": true, "fallback_range": 20}
+```
+
+> ⚠️ 不可寫成純數字（`5000`）——解析失敗會靜默回退，可能佔用錯誤 port 導致 Caddy 無法代理。
+
+### 常用維運指令
+
+```bash
+sudo systemctl status prism          # 查看 Prism 狀態
+sudo journalctl -u prism -f          # 即時查看 Prism 日誌
+sudo systemctl restart prism         # 重啟 Prism
+sudo systemctl status caddy          # 查看 Caddy 代理狀態
+sudo ss -tlnp | grep -E '5000|5001'  # 確認 port 占用狀況
+```
+
+---
+
+**版本**: v2.4.2
+**更新日期**: 2026-04-12
+**更新內容**: Linux venv 說明、`.port_config` JSON 格式要求、DEPLOY-PI.md 參照
