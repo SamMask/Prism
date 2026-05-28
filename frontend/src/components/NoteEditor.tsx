@@ -16,10 +16,11 @@ import { usePromptExtraction } from '../hooks/editor/usePromptExtraction'
 interface NoteEditorProps {
   note: Note | null
   onClose: () => void
+  initialPreview?: boolean
 }
 
-export function NoteEditor({ note, onClose }: NoteEditorProps) {
-  const form = useNoteForm(note, onClose)
+export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditorProps) {
+  const form = useNoteForm(note, onClose, initialPreview)
   const { handlePaste } = usePasteHandler(form.setContent)
   const { hasAIPrompt, isCheckingPrompt, handleCopyPrompt } = usePromptExtraction(form.content)
   const history = useNoteHistory(note, form.setContent)
@@ -42,8 +43,8 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
 
   return (
     <>
-      <Modal isOpen onClose={form.handleClose} size="xl">
-        <div className="flex flex-col h-[80vh]">
+      <Modal isOpen onClose={form.handleClose} size="full">
+        <div className="flex h-[min(86vh,920px)] flex-col overflow-hidden" data-testid="note-editor">
 
           {/* Toolbar */}
           <EditorToolbar
@@ -61,11 +62,11 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
           />
 
           {/* Body */}
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
 
             {/* Dual-mode image gallery */}
             {form.editorLayout === 'dual' && (
-              <div className="w-56 flex-shrink-0 border-r border-border-subtle p-3 overflow-auto bg-bg-elevated/30">
+              <div className="hidden w-56 flex-shrink-0 overflow-auto border-r border-border-subtle bg-bg-elevated/30 p-3 lg:block">
                 <h4 className="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                   <Image size={14} />
                   圖片預覽
@@ -74,7 +75,6 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   <div className="text-center text-text-muted text-sm py-8">
                     <Image size={32} className="mx-auto mb-2 opacity-30" />
                     <p>尚無圖片</p>
-                    <p className="text-xs mt-1">在內容中加入圖片後會顯示在此</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -99,7 +99,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
             {/* Editor / Preview area */}
             <div
               ref={drag.dropZoneRef}
-              className={`flex-1 flex flex-col p-6 overflow-auto relative ${
+              className={`relative flex min-h-0 flex-1 flex-col overflow-auto px-4 py-5 lg:px-7 lg:py-6 ${
                 drag.isDragging ? 'ring-2 ring-primary ring-inset bg-primary/5' : ''
               }`}
               onDragEnter={drag.handleDragEnter}
@@ -122,12 +122,12 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                 onChange={(e) => form.setTitle(e.target.value)}
                 placeholder="標題"
                 autoFocus
-                className="text-xl font-semibold bg-transparent border-none outline-none text-text-primary placeholder-text-muted mb-4"
+                className="mb-4 w-full bg-transparent text-2xl font-semibold leading-tight text-text-primary placeholder-text-muted outline-none"
               />
 
               {form.isPreview ? (
                 <div
-                  className="flex-1 prose prose-invert max-w-none
+                  className="min-h-0 flex-1 prose prose-invert max-w-none
                     text-text-primary prose-headings:text-text-primary
                     prose-a:text-primary prose-strong:text-text-primary
                     prose-code:bg-bg-elevated prose-code:px-1 prose-code:rounded
@@ -147,7 +147,7 @@ export function NoteEditor({ note, onClose }: NoteEditorProps) {
                   onChange={(e) => form.setContent(e.target.value)}
                   onPaste={handlePaste}
                   placeholder="開始輸入內容... (支援 Markdown，可直接貼上或拖曳圖片，Ctrl+B 粗體、Ctrl+I 斜體)"
-                  className="flex-1 bg-transparent border-none outline-none resize-none text-text-primary placeholder-text-muted font-mono text-sm leading-relaxed"
+                  className="min-h-[26rem] flex-1 resize-none border-none bg-transparent font-mono text-sm leading-relaxed text-text-primary outline-none placeholder-text-muted"
                 />
               )}
             </div>

@@ -1,12 +1,23 @@
 
 import pytest
-from utils.query_builder import NoteQueryBuilder, sanitize_fts_query
+from utils.query_builder import (
+    NoteQueryBuilder,
+    sanitize_fts_query,
+    tokenize_search_terms,
+)
+
+
+def test_tokenize_search_terms_splits_filename_punctuation():
+    """Filename-like queries should remain searchable as separate terms."""
+    assert tokenize_search_terms("todo.md") == ["todo", "md"]
+    assert tokenize_search_terms("foo-bar") == ["foo", "bar"]
 
 def test_sanitize_fts_query_basic():
     """Test basic FTS query logic"""
     assert sanitize_fts_query("hello") == '"hello"*'
     assert sanitize_fts_query("hello world") == '"hello"* "world"*'
-    assert sanitize_fts_query("foo-bar") == '"foobar"*' 
+    assert sanitize_fts_query("foo-bar") == '"foo"* "bar"*'
+    assert sanitize_fts_query("todo.md") == '"todo"* "md"*'
     assert sanitize_fts_query("") == ""
     assert sanitize_fts_query("   ") == ""
 

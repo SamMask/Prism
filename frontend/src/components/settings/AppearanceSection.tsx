@@ -1,17 +1,55 @@
 
 import { useState } from 'react';
-import { Sun, Moon, Check } from 'lucide-react';
+import { Sun, Moon, Check, LayoutGrid, List, AlignJustify, Rows, Newspaper, Clapperboard } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { Category } from '../../services/api';
+import { useAppStore, type ViewMode } from '../../stores/appStore';
 
 interface AppearanceSectionProps {
   categories: Category[];
 }
 
+type AestheticMode = 'linear' | 'editorial' | 'studio';
+type AccentColor = 'default' | 'cyberpunk' | 'eye-care' | 'elegant' | 'ocean' | 'sunset';
+
+const clampNumber = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const readNumberSetting = (key: string, fallback: number, min: number, max: number) => {
+  const value = Number(localStorage.getItem(key));
+  return Number.isFinite(value) ? clampNumber(value, min, max) : fallback;
+};
+
+const setRootPixelVariable = (name: string, value: number) => {
+  document.documentElement.style.setProperty(name, `${value}px`);
+};
+
+const accentOptions: Array<{ id: AccentColor; name: string; color: string }> = [
+  { id: 'default', name: '專業藍', color: '#3b82f6' },
+  { id: 'cyberpunk', name: '賽博龐克', color: '#e879f9' },
+  { id: 'eye-care', name: '護眼綠', color: '#34d399' },
+  { id: 'elegant', name: '典雅金', color: '#d4a574' },
+  { id: 'ocean', name: '海洋青', color: '#14b8a6' },
+  { id: 'sunset', name: '夕陽橙', color: '#f97316' },
+];
+
 export function AppearanceSection({ categories }: AppearanceSectionProps) {
+  const { viewMode, setViewMode } = useAppStore();
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
+  const [aestheticMode, setAestheticMode] = useState<AestheticMode>(() => {
+    const savedMode = localStorage.getItem('prism.aestheticMode') as AestheticMode | null;
+    return savedMode === 'editorial' || savedMode === 'studio' ? savedMode : 'linear';
+  });
+  const [accentColor, setAccentColor] = useState<AccentColor>(() => {
+    const savedAccent =
+      (localStorage.getItem('prism.accentColor') || localStorage.getItem('colorTheme')) as AccentColor | null;
+    return savedAccent && accentOptions.some((option) => option.id === savedAccent) ? savedAccent : 'default';
+  });
+  const [cornerRadius, setCornerRadius] = useState(() => readNumberSetting('prism.cornerRadius', 10, 4, 24));
+  const [sidebarWidth, setSidebarWidth] = useState(() => readNumberSetting('prism.sidebarWidth', 248, 208, 320));
 
   const [autoLoadMore, setAutoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') === 'true');
 
@@ -21,8 +59,57 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('light', newTheme === 'light');
+    document.documentElement.setAttribute('data-mode', newTheme);
     toast.success(`已切換至${newTheme === 'dark' ? '深色' : '淺色'}主題`);
   };
+
+  const setAesthetic = (mode: AestheticMode, label: string) => {
+    setAestheticMode(mode);
+    localStorage.setItem('prism.aestheticMode', mode);
+    document.documentElement.setAttribute('data-aesthetic', mode);
+    toast.success(`已切換至「${label}」外觀`);
+  };
+
+  const setAccent = (color: AccentColor, label: string) => {
+    setAccentColor(color);
+    localStorage.setItem('prism.accentColor', color);
+    localStorage.setItem('colorTheme', color);
+    document.documentElement.setAttribute('data-accent', color);
+    document.documentElement.setAttribute('data-theme', color);
+    toast.success(`已切換至「${label}」主色`);
+  };
+
+  const updateCornerRadius = (value: number) => {
+    const nextValue = clampNumber(value, 4, 24);
+    setCornerRadius(nextValue);
+    localStorage.setItem('prism.cornerRadius', String(nextValue));
+    setRootPixelVariable('--prism-corner-radius', nextValue);
+  };
+
+  const updateSidebarWidth = (value: number) => {
+    const nextValue = clampNumber(value, 208, 320);
+    setSidebarWidth(nextValue);
+    localStorage.setItem('prism.sidebarWidth', String(nextValue));
+    setRootPixelVariable('--prism-sidebar-width', nextValue);
+    setRootPixelVariable('--sidebar-w', nextValue);
+  };
+
+  const viewOptions: Array<{ value: ViewMode; label: string; icon: typeof LayoutGrid }> = [
+    { value: 'grid', label: '網格', icon: LayoutGrid },
+    { value: 'list', label: '列表', icon: List },
+    { value: 'compact', label: '精簡', icon: AlignJustify },
+  ];
+
+  const aestheticOptions: Array<{
+    value: AestheticMode;
+    label: string;
+    description: string;
+    icon: typeof Rows;
+  }> = [
+    { value: 'linear', label: 'Linear', description: '清楚、直接、偏工具感', icon: Rows },
+    { value: 'editorial', label: 'Editorial', description: '閱讀感、標題層級更強', icon: Newspaper },
+    { value: 'studio', label: 'Studio', description: '更緊湊、偏創作工作台', icon: Clapperboard },
+  ];
 
   return (
     <div className="glass rounded-xl p-6">
@@ -49,32 +136,97 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
         </Button>
       </div>
 
+      {/* Aesthetic Mode */}
+      <div className="pt-6 border-t border-border-subtle">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-text-primary">美學方向</p>
+            <p className="text-text-muted text-sm">
+              切換字體層級、卡片節奏與介面密度
+            </p>
+          </div>
+          <div
+            className="grid w-full gap-2 sm:grid-cols-3 lg:w-auto"
+            data-testid="aesthetic-mode-controls"
+          >
+            {aestheticOptions.map(({ value, label, description, icon: Icon }) => {
+              const isActive = aestheticMode === value;
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setAesthetic(value, label)}
+                  className={`min-w-[148px] rounded-lg border px-3 py-2 text-left transition-all
+                    ${isActive
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border-default bg-bg-elevated text-text-secondary hover:border-border-hover hover:text-text-primary'
+                    }`}
+                  aria-pressed={isActive}
+                  data-testid={`aesthetic-mode-${value}`}
+                >
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <Icon size={15} />
+                    {label}
+                  </span>
+                  <span className="mt-1 block text-xs text-text-muted">
+                    {description}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Default View Mode */}
+      <div className="pt-6 border-t border-border-subtle">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-text-primary">筆記顯示模式</p>
+            <p className="text-text-muted text-sm">
+              設定 Home 筆記列表的預設密度
+            </p>
+          </div>
+          <div className="inline-flex w-fit items-center gap-1 rounded-lg bg-bg-elevated p-1">
+            {viewOptions.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setViewMode(value);
+                  toast.success(`已切換為「${label}」顯示`);
+                }}
+                className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors
+                  ${viewMode === value
+                    ? 'bg-primary text-white'
+                    : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                  }`}
+                aria-pressed={viewMode === value}
+              >
+                <Icon size={16} />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* Color Theme */}
       <div className="pt-6 border-t border-border-subtle">
         <div className="mb-3">
-          <p className="text-text-primary">主題色彩</p>
+          <p className="text-text-primary">主色</p>
           <p className="text-text-muted text-sm">
-            選擇你喜歡的配色方案
+            在目前美學方向下調整強調色
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {[
-            { id: 'default', name: '專業藍', color: '#3b82f6' },
-            { id: 'cyberpunk', name: '賽博龐克', color: '#e879f9' },
-            { id: 'eye-care', name: '護眼綠', color: '#34d399' },
-            { id: 'elegant', name: '典雅金', color: '#d4a574' },
-            { id: 'ocean', name: '海洋青', color: '#14b8a6' },
-            { id: 'sunset', name: '夕陽橙', color: '#f97316' },
-          ].map((themeOption) => {
-            const isSelected = document.documentElement.getAttribute('data-theme') === themeOption.id;
+          {accentOptions.map((themeOption) => {
+            const isSelected = accentColor === themeOption.id;
             return (
               <button
                 key={themeOption.id}
-                onClick={() => {
-                  document.documentElement.setAttribute('data-theme', themeOption.id);
-                  localStorage.setItem('colorTheme', themeOption.id);
-                  toast.success(`已切換至「${themeOption.name}」主題`);
-                }}
+                type="button"
+                onClick={() => setAccent(themeOption.id, themeOption.name)}
                 className={`
                   flex items-center gap-3 p-3 rounded-lg border
                   transition-all duration-200
@@ -83,6 +235,8 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                     : 'border-border-default hover:border-border-hover hover:bg-bg-elevated'
                   }
                 `}
+                aria-pressed={isSelected}
+                data-testid={`accent-color-${themeOption.id}`}
               >
                 <div
                   className="w-8 h-8 rounded-full flex-shrink-0"
@@ -99,6 +253,57 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
               </button>
             );
           })}
+        </div>
+      </div>
+
+      {/* Geometry Controls */}
+      <div className="pt-6 border-t border-border-subtle">
+        <div className="space-y-6">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-text-primary">邊角圓潤度</p>
+              <p className="text-text-muted text-sm">
+                影響卡片、按鈕、輸入框等所有圓角
+              </p>
+            </div>
+            <div className="flex min-w-[220px] items-center gap-4">
+              <input
+                type="range"
+                min={4}
+                max={24}
+                step={1}
+                value={cornerRadius}
+                onChange={(event) => updateCornerRadius(Number(event.target.value))}
+                className="prism-slider flex-1"
+                aria-label="邊角圓潤度"
+                data-testid="corner-radius-slider"
+              />
+              <span className="w-12 text-right text-sm tabular-nums text-text-primary">{cornerRadius}px</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-text-primary">側邊欄寬度</p>
+              <p className="text-text-muted text-sm">
+                調整桌面版側邊欄與筆記區的空間比例
+              </p>
+            </div>
+            <div className="flex min-w-[220px] items-center gap-4">
+              <input
+                type="range"
+                min={208}
+                max={320}
+                step={4}
+                value={sidebarWidth}
+                onChange={(event) => updateSidebarWidth(Number(event.target.value))}
+                className="prism-slider flex-1"
+                aria-label="側邊欄寬度"
+                data-testid="sidebar-width-slider"
+              />
+              <span className="w-14 text-right text-sm tabular-nums text-text-primary">{sidebarWidth}px</span>
+            </div>
+          </div>
         </div>
       </div>
 

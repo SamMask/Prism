@@ -88,13 +88,13 @@ export function PromptBuilder() {
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-8rem)]">
+    <div className="grid min-h-0 gap-4 lg:h-[calc(100vh-8rem)] lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.92fr)]" data-testid="prompt-builder-page">
       {/* Left Panel - Configuration */}
-      <div className="w-1/2 overflow-y-auto pr-2 space-y-4">
+      <div className="min-h-0 space-y-4 overflow-y-auto pr-0 lg:pr-2" data-testid="prompt-builder-controls">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-accent 
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-accent
                             flex items-center justify-center">
               <Sparkles size={20} className="text-white" />
             </div>
@@ -105,7 +105,7 @@ export function PromptBuilder() {
           </div>
           
           {/* Weight Toggle */}
-          <label className="flex items-center gap-2 cursor-pointer">
+          <label className="flex items-center gap-2 cursor-pointer rounded-lg border border-border-subtle bg-bg-elevated px-3 py-2">
             <input
               type="checkbox"
               checked={useWeights}
@@ -120,7 +120,7 @@ export function PromptBuilder() {
         <QuickTemplates templates={quickTemplates} onApply={applyTemplate} />
 
         {/* Main Description */}
-        <div className="glass rounded-xl p-4">
+        <div className="glass rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-text-secondary">
               主要描述 *
@@ -237,7 +237,7 @@ export function PromptBuilder() {
         </ParameterGroup>
 
         {/* Negative Prompt */}
-        <div className="glass rounded-xl p-4">
+        <div className="glass rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <label className="text-sm font-medium text-text-secondary">
               Negative Prompt
@@ -267,7 +267,7 @@ export function PromptBuilder() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-3">
+        <div className="sticky bottom-0 z-10 -mx-1 flex gap-3 border-t border-border-subtle bg-bg-base/95 p-3 backdrop-blur" data-testid="prompt-builder-actions">
           <Button onClick={saveToLibrary} variant="primary" className="flex-1 flex items-center justify-center gap-2">
             <Save size={18} />
             儲存至筆記庫
@@ -280,7 +280,7 @@ export function PromptBuilder() {
       </div>
 
       {/* Right Panel - Output Preview */}
-      <div className="w-1/2">
+      <div className="min-h-[32rem] lg:min-h-0" data-testid="prompt-builder-preview">
         <OutputPreview
           textOutput={textOutput}
           narrativeOutput={narrativeOutput}

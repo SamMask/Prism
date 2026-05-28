@@ -17,7 +17,7 @@ export function QuickTemplates({ templates, onApply }: QuickTemplatesProps) {
   if (templates.length === 0) return null
 
   return (
-    <div className="glass rounded-xl p-4">
+    <div className="glass rounded-lg p-4">
       <h3 className="text-sm font-semibold text-text-secondary mb-3 flex items-center gap-2">
         <Zap size={16} className="text-accent" />
         快速模板
@@ -27,9 +27,9 @@ export function QuickTemplates({ templates, onApply }: QuickTemplatesProps) {
           <button
             key={idx}
             onClick={() => onApply(template)}
-            className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-surface 
+            className="px-3 py-1.5 bg-bg-elevated hover:bg-bg-surface
                        border border-border-subtle hover:border-primary/50
-                       rounded-lg text-sm text-text-secondary hover:text-text-primary
+                       rounded-md text-sm text-text-secondary hover:text-text-primary
                        transition-all duration-200"
           >
             {template.name}

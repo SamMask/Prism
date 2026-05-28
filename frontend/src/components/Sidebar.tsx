@@ -1,5 +1,17 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Home, Sparkles, Settings, FolderOpen, ChevronLeft, ChevronRight, Tag, Hash, ChevronDown, ChevronUp } from 'lucide-react'
+import {
+  Archive,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  FolderOpen,
+  Hash,
+  Home,
+  Settings,
+  Sparkles,
+  Tag,
+} from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../stores/appStore'
 
@@ -13,8 +25,10 @@ export function Sidebar() {
     fetchTags,
     selectedCategoryId, 
     selectedTagId,
+    showArchived,
     setSelectedCategory,
-    setSelectedTag
+    setSelectedTag,
+    setShowArchived,
   } = useAppStore()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [showTags, setShowTags] = useState(true)
@@ -25,16 +39,16 @@ export function Sidebar() {
     fetchTags()
   }, [fetchCategories, fetchTags])
 
-  const navItems = [
-    { path: '/', icon: Home, label: '首頁' },
-    { path: '/prompt-builder', icon: Sparkles, label: 'Prompt Builder' },
-    { path: '/settings', icon: Settings, label: '設定' },
-  ]
-
   // Display tags (show all or just first 10)
   const displayTags = showAllTags ? tags : tags.slice(0, 10)
   const hasMoreTags = tags.length > 10
   const isHomeRoute = location.pathname === '/'
+
+  const clearLibraryFilters = () => {
+    setSelectedCategory(null)
+    setSelectedTag(null)
+    if (showArchived) setShowArchived(false)
+  }
 
   const handleCategoryClick = (categoryId: number) => {
     const nextCategoryId = isHomeRoute && selectedCategoryId === categoryId ? null : categoryId
@@ -48,55 +62,121 @@ export function Sidebar() {
     if (!isHomeRoute) navigate('/')
   }
 
+  const handleArchiveClick = () => {
+    setShowArchived(!showArchived)
+    if (!isHomeRoute) navigate('/')
+  }
+
+  const systemSection = !isCollapsed && (
+    <div>
+      <h3 className="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-wider text-text-muted sm:block">
+        系統
+      </h3>
+      <div className="space-y-1">
+        <button
+          onClick={handleArchiveClick}
+          className={`w-full flex items-center justify-center sm:justify-start gap-2.5 rounded-md px-2.5 py-2 text-left text-[13.5px] transition-colors duration-150
+            ${showArchived
+              ? 'bg-primary/15 text-primary-light'
+              : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+            }`}
+        >
+          <Archive size={16} />
+          <span className="hidden min-w-0 flex-1 truncate sm:block">封存</span>
+        </button>
+        <Link
+          to="/settings"
+          onClick={clearLibraryFilters}
+          className={`flex items-center justify-center sm:justify-start gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] transition-colors duration-150
+            ${location.pathname === '/settings'
+              ? 'bg-primary/15 text-primary-light'
+              : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+            }`}
+        >
+          <Settings size={16} />
+          <span className="hidden truncate sm:block">設定</span>
+        </Link>
+      </div>
+    </div>
+  )
+
   return (
     <aside
+      data-testid="app-sidebar"
       className={`
-        bg-bg-surface border-r border-border-subtle
-        flex flex-col transition-all duration-300
-        ${isCollapsed ? 'w-16' : 'w-64'}
+        bg-bg-base border-r border-border-subtle
+        flex shrink-0 flex-col transition-all duration-300
+        ${isCollapsed ? 'w-16' : 'w-16 sm:w-[var(--prism-sidebar-width)]'}
       `}
     >
       {/* Logo */}
-      <div className="p-4 border-b border-border-subtle flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-          <span className="text-white font-bold text-sm">P</span>
+      <div className={`border-b border-border-subtle flex items-center gap-3 ${isCollapsed ? 'px-3.5 py-[18px]' : 'px-[18px] py-[18px]'}`}>
+        <div className="w-7 h-7 rounded-md bg-primary text-white flex shrink-0 items-center justify-center">
+          <span className="font-semibold text-sm">P</span>
         </div>
         {!isCollapsed && (
-          <span className="font-semibold text-lg gradient-text">Prism V2</span>
+          <div className="hidden min-w-0 sm:block">
+            <div className="text-[17px] font-semibold leading-tight tracking-tight text-text-primary">Prism</div>
+            <div className="mt-0.5 font-mono text-[11px] text-text-muted">v2 · local</div>
+          </div>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-1 overflow-y-auto" data-testid="sidebar-nav">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path && !selectedCategoryId && !selectedTagId
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              onClick={() => {
-                setSelectedCategory(null)
-                setSelectedTag(null)
-              }}
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-lg
-                transition-colors duration-200
-                ${isActive
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
-                }
-              `}
-            >
-              <item.icon size={20} />
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          )
-        })}
+      <nav className="flex-1 overflow-y-auto px-3 py-4" data-testid="sidebar-nav">
+        <div className="space-y-6">
+          <div>
+            {!isCollapsed && (
+              <h3 className="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-wider text-text-muted sm:block">
+                導覽
+              </h3>
+            )}
+            <div className="space-y-1">
+              <Link
+                to="/"
+                onClick={clearLibraryFilters}
+                className={`
+                  flex items-center justify-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] sm:justify-start
+                  transition-colors duration-150
+                  ${isHomeRoute && !selectedCategoryId && !selectedTagId && !showArchived
+                    ? 'bg-primary/15 text-primary-light'
+                    : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                  }
+                `}
+              >
+                <Home size={16} />
+                {!isCollapsed && (
+                  <>
+                    <span className="hidden min-w-0 flex-1 truncate sm:block">全部</span>
+                    <span className="hidden font-mono text-[11px] text-text-muted sm:inline">
+                      {categories.reduce((sum, cat) => sum + (cat.count || 0), 0).toLocaleString()}
+                    </span>
+                  </>
+                )}
+              </Link>
+
+              <Link
+                to="/prompt-builder"
+                onClick={clearLibraryFilters}
+                className={`
+                  flex items-center justify-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] sm:justify-start
+                  transition-colors duration-150
+                  ${location.pathname === '/prompt-builder'
+                    ? 'bg-primary/15 text-primary-light'
+                    : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                  }
+                `}
+              >
+                <Sparkles size={16} />
+                {!isCollapsed && <span className="hidden truncate sm:block">Prompt Builder</span>}
+              </Link>
+            </div>
+          </div>
 
         {/* Categories Section */}
         {!isCollapsed && categories.length > 0 && (
-          <div className="mt-6">
-            <h3 className="px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wider flex items-center gap-2">
+          <div>
+            <h3 className="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-wider text-text-muted sm:flex items-center gap-2">
               <FolderOpen size={14} />
               分類
             </h3>
@@ -105,16 +185,16 @@ export function Sidebar() {
                 <button
                   key={cat.id}
                   onClick={() => handleCategoryClick(cat.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg
-                           transition-colors duration-200 text-left
+                  className={`w-full flex items-center justify-center sm:justify-start gap-2.5 px-2.5 py-2 rounded-md
+                           transition-colors duration-150 text-left text-[13.5px]
                            ${selectedCategoryId === cat.id
-                             ? 'bg-primary/10 text-primary'
+                             ? 'bg-primary/15 text-primary-light'
                              : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
                            }`}
                 >
-                  <span className="text-lg">{cat.icon || '📁'}</span>
-                  <span className="truncate flex-1">{cat.name}</span>
-                  <span className="text-xs text-text-muted bg-bg-elevated px-1.5 py-0.5 rounded">
+                  <span className="text-[15px]">{cat.icon || '📁'}</span>
+                  <span className="hidden truncate flex-1 sm:block">{cat.name}</span>
+                  <span className="hidden font-mono text-[11px] text-text-muted sm:inline">
                     {cat.count || 0}
                   </span>
                 </button>
@@ -123,12 +203,14 @@ export function Sidebar() {
           </div>
         )}
 
+        {systemSection}
+
         {/* Tags Section */}
         {!isCollapsed && tags.length > 0 && (
-          <div className="mt-6">
+          <div>
             <button 
               onClick={() => setShowTags(!showTags)}
-              className="w-full px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wider flex items-center gap-2 hover:text-text-primary transition-colors"
+              className="w-full mb-2 hidden px-2 text-[11px] font-medium text-text-muted uppercase tracking-wider sm:flex items-center gap-2 hover:text-text-primary transition-colors"
             >
               <Tag size={14} />
               標籤
@@ -143,16 +225,16 @@ export function Sidebar() {
                   <button
                     key={tag.id}
                     onClick={() => handleTagClick(tag.id)}
-                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-lg
-                             transition-colors duration-200 text-left text-sm
+                    className={`w-full flex items-center justify-center sm:justify-start gap-2 px-2.5 py-1.5 rounded-md
+                             transition-colors duration-150 text-left text-[13px]
                              ${selectedTagId === tag.id
-                               ? 'bg-accent/10 text-accent'
+                               ? 'bg-accent/15 text-accent'
                                : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
                              }`}
                   >
                     <Hash size={14} className="flex-shrink-0" />
-                    <span className="truncate flex-1">{tag.name}</span>
-                    <span className="text-xs text-text-muted bg-bg-elevated px-1.5 py-0.5 rounded">
+                    <span className="hidden truncate flex-1 sm:block">{tag.name}</span>
+                    <span className="hidden font-mono text-[11px] text-text-muted sm:inline">
                       {tag.count || 0}
                     </span>
                   </button>
@@ -162,7 +244,7 @@ export function Sidebar() {
                 {hasMoreTags && (
                   <button
                     onClick={() => setShowAllTags(!showAllTags)}
-                    className="w-full px-3 py-2 text-xs text-primary hover:text-primary-hover 
+                    className="hidden w-full px-3 py-2 text-xs text-primary-light hover:text-primary sm:flex
                                transition-colors flex items-center justify-center gap-1"
                   >
                     {showAllTags ? (
@@ -182,19 +264,20 @@ export function Sidebar() {
             )}
           </div>
         )}
+        </div>
       </nav>
 
       {/* Bottom Section */}
       <div className="p-3 border-t border-border-subtle">
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md
                      text-text-muted hover:bg-bg-hover hover:text-text-primary
-                     transition-colors duration-200"
+                     transition-colors duration-150 text-sm"
           title={isCollapsed ? '展開側邊欄' : '收縮側邊欄'}
         >
           {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          {!isCollapsed && <span>收縮側邊欄</span>}
+          {!isCollapsed && <span className="hidden sm:inline">收縮側邊欄</span>}
         </button>
       </div>
     </aside>

@@ -221,6 +221,24 @@ class TestNotesAPI:
             assert response.status_code == 200
             result_ids = {note['id'] for note in response.get_json()['data']}
             assert note_id in result_ids
+
+    def test_search_matches_filename_like_term_in_note_content(self, client):
+        """Exact filename-like searches such as todo.md should match card text."""
+        response = client.post(
+            '/api/notes',
+            data=json.dumps({
+                'title': 'Filename Search Fixture',
+                'content': 'This card references todo.md in its visible body.'
+            }),
+            content_type='application/json'
+        )
+        assert response.status_code == 201
+        note_id = json.loads(response.data)['data']['note_id']
+
+        response = client.get('/api/notes?q=todo.md&per_page=100')
+        assert response.status_code == 200
+        result_ids = {note['id'] for note in response.get_json()['data']}
+        assert note_id in result_ids
     
     def test_create_note_missing_content(self, client):
         """Test POST /api/notes fails without content"""

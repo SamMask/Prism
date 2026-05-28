@@ -22,20 +22,24 @@ export function ParameterGroup({
   const [isOpen, setIsOpen] = useState(defaultOpen)
 
   return (
-    <div className="glass rounded-xl overflow-hidden">
+    <div className="glass rounded-lg overflow-hidden">
       {/* Header */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 flex items-center justify-between 
-                   bg-bg-elevated hover:bg-bg-surface transition-colors"
+      <div
+        className="flex w-full items-center justify-between bg-bg-elevated px-4 py-3 transition-colors hover:bg-bg-surface"
       >
-        <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex min-w-0 flex-1 items-center gap-2 text-left"
+          aria-expanded={isOpen}
+        >
           {icon}
           <span className="font-medium text-text-primary">{title}</span>
-        </div>
-        <div className="flex items-center gap-2">
+        </button>
+        <div className="flex shrink-0 items-center gap-2">
           {onRandomize && (
             <button
+              type="button"
               onClick={(e) => {
                 e.stopPropagation()
                 onRandomize()
@@ -46,17 +50,23 @@ export function ParameterGroup({
               <Shuffle size={16} className="text-primary" />
             </button>
           )}
-          <ChevronDown 
-            size={18} 
-            className={`text-text-muted transition-transform duration-200 
-                        ${isOpen ? 'rotate-180' : ''}`}
-          />
+          <button
+            type="button"
+            onClick={() => setIsOpen(!isOpen)}
+            className="rounded-md p-1 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+            aria-label={isOpen ? '收合區塊' : '展開區塊'}
+          >
+            <ChevronDown
+              size={18}
+              className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            />
+          </button>
         </div>
-      </button>
+      </div>
 
       {/* Content */}
       {isOpen && (
-        <div className="p-4 space-y-4 border-t border-border-subtle">
+        <div className="p-3 sm:p-4 space-y-4 border-t border-border-subtle">
           {children}
         </div>
       )}

@@ -45,9 +45,9 @@ export function OutputPreview({
   ]
 
   return (
-    <div className="glass rounded-xl p-6 h-full flex flex-col">
+    <div className="glass rounded-lg p-4 sm:p-5 h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 className="text-lg font-semibold text-text-primary">輸出預覽</h2>
         
         {/* Mode Tabs */}
@@ -69,7 +69,7 @@ export function OutputPreview({
       </div>
 
       {/* Output Content */}
-      <div className="flex-1 bg-bg-elevated rounded-lg p-4 overflow-auto mb-4">
+      <div className="flex-1 min-h-[18rem] bg-bg-elevated rounded-lg p-4 overflow-auto mb-4" data-testid="prompt-output-preview">
         {outputMode === 'json' ? (
           <pre className="text-sm text-text-primary font-mono whitespace-pre-wrap">
             {getCurrentOutput() || '// 尚無輸出...'}
@@ -90,7 +90,7 @@ export function OutputPreview({
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <Button
           onClick={onOptimize}
           variant="secondary"

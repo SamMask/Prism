@@ -13,6 +13,14 @@
 | `docs/TODO.md` | 原子化待辦清單與版本歷程 |
 | `docs/Prism.md` | V2 規劃期歷史記錄（已凍結，不再更新；僅供重構決策脈絡參考） |
 
+### 重大重構 / 前端改版額外必讀
+
+| 文件 | 內容 |
+|---|---|
+| `Prism_Go_模組逐步重構計劃報告.md` | Python → Go 漸進替換盤點；只作為 shadow backend / API contract / response diff 路線參考，不代表立即改寫產品 |
+| `docs/FRONTEND-REDESIGN-PLAN.md` | 新 UI 參考檔與 Go 重構路線的整合規劃；採納 UX 工作流，明確暫緩 collections schema、AI、協作與大規模 scope creep |
+| `docs/New_UI/Prism Redesign - standalone.html` | UI 原型參考；只採工作流與視覺方向，不直接搬 prototype-only code / sample data / tweak panel |
+
 ## 執行規則
 
 1. **有未規劃事項** → 先在 `docs/TODO.md` 拆解原子任務，更新後再繼續實作

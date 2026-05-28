@@ -1,5 +1,5 @@
 import { Note, api } from '../services/api'
-import { useAppStore } from '../stores/appStore'
+import { useAppStore, type ViewMode } from '../stores/appStore'
 import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { IconButton } from './ui'
@@ -8,11 +8,11 @@ import { confirm } from './ui/ConfirmDialog'
 
 interface NoteCardProps {
   note: Note
-  viewMode: 'grid' | 'list'
+  viewMode: ViewMode
 }
 
 export function NoteCard({ note, viewMode }: NoteCardProps) {
-  const { openEditor, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
+  const { openEditor, openReading, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -56,13 +56,14 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     if (isSelectionMode) {
       toggleNoteSelection(note.id)
     } else {
-      // Read card open mode preference from localStorage
-      // @ts-ignore - Reserved for future preview/reading mode implementation
       const cardOpenMode = localStorage.getItem('cardOpenMode') || 'reading'
-      
-      // For now, all modes open the editor (preview/reading modes to be implemented later)
-      // Future: preview mode could show a modal, reading mode could open in read-only
-      openEditor(note)
+      if (cardOpenMode === 'reading') {
+        openReading(note)
+      } else if (cardOpenMode === 'preview') {
+        openEditor(note, { preview: true })
+      } else {
+        openEditor(note)
+      }
     }
   }
 
@@ -168,6 +169,46 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
       toast.error('切換封存失敗')
     }
     setShowMenu(false)
+  }
+
+  if (viewMode === 'compact') {
+    return (
+      <div
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        data-testid={`note-card-${note.id}`}
+        className={`
+          group flex min-h-[48px] items-center gap-3 rounded-md px-3 py-2 cursor-pointer
+          bg-bg-surface border border-border-subtle
+          hover:border-border-default hover:bg-bg-elevated
+          transition-colors duration-150
+          ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
+        `}
+      >
+        {isSelectionMode && (
+          <div className={`w-4 h-4 rounded border-2 flex shrink-0 items-center justify-center
+                          ${isSelected ? 'bg-primary border-primary' : 'border-border-default'}`}>
+            {isSelected && <Check size={12} className="text-white" />}
+          </div>
+        )}
+
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          {note.is_pinned && <Pin size={13} className="shrink-0 text-warning" />}
+          <h3 className="truncate text-sm font-medium text-text-primary">
+            {note.title || '無標題'}
+          </h3>
+          <span className="hidden min-w-0 flex-1 truncate text-xs text-text-muted md:block">
+            {getPreview(note.content, 96)}
+          </span>
+        </div>
+
+        <div className="hidden shrink-0 items-center gap-2 text-xs text-text-muted sm:flex">
+          <span className="max-w-[140px] truncate">{note.category_name || note.type}</span>
+          <span>{note.content?.length?.toLocaleString() || 0}字</span>
+          <span>{new Date(note.updated_at).toLocaleDateString('zh-TW')}</span>
+        </div>
+      </div>
+    )
   }
 
   if (viewMode === 'list') {

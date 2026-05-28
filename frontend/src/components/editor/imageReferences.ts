@@ -1,3 +1,20 @@
+export function extractImageReferences(content: string): string[] {
+  const found: string[] = []
+  const patterns = [
+    /!\[[^\]]*\]\(\s*([^\s)]+)(?:\s+["'][^"']*["'])?\s*\)/g,
+    /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi,
+  ]
+
+  for (const pattern of patterns) {
+    let match
+    while ((match = pattern.exec(content)) !== null) {
+      if (!found.includes(match[1])) found.push(match[1])
+    }
+  }
+
+  return found
+}
+
 export function removeImageReferences(content: string, urls: string[]): string {
   let nextContent = content
 

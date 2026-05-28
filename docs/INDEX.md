@@ -1,7 +1,7 @@
 # Prism 文檔索引 (INDEX)
 
-> **專案版本**: v2.4.5
-> **更新日期**: 2026-05-05
+> **專案版本**: v2.4.9
+> **更新日期**: 2026-05-28
 > **專案狀態**: 🟢 穩定運行 — Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
@@ -23,7 +23,11 @@
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
-| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已重寫 (2026-05-05) |
+| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-05-27) |
+| [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 新 UI 參考檔 + Go shadow backend 路線整合規劃；前端改版與重構前必讀 | 📋 規劃中 |
+| [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
+| [contracts/api-readonly-manifest.json](./contracts/api-readonly-manifest.json) | Phase 18 read-only API manifest；Go shadow backend 與工具 surface 的機器可讀草稿 | ✅ 已建立 |
+| [../go-shadow/README.md](../go-shadow/README.md) | Phase 18.4 Go read-only shadow backend scaffold；啟動方式、scope、runtime safety 與 diff harness | ✅ 已建立 |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | 環境變數設定、Source / Dev mode、Raspberry Pi 部署流程；PyInstaller 僅作內部打包參考 | ✅ 仍適用 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 本地開發環境建置、依賴安裝、PR 規範 | ✅ 仍適用 |
 
@@ -56,6 +60,15 @@
 
 ---
 
+## 原型 / 重構參考
+
+| 文件 | 說明 | 狀態 |
+|------|------|------|
+| [Prism Redesign - standalone.html](./New_UI/Prism%20Redesign%20-%20standalone.html) | 新 UI 前端原型參考；只採工作流與視覺方向，不直接搬 prototype code / sample data | 📎 參考 |
+| [Prism_Go_模組逐步重構計劃報告.md](../Prism_Go_模組逐步重構計劃報告.md) | Python → Go 漸進替換盤點；Phase 0-1 read-only shadow backend 與 response diff 依據 | 📎 參考 |
+
+---
+
 ## 快查：改什麼讀什麼
 
 | 情境 | 必讀文件 |
@@ -64,5 +77,7 @@
 | 修改資料庫欄位或新增 Migration | `SCHEMA.md` |
 | 架構調整 / 新模組 | `ARCHITECTURE.md` |
 | 規劃新功能 / 查進度 | `TODO.md` |
+| 前端改版 / UI rewrite | `FRONTEND-REDESIGN-PLAN.md` + `docs/New_UI/Prism Redesign - standalone.html` |
+| Go shadow backend / API contract lock | `contracts/phase18-readiness.md` + `contracts/api-readonly-manifest.json` + `Prism_Go_模組逐步重構計劃報告.md` + `API_REFERENCE.md` + `SCHEMA.md` |
 | 首次部署 / 環境設定 | `DEPLOYMENT.md` + `CONTRIBUTING.md` |
 | 理解整體方向 | `Prism.md` |

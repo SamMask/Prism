@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import { api, Note, Category, Tag } from '../services/api'
 
+export type ViewMode = 'grid' | 'list' | 'compact'
+
+const VIEW_MODE_STORAGE_KEY = 'prism.viewMode'
+
+function readSavedViewMode(): ViewMode {
+  const savedMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
+  return savedMode === 'grid' || savedMode === 'list' || savedMode === 'compact'
+    ? savedMode
+    : 'grid'
+}
+
 interface AppState {
   // Notes
   notes: Note[]
@@ -10,10 +21,13 @@ interface AppState {
   hasMore: boolean
 
   // UI State
-  viewMode: 'grid' | 'list'
+  viewMode: ViewMode
   selectedNoteIds: number[]
   isEditorOpen: boolean
   editingNote: Note | null
+  editorStartsInPreview: boolean
+  isReadingOpen: boolean
+  readingNote: Note | null
   isDeleting: boolean
 
   // Filters
@@ -31,9 +45,11 @@ interface AppState {
   fetchNotes: (reset?: boolean) => Promise<void>
   fetchCategories: () => Promise<void>
   fetchTags: () => Promise<void>
-  setViewMode: (mode: 'grid' | 'list') => void
-  openEditor: (note: Note | null) => void
+  setViewMode: (mode: ViewMode) => void
+  openEditor: (note: Note | null, options?: { preview?: boolean }) => void
   closeEditor: () => void
+  openReading: (note: Note) => void
+  closeReading: () => void
   setSearchQuery: (query: string) => void
   setSelectedCategory: (id: number | null) => void
   setSelectedTag: (id: number | null) => void
@@ -54,10 +70,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentPage: 1,
   hasMore: true,
 
-  viewMode: 'grid',
+  viewMode: readSavedViewMode(),
   selectedNoteIds: [],
   isEditorOpen: false,
   editingNote: null,
+  editorStartsInPreview: false,
+  isReadingOpen: false,
+  readingNote: null,
   isDeleting: false,
 
   searchQuery: '',
@@ -137,11 +156,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  setViewMode: (mode) => set({ viewMode: mode }),
+  setViewMode: (mode) => {
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode)
+    set({ viewMode: mode })
+  },
 
-  openEditor: (note) => set({ isEditorOpen: true, editingNote: note }),
+  openEditor: (note, options) => set({
+    isEditorOpen: true,
+    editingNote: note,
+    editorStartsInPreview: !!options?.preview,
+    isReadingOpen: false,
+    readingNote: null,
+  }),
 
-  closeEditor: () => set({ isEditorOpen: false, editingNote: null }),
+  closeEditor: () => set({ isEditorOpen: false, editingNote: null, editorStartsInPreview: false }),
+
+  openReading: (note) => set({ isReadingOpen: true, readingNote: note }),
+
+  closeReading: () => set({ isReadingOpen: false, readingNote: null }),
 
   setSearchQuery: (query) => {
     set({ searchQuery: query, currentPage: 1 })
@@ -149,12 +181,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setSelectedCategory: (id) => {
-    set({ selectedCategoryId: id, selectedTagId: null, currentPage: 1 })
+    set({ selectedCategoryId: id, selectedTagId: null, showArchived: false, currentPage: 1 })
     get().fetchNotes(true)
   },
 
   setSelectedTag: (id) => {
-    set({ selectedTagId: id, selectedCategoryId: null, currentPage: 1 })
+    set({ selectedTagId: id, selectedCategoryId: null, showArchived: false, currentPage: 1 })
     get().fetchNotes(true)
   },
 

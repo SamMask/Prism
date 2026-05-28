@@ -1,7 +1,8 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { useAppStore } from '../stores/appStore'
+import { useAppStore, type ViewMode } from '../stores/appStore'
 import { NoteCard } from '../components/NoteCard'
 import { NoteEditor } from '../components/NoteEditor'
+import { ReadingView } from '../components/ReadingView'
 import { ToastContainer, toast } from '../components/ui/Toast'
 import { Loader2 } from 'lucide-react'
 import {
@@ -24,7 +25,7 @@ import { CSS } from '@dnd-kit/utilities'
 import { Note, api } from '../services/api'
 
 // Sortable NoteCard wrapper
-function SortableNoteCard({ note, viewMode }: { note: Note; viewMode: 'grid' | 'list' }) {
+function SortableNoteCard({ note, viewMode }: { note: Note; viewMode: ViewMode }) {
   const {
     attributes,
     listeners,
@@ -56,9 +57,20 @@ export function HomePage() {
     viewMode,
     isEditorOpen,
     editingNote,
+    editorStartsInPreview,
+    isReadingOpen,
+    readingNote,
     fetchNotes,
     closeEditor,
+    closeReading,
     sortBy,
+    searchQuery,
+    selectedCategoryId,
+    selectedTagId,
+    showArchived,
+    totalNotes,
+    categories,
+    tags,
   } = useAppStore()
 
   const [localNotes, setLocalNotes] = useState<Note[]>([])
@@ -147,17 +159,33 @@ export function HomePage() {
 
   // Only enable drag when sortBy is 'custom'
   const isDragEnabled = sortBy === 'custom'
+  const activeCategory = categories.find((category) => category.id === selectedCategoryId)
+  const activeTag = tags.find((tag) => tag.id === selectedTagId)
+  const sectionTitle = searchQuery
+    ? '搜尋結果'
+    : showArchived
+      ? '封存'
+      : activeCategory?.name || (activeTag ? `#${activeTag.name}` : '全部')
+  const sectionSub = searchQuery
+    ? `關鍵字「${searchQuery}」 · ${totalNotes.toLocaleString()} 筆結果`
+    : showArchived
+      ? `${totalNotes.toLocaleString()} 筆封存內容`
+      : selectedCategoryId
+        ? `分類 · ${totalNotes.toLocaleString()} 筆內容`
+        : selectedTagId
+          ? `標籤 · ${totalNotes.toLocaleString()} 筆內容`
+          : '所有筆記，依更新時間排序'
 
   // Render notes grid/list content
   const notesContent = (
     <div
       className={`
-        ${viewMode === 'grid'
-          ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4'
-          : 'flex flex-col gap-3'
-        }
+        ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : ''}
+        ${viewMode === 'list' ? 'flex flex-col gap-3' : ''}
+        ${viewMode === 'compact' ? 'flex flex-col gap-1.5' : ''}
       `}
       data-testid="notes-grid"
+      data-view-mode={viewMode}
     >
       {isDragEnabled ? (
         localNotes.map((note) => (
@@ -173,6 +201,17 @@ export function HomePage() {
 
   return (
     <>
+      <div className="mb-5 flex items-end justify-between gap-4 px-1">
+        <div className="min-w-0">
+          <h1 className="truncate text-3xl font-semibold leading-tight tracking-tight text-text-primary">
+            {sectionTitle}
+          </h1>
+          <p className="mt-1 text-sm text-text-muted">
+            {sectionSub}
+          </p>
+        </div>
+      </div>
+
       {/* Notes Grid/List with optional DnD */}
       {isDragEnabled ? (
         <DndContext
@@ -251,7 +290,11 @@ export function HomePage() {
 
       {/* Editor Modal */}
       {isEditorOpen && (
-        <NoteEditor note={editingNote} onClose={closeEditor} />
+        <NoteEditor note={editingNote} onClose={closeEditor} initialPreview={editorStartsInPreview} />
+      )}
+
+      {isReadingOpen && readingNote && (
+        <ReadingView note={readingNote} onClose={closeReading} />
       )}
 
       {/* Toast Notifications */}

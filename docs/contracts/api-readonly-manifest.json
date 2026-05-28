@@ -1,0 +1,190 @@
+{
+  "id": "phase18-readiness-core-api",
+  "updated_at": "2026-05-27",
+  "purpose": "Lock the Python baseline surface for the Phase 18 frontend redesign and the first Go read-only shadow backend.",
+  "scope": {
+    "included": [
+      "Core library reads used by Home, Sidebar filters, Note detail, and external agent read flows",
+      "Core note/category/tag writes that the frontend shell must keep compatible with",
+      "Prompt Builder option reads/writes as existing settings-backed behavior"
+    ],
+    "deferred": [
+      "File upload and attachment write migration",
+      "Import/export rewrite",
+      "Server maintenance and Raspberry Pi local-only operations",
+      "Prototype-only collections schema, AI, collaboration, timeline, or social features"
+    ]
+  },
+  "golden_fixtures": [
+    {
+      "name": "api_test",
+      "method": "GET",
+      "path": "/api/test",
+      "fixture": "tests/fixtures/api_golden/api_test.json"
+    },
+    {
+      "name": "categories_index",
+      "method": "GET",
+      "path": "/api/categories",
+      "fixture": "tests/fixtures/api_golden/categories_index.json"
+    },
+    {
+      "name": "tags_index",
+      "method": "GET",
+      "path": "/api/tags",
+      "fixture": "tests/fixtures/api_golden/tags_index.json"
+    },
+    {
+      "name": "notes_index",
+      "method": "GET",
+      "path": "/api/notes?page=1&per_page=20",
+      "fixture": "tests/fixtures/api_golden/notes_index.json"
+    },
+    {
+      "name": "note_detail",
+      "method": "GET",
+      "path": "/api/notes/1",
+      "fixture": "tests/fixtures/api_golden/note_detail.json"
+    }
+  ],
+  "core_read_surface": [
+    {
+      "method": "GET",
+      "path": "/api/test",
+      "side_effect_class": "read-only",
+      "go_shadow_phase": "18.4",
+      "notes": "Health and aggregate counts."
+    },
+    {
+      "method": "GET",
+      "path": "/api/categories",
+      "side_effect_class": "read-only",
+      "go_shadow_phase": "18.4",
+      "notes": "Category list with note counts. Ordered by sort_order."
+    },
+    {
+      "method": "GET",
+      "path": "/api/tags",
+      "side_effect_class": "read-only",
+      "go_shadow_phase": "18.4",
+      "notes": "Tag list with usage counts. Ordered by tag name."
+    },
+    {
+      "method": "GET",
+      "path": "/api/notes",
+      "side_effect_class": "read-only",
+      "go_shadow_phase": "18.4",
+      "query": {
+        "page": "int, default 1",
+        "per_page": "int, default 20, max 100",
+        "q": "string, max 200 chars",
+        "type": "legacy category name compatibility filter",
+        "category_id": "int category filter",
+        "tags": "comma-separated tag ids",
+        "tag_mode": "AND or OR, default AND",
+        "include_archived": "bool string, include active plus archived",
+        "archived": "bool string, archived-only filter",
+        "pinned_only": "bool string, pinned-only filter",
+        "sort": "updated, created, or custom"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/notes/<note_id>",
+      "side_effect_class": "read-only",
+      "go_shadow_phase": "18.4",
+      "notes": "Full note detail including prompt_params, parent_id, tags, and urls."
+    }
+  ],
+  "core_write_surface": [
+    {
+      "method": "POST",
+      "path": "/api/notes",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred",
+      "notes": "Creates note, tags, and source urls. Still owned by Python in Phase 18.4."
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notes/<note_id>",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred",
+      "notes": "Updates note, appends Note_History on content changes, replaces tags and urls."
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/notes/<note_id>",
+      "side_effect_class": "db-write/file-delete",
+      "go_shadow_phase": "deferred",
+      "notes": "Deletes note and may clean unreferenced uploaded images."
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/<note_id>/pin",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/<note_id>/archive",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/<note_id>/duplicate",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/notes/reorder",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/batch/type",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/batch/tags",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notes/batch/delete",
+      "side_effect_class": "db-write/file-delete",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "POST/PUT/DELETE",
+      "path": "/api/categories*",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    },
+    {
+      "method": "PUT/DELETE/POST",
+      "path": "/api/tags*",
+      "side_effect_class": "db-write",
+      "go_shadow_phase": "deferred"
+    }
+  ],
+  "excluded_from_go_read_shadow": [
+    "/api/upload*",
+    "/api/notes/<note_id>/attachments POST",
+    "/api/attachments/<attachment_id> DELETE",
+    "/api/export*",
+    "/api/import*",
+    "/api/cleanup*",
+    "/api/system/vacuum",
+    "/api/system/clear-history",
+    "/api/system/wal-checkpoint",
+    "/api/system/startup-preference",
+    "/api/system/port-config",
+    "/api/server/*"
+  ]
+}

@@ -234,7 +234,7 @@ export function EditorSidebar({
   const [showImagePanel, setShowImagePanel] = useState(false);
 
   return (
-    <div className="w-64 flex-shrink-0 border-l border-border-subtle p-4 space-y-4 overflow-auto">
+    <div className="max-h-[38vh] w-full flex-shrink-0 space-y-4 overflow-auto border-t border-border-subtle p-4 lg:max-h-none lg:w-72 lg:border-l lg:border-t-0">
       {/* Category */}
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
@@ -387,17 +387,13 @@ export function EditorSidebar({
             </button>
           ))}
         </div>
-        {editorLayout === "dual" && (
-          <p className="text-xs text-text-muted mt-1.5">
-            圖片會顯示在左側，編輯區在右側
-          </p>
-        )}
       </div>
 
       {/* Image Management (v1.5.0) */}
       <div>
         <button
           onClick={() => setShowImagePanel(!showImagePanel)}
+          data-testid="image-management-toggle"
           className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2 w-full hover:text-text-primary transition-colors"
         >
           {showImagePanel ? <ChevronDown size={14} /> : <ChevronRight size={14} />}

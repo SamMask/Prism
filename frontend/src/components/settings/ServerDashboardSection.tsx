@@ -252,7 +252,7 @@ export function ServerDashboardSection() {
   const isLinux = hardware?.platform?.system === 'Linux';
 
   return (
-    <div className="glass rounded-xl p-6">
+    <div className="glass rounded-lg p-5" data-testid="server-dashboard-section">
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
           <Server size={20} className="text-cyan-400" />
@@ -267,6 +267,16 @@ export function ServerDashboardSection() {
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
           重新整理
         </Button>
+      </div>
+
+      <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3" data-testid="server-local-only-boundary">
+        <Shield size={16} className="mt-0.5 shrink-0 text-amber-400" />
+        <div className="space-y-1 text-sm">
+          <p className="font-medium text-text-primary">Server controls are local-only.</p>
+          <p className="text-text-muted">
+            `/api/server/*` 仍由後端限制在 localhost / trusted internal access；這裡只呈現既有控制項，不放寬遠端存取。
+          </p>
+        </div>
       </div>
 
       {/* ============================================================= */}

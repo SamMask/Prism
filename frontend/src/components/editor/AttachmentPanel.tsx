@@ -36,7 +36,7 @@ export function AttachmentPanel({
   };
 
   return (
-    <div>
+    <div data-testid="attachment-panel">
       <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
         <Paperclip size={14} /> 附件
         {attachments.length > 0 && (
@@ -52,6 +52,7 @@ export function AttachmentPanel({
           {attachments.map((att) => (
             <div
               key={att.id}
+              data-testid={`attachment-item-${att.id}`}
               className={`flex items-center gap-2 px-2 py-1.5 rounded-lg
                          bg-bg-elevated text-text-secondary text-xs
                          hover:bg-bg-hover group cursor-pointer
@@ -106,6 +107,7 @@ export function AttachmentPanel({
       />
       <button
         onClick={() => attachmentInputRef.current?.click()}
+        data-testid="attachment-upload-button"
         className="w-full flex items-center justify-center gap-2 px-3 py-2
                    rounded-lg border border-dashed border-border-default
                    text-text-muted text-sm
@@ -115,9 +117,6 @@ export function AttachmentPanel({
         <Plus size={14} />
         新增 .md 附件
       </button>
-      <p className="text-xs text-text-muted mt-1.5">
-        支援拖曳 .md 檔案到編輯區
-      </p>
     </div>
   );
 }

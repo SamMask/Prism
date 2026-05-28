@@ -4,7 +4,7 @@ import { Image, CheckSquare, Square, Trash2, Star, X, Copy, XCircle } from 'luci
 import { api } from '../../services/api';
 import { toast } from '../ui/Toast';
 import { confirm } from '../ui/ConfirmDialog';
-import { removeImageReferences } from './imageReferences';
+import { extractImageReferences, removeImageReferences } from './imageReferences';
 
 interface ImageManagementPanelProps {
   content: string;
@@ -22,18 +22,7 @@ export function ImageManagementPanel({
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Extract all images from content
-  const images = useMemo(() => {
-    const pattern = /!\[.*?\]\(([^)]+)\)/g;
-    const found: string[] = [];
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      if (!found.includes(match[1])) {
-        found.push(match[1]);
-      }
-    }
-    return found;
-  }, [content]);
+  const images = useMemo(() => extractImageReferences(content), [content]);
 
   const toggleSelect = (url: string) => {
     setSelectedImages(prev => {
@@ -107,16 +96,15 @@ export function ImageManagementPanel({
 
   if (images.length === 0) {
     return (
-      <div className="text-center py-6">
+      <div className="text-center py-6" data-testid="image-management-empty">
         <Image size={32} className="mx-auto mb-2 text-text-muted opacity-30" />
         <p className="text-sm text-text-muted">此筆記尚無圖片</p>
-        <p className="text-xs text-text-muted mt-1">在內容中加入圖片後會顯示在此</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-testid="image-management-panel">
       {/* Toolbar */}
       <div className="flex items-center gap-1.5 flex-wrap">
         <button
@@ -166,6 +154,7 @@ export function ImageManagementPanel({
           return (
             <div
               key={index}
+              data-testid={`managed-image-${index}`}
               className={`relative group rounded-lg overflow-hidden border transition-all cursor-pointer
                         ${isSelected ? 'border-primary ring-1 ring-primary' : 'border-border-subtle hover:border-border-hover'}
                         ${isCover ? 'ring-2 ring-yellow-500' : ''}`}
@@ -215,6 +204,7 @@ export function ImageManagementPanel({
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleRemoveFromContent([src]); }}
+                  data-testid={`remove-image-reference-${index}`}
                   className="p-1 rounded text-white/70 hover:text-yellow-400 text-xs transition-colors"
                   title="移除引用"
                 >

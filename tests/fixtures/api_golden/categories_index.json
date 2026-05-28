@@ -1,0 +1,16 @@
+{
+  "json": {
+    "data": [
+      {
+        "count": 1,
+        "icon": "📝",
+        "id": 1,
+        "is_default": true,
+        "name": "筆記",
+        "sort_order": 0
+      }
+    ],
+    "status": "success"
+  },
+  "status_code": 200
+}

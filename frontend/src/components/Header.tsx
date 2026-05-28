@@ -1,11 +1,13 @@
-import { Search, Plus, LayoutGrid, List, X, ArrowUpDown, Trash2, CheckSquare, Square } from 'lucide-react'
+import { Search, Plus, LayoutGrid, List, AlignJustify, X, ArrowUpDown, Trash2, CheckSquare, Square, Command } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 
 export function Header() {
+  const location = useLocation()
   const {
     searchQuery,
     setSearchQuery,
@@ -20,6 +22,12 @@ export function Header() {
     sortBy,
     setSortBy,
     notes,
+    categories,
+    tags,
+    selectedCategoryId,
+    selectedTagId,
+    showArchived,
+    totalNotes,
   } = useAppStore()
 
   const [inputValue, setInputValue] = useState(searchQuery)
@@ -73,11 +81,31 @@ export function Header() {
     { value: 'created' as const, label: '建立時間 (新→舊)' },
     { value: 'custom' as const, label: '自訂順序' },
   ]
+  const viewOptions = [
+    { value: 'grid' as const, label: '網格', icon: LayoutGrid },
+    { value: 'list' as const, label: '列表', icon: List },
+    { value: 'compact' as const, label: '精簡列表', icon: AlignJustify },
+  ]
 
   const isSelectionMode = selectedNoteIds.length > 0
+  const isHomeRoute = location.pathname === '/'
+  const activeCategory = categories.find((category) => category.id === selectedCategoryId)
+  const activeTag = tags.find((tag) => tag.id === selectedTagId)
+  const pageTitle = location.pathname === '/prompt-builder'
+    ? 'Prompt Builder'
+    : location.pathname === '/settings'
+      ? '設定'
+      : showArchived
+        ? '封存'
+        : activeCategory?.name || (activeTag ? `#${activeTag.name}` : '全部')
+  const pageMeta = isHomeRoute
+    ? `${totalNotes.toLocaleString()} 筆內容`
+    : location.pathname === '/prompt-builder'
+      ? '結構化提示工具'
+      : '系統與資料維護'
 
   return (
-    <header className="h-16 bg-bg-surface border-b border-border-subtle px-6 flex items-center gap-4" data-testid="header">
+    <header className="h-[60px] shrink-0 bg-bg-base border-b border-border-subtle px-4 lg:px-6 flex items-center gap-3" data-testid="header">
       {isSelectionMode ? (
         // Selection Mode Header
         <>
@@ -123,8 +151,21 @@ export function Header() {
       ) : (
         // Normal Header
         <>
+          <div className="min-w-0 flex items-center gap-2 pr-2">
+            <div className="min-w-0">
+              <div className="truncate text-[16px] font-semibold tracking-tight text-text-primary">
+                {pageTitle}
+              </div>
+              <div className="hidden sm:block truncate text-[11px] text-text-muted">
+                {pageMeta}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1" />
+
           {/* Search Bar */}
-          <form onSubmit={handleSearchSubmit} className="flex-1 max-w-xl relative" data-testid="search-form">
+          <form onSubmit={handleSearchSubmit} className="hidden md:block w-[min(36vw,440px)] relative" data-testid="search-form">
             <div className="relative flex items-center gap-2">
               {/* Search Input */}
               <div className="relative flex-1">
@@ -139,7 +180,7 @@ export function Header() {
                   onKeyDown={handleKeyDown}
                   placeholder="搜尋筆記... (按 Enter)"
                   data-testid="search-input"
-                  className="w-full pl-10 pr-10 py-2.5 rounded-lg
+                  className="w-full pl-10 pr-10 py-2 rounded-md text-sm
                              bg-bg-elevated border border-border-default
                              text-text-primary placeholder-text-muted
                              focus:outline-none focus:ring-1 focus:border-primary focus:ring-primary/50
@@ -160,11 +201,12 @@ export function Header() {
           </form>
 
           {/* Sort Dropdown */}
-          <div className="relative">
+          {isHomeRoute && (
+          <div className="relative hidden sm:block">
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-bg-elevated
-                         text-text-secondary hover:text-text-primary transition-colors"
+              className="flex items-center gap-2 px-3 py-2 rounded-md bg-bg-elevated
+                         text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors text-sm"
             >
               <ArrowUpDown size={16} />
               <span className="text-sm hidden sm:inline">
@@ -200,37 +242,48 @@ export function Header() {
               </>
             )}
           </div>
+          )}
 
           {/* View Mode Toggle */}
-          <div className="flex items-center gap-1 p-1 rounded-lg bg-bg-elevated">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-md transition-colors duration-200 ${
-                viewMode === 'grid'
-                  ? 'bg-primary text-white'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid size={18} />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-2 rounded-md transition-colors duration-200 ${
-                viewMode === 'list'
-                  ? 'bg-primary text-white'
-                  : 'text-text-muted hover:text-text-primary'
-              }`}
-              title="List View"
-            >
-              <List size={18} />
-            </button>
+          {isHomeRoute && (
+          <div className="flex items-center gap-0.5 p-1 rounded-md bg-bg-elevated" aria-label="顯示模式">
+            {viewOptions.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                onClick={() => setViewMode(value)}
+                className={`p-1.5 rounded transition-colors duration-150 ${
+                  viewMode === value
+                    ? 'bg-primary/20 text-primary-light'
+                    : 'text-text-muted hover:text-text-primary'
+                }`}
+                title={label}
+                aria-label={label}
+                aria-pressed={viewMode === value}
+                data-testid={`view-mode-${value}`}
+              >
+                <Icon size={18} />
+              </button>
+            ))}
           </div>
+          )}
 
           {/* New Note Button */}
-          <Button onClick={() => openEditor(null)} variant="primary" data-testid="add-note-button">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            className="hidden items-center gap-2 rounded-md bg-bg-elevated px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary lg:flex"
+            data-testid="command-palette-button"
+            aria-label="開啟命令面板"
+            title="開啟命令面板"
+          >
+            <Command size={16} />
+            <span className="font-mono text-xs">Ctrl K</span>
+          </button>
+
+          {/* New Note Button */}
+          <Button onClick={() => openEditor(null)} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button">
             <Plus size={18} />
-            <span>新增筆記</span>
+            <span className="hidden sm:inline">新增</span>
           </Button>
         </>
       )}

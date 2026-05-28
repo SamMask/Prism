@@ -1,0 +1,31 @@
+{
+  "json": {
+    "data": {
+      "category_id": 1,
+      "content": "Welcome to Prism!",
+      "cover_image": null,
+      "cover_position": "top",
+      "created_at": "<timestamp>",
+      "editor_layout": "single",
+      "id": 1,
+      "is_archived": false,
+      "is_pinned": false,
+      "parent_id": null,
+      "parent_title": null,
+      "prompt_params": null,
+      "remarks": null,
+      "tags": [
+        {
+          "id": 1,
+          "name": "Welcome"
+        }
+      ],
+      "title": "Welcome Note",
+      "type": "筆記",
+      "updated_at": "<timestamp>",
+      "urls": []
+    },
+    "status": "success"
+  },
+  "status_code": 200
+}

@@ -25,7 +25,7 @@ def tokenize_search_terms(keyword: str, max_tokens: int = 20) -> List[str]:
         return []
 
     safe_keyword = "".join([
-        c.lower() for c in keyword if c.isalnum() or c.isspace()
+        c.lower() if c.isalnum() else " " for c in keyword
     ])
     tokens = safe_keyword.split()
 

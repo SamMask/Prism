@@ -54,6 +54,7 @@ export function EditablePreview({
           return (
             <figure
               key={`${block.kind}-${block.start}`}
+              data-testid="preview-image-block"
               className="relative group inline-flex min-h-20 min-w-20 max-w-full items-center justify-center rounded-lg border border-border-subtle bg-bg-elevated/40 overflow-hidden"
             >
               <img
@@ -65,6 +66,7 @@ export function EditablePreview({
               <button
                 type="button"
                 onClick={() => removeImage(block.imageUrl as string)}
+                data-testid="preview-remove-image"
                 className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-danger/90 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
                 title="移除圖片引用"
               >
@@ -91,11 +93,13 @@ export function EditablePreview({
         return (
           <section
             key={`${block.kind}-${block.start}`}
+            data-testid="preview-text-block"
             className="relative group rounded-lg border border-transparent hover:border-border-subtle hover:bg-bg-elevated/30 transition-colors"
           >
             <button
               type="button"
               onClick={() => setActiveBlockStart(block.start)}
+              data-testid="preview-edit-block"
               className="absolute top-2 right-2 p-1.5 rounded-md bg-bg-elevated text-text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-text-primary transition-all"
               title="編輯此段"
             >

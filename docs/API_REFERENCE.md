@@ -2,7 +2,7 @@
 
 > 用途：提供外部 Agent / 自動化工具（例如 `murmur厭世貓`）直接對接 Prism 的實際 API 契約。
 > 基準：以目前 Flask 路由實作為準，不以舊前端型別或歷史文件為準。
-> 最後確認：2026-05-05
+> 最後確認：2026-05-27
 
 ---
 
@@ -79,9 +79,12 @@
 | `per_page` | int | 每頁數量，預設 `20`，最大 `100` |
 | `q` | string | 卡片搜尋關鍵字，後端會截斷到 200 字；搜尋範圍包含標題、內文、備註、附件標題 / 路徑 / 文字內容、標籤 |
 | `type` | string | 分類名稱相容參數；不是 DB 欄位 |
+| `category_id` | int | 分類 ID 過濾；前端應優先使用此欄位，避免分類改名造成 `type` 字串漂移 |
 | `tags` | string | Tag ID 逗號分隔，例如 `1,2,3` |
 | `tag_mode` | string | `AND` 或 `OR`，預設 `AND` |
 | `include_archived` | bool | 是否包含封存筆記，預設 `false` |
+| `archived` | bool | 只顯示封存筆記，預設 `false`；優先於 `include_archived` |
+| `pinned_only` | bool | 只顯示置頂筆記，預設 `false` |
 | `sort` | string | `updated` / `created` / `custom`，預設 `updated` |
 
 #### Response

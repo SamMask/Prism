@@ -6,7 +6,7 @@ import { toast } from '../../components/ui/Toast'
 
 const SEPARATION_THRESHOLD = 5000
 
-export function useNoteForm(note: Note | null, onClose: () => void) {
+export function useNoteForm(note: Note | null, onClose: () => void, initialPreview = false) {
   const { fetchNotes } = useAppStore()
   const isEditing = !!note
 
@@ -26,7 +26,7 @@ export function useNoteForm(note: Note | null, onClose: () => void) {
   const [urlInput, setUrlInput] = useState('')
   const [coverImage, setCoverImage] = useState<string | undefined>(note?.cover_image)
   const [tagInput, setTagInput] = useState('')
-  const [isPreview, setIsPreview] = useState(false)
+  const [isPreview, setIsPreview] = useState(initialPreview)
   const [isSaving, setIsSaving] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
