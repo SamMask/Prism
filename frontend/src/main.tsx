@@ -11,16 +11,23 @@ const readNumberSetting = (key: string, fallback: number, min: number, max: numb
   return Number.isFinite(value) ? clampNumber(value, min, max) : fallback
 }
 
-// Initialize color theme from localStorage
-const savedColorTheme = localStorage.getItem('colorTheme') || 'default'
-document.documentElement.setAttribute('data-theme', savedColorTheme)
+// Initialize appearance from localStorage
 const savedAccentColor = localStorage.getItem('prism.accentColor') || localStorage.getItem('colorTheme')
-if (savedAccentColor) {
-  document.documentElement.setAttribute('data-accent', savedAccentColor)
-}
+document.documentElement.setAttribute('data-accent', savedAccentColor || 'default')
+document.documentElement.removeAttribute('data-theme')
 
-const savedAestheticMode = localStorage.getItem('prism.aestheticMode') || 'linear'
-document.documentElement.setAttribute('data-aesthetic', savedAestheticMode)
+const backgroundSchemes = ['neutral', 'black', 'warm', 'green', 'paper'] as const
+const savedBackgroundScheme = localStorage.getItem('prism.backgroundScheme')
+const backgroundScheme = backgroundSchemes.includes(savedBackgroundScheme as typeof backgroundSchemes[number])
+  ? (savedBackgroundScheme as typeof backgroundSchemes[number])
+  : 'neutral'
+document.documentElement.setAttribute('data-bg', backgroundScheme)
+
+const normalizeAestheticMode = (value: string | null) => {
+  if (value === 'linear' || value === 'editorial' || value === 'studio') return 'editorial'
+  return 'editorial'
+}
+document.documentElement.setAttribute('data-aesthetic', normalizeAestheticMode(localStorage.getItem('prism.aestheticMode')))
 
 const savedMode = localStorage.getItem('theme') || 'dark'
 document.documentElement.classList.toggle('light', savedMode === 'light')

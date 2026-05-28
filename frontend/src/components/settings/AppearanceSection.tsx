@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Sun, Moon, Check, LayoutGrid, List, AlignJustify, Rows, Newspaper, Clapperboard } from 'lucide-react';
+import { Sun, Moon, Check, LayoutGrid, List, AlignJustify } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { Category } from '../../services/api';
 import { useAppStore, type ViewMode } from '../../stores/appStore';
@@ -9,8 +9,8 @@ interface AppearanceSectionProps {
   categories: Category[];
 }
 
-type AestheticMode = 'linear' | 'editorial' | 'studio';
 type AccentColor = 'default' | 'cyberpunk' | 'eye-care' | 'elegant' | 'ocean' | 'sunset';
+type BackgroundScheme = 'neutral' | 'black' | 'warm' | 'green' | 'paper';
 
 const clampNumber = (value: number, min: number, max: number) => {
   return Math.min(Math.max(value, min), max);
@@ -34,19 +34,27 @@ const accentOptions: Array<{ id: AccentColor; name: string; color: string }> = [
   { id: 'sunset', name: '夕陽橙', color: '#f97316' },
 ];
 
+const backgroundOptions: Array<{ id: BackgroundScheme; name: string; colors: [string, string, string] }> = [
+  { id: 'neutral', name: '預設藍灰', colors: ['#0b1020', '#141a2a', '#263247'] },
+  { id: 'black', name: '純黑', colors: ['#000000', '#080808', '#1a1a1a'] },
+  { id: 'warm', name: '暖灰', colors: ['#17130f', '#211c17', '#3a3128'] },
+  { id: 'green', name: '護眼灰綠', colors: ['#0d1511', '#14201a', '#2a3a31'] },
+  { id: 'paper', name: '紙張米色', colors: ['#f4ecd9', '#fbf5e4', '#d4c8a4'] },
+];
+
 export function AppearanceSection({ categories }: AppearanceSectionProps) {
   const { viewMode, setViewMode } = useAppStore();
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
-  const [aestheticMode, setAestheticMode] = useState<AestheticMode>(() => {
-    const savedMode = localStorage.getItem('prism.aestheticMode') as AestheticMode | null;
-    return savedMode === 'editorial' || savedMode === 'studio' ? savedMode : 'linear';
-  });
   const [accentColor, setAccentColor] = useState<AccentColor>(() => {
     const savedAccent =
       (localStorage.getItem('prism.accentColor') || localStorage.getItem('colorTheme')) as AccentColor | null;
     return savedAccent && accentOptions.some((option) => option.id === savedAccent) ? savedAccent : 'default';
+  });
+  const [backgroundScheme, setBackgroundScheme] = useState<BackgroundScheme>(() => {
+    const savedScheme = localStorage.getItem('prism.backgroundScheme') as BackgroundScheme | null;
+    return savedScheme && backgroundOptions.some((option) => option.id === savedScheme) ? savedScheme : 'neutral';
   });
   const [cornerRadius, setCornerRadius] = useState(() => readNumberSetting('prism.cornerRadius', 10, 4, 24));
   const [sidebarWidth, setSidebarWidth] = useState(() => readNumberSetting('prism.sidebarWidth', 248, 208, 320));
@@ -63,20 +71,19 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     toast.success(`已切換至${newTheme === 'dark' ? '深色' : '淺色'}主題`);
   };
 
-  const setAesthetic = (mode: AestheticMode, label: string) => {
-    setAestheticMode(mode);
-    localStorage.setItem('prism.aestheticMode', mode);
-    document.documentElement.setAttribute('data-aesthetic', mode);
-    toast.success(`已切換至「${label}」外觀`);
-  };
-
   const setAccent = (color: AccentColor, label: string) => {
     setAccentColor(color);
     localStorage.setItem('prism.accentColor', color);
     localStorage.setItem('colorTheme', color);
     document.documentElement.setAttribute('data-accent', color);
-    document.documentElement.setAttribute('data-theme', color);
-    toast.success(`已切換至「${label}」主色`);
+    toast.success(`已切換至「${label}」強調色`);
+  };
+
+  const setBackground = (scheme: BackgroundScheme, label: string) => {
+    setBackgroundScheme(scheme);
+    localStorage.setItem('prism.backgroundScheme', scheme);
+    document.documentElement.setAttribute('data-bg', scheme);
+    toast.success(`已切換至「${label}」背景色調`);
   };
 
   const updateCornerRadius = (value: number) => {
@@ -98,17 +105,6 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     { value: 'grid', label: '網格', icon: LayoutGrid },
     { value: 'list', label: '列表', icon: List },
     { value: 'compact', label: '精簡', icon: AlignJustify },
-  ];
-
-  const aestheticOptions: Array<{
-    value: AestheticMode;
-    label: string;
-    description: string;
-    icon: typeof Rows;
-  }> = [
-    { value: 'linear', label: 'Linear', description: '清楚、直接、偏工具感', icon: Rows },
-    { value: 'editorial', label: 'Editorial', description: '閱讀感、標題層級更強', icon: Newspaper },
-    { value: 'studio', label: 'Studio', description: '更緊湊、偏創作工作台', icon: Clapperboard },
   ];
 
   return (
@@ -136,45 +132,42 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
         </Button>
       </div>
 
-      {/* Aesthetic Mode */}
+      {/* Background Scheme */}
       <div className="pt-6 border-t border-border-subtle">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="text-text-primary">美學方向</p>
-            <p className="text-text-muted text-sm">
-              切換字體層級、卡片節奏與介面密度
-            </p>
-          </div>
-          <div
-            className="grid w-full gap-2 sm:grid-cols-3 lg:w-auto"
-            data-testid="aesthetic-mode-controls"
-          >
-            {aestheticOptions.map(({ value, label, description, icon: Icon }) => {
-              const isActive = aestheticMode === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setAesthetic(value, label)}
-                  className={`min-w-[148px] rounded-lg border px-3 py-2 text-left transition-all
-                    ${isActive
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border-default bg-bg-elevated text-text-secondary hover:border-border-hover hover:text-text-primary'
-                    }`}
-                  aria-pressed={isActive}
-                  data-testid={`aesthetic-mode-${value}`}
-                >
-                  <span className="flex items-center gap-2 text-sm font-medium">
-                    <Icon size={15} />
-                    {label}
-                  </span>
-                  <span className="mt-1 block text-xs text-text-muted">
-                    {description}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+        <div className="mb-3">
+          <p className="text-text-primary">背景色調</p>
+          <p className="text-text-muted text-sm">
+            調整底色、卡片層次與邊框色階
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {backgroundOptions.map((option) => {
+            const isSelected = backgroundScheme === option.id;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setBackground(option.id, option.name)}
+                className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all
+                  ${isSelected
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border-default bg-bg-elevated hover:border-border-default hover:bg-bg-hover'
+                  }`}
+                aria-pressed={isSelected}
+                data-testid={`background-scheme-${option.id}`}
+              >
+                <span className="flex h-8 w-8 shrink-0 overflow-hidden rounded-full border border-border-subtle">
+                  {option.colors.map((color) => (
+                    <span key={color} className="flex-1" style={{ backgroundColor: color }} />
+                  ))}
+                </span>
+                <span className={`min-w-0 flex-1 text-sm font-medium ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
+                  {option.name}
+                </span>
+                {isSelected && <Check size={16} className="shrink-0 text-primary" />}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -214,9 +207,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       {/* Color Theme */}
       <div className="pt-6 border-t border-border-subtle">
         <div className="mb-3">
-          <p className="text-text-primary">主色</p>
+          <p className="text-text-primary">強調色</p>
           <p className="text-text-muted text-sm">
-            在目前美學方向下調整強調色
+            只影響按鈕、焦點、標籤與啟用狀態
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

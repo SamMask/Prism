@@ -3,7 +3,7 @@
 **狀態**: 🟢 穩定運行 (Stable)
 **核心目標**: Headless KMS API + 純關鍵字 FTS 搜尋
 **文件參照**: `docs/Prism.md` (歷史背景), `docs/SCHEMA.md` (資料庫規格), `docs/FRONTEND-REDESIGN-PLAN.md` (UI/Go 重構規劃), `Prism_Go_模組逐步重構計劃報告.md` (Go shadow backend), `garbage-can/1230-審核報告.md` (Linus Audit)
-**最後更新**: 2026-05-28
+**最後更新**: 2026-05-29
 
 ---
 
@@ -190,7 +190,7 @@
 - [x] **18.3.1** Prompt Builder density pass — 改善表單層級、preview 與儲存動線，維持現有輸出 contract；改為 desktop 設定/預覽雙欄、mobile 上下堆疊，動作列固定在設定區底部。
 - [x] **18.3.2** Settings tabs — 外觀 / 資料 / 搜尋 / 部署 / 關於只重排現有功能，不新增 server API；既有 Appearance、資料維護/備份/危險區、分類標籤、部署/更新/Server dashboard、About 依 tab 分組。
 - [x] **18.3.3** Server dashboard safety check — 保留 `/api/server/*` localhost-only 邊界與既有錯誤處理；部署 tab 與 ServerDashboard 補 local-only 邊界提示，仍只呼叫既有 `/api/server/hardware`、`/api/server/version`、`/api/server/backup/list`。**收尾驗證**：`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v` → 83 passed；Playwright fallback 驗證 Prompt Builder desktop/mobile、輸入描述後 preview 更新、Settings 五個 tabs 切換、部署 tab local-only guard 與 ServerDashboard；console 僅有 Vite dev 訊息、React DevTools 提示與既有 React Router v7 future warnings。
-- [x] **18.3.4** Appearance aesthetic modes — 外觀 tab 新增 `Linear` / `Editorial` / `Studio` 三種本機美學方向，使用 `localStorage` + `data-aesthetic` 切換字體層級、卡片節奏與整體 palette；`data-accent` 主色、邊角圓潤度與側邊欄寬度皆為本機 UI 偏好，不新增 server API 或 schema。
+- [x] **18.3.4** Appearance baseline + background schemes — 外觀 tab 移除 `Linear` / `Editorial` / `Studio` 美學方向 UI，前台固定採 Editorial 閱讀基準且中文摘要不使用 italic；保留 Home `grid` / `list` / `compact` ViewMode；新增 `prism.backgroundScheme` + `data-bg` 背景色調，將 semantic background palette 與 `data-accent` 強調色拆開，不新增 server API 或 schema。
 - [x] **18.3.5** Filename-like search regression — `GET /api/notes?q=...` 將標點視為 token 分隔，修正 `todo.md` 這類卡片內容 / 檔名式查詢因 `todomd` 黏詞而查不到的問題。
 
 ### 🧪 18.4 Go Read Shadow Backend
@@ -404,6 +404,7 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **frontend-ui** | 2026-05-29 | Appearance settings 簡化 — 移除 `Linear` / `Editorial` / `Studio` 美學方向 UI，舊 `prism.aestheticMode` 僅讀取相容並正規化為 Editorial baseline；新增 `背景色調`（`prism.backgroundScheme` + `data-bg`）五組 semantic background palette，每組支援深色/淺色；`data-accent` 僅控制 primary/accent/focus/tag/active 類狀態，中文摘要維持 normal font-style。**收尾驗證**：`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build` passed；Playwright fallback 驗證 Settings 不再出現美學方向/Linear/Editorial/Studio，切換背景色調與強調色後背景 tokens 不被 accent 覆蓋，mobile 無水平溢出。 |
 | **pi-deploy** | 2026-05-28 | 部署 Appearance controls follow-up 到 Raspberry Pi：同步 `frontend/dist` 與 `docs/TODO.md`，重啟 `prism.service` 後 live 驗證 `active`；`/api/test` status ok、`/api/server/version` v2.4.9 + V2 mode true、migration current/latest 15 且無 pending；首頁 HTML 指向 `assets/index-CKp_FqWr.css` / `assets/index-HYEMKfiU.js`，Pi dist CSS 內含 `data-accent`、`--prism-sidebar-width`、`--prism-corner-radius`。 |
 | **frontend-ui** | 2026-05-28 | Appearance controls fidelity follow-up — `Linear` / `Editorial` / `Studio` 保留各自 dark/light 整體 palette，`主色` 改為 `data-accent` 強調色覆蓋，避免美學方向吃掉主題色彩；補入 prototype 的邊角圓潤度與側邊欄寬度 slider，使用 `localStorage` + CSS variables 套用到卡片、按鈕、輸入框與桌面 sidebar。**收尾驗證**：`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v` → 87 passed；Playwright 驗證 Studio/light 背景維持 `#ebe6d8`、主色切夕陽橙後 `--color-primary=#f97316`、圓角 `18px`、sidebar `288px` 實際生效且無 console error。 |
 | **frontend-ui** | 2026-05-28 | Appearance palette fidelity follow-up — 對齊 `Prism Redesign - standalone.html` 的 `Linear` / `Editorial` / `Studio` token，補齊 dark/light 六組整體 palette：Linear 冷灰藍、Editorial 暖紙色/棕金、Studio 暖米色/鼠尾草綠；初始化與切換同步 `data-mode`，避免只改 selected state 而未改整體色系。**收尾驗證**：`cd frontend && npm run build` passed；Playwright 驗證三種 aesthetic 點擊後 `--color-bg-base` / `--color-primary` 均不同，切到 light 後 Studio 套用 `#ebe6d8` / `#006c4e`。 |

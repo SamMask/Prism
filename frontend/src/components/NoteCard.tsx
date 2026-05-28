@@ -218,7 +218,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         onContextMenu={handleContextMenu}
         data-testid={`note-card-${note.id}`}
         className={`
-          flex items-center gap-4 p-4 rounded-xl cursor-pointer
+          flex items-center gap-4 p-[var(--prism-card-padding)] rounded-xl cursor-pointer
           bg-bg-surface border border-border-subtle
           hover:border-border-default hover:bg-bg-elevated
           transition-all duration-200
@@ -309,7 +309,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
       )}
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-[var(--prism-card-padding)]">
         {/* Title */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">

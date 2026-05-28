@@ -180,7 +180,7 @@ export function HomePage() {
   const notesContent = (
     <div
       className={`
-        ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4' : ''}
+        ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--prism-card-gap)]' : ''}
         ${viewMode === 'list' ? 'flex flex-col gap-3' : ''}
         ${viewMode === 'compact' ? 'flex flex-col gap-1.5' : ''}
       `}
