@@ -10,7 +10,7 @@
 | `DEPLOY-PI.md` | 樹莓派更新流程（日常 tar+SSH sync、首次 venv 設定、常見問題） |
 | `docs/ARCHITECTURE.md` | 架構圖（C4 Container Diagram） |
 | `docs/SCHEMA.md` | 現行 DB 綱要（所有資料表欄位定義，改 DB 前必讀） |
-| `docs/TODO.md` | 原子化待辦清單與版本歷程 |
+| `docs/TODO.md` | 原子化 active 待辦與近期更新摘要；完整完成項目 / Changelog 見 `docs/development-history/` |
 | `docs/Prism.md` | V2 規劃期歷史記錄（已凍結，不再更新；僅供重構決策脈絡參考） |
 
 ### 重大重構 / 前端改版額外必讀
@@ -25,7 +25,7 @@
 
 1. **有未規劃事項** → 先在 `docs/TODO.md` 拆解原子任務，更新後再繼續實作
 2. **完成一個階段** → 回頭更新相關文件：
-   - `docs/TODO.md`（打 `[x]`、更新 Changelog）
+   - `docs/TODO.md`（打 `[x]`、更新近期摘要；長版歷程歸檔到 `docs/development-history/`）
    - `docs/ARCHITECTURE.md`（新模組 / 架構變動時）
    - `docs/SCHEMA.md`（有新 DB 欄位或遷移時）
    - `CLAUDE.md` + `AGENTS.md`（開發規範本身要改時，**兩份都要改**）

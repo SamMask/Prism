@@ -1,7 +1,7 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.4.9
-> **更新日期**: 2026-05-28
+> **更新日期**: 2026-06-01
 > **專案狀態**: 🟢 穩定運行 — Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
@@ -10,7 +10,7 @@
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
-| [TODO.md](./TODO.md) | 原子化待辦清單、已完成項目、版本 Changelog | ✅ 持續更新 |
+| [TODO.md](./TODO.md) | 原子化 active roadmap、backlog/icebox、近期更新摘要；長版歷史移至 development-history | ✅ 持續更新 |
 | [SCHEMA.md](./SCHEMA.md) | **現行 DB 綱要** — 所有資料表欄位定義（唯一真實來源），附 Migration 歷程 | ✅ 持續更新 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | C4 Container Diagram、模組邊界、資料流向 | ✅ 持續更新 |
 | [Prism.md](./Prism.md) | V2 架構決策記錄與歷史路線圖（V1→V2 重構背景、AI 拔除決策脈絡） | 🗄️ 歷史參考，不再更新 |
@@ -55,6 +55,7 @@
 | 文件 | 說明 | 狀態 |
 |------|------|------|
 | [README.md](./README.md) | 舊版文檔索引 (v1.4.1, 2025-12-15) | 🗄️ 已由本文件取代 |
+| [development-history/README.md](./development-history/README.md) | 從 TODO 拆出的完成階段與完整 Changelog 保存區 | 🗄️ 歷史保存，按需更新 |
 | [hypothetical_modern_prism.md](./hypothetical_modern_prism.md) | 現代化架構評估報告（前後端分離 Vite/React 方案探討）| 🗄️ 已完成實作，僅供歷史參考 |
 | [future_possibilities_heavy_local.md](./future_possibilities_heavy_local.md) | 本地 AI 重度依賴方案探索（PyTorch / Ollama / HuggingFace）| 🗄️ 已廢棄 — AI 功能於 v2.3.0 全面移除 |
 
