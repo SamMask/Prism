@@ -1,0 +1,52 @@
+{
+  "phase": "19.3",
+  "name": "Controlled Read Routing Proof",
+  "decision_date": "2026-06-04",
+  "default_owner": "python",
+  "fallback_owner": "python",
+  "switch": {
+    "enabled_by": "PRISM_GO_READ_ROUTING=1",
+    "base_url": "PRISM_GO_READ_BASE_URL",
+    "default_state": "off",
+    "allowed_base_hosts": [
+      "localhost",
+      "127.0.0.1",
+      "::1"
+    ],
+    "required_scheme": "http",
+    "requires_explicit_port": true
+  },
+  "proxied_surface": [
+    "GET /api/test",
+    "GET /api/categories",
+    "GET /api/tags",
+    "GET /api/notes",
+    "GET /api/notes/<id>"
+  ],
+  "python_owned_surface": [
+    "GET /api/system/go-read-routing",
+    "all POST / PUT / DELETE / PATCH routes",
+    "attachments",
+    "export",
+    "cleanup",
+    "server maintenance",
+    "migrations"
+  ],
+  "failure_behavior": "fail_open_to_python",
+  "response_evidence": {
+    "proxied_header": "X-Prism-Go-Read-Routing: hit",
+    "status_endpoint": "GET /api/system/go-read-routing"
+  },
+  "next_phase": {
+    "id": "19.4",
+    "title": "Cutover Readiness Audit",
+    "scope": "audit evidence for whether read-only Go routing is stable enough to consider a separately approved service-level cutover plan",
+    "must_not_include": [
+      "production cutover",
+      "write routes",
+      "file routes",
+      "Go migrations",
+      "Python backend removal"
+    ]
+  }
+}

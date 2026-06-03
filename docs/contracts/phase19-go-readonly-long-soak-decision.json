@@ -1,0 +1,147 @@
+{
+  "phase": "19.7",
+  "name": "Post-soak Decision Gate",
+  "execution_date": "2026-06-04",
+  "live_execution_authorized": true,
+  "decision": "Execute a bounded extended Python-switch read-only soak, then roll back to Python-only.",
+  "target_host": {
+    "ssh_alias": "PI5Mask24",
+    "hostname": "raspberrypi",
+    "public_exposure_changed": false,
+    "caddy_route_changed": false,
+    "frontend_default_target_changed": false
+  },
+  "preflight": {
+    "starting_state": "python_only",
+    "python_service_active": true,
+    "routing_enabled": false,
+    "go_sidecar_active": false,
+    "port_5002_listening": false,
+    "migration_status": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    },
+    "api_test_counts": {
+      "notes_count": 196,
+      "categories_count": 6,
+      "tags_count": 122
+    }
+  },
+  "fresh_backup": {
+    "path": "/home/mask070924/prism/backups/prism_pre_go_readonly_long_soak_20260604_034124.db",
+    "verified": true,
+    "schema_version": 16,
+    "notes_count": 196,
+    "verification_note": "Schema_Meta is key/value; schema_version was read from value where key='schema_version'."
+  },
+  "go_sidecar": {
+    "service_name": "prism-go-readonly.service",
+    "bind": "127.0.0.1:5002",
+    "healthz_status": 200,
+    "db_path": "/home/mask070924/prism/knowledge.db",
+    "data_dir": "/home/mask070924/prism",
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "sqlite_query_only": true,
+    "localhost_only": true
+  },
+  "extended_soak": {
+    "start_time_local": "2026-06-04T03:42:31+08:00",
+    "end_time_local": "2026-06-04T03:51:36+08:00",
+    "sample_count": 10,
+    "sample_interval_seconds": 60,
+    "routing_status_during_soak": {
+      "enabled": true,
+      "base_url": "http://127.0.0.1:5002",
+      "valid_base_url": true,
+      "default_owner": "python",
+      "fallback_owner": "python"
+    },
+    "sampled_each_round": [
+      {
+        "path": "GET /api/test",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit",
+        "required_body_fragment": "\"notes_count\":196"
+      },
+      {
+        "path": "GET /api/notes?per_page=1&page=1",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit",
+        "required_body_fragment": "\"total\":196"
+      },
+      {
+        "path": "GET /api/notes/114",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/system/migration-status",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing",
+        "required_body_fragment": "\"current_version\":16"
+      },
+      {
+        "path": "POST /api/test",
+        "expected_status": 403,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      }
+    ],
+    "all_samples_passed": true,
+    "python_service_active_each_round": true,
+    "go_sidecar_active_each_round": true,
+    "go_write_method_logs_since_start": []
+  },
+  "rollback_drill": {
+    "completed": true,
+    "actions": [
+      "Removed /etc/systemd/system/prism.service.d/go-read-routing.conf",
+      "Ran systemctl daemon-reload",
+      "Restarted prism.service",
+      "Verified /api/system/go-read-routing enabled=false",
+      "Verified /api/test returns 200 without X-Prism-Go-Read-Routing",
+      "Stopped prism-go-readonly.service",
+      "Verified no 127.0.0.1:5002 listener remains",
+      "Verified migration status stayed current/latest v16 with pending []"
+    ],
+    "final_state": {
+      "python_service_active": true,
+      "routing_enabled": false,
+      "routing_base_url": null,
+      "representative_get_without_go_header": true,
+      "go_sidecar_active": false,
+      "port_5002_listening": false,
+      "migration_current_version": 16,
+      "migration_latest_version": 16,
+      "migration_pending": []
+    }
+  },
+  "result": {
+    "status": "completed_and_rolled_back_to_python_only",
+    "conclusion": "Go is now a verified bounded Python-switch read-only sidecar candidate for the approved GET surface.",
+    "not_a_cutover": true,
+    "remaining_risks": [
+      "Reverse-proxy/Caddy routing has not been planned or exercised.",
+      "Long-running unattended production routing has not been approved.",
+      "Writes, files, maintenance, exports, and migrations remain Python-owned."
+    ]
+  },
+  "not_authorized_by_19_7": [
+    "Caddy route changes",
+    "Frontend default API target changes",
+    "Unattended long-running production read routing",
+    "Go ownership of write/file/maintenance routes",
+    "Go migrations",
+    "Python backend removal",
+    "Direct public internet exposure"
+  ],
+  "allowed_next_step": {
+    "id": "19.8",
+    "title": "Reverse-proxy / Service Cutover Planning Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Write a plan-only Caddy/service cutover design or explicitly defer cutover after reviewing 19.7 evidence.",
+    "requires_explicit_user_approval": true,
+    "first_step_if_approved": "Create plan-only contract for Caddy/service routing, monitoring, rollback, exposure boundary, and failure criteria before any live Caddy/frontend/default route change."
+  }
+}

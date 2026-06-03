@@ -1,0 +1,204 @@
+{
+  "phase": "19.8",
+  "name": "Reverse-proxy / Service Cutover Planning Gate",
+  "decision_date": "2026-06-04",
+  "plan_only": true,
+  "live_execution_authorized": false,
+  "requires_explicit_user_approval_before_live_execution": true,
+  "goal": "Define a separately approved Caddy/service read-only routing plan after the successful 19.6 short soak and 19.7 bounded extended Python-switch soak, while preserving Python as the rollback and owner for writes/files/migrations.",
+  "evidence_inputs": [
+    "docs/contracts/phase19-go-readonly-service-cutover-plan.json",
+    "docs/contracts/phase19-go-readonly-soak-execution.json",
+    "docs/contracts/phase19-go-readonly-long-soak-decision.json"
+  ],
+  "exposure_boundary": {
+    "allowed": [
+      "localhost",
+      "trusted LAN",
+      "VPN",
+      "SSH tunnel",
+      "reverse proxy protected by external auth"
+    ],
+    "not_allowed": [
+      "direct public internet exposure",
+      "unprotected Caddy public endpoint",
+      "public Go sidecar bind"
+    ],
+    "auth_note": "Prism still has no built-in API token, Bearer token, or user auth layer; any broader exposure must be protected outside Prism before routing changes are considered."
+  },
+  "planned_topology": {
+    "python_service": {
+      "name": "prism.service",
+      "role": "primary runtime, write/file/maintenance/migration owner, rollback target",
+      "bind": "127.0.0.1:5000",
+      "required_final_fallback": true
+    },
+    "go_sidecar_service": {
+      "name": "prism-go-readonly.service",
+      "role": "read-only sidecar for validated GET surface only",
+      "bind": "127.0.0.1:5002",
+      "db_mode": "SQLite query_only, schema >= 16",
+      "public_bind_allowed": false,
+      "allowed_surface": [
+        "GET /healthz",
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes",
+        "GET /api/notes/<id>"
+      ]
+    },
+    "reverse_proxy": {
+      "name": "Caddy",
+      "plan": "Only route the validated GET read surface to the localhost Go sidecar; all other API, frontend, files, server maintenance, imports/exports, cleanup, and write methods remain on Python.",
+      "must_preserve_external_access_policy": true,
+      "must_not_change_frontend_default_api_target": true
+    }
+  },
+  "route_policy": {
+    "go_allowed": [
+      {
+        "method": "GET",
+        "path": "/api/test"
+      },
+      {
+        "method": "GET",
+        "path": "/api/categories"
+      },
+      {
+        "method": "GET",
+        "path": "/api/tags"
+      },
+      {
+        "method": "GET",
+        "path": "/api/notes"
+      },
+      {
+        "method": "GET",
+        "path": "/api/notes/<id>"
+      }
+    ],
+    "python_required": [
+      "POST / PUT / DELETE / PATCH on every path",
+      "/api/system/*",
+      "/api/server/*",
+      "/api/export/*",
+      "/api/import/*",
+      "/api/cleanup/*",
+      "/api/attachments/*",
+      "/api/upload*",
+      "frontend SPA assets",
+      "static uploads",
+      "database migrations"
+    ],
+    "header_evidence": {
+      "required_for_go_routed_reads": "X-Prism-Go-Read-Routing: hit",
+      "must_be_absent_for_python_owned_routes": true
+    }
+  },
+  "caddy_plan_shape": {
+    "config_change_type": "separate reversible snippet or clearly bounded route block",
+    "validate_before_reload": "caddy validate",
+    "reload_command": "systemctl reload caddy",
+    "rollback_source": "previous Caddy config or disabled snippet",
+    "rollback_commands": [
+      "restore previous Caddy route config or disable Go read route snippet",
+      "caddy validate",
+      "systemctl reload caddy",
+      "verify representative GET reads work through Python without X-Prism-Go-Read-Routing"
+    ],
+    "not_authorized_in_19_8": true
+  },
+  "preflight_required_before_19_9_execution": [
+    "Confirm explicit user approval for live 19.9 execution",
+    "Confirm Python prism.service is active and healthy",
+    "Confirm Caddy is active and current config can validate before changes",
+    "Capture current Caddy config backup or rollback copy",
+    "Confirm /api/system/go-read-routing reports enabled=false before Caddy-level routing",
+    "Create and verify a fresh timestamped production DB backup",
+    "Confirm Go sidecar starts on localhost 127.0.0.1:5002 and /healthz reports schema_version >= 16 plus sqlite_query_only=true",
+    "Confirm Go sidecar has no public bind",
+    "Confirm all Python-owned routes remain Python-routed before and after the change",
+    "Define exact soak duration, sample interval, and rollback trigger before reload"
+  ],
+  "monitoring_evidence_required_for_19_9": [
+    "systemctl is-active prism",
+    "systemctl is-active prism-go-readonly",
+    "systemctl is-active caddy",
+    "caddy validate output before reload",
+    "GET /api/test, /api/categories, /api/tags, /api/notes, /api/notes/<id> status and X-Prism-Go-Read-Routing header",
+    "GET /api/system/migration-status status and absence of X-Prism-Go-Read-Routing header",
+    "POST method check status and absence of X-Prism-Go-Read-Routing header",
+    "Go sidecar journal showing no POST/PUT/DELETE/PATCH routed activity",
+    "Caddy logs or access evidence sufficient to confirm route ownership",
+    "Rollback verification showing Python-only behavior"
+  ],
+  "success_criteria": [
+    "Caddy validates before any reload",
+    "Python service remains active throughout",
+    "Go sidecar serves only localhost read-only GET surface",
+    "Allowed GET read surface returns expected status and carries X-Prism-Go-Read-Routing during the approved live drill",
+    "Python-owned routes do not carry X-Prism-Go-Read-Routing",
+    "Rollback returns all representative reads to Python-only behavior",
+    "No frontend default target, public exposure, write/file/maintenance route, migration, or DB write ownership changes"
+  ],
+  "failure_criteria": [
+    "Caddy validation fails",
+    "Python prism.service becomes unhealthy",
+    "Go sidecar reports sqlite_query_only=false",
+    "Go sidecar binds anything other than localhost",
+    "Any POST/PUT/DELETE/PATCH request reaches Go",
+    "Any Python-owned route carries X-Prism-Go-Read-Routing",
+    "Any public exposure boundary is widened without external auth",
+    "Rollback cannot return to Python-only behavior immediately"
+  ],
+  "rollback_drill": {
+    "required": true,
+    "primary": [
+      "Disable or remove the Caddy Go read route snippet",
+      "Run caddy validate",
+      "Reload Caddy",
+      "Stop prism-go-readonly.service if it is no longer needed",
+      "Verify /api/test works without X-Prism-Go-Read-Routing",
+      "Verify /api/system/migration-status current/latest v16 pending []",
+      "Verify no 127.0.0.1:5002 listener remains if sidecar is stopped"
+    ],
+    "hard_rollback": [
+      "Restore backed-up Caddy config",
+      "Run caddy validate",
+      "Restart or reload Caddy",
+      "Restart prism.service if needed",
+      "Do not let Go perform DB repair or migration"
+    ]
+  },
+  "not_in_scope": [
+    "Live Caddy config changes",
+    "Live Caddy reload",
+    "Frontend default API target change",
+    "Direct public internet exposure",
+    "Go write/file/maintenance routes",
+    "Go migrations",
+    "Go production DB writes",
+    "Python backend removal",
+    "Unattended long-running production routing"
+  ],
+  "result": {
+    "status": "plan_ready",
+    "conclusion": "19.8 closes the reverse-proxy/service cutover planning gap, but it does not authorize live Caddy or frontend routing changes."
+  },
+  "allowed_next_step": {
+    "id": "19.9",
+    "title": "Approved Caddy Read-only Routing Drill",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Execute a short, reversible Caddy-level read-only routing drill using the 19.8 plan, with fresh backup, caddy validate, live evidence, and rollback to Python-only.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Caddy route change",
+      "Caddy reload",
+      "Frontend default API target change",
+      "Long-running production routing",
+      "Go writes/files/migrations",
+      "Python backend removal"
+    ]
+  }
+}

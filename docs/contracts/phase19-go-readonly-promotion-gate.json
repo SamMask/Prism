@@ -1,0 +1,53 @@
+{
+  "phase": "19.2",
+  "name": "Go Read-only Promotion Gate",
+  "decision_date": "2026-06-04",
+  "decision": "promote_to_controlled_readonly_candidate",
+  "current_runtime_owner": "Python Flask prism.service",
+  "go_runtime_role": "read-only sidecar and controlled routing candidate",
+  "allowed_api_surface": [
+    "GET /healthz",
+    "GET /api/test",
+    "GET /api/categories",
+    "GET /api/tags",
+    "GET /api/notes",
+    "GET /api/notes/<id>"
+  ],
+  "required_evidence": [
+    "go test ./...",
+    "Python vs Go response diff tests",
+    "pytest tests/ -v",
+    "Windows local executable smoke test",
+    "Linux ARM64 build artifact test",
+    "Pi sidecar smoke on copied v16 DB",
+    "GET-only browser request capture",
+    "Go logs contain no write attempts"
+  ],
+  "promotion_constraints": {
+    "python_remains_rollback_path": true,
+    "go_may_read_only_copied_db_by_default": true,
+    "production_db_requires_explicit_allow_flag": true,
+    "go_runs_migrations": false,
+    "go_replaces_prism_service": false,
+    "frontend_default_points_to_go": false
+  },
+  "blocked_until_future_phase": [
+    "POST / PUT / DELETE",
+    "attachments, export, cleanup, and server maintenance",
+    "formal production cutover",
+    "removing or weakening the Python backend",
+    "Go-managed migration or automatic production DB repair"
+  ],
+  "next_phase": {
+    "id": "19.3",
+    "title": "Controlled Read Routing Proof",
+    "scope": "local-only or sidecar-only proof for routing the existing read surface to Go behind an explicit reversible switch",
+    "must_not_include": [
+      "write routes",
+      "file routes",
+      "server maintenance routes",
+      "default frontend cutover",
+      "Python backend removal"
+    ]
+  }
+}

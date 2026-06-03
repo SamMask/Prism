@@ -123,6 +123,12 @@ def create_app(env_name='default'):
                 app.logger.warning(f"[CSRF] Blocked request: Origin={origin}, Referer={referer}")
                 abort(403, description='CSRF validation failed: Origin mismatch')
 
+    @app.before_request
+    def go_read_routing_proof():
+        """Phase 19.3: optional localhost-only Go read routing proof."""
+        from utils.go_read_routing import proxy_go_read_request
+
+        return proxy_go_read_request(os.environ)
 
     # Global Template Variables
     @app.context_processor

@@ -27,6 +27,14 @@
 | [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 新 UI 參考檔 + Go shadow backend 路線整合規劃；前端改版與重構前必讀 | 📋 規劃中 |
 | [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
 | [contracts/api-readonly-manifest.json](./contracts/api-readonly-manifest.json) | Phase 18 read-only API manifest；Go shadow backend 與工具 surface 的機器可讀草稿 | ✅ 已建立 |
+| [contracts/phase19-go-runtime-packaging.md](./contracts/phase19-go-runtime-packaging.md) | Phase 19 Go runtime / packaging proof：single binary、external data dir、driver spike、build/deploy plan | ✅ 已建立 |
+| [contracts/phase19-go-readonly-promotion-gate.json](./contracts/phase19-go-readonly-promotion-gate.json) | Phase 19.2 Go read-only promotion gate；固定 Go 只能作 controlled read-only candidate 與下一步 19.3 邊界 | ✅ 已建立 |
+| [contracts/phase19-go-read-routing-proof.json](./contracts/phase19-go-read-routing-proof.json) | Phase 19.3 controlled read routing proof；定義 opt-in localhost-only switch、fallback、headers、status endpoint 與 19.4 邊界 | ✅ 已建立 |
+| [contracts/phase19-go-cutover-readiness-audit.json](./contracts/phase19-go-cutover-readiness-audit.json) | Phase 19.4 cutover readiness audit；彙整 evidence、blocking gaps、未授權事項與 19.5 approval boundary | ✅ 已建立 |
+| [contracts/phase19-go-readonly-service-cutover-plan.json](./contracts/phase19-go-readonly-service-cutover-plan.json) | Phase 19.5 read-only service-level cutover plan；plan-only topology、preflight、rollback、monitoring、criteria 與 19.6 approval gate | ✅ 已建立 |
+| [contracts/phase19-go-readonly-soak-execution.json](./contracts/phase19-go-readonly-soak-execution.json) | Phase 19.6 approved read-only soak execution；記錄 Pi live evidence、routing header、rollback final state 與 19.7 approval gate | ✅ 已建立 |
+| [contracts/phase19-go-readonly-long-soak-decision.json](./contracts/phase19-go-readonly-long-soak-decision.json) | Phase 19.7 post-soak decision；記錄 bounded extended read-only soak、10 輪採樣、rollback final state 與 19.8 approval gate | ✅ 已建立 |
+| [contracts/phase19-go-reverse-proxy-service-cutover-plan.json](./contracts/phase19-go-reverse-proxy-service-cutover-plan.json) | Phase 19.8 reverse-proxy/service cutover plan；定義 Caddy/service read-only routing、rollback、exposure boundary 與 19.9 approval gate | ✅ 已建立 |
 | [../go-shadow/README.md](../go-shadow/README.md) | Phase 18.4 Go read-only shadow backend scaffold；啟動方式、scope、runtime safety 與 diff harness | ✅ 已建立 |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | 環境變數設定、Source / Dev mode、Raspberry Pi 部署流程；PyInstaller 僅作內部打包參考 | ✅ 仍適用 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 本地開發環境建置、依賴安裝、PR 規範 | ✅ 仍適用 |
@@ -80,5 +88,6 @@
 | 規劃新功能 / 查進度 | `TODO.md` |
 | 前端改版 / UI rewrite | `FRONTEND-REDESIGN-PLAN.md` + `docs/New_UI/Prism Redesign - standalone.html` |
 | Go shadow backend / API contract lock | `contracts/phase18-readiness.md` + `contracts/api-readonly-manifest.json` + `Prism_Go_模組逐步重構計劃報告.md` + `API_REFERENCE.md` + `SCHEMA.md` |
+| Go runtime / packaging proof | `contracts/phase19-go-runtime-packaging.md` + `contracts/phase19-go-readonly-promotion-gate.json` + `contracts/phase19-go-read-routing-proof.json` + `contracts/phase19-go-cutover-readiness-audit.json` + `contracts/phase19-go-readonly-service-cutover-plan.json` + `contracts/phase19-go-readonly-soak-execution.json` + `contracts/phase19-go-readonly-long-soak-decision.json` + `contracts/phase19-go-reverse-proxy-service-cutover-plan.json` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |
 | 首次部署 / 環境設定 | `DEPLOYMENT.md` + `CONTRIBUTING.md` |
 | 理解整體方向 | `Prism.md` |

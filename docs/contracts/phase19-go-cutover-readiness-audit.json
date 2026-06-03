@@ -1,0 +1,73 @@
+{
+  "phase": "19.4",
+  "name": "Cutover Readiness Audit",
+  "decision_date": "2026-06-04",
+  "decision": "ready_for_separate_readonly_service_plan",
+  "decision_scope": "audit_only",
+  "runtime_change": false,
+  "evidence": {
+    "phase19_0_runtime_packaging": [
+      "Windows single executable build proof",
+      "Linux ARM64 cross-build artifact proof",
+      "embedded React dist proof",
+      "external data dir and explicit DB path",
+      "schema version >= 16 startup check",
+      "GET /healthz reports query-only runtime state"
+    ],
+    "phase19_1_real_data_canary": [
+      "Pi v16 DB copied before Go canary",
+      "Go sidecar read copied v16 DB only",
+      "Pi sidecar smoke covered healthz, test, categories, tags, notes list, note detail, and note 404",
+      "Windows embedded frontend smoke captured GET-only API calls",
+      "runtime metrics captured for Python and Go",
+      "Go logs showed GET startup/request activity only"
+    ],
+    "phase19_2_promotion_gate": [
+      "machine-readable promotion gate exists",
+      "Go route surface locked to GET read-only endpoints",
+      "Python remains runtime owner and rollback path",
+      "Go migrations and default frontend cutover remain blocked"
+    ],
+    "phase19_3_read_routing_proof": [
+      "Python-side opt-in switch defaults off",
+      "Go base URL restricted to localhost, 127.0.0.1, or ::1 with explicit port",
+      "only validated GET read surface may proxy",
+      "invalid base URL and unavailable sidecar fail open to Python",
+      "proxied responses expose X-Prism-Go-Read-Routing: hit",
+      "GET /api/system/go-read-routing reports switch status and fallback owner"
+    ]
+  },
+  "blocking_gaps_before_any_cutover": [
+    "No production service-level cutover plan exists",
+    "No live Pi service replacement has been approved or performed",
+    "No long-running read-routing soak has been recorded",
+    "No Caddy/systemd read-routing deployment contract exists",
+    "No rollback drill from Go-routed reads back to Python service has been recorded",
+    "Go still does not own POST / PUT / DELETE",
+    "Go still does not own attachments, export, cleanup, server maintenance, or migrations",
+    "Go still does not write or migrate the production DB",
+    "Python remains required for all write and file workflows"
+  ],
+  "allowed_next_step": {
+    "id": "19.5",
+    "title": "Read-only Service-level Cutover Plan",
+    "scope": "plan a separately approved read-only service-level cutover or soak test with explicit rollback, deployment, monitoring, and no write/file/migration ownership change",
+    "requires_user_approval_before_execution": true,
+    "must_not_include": [
+      "POST / PUT / DELETE",
+      "attachments, export, cleanup, or server maintenance",
+      "Go migrations",
+      "production DB writes",
+      "Python backend removal",
+      "unapproved live service replacement"
+    ]
+  },
+  "not_authorized_by_19_4": [
+    "Replacing prism.service",
+    "Changing frontend default API target in production",
+    "Writing to production knowledge.db from Go",
+    "Running migrations from Go",
+    "Removing Python runtime or venv",
+    "Promoting Go file/write routes"
+  ]
+}

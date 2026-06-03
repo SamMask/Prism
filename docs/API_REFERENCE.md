@@ -712,6 +712,42 @@ Response：
 - 若未設定更新來源，會回 `has_update: false` 與 `message: "未設定更新來源"`。
 - 更新來源優先讀 `PRISM_RELEASE_API_URL`，其次讀 `GITHUB_REPOSITORY`，最後嘗試從本機 `git remote origin` 推導 GitHub Releases API。
 
+### GET `/api/system/go-read-routing`
+
+Phase 19.3 controlled read routing proof 狀態。這是 Python-owned status endpoint，用來確認目前是否啟用 opt-in Go read routing switch；它不是 Go runtime endpoint，也不代表 production cutover。
+
+Response：
+
+```json
+{
+  "status": "success",
+  "data": {
+    "phase": "19.3",
+    "enabled": false,
+    "base_url": null,
+    "valid_base_url": null,
+    "mode": "controlled-read-routing-proof",
+    "default_owner": "python",
+    "fallback_owner": "python",
+    "allowed_api_surface": [
+      "/api/categories",
+      "/api/notes",
+      "/api/tags",
+      "/api/test",
+      "/api/notes/<id>"
+    ],
+    "blocked_methods": ["POST", "PUT", "DELETE", "PATCH"],
+    "error": null
+  }
+}
+```
+
+啟用條件：
+
+- `PRISM_GO_READ_ROUTING=1`
+- `PRISM_GO_READ_BASE_URL=http://127.0.0.1:<port>` 或 localhost / `[::1]`
+- 只代理已驗證 GET read surface；其他 API 仍由 Python 處理。
+
 ### GET `/api/system/migration-status`
 
 取得資料庫 migration 狀態。
@@ -843,6 +879,7 @@ Response：
 已同步的歷史差異：
 
 - `GET /api/system/check-update` 已補回後端路由。
+- `GET /api/system/go-read-routing` 是 Phase 19.3 Python-owned Go read routing proof status endpoint。
 - `GET /api/system/migration-status` 已補回後端路由。
 - `DELETE /api/categories/<id>` 使用 `target_category_id`，不再使用舊的 `target_category` / `target_name`。
 - `GET /api/notes` 支援 `archived`、`include_archived`、`pinned_only`、`category_id`。

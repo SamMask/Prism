@@ -450,6 +450,15 @@ def check_update():
     })
 
 
+@system_bp.route('/system/go-read-routing', methods=['GET'])
+def go_read_routing_status():
+    """Return Phase 19.3 controlled Go read routing proof status."""
+    import os
+    from utils.go_read_routing import routing_status
+
+    return jsonify(routing_status(os.environ))
+
+
 @system_bp.route('/system/migration-status', methods=['GET'])
 def migration_status():
     """Return current database migration status."""

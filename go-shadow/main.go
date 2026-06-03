@@ -12,18 +12,29 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
+
+const expectedSchemaVersion = 16
 
 //go:embed web/dist/*
 var embeddedDist embed.FS
 
 type server struct {
-	db *sql.DB
+	db      *sql.DB
+	runtime runtimeConfig
+}
+
+type runtimeConfig struct {
+	addr    string
+	dbPath  string
+	dataDir string
 }
 
 type response map[string]any
@@ -36,16 +47,26 @@ type tagRef struct {
 func main() {
 	dbPath := flag.String("db", os.Getenv("PRISM_GO_DB"), "path to a copied Prism SQLite database")
 	addr := flag.String("addr", envDefault("PRISM_GO_ADDR", "127.0.0.1:5001"), "listen address")
+	dataDir := flag.String("data-dir", envDefault("PRISM_GO_DATA_DIR", "."), "external Prism user data directory")
 	flag.Parse()
 
-	db, err := openReadOnlyDB(*dbPath)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db, err := openReadOnlyDB(cfg.dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	if err := verifySchemaVersion(db, expectedSchemaVersion); err != nil {
+		log.Fatal(err)
+	}
 
-	srv := &server{db: db}
+	srv := &server{db: db, runtime: cfg}
 	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", srv.handleHealth)
 	mux.HandleFunc("/api/test", srv.handleTest)
 	mux.HandleFunc("/api/categories", srv.handleCategories)
 	mux.HandleFunc("/api/tags", srv.handleTags)
@@ -53,8 +74,8 @@ func main() {
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.Handle("/", staticHandler())
 
-	log.Printf("Prism Go shadow listening on %s", *addr)
-	if err := http.ListenAndServe(*addr, mux); err != nil {
+	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
+	if err := http.ListenAndServe(cfg.addr, logRequests(mux)); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -66,22 +87,34 @@ func envDefault(key, fallback string) string {
 	return fallback
 }
 
-func openReadOnlyDB(dbPath string) (*sql.DB, error) {
+func resolveRuntimeConfig(addr, dbPath, dataDir string) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
-		return nil, errors.New("database path is required; pass --db or PRISM_GO_DB")
+		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
-	abs, err := filepath.Abs(dbPath)
+	absDB, err := filepath.Abs(dbPath)
 	if err != nil {
-		return nil, err
+		return runtimeConfig{}, err
 	}
-	if filepath.Base(abs) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_DB") != "1" {
-		return nil, fmt.Errorf("refusing to open production-like database %s; use a copied *_test.db or *_dev.db", abs)
+	if filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_DB") != "1" {
+		return runtimeConfig{}, fmt.Errorf("refusing to open production-like database %s; use a copied *_test.db or *_dev.db", absDB)
 	}
-	if _, err := os.Stat(abs); err != nil {
-		return nil, err
+	if _, err := os.Stat(absDB); err != nil {
+		return runtimeConfig{}, err
 	}
 
-	db, err := sql.Open("sqlite", abs)
+	absData, err := filepath.Abs(dataDir)
+	if err != nil {
+		return runtimeConfig{}, err
+	}
+	if err := os.MkdirAll(absData, 0755); err != nil {
+		return runtimeConfig{}, err
+	}
+
+	return runtimeConfig{addr: addr, dbPath: absDB, dataDir: absData}, nil
+}
+
+func openReadOnlyDB(dbPath string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +122,39 @@ func openReadOnlyDB(dbPath string) (*sql.DB, error) {
 		db.Close()
 		return nil, err
 	}
+	var queryOnly int
+	if err := db.QueryRow("PRAGMA query_only").Scan(&queryOnly); err != nil {
+		db.Close()
+		return nil, err
+	}
+	if queryOnly != 1 {
+		db.Close()
+		return nil, errors.New("failed to enable SQLite query_only mode")
+	}
 	return db, nil
+}
+
+func verifySchemaVersion(db *sql.DB, expected int) error {
+	current, err := schemaVersion(db)
+	if err != nil {
+		return err
+	}
+	if current < expected {
+		return fmt.Errorf("database schema version %d is older than expected %d", current, expected)
+	}
+	return nil
+}
+
+func schemaVersion(db *sql.DB) (int, error) {
+	var raw string
+	if err := db.QueryRow("SELECT value FROM Schema_Meta WHERE key = 'schema_version'").Scan(&raw); err != nil {
+		return 0, fmt.Errorf("schema version check failed: %w", err)
+	}
+	version, err := strconv.Atoi(raw)
+	if err != nil {
+		return 0, fmt.Errorf("invalid schema_version %q: %w", raw, err)
+	}
+	return version, nil
 }
 
 func staticHandler() http.Handler {
@@ -97,7 +162,39 @@ func staticHandler() http.Handler {
 	if err != nil {
 		return http.NotFoundHandler()
 	}
-	return http.FileServer(http.FS(sub))
+	files := http.FS(sub)
+	fileServer := http.FileServer(files)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			serveIndex(w, r, files)
+			return
+		}
+		cleanPath := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
+		if cleanPath == "." || cleanPath == "" {
+			cleanPath = "index.html"
+		}
+		if file, err := files.Open(cleanPath); err == nil {
+			_ = file.Close()
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		serveIndex(w, r, files)
+	})
+}
+
+func serveIndex(w http.ResponseWriter, r *http.Request, files http.FileSystem) {
+	index, err := files.Open("index.html")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	defer index.Close()
+	stat, err := index.Stat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.ServeContent(w, r, "index.html", stat.ModTime(), index)
 }
 
 func requireGET(w http.ResponseWriter, r *http.Request) bool {
@@ -117,6 +214,51 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, response{"status": "error", "message": message})
+}
+
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(status int) {
+	r.status = status
+	r.ResponseWriter.WriteHeader(status)
+}
+
+func logRequests(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		started := time.Now()
+		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
+		next.ServeHTTP(recorder, r)
+		log.Printf("request method=%s path=%s status=%d duration_ms=%d", r.Method, r.URL.RequestURI(), recorder.status, time.Since(started).Milliseconds())
+	})
+}
+
+func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) {
+		return
+	}
+	version, err := schemaVersion(s.db)
+	if err != nil {
+		writeJSON(w, http.StatusServiceUnavailable, response{
+			"status": "error", "message": err.Error(),
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "ok",
+		"runtime": response{
+			"mode":                    "go-runtime-proof",
+			"addr":                    s.runtime.addr,
+			"data_dir":                s.runtime.dataDir,
+			"db_path":                 s.runtime.dbPath,
+			"schema_version":          version,
+			"expected_schema_version": expectedSchemaVersion,
+			"sqlite_query_only":       true,
+			"api_surface":             "get-read-only",
+		},
+	})
 }
 
 func boolString(r *http.Request, key string) bool {

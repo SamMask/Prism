@@ -1,0 +1,136 @@
+{
+  "phase": "19.5",
+  "name": "Read-only Service-level Cutover Plan",
+  "decision_date": "2026-06-04",
+  "plan_only": true,
+  "live_execution_authorized": false,
+  "requires_explicit_user_approval_before_live_execution": true,
+  "goal": "Define a separately approved read-only service-level soak/cutover path for routing Prism GET read surface through Go while preserving Python as rollback and owner for all writes/files/migrations.",
+  "exposure_boundary": {
+    "allowed": [
+      "localhost",
+      "trusted LAN",
+      "VPN",
+      "SSH tunnel",
+      "reverse proxy protected by external auth"
+    ],
+    "not_allowed": [
+      "direct public internet exposure",
+      "unprotected Caddy or Flask/Go public endpoint"
+    ],
+    "auth_note": "Prism still has no built-in API token, Bearer token, or user auth layer."
+  },
+  "planned_topology": {
+    "python_service": {
+      "name": "prism.service",
+      "role": "primary runtime, write/file/maintenance owner, rollback target",
+      "status": "unchanged by this plan"
+    },
+    "go_sidecar_service": {
+      "name": "prism-go-readonly.service",
+      "role": "read-only sidecar for validated GET surface only",
+      "bind": "127.0.0.1:5002",
+      "db_mode": "SQLite query_only, schema >= 16",
+      "allowed_surface": [
+        "GET /healthz",
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes",
+        "GET /api/notes/<id>"
+      ]
+    },
+    "routing_owner": {
+      "phase19_5_plan": "Python-side PRISM_GO_READ_ROUTING switch remains the planned first control point",
+      "future_caddy_option": "Caddy may be considered only after a successful Python-switch soak and separate approval"
+    }
+  },
+  "preflight_required_before_execution": [
+    "Confirm current Python prism.service is active and healthy",
+    "Confirm /api/test, /api/system/migration-status, /api/notes, and one note detail are healthy on Python",
+    "Create timestamped production DB backup",
+    "Confirm backup exists and can be read",
+    "Build or deploy Go sidecar artifact for the target host",
+    "Confirm Go sidecar starts with explicit DB path and reports /healthz schema_version >= 16 and sqlite_query_only=true",
+    "Confirm Go sidecar binds localhost only",
+    "Confirm no POST / PUT / DELETE / PATCH routes are served by Go",
+    "Confirm no Caddy public exposure change is included in the first soak"
+  ],
+  "execution_stages": [
+    {
+      "id": "stage_0",
+      "name": "No-routing sidecar smoke",
+      "description": "Start Go sidecar while Python remains the only routed service. Smoke healthz and read endpoints directly on localhost sidecar.",
+      "rollback": "Stop Go sidecar; Python service remains untouched."
+    },
+    {
+      "id": "stage_1",
+      "name": "Python opt-in read routing soak",
+      "description": "Enable PRISM_GO_READ_ROUTING=1 and PRISM_GO_READ_BASE_URL=http://127.0.0.1:5002 on Python service only after explicit approval. Keep all non-whitelisted routes on Python.",
+      "rollback": "Unset PRISM_GO_READ_ROUTING or set it to 0, restart Python service, verify routed reads no longer include X-Prism-Go-Read-Routing."
+    },
+    {
+      "id": "stage_2",
+      "name": "Optional reverse-proxy read routing plan",
+      "description": "Do not execute in 19.5. Consider only after successful stage_1 soak and separate approval.",
+      "rollback": "Restore previous Caddy config and reload Caddy."
+    }
+  ],
+  "monitoring_evidence": [
+    "Python systemctl status prism.service",
+    "Go sidecar systemctl status prism-go-readonly.service",
+    "GET /api/system/go-read-routing",
+    "GET /healthz on Go sidecar",
+    "Representative GET /api/test, /api/categories, /api/tags, /api/notes, /api/notes/<id>",
+    "Response header X-Prism-Go-Read-Routing: hit for proxied reads during stage_1",
+    "Python and Go logs showing GET-only routed activity",
+    "No Go write attempts and no Go migration logs"
+  ],
+  "success_criteria": [
+    "Python prism.service remains active and is the rollback target",
+    "Go sidecar serves only the approved GET read surface",
+    "All representative reads return matching status and expected JSON shape",
+    "Writes/files/maintenance/migrations remain Python-owned",
+    "Fallback to Python works by disabling PRISM_GO_READ_ROUTING",
+    "No public-internet exposure is introduced",
+    "No production DB write or migration is performed by Go"
+  ],
+  "failure_criteria": [
+    "Any write/file/maintenance route is routed to Go",
+    "Go reports sqlite_query_only=false",
+    "Schema version check fails",
+    "Python rollback path is unhealthy",
+    "Read responses drift from Python contract",
+    "Caddy or service routing exposes Prism without trusted LAN/VPN/tunnel/protected reverse proxy boundary",
+    "Any live execution proceeds without explicit approval"
+  ],
+  "rollback_drill": {
+    "primary": [
+      "Disable PRISM_GO_READ_ROUTING",
+      "Restart Python prism.service",
+      "Verify /api/system/go-read-routing reports enabled=false",
+      "Verify representative GET reads work without X-Prism-Go-Read-Routing",
+      "Stop Go sidecar if needed"
+    ],
+    "db_recovery": [
+      "Use timestamped DB backup only if Python DB health is damaged",
+      "Do not let Go perform DB repair or migration"
+    ]
+  },
+  "not_in_scope": [
+    "POST / PUT / DELETE / PATCH",
+    "attachments, export, cleanup, server maintenance",
+    "Go migrations",
+    "production DB writes from Go",
+    "Python backend removal",
+    "default frontend API target change",
+    "direct public internet exposure"
+  ],
+  "allowed_next_step": {
+    "id": "19.6",
+    "title": "Approved Read-only Soak Execution",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "execute stage_0 and optionally stage_1 from the 19.5 plan on the target host after explicit approval, with live evidence and rollback drill",
+    "requires_explicit_user_approval": true
+  }
+}
