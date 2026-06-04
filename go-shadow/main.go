@@ -471,8 +471,11 @@ func buildNotesWhere(r *http.Request) (string, []any) {
 		like := "%" + q + "%"
 		clauses = append(clauses, `(n.title LIKE ? OR n.content LIKE ? OR n.remarks LIKE ? OR n.id IN (
 			SELECT nt.note_id FROM Note_Tags nt JOIN Tags t ON nt.tag_id = t.id WHERE t.name LIKE ?
+		) OR n.id IN (
+			SELECT a.note_id FROM Note_Attachments a
+			WHERE a.title LIKE ? OR a.file_path LIKE ?
 		))`)
-		args = append(args, like, like, like, like)
+		args = append(args, like, like, like, like, like, like)
 	}
 	return "WHERE " + strings.Join(clauses, " AND "), args
 }

@@ -1,0 +1,92 @@
+{
+  "phase": "20.4",
+  "name": "Post-polish Stabilization and Candidate Closure Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "runtime_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "frontend_default_change_performed": false,
+  "source_polish": "docs/contracts/phase20-go-read-surface-polish.json",
+  "decision": "Close Phase 20 as closed_stabilized after DB-only read-surface polish. Do not promote Go text attachment body search or any write/file/migration ownership as the next active scope.",
+  "closure_status": "closed_stabilized",
+  "stabilization_review": {
+    "read_surface_result": "The hardened Go read-only surface remains limited to GET /api/test, /api/categories, /api/tags, /api/notes, and numeric note detail.",
+    "parity_result": "20.3 closed the DB-only attachment metadata search parity gap with a Python vs Go response diff fixture.",
+    "remaining_gap": "Text attachment body search still belongs to Python because it requires request-time file body scanning outside the current DB-only Go read contract.",
+    "risk_decision": "Do not open file-read parity as the automatic next step. It would require a separate data-dir/path traversal/file type/performance/rollback contract before any implementation.",
+    "phase20_conclusion": "No further Go ownership expansion is justified by Phase 20 evidence."
+  },
+  "ownership_after_20_4": {
+    "go": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes",
+      "GET /api/notes/<numeric id>"
+    ],
+    "python": [
+      "All POST / PUT / DELETE / PATCH routes",
+      "Unreviewed or nonnumeric /api/notes/... GET paths",
+      "GET /api/system/*",
+      "GET /api/server/*",
+      "Text attachment body search",
+      "Files, uploads, attachments endpoints, cleanup, import/export, frontend/static assets, migrations, and runtime operations"
+    ]
+  },
+  "not_selected_next": [
+    {
+      "id": "go_text_attachment_body_search",
+      "reason": "Requires Go file body scanning beyond SQLite query_only DB reads; needs a separate file-read safety contract before any implementation."
+    },
+    {
+      "id": "go_write_or_file_routes",
+      "reason": "20.1 inventory already identified transaction, file side-effect, backup, rollback, CSRF/local-only, and fixture blockers."
+    },
+    {
+      "id": "caddy_or_service_change",
+      "reason": "20.4 is plan-only stabilization and does not authorize live Pi, Caddy, systemd, frontend, or exposure changes."
+    }
+  ],
+  "verification_evidence_required": [
+    "tests/test_phase20_go_post_polish_stabilization.py locks 20.4 closure and next-step boundaries",
+    "tests/test_phase20_go_read_surface_polish.py continues to lock 20.3 DB-only read polish",
+    "tests/test_phase18_go_shadow_contract.py continues to run Python vs Go response diff for the hardened read surface",
+    "Full pytest suite remains green"
+  ],
+  "not_authorized_by_20_4": [
+    "Go write/file/migration implementation",
+    "Caddy route expansion beyond the validated GET read surface",
+    "Changing prism-go-readonly.service away from SQLite query_only",
+    "Frontend default API target change",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "Production DB writes from Go",
+    "Go migration framework",
+    "Live Pi service or Caddy reload",
+    "Go attachment file body scanning"
+  ],
+  "result": {
+    "status": "phase20_closed_stabilized",
+    "conclusion": "Phase 20 ends with the existing Go read-only surface tightened but not expanded. Future file-read parity, delivery, deploy, push, or product queue work requires a separate approved gate."
+  },
+  "allowed_next_step": {
+    "id": "21.0",
+    "title": "Delivery and Queue Selection Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only selection of the next branch after Phase 20 closure: local-only commit/push, Pi delivery planning, file-read parity assessment, or return to product/frontend backlog. This does not authorize deployment, Caddy/service changes, Go file-read implementation, Go writes/files/migrations, frontend default changes, Python removal, or public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Git commit or push",
+      "Pi deploy or live service reload",
+      "Caddy route expansion or reload",
+      "Go attachment file body scanning",
+      "Go write/file/migration implementation",
+      "Changing prism-go-readonly.service away from SQLite query_only",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

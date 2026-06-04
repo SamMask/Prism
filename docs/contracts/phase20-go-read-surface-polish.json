@@ -1,0 +1,106 @@
+{
+  "phase": "20.3",
+  "name": "Read Surface Parity and Documentation Polish Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "source_candidate_plan": "docs/contracts/phase20-go-candidate-fixture-planning.json",
+  "selected_candidate": "read_surface_polish",
+  "runtime_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "frontend_default_change_performed": false,
+  "go_implementation_scope": "read-only DB parity only",
+  "decision": "Tighten the existing Go read-only notes search parity for DB-backed attachment metadata and document the remaining Python-owned text attachment body search gap.",
+  "parity_changes": [
+    {
+      "id": "attachment_metadata_search",
+      "surface": "GET /api/notes?q=...",
+      "change": "Go read-only runtime now includes Note_Attachments.title and Note_Attachments.file_path in the existing notes search WHERE clause.",
+      "side_effects": "SQLite reads only",
+      "reason": "Python GET /api/notes already searches attachment metadata through SQL; this closes a DB-only parity gap without file access or route expansion.",
+      "fixture": "tests/test_phase18_go_shadow_contract.py seeds attachment-meta-canary in Note_Attachments and includes it in the Python vs Go response diff matrix."
+    }
+  ],
+  "documented_gaps": [
+    {
+      "id": "text_attachment_body_search",
+      "python_behavior": "Python GET /api/notes?q=... scans text attachment file bodies (.md, .markdown, .txt) in a request-time read-only pass and merges matching note_id values into the SQL query.",
+      "go_behavior_after_20_3": "Go does not scan attachment file bodies. It remains limited to SQLite query_only DB reads for the hardened read surface.",
+      "decision": "Keep text attachment body search Python-owned until a separate file-read parity contract is explicitly approved.",
+      "not_implemented_reason": "Adding file body scan would expand Go beyond DB-only read parity and needs data-dir/path safety, file type, performance, and rollback documentation."
+    }
+  ],
+  "verified_fixture_matrix": [
+    "GET /api/test",
+    "GET /api/categories",
+    "GET /api/tags",
+    "GET /api/notes pagination and per_page bounds",
+    "GET /api/notes include_archived and pinned_only",
+    "GET /api/notes sort=created and sort=custom",
+    "GET /api/notes type compatibility filter",
+    "GET /api/notes category_id filter",
+    "GET /api/notes tag OR and AND filters",
+    "GET /api/notes title/content/remarks/tag search",
+    "GET /api/notes filename-like and Chinese search",
+    "GET /api/notes attachment metadata search",
+    "GET /api/notes empty result search",
+    "GET /api/notes/<numeric id> success and 404",
+    "GET /healthz query_only/schema/api_surface invariants"
+  ],
+  "ownership_after_20_3": {
+    "go": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes",
+      "GET /api/notes/<numeric id>"
+    ],
+    "python": [
+      "All POST / PUT / DELETE / PATCH routes",
+      "Unreviewed or nonnumeric /api/notes/... GET paths",
+      "GET /api/system/*",
+      "GET /api/server/*",
+      "Text attachment body search",
+      "Files, uploads, attachments endpoints, cleanup, import/export, frontend/static assets, and migrations"
+    ]
+  },
+  "not_authorized_by_20_3": [
+    "Go write/file/migration implementation",
+    "Caddy route expansion beyond the validated GET read surface",
+    "Changing prism-go-readonly.service away from SQLite query_only",
+    "Frontend default API target change",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "Production DB writes from Go",
+    "Go migration framework",
+    "Live Pi service or Caddy reload",
+    "Go attachment file body scanning"
+  ],
+  "verification_commands": [
+    "pytest tests/test_phase18_go_shadow_contract.py -v",
+    "pytest tests/test_phase20_go_read_surface_polish.py -v",
+    "pytest tests/test_phase20_go_candidate_fixture_planning.py -v",
+    "pytest tests/ -v"
+  ],
+  "result": {
+    "status": "read_surface_polished",
+    "conclusion": "20.3 closes a DB-only attachment metadata search parity gap and documents text attachment body search as Python-owned. It does not expand runtime ownership, Caddy routes, service mode, frontend defaults, or public exposure."
+  },
+  "allowed_next_step": {
+    "id": "20.4",
+    "title": "Post-polish Stabilization and Candidate Closure Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only stabilization review after 20.3. It may decide to close Phase 20 or plan a separately approved file-read parity assessment. It must not implement Go writes/files/migrations, expand Caddy routes, disable query_only, change frontend defaults, remove Python, reload live services, or broaden public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go write/file/migration implementation",
+      "Caddy route expansion beyond the validated GET read surface",
+      "Changing prism-go-readonly.service away from SQLite query_only",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure",
+      "Live Pi service or Caddy reload",
+      "Go attachment file body scanning"
+    ]
+  }
+}

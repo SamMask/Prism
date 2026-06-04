@@ -126,6 +126,7 @@
 #### 備註
 
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
+- Go read-only route parity: Phase 20.3 後，Go sidecar 的既有 `/api/notes?q=...` read surface 已對齊 DB-backed `Note_Attachments.title` / `file_path` metadata 搜尋；text attachment body search remains Python-owned，因為它需要 request-time file body scan。
 - 列表回應目前不包含 `parent_id`。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。
 

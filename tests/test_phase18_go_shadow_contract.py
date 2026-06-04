@@ -36,6 +36,7 @@ CASES = [
     "/api/notes?q=Welcome&page=1&per_page=20",
     "/api/notes?q=todo.md&page=1&per_page=20",
     "/api/notes?q=%E4%B8%AD%E6%96%87%E6%90%9C%E5%B0%8B&page=1&per_page=20",
+    "/api/notes?q=attachment-meta-canary&page=1&per_page=20",
     "/api/notes?q=no-such-canary-result&page=1&per_page=20",
     "/api/notes?category_id=1&page=1&per_page=20",
 ]
@@ -93,6 +94,18 @@ def _seed_diff_matrix_data(db_path):
         conn.execute(
             "INSERT INTO Note_Tags (note_id, tag_id) VALUES (?, ?)",
             (note_id, tag_id),
+        )
+        conn.execute(
+            """
+            INSERT INTO Note_Attachments (
+                note_id, file_path, file_type, title, size_bytes
+            ) VALUES (?, ?, 'md', ?, 128)
+            """,
+            (
+                note_id,
+                "docs/attachments/attachment-meta-canary.md",
+                "attachment-meta-canary reference",
+            ),
         )
         conn.commit()
         return category_id, tag_id

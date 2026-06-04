@@ -1,0 +1,203 @@
+{
+  "phase": "20.2",
+  "name": "Candidate Selection and Fixture Planning Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "runtime_change_performed": false,
+  "go_implementation_authorized": false,
+  "source_inventory": "docs/contracts/phase20-go-write-surface-contract-inventory.json",
+  "decision": "Select read-surface polish as the only Phase 20.2 candidate; do not select any Go write, file, migration, system, server, import/export, cleanup, or frontend ownership candidate.",
+  "selected_candidate": {
+    "id": "read_surface_polish",
+    "title": "Tighten read-only parity before any write ownership",
+    "candidate_type": "read_only_polish",
+    "risk": "low",
+    "owner_after_20_2": {
+      "go": [
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes",
+        "GET /api/notes/<numeric id>"
+      ],
+      "python": [
+        "All POST / PUT / DELETE / PATCH routes",
+        "Unreviewed or nonnumeric /api/notes/... GET paths",
+        "GET /api/system/*",
+        "GET /api/server/*",
+        "Files, uploads, attachments, cleanup, import/export, frontend/static assets, and migrations"
+      ]
+    },
+    "reason": "It improves the already-promoted read-only surface without changing runtime ownership, Caddy matchers, SQLite query_only mode, frontend defaults, production DB write behavior, or exposure boundaries."
+  },
+  "rejected_candidates": [
+    {
+      "id": "notes_core_writes",
+      "reason": "High-risk DB and file side effects require transaction, Note_History, Source_Urls, tag/category, image cleanup, CSRF/origin, backup, and rollback parity before selection."
+    },
+    {
+      "id": "notes_actions_and_batch",
+      "reason": "Bulk and action writes need partial-failure transaction fixtures and sort/tag duplication parity before selection."
+    },
+    {
+      "id": "history_restore",
+      "reason": "Nonnumeric and nested /api/notes/... paths intentionally remain Python-owned under the hardened Caddy matcher."
+    },
+    {
+      "id": "category_tag_writes",
+      "reason": "Mutation behavior still needs uniqueness/collation, default-category, reassignment, and rollback fixtures before selection."
+    },
+    {
+      "id": "attachments_and_long_content",
+      "reason": "File write/delete and content restore behavior require manifest/checksum rollback planning before selection."
+    },
+    {
+      "id": "uploads_and_remote_fetch",
+      "reason": "Upload validation, path safety, image metadata parsing, and SSRF guard parity are out of scope for a read-polish gate."
+    },
+    {
+      "id": "cleanup_and_media_maintenance",
+      "reason": "Cleanup routes are destructive file maintenance and require dry-run plus restore evidence before selection."
+    },
+    {
+      "id": "import_export",
+      "reason": "Export is data exfiltration surface and import is bulk write surface; neither should be mixed into read-surface polish."
+    },
+    {
+      "id": "system_maintenance",
+      "reason": "System routes and migration status remain Python operational surface and schema SSOT."
+    },
+    {
+      "id": "server_local_operations",
+      "reason": "Server routes are localhost-only operational endpoints with service/process and backup file side effects."
+    },
+    {
+      "id": "prompt_and_wizard_config",
+      "reason": "Configuration writes need file-locking and config backup behavior before selection."
+    }
+  ],
+  "fixture_plan": {
+    "python_baseline_owner": "Flask pytest client with temp_db",
+    "future_go_comparison_owner": "go-shadow read-only runtime against the same temp_db copy",
+    "required_fixtures_before_any_20_3_edit": [
+      {
+        "id": "hardened_read_surface_matrix",
+        "routes": [
+          "GET /api/test",
+          "GET /api/categories",
+          "GET /api/tags",
+          "GET /api/notes",
+          "GET /api/notes/<numeric id>"
+        ],
+        "cases": [
+          "notes list pagination and per_page bounds",
+          "include_archived and pinned_only",
+          "sort=created and sort=custom",
+          "type compatibility filter",
+          "category_id filter",
+          "tag OR and AND filters",
+          "numeric note detail success",
+          "numeric note detail 404"
+        ]
+      },
+      {
+        "id": "search_parity_matrix",
+        "routes": [
+          "GET /api/notes?q=..."
+        ],
+        "cases": [
+          "title/content match",
+          "remarks match",
+          "tag-name match",
+          "filename-like query such as todo.md",
+          "Chinese keyword query",
+          "empty result query",
+          "document whether attachment metadata and text-file body search are Python-only gaps or Go parity requirements"
+        ]
+      },
+      {
+        "id": "ownership_boundary_matrix",
+        "routes": [
+          "GET /api/notes/not-a-number",
+          "GET /api/notes/<id>/history",
+          "GET /api/system/go-read-routing",
+          "GET /api/server/version",
+          "POST /api/notes"
+        ],
+        "cases": [
+          "No Go route expansion for nonnumeric or nested /api/notes/... paths",
+          "No Go routing header on Python-owned system/server routes",
+          "No Go ownership for write methods"
+        ]
+      },
+      {
+        "id": "runtime_invariant_matrix",
+        "routes": [
+          "GET /healthz"
+        ],
+        "cases": [
+          "SQLite query_only remains true",
+          "schema_version remains at least 16",
+          "api_surface remains get-read-only",
+          "Go source still contains no POST/PUT/DELETE route registration"
+        ]
+      }
+    ]
+  },
+  "rollback_plan": {
+    "phase20_2_live_rollback_required": false,
+    "reason": "20.2 is documentation and test planning only; it performs no live Pi, Caddy, systemd, frontend, DB, or Go runtime change.",
+    "rollback_evidence_required_before_any_future_live_step": [
+      "Fresh timestamped SQLite backup before live routing or write experiments",
+      "Caddy config backup before any matcher edit",
+      "Proof that prism-go-readonly.service remains localhost-bound and query_only for read-only work",
+      "Header/status/log checks proving Python-owned routes stay Python-owned",
+      "Documented revert command or config restore path for any future runtime change"
+    ]
+  },
+  "stop_conditions_for_20_3": [
+    "Python vs Go response diff mismatch on the hardened read surface",
+    "Go search behavior cannot be made equivalent without file access beyond the current read-only contract",
+    "Any proposed change requires POST/PUT/DELETE/PATCH, production DB writes, Go migrations, file writes/deletes, or Caddy route expansion",
+    "sqlite_query_only would need to be disabled",
+    "The Caddy matcher would need to broaden beyond exact read paths and numeric note detail",
+    "A route would become exposed outside localhost, trusted LAN, VPN, SSH tunnel, or an externally authenticated reverse proxy",
+    "Frontend default API target or Python rollback ownership would need to change"
+  ],
+  "verification_commands_for_20_2": [
+    "pytest tests/test_phase20_go_candidate_fixture_planning.py -v",
+    "pytest tests/test_phase20_go_write_surface_contract_inventory.py -v"
+  ],
+  "not_authorized_by_20_2": [
+    "Go write/file/migration implementation",
+    "Caddy route expansion beyond the validated GET read surface",
+    "Changing prism-go-readonly.service away from SQLite query_only",
+    "Frontend default API target change",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "Production DB writes from Go",
+    "Go migration framework",
+    "Live Pi service or Caddy reload"
+  ],
+  "result": {
+    "status": "candidate_selected_plan_only",
+    "conclusion": "Phase 20.2 selects read-surface polish only. The next safe step is a separately approved 20.3 read-surface parity and documentation polish gate, not Go write implementation."
+  },
+  "allowed_next_step": {
+    "id": "20.3",
+    "title": "Read Surface Parity and Documentation Polish Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan and execute only read-only parity fixture improvements and documentation alignment for the existing hardened Go read surface. It must not expand Caddy routes, disable query_only, add Go writes/files/migrations, change frontend defaults, remove Python, reload live services, or broaden public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go write/file/migration implementation",
+      "Caddy route expansion beyond the validated GET read surface",
+      "Changing prism-go-readonly.service away from SQLite query_only",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure",
+      "Live Pi service or Caddy reload"
+    ]
+  }
+}

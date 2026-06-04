@@ -192,7 +192,7 @@
 - [x] **19.15.3** Read-only promotion closure — 決議保留 hardened permanent read-only Caddy route，Phase 19 Go read-only promotion 關閉為 `closed_stabilized`。Go 只擁有已驗證 GET read surface；Python 仍擁有 writes/files/system/server/import/export/cleanup/frontend/static/migrations。
 - [x] **19.15.4** No route expansion by default — 未擴大 Go route、未改 frontend default、未加入 Go writes/files/migrations、未移除 Python、未擴大 public exposure。新增 `tests/test_phase19_go_post_matcher_hardening_stabilization.py`。
 
-## 🚦 Phase 20: Post-readonly Go Scope Assessment — 📋 Plan-only
+## 🚦 Phase 20: Post-readonly Go Scope Assessment — ✅ Closed (20.4 Stabilized)
 
 > **來源**: Phase 19 `closed_stabilized` read-only promotion、`docs/API_REFERENCE.md`、`docs/SCHEMA.md`、`routes/`、`go-shadow/`。
 > **目標**: 在不擴 runtime ownership 的前提下，評估 read-only 之後是否還有必要讓 Go 承接更多 surface；先鎖 contract、side effects、rollback 與測試，不直接實作 writes/files/migrations。
@@ -211,11 +211,37 @@
 - [x] **20.1.2** Side-effect and rollback map — 依 route class 文件化 DB writes、file writes/deletes、external fetches、service/process actions、security boundary、backup/rollback 與 future parity fixture requirements。
 - [x] **20.1.3** No Go implementation — 20.1 未實作 Go write/file/migration、未擴 Caddy route、未改 frontend default、未移除 Python、未擴大 public exposure。新增 `tests/test_phase20_go_write_surface_contract_inventory.py`。
 
-### ⛔ 20.2 Candidate Selection and Fixture Planning Gate — Blocked Pending Explicit Approval
+### ✅ 20.2 Candidate Selection and Fixture Planning Gate
 
-- [ ] **20.2.1** Candidate decision — 另行授權後，才可 plan-only 選擇至多一個 future candidate；也可明確決議先回到 read-surface polish。
-- [ ] **20.2.2** Fixture and rollback plan — 若選擇 candidate，先定義 Python baseline fixtures、rollback evidence、stop conditions 與驗證命令。
-- [ ] **20.2.3** No implementation by default — 20.2 不授權 Go write/file/migration implementation、不擴 Caddy route、不改 `prism-go-readonly.service` query-only 模式、不改 frontend default、不移除 Python、不擴大 public exposure。
+- [x] **20.2.1** Candidate decision — 使用者明確授權後，plan-only 選擇唯一 candidate：`read_surface_polish`。決議先強化已 promoted 的 Go read-only surface parity / 文件 / fixture，不選 notes writes、batch/actions、history restore、category/tag writes、attachments、uploads、cleanup、import/export、system/server、prompt/wizard config。
+- [x] **20.2.2** Fixture and rollback plan — 新增 `docs/contracts/phase20-go-candidate-fixture-planning.json`，定義 Python baseline fixtures、future Go comparison owner、hardened read surface matrix、search parity matrix、ownership boundary matrix、runtime invariant matrix、rollback evidence 與 20.3 stop conditions。
+- [x] **20.2.3** No implementation by default — 20.2 未實作 Go write/file/migration、未擴 Caddy route、未改 `prism-go-readonly.service` query-only 模式、未改 frontend default、未移除 Python、未擴大 public exposure、未做 live Pi service 或 Caddy reload。新增 `tests/test_phase20_go_candidate_fixture_planning.py`。
+
+### ✅ 20.3 Read Surface Parity and Documentation Polish Gate
+
+- [x] **20.3.1** Read parity fixture execution — 使用者明確授權後，針對 20.2 選定的 `read_surface_polish` 補強 Python vs Go read-only parity：Go `GET /api/notes?q=...` 補齊 DB-only `Note_Attachments.title` / `file_path` metadata 搜尋，並在 `tests/test_phase18_go_shadow_contract.py` 加入 `attachment-meta-canary` Python vs Go response diff fixture。
+- [x] **20.3.2** Documentation alignment — 新增 `docs/contracts/phase20-go-read-surface-polish.json`，並同步 `docs/API_REFERENCE.md` / `docs/ARCHITECTURE.md`：文字附件 body 搜尋仍是 Python-owned gap，未偷擴 Go file body scan / route ownership。
+- [x] **20.3.3** No runtime expansion — 20.3 未實作 Go write/file/migration、未擴 Caddy route、未關閉 SQLite `query_only`、未改 frontend default、未移除 Python、未擴大 public exposure、未做 live Pi service 或 Caddy reload。新增 `tests/test_phase20_go_read_surface_polish.py`。
+
+### ✅ 20.4 Post-polish Stabilization and Candidate Closure Gate
+
+- [x] **20.4.1** Stabilization review — 使用者明確授權後，plan-only 回顧 20.3 read-surface polish 結果；決議 Phase 20 關閉為 `closed_stabilized`，不把 file-read parity 升格為下一個 active implementation。
+- [x] **20.4.2** File-read parity decision — 新增 `docs/contracts/phase20-go-post-polish-stabilization.json`：Go 文字附件 body 搜尋仍需另行 file-read safety / data-dir / path traversal / performance / rollback contract，20.4 不直接實作。
+- [x] **20.4.3** No runtime expansion — 20.4 未實作 Go writes/files/migrations、未擴 Caddy route、未關閉 SQLite `query_only`、未改 frontend default、未移除 Python、未擴大 public exposure、未做 live Pi service 或 Caddy reload。新增 `tests/test_phase20_go_post_polish_stabilization.py`。
+
+---
+
+## 🧭 Phase 21: Delivery and Queue Selection — ⛔ Blocked Pending Explicit Approval
+
+> **來源**: Phase 20 `closed_stabilized`、未部署/未推送的本機 Phase 20.2-20.4 changes、`DEPLOY-PI.md`、GitHub publish hygiene。
+> **目標**: 在 Phase 20 關閉後，先選下一個分支：local commit/push、Pi delivery planning、file-read parity assessment，或回到 product/frontend backlog；不得把 delivery、deploy、file-read implementation 混成同一步。
+> **原則**: 未另行授權前，不做 git commit/push、不部署 Pi、不 reload Caddy/service、不新增 Go file-read/body scan、不擴 Go writes/files/migrations、不改 frontend default、不移除 Python、不擴大 public exposure。
+
+### ⛔ 21.0 Delivery and Queue Selection Gate — Blocked Pending Explicit Approval
+
+- [ ] **21.0.1** Branch selection — 另行授權後，才可 plan-only 選擇下一個分支：commit/push、Pi delivery plan、file-read parity assessment、或回到 product/frontend backlog。
+- [ ] **21.0.2** Delivery boundary — 若選 commit/push 或 Pi delivery，必須先做 dirty tree / privacy / runtime truth sweep；Pi delivery 需另行 live preflight 與 rollback plan。
+- [ ] **21.0.3** No implementation by default — 21.0 本身不授權 git commit/push、Pi deploy、Caddy/service reload、Go attachment body scan、Go writes/files/migrations、frontend default change、Python removal 或 public exposure。
 
 ### ⏸️ Phase 19.0 不處理
 
@@ -301,6 +327,9 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **backend-go-runtime** | 2026-06-05 | Phase 20.4 post-polish stabilization and candidate closure — 在明確授權後完成 plan-only stabilization review：Phase 20 關閉為 `closed_stabilized`；20.3 已補齊 DB-only attachment metadata read parity，剩餘文字附件 body 搜尋仍 Python-owned，若未來要評估 Go file-read parity，必須另開 file-read safety / data-dir / path traversal / performance / rollback contract。未實作 Go attachment body scan、Go writes/files/migrations、未擴 Caddy route、未關閉 sidecar SQLite `query_only`、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；21.0 為需另行授權的 delivery and queue selection gate。 |
+| **backend-go-runtime** | 2026-06-05 | Phase 20.3 read surface parity and documentation polish — 在明確授權後完成既有 hardened Go read-only surface polish：Go `/api/notes?q=...` 補齊 DB-only `Note_Attachments.title` / `file_path` metadata 搜尋，Python vs Go diff fixture 新增 `attachment-meta-canary`；新增 20.3 contract / pytest lock，並同步 API / architecture docs 明確標示文字附件 body 搜尋仍是 Python-owned gap，未擴 Go file body scan。未實作 Go writes/files/migrations、未擴 Caddy route、未關閉 sidecar SQLite `query_only`、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；20.4 為需另行授權的 post-polish stabilization and candidate closure gate。 |
+| **backend-go-runtime** | 2026-06-05 | Phase 20.2 candidate selection and fixture planning — 在明確授權後完成 plan-only candidate decision：唯一選擇 `read_surface_polish`，先強化既有 hardened Go read-only surface 的 parity / docs / fixtures；拒絕 notes writes、batch/actions、history restore、category/tag writes、attachments/uploads/cleanup/import/export/system/server/config 等 ownership candidate。新增 fixture / rollback / stop-condition contract 與 pytest lock；未實作 Go writes/files/migrations、未擴 Caddy route、未改 sidecar query-only 模式、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；20.3 為需另行授權的 read surface parity and documentation polish gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 20.1 write surface contract inventory — 在明確授權後完成 plan-only route class 盤點：notes core writes、batch/actions、history restore、category/tag writes、attachments/long content、uploads/remote fetch、cleanup/media maintenance、import/export、system maintenance、server local operations、prompt/wizard config 全部仍 Python-owned。新增 side-effect / rollback / fixture requirements 與 pytest lock；未實作 Go writes/files/migrations、未擴 Caddy route、未改 sidecar query-only 模式、未改 frontend default、未移除 Python；20.2 為需另行授權的 candidate selection and fixture planning gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 20.0 post-readonly Go scope assessment — 在明確授權後完成 plan-only 評估：Phase 19 已 `closed_stabilized`，Go 只擁有 hardened Caddy matcher 下的 GET read surface；notes writes、category/tag writes、upload/attachments/cleanup/import/export、system/server/migrations 全部仍有 transaction、file side effects、CSRF/local-only、backup/rollback、parity fixture blocker。20.0 不實作任何 Go write/file/migration、不擴 Caddy route、不改 frontend default、不移除 Python；20.1 為需另行授權的 write surface contract inventory gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.15 post-matcher hardening stabilization — 在明確授權後不改 Caddy、不 reload，只做 narrowed matcher monitoring：5 輪、每輪 10 秒驗 exact read list 與 numeric note detail 仍有 `X-Prism-Go-Read-Routing: hit`，非 numeric/nested `/api/notes/...`、system/routing/server/version/POST 無 Go header；Caddy validate 通過，migration v16 pending `[]`，Go journal 無 write/error。決議保留 hardened permanent read-only Caddy route，Phase 19 Go read-only promotion 關閉為 `closed_stabilized`。20.0 為需另行授權的 plan-only post-readonly Go scope assessment。 |
