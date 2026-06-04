@@ -1,0 +1,506 @@
+{
+  "phase": "20.1",
+  "name": "Write Surface Contract Inventory Gate",
+  "decision_date": "2026-06-04",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "runtime_change_performed": false,
+  "go_implementation_authorized": false,
+  "decision": "Inventory Python-owned mutation, file, import/export, cleanup, system, server, and configuration surfaces before selecting any future Go ownership candidate.",
+  "source_assessment": "docs/contracts/phase20-go-post-readonly-scope-assessment.json",
+  "current_go_ownership": {
+    "caddy_hardened_read_surface": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes",
+      "GET /api/notes/<numeric id>"
+    ],
+    "sidecar": {
+      "service": "prism-go-readonly.service",
+      "bind": "127.0.0.1:5002",
+      "sqlite_query_only": true,
+      "schema_version": 16
+    }
+  },
+  "inventory_inputs": [
+    "app.py",
+    "routes/categories.py",
+    "routes/tags.py",
+    "routes/upload.py",
+    "routes/attachments.py",
+    "routes/cleanup.py",
+    "routes/export.py",
+    "routes/prompt_options.py",
+    "routes/wizard_options.py",
+    "routes/system.py",
+    "routes/server.py",
+    "routes/notes/crud.py",
+    "routes/notes/actions.py",
+    "routes/notes/batch.py",
+    "routes/notes/history.py",
+    "routes/notes/import_.py",
+    "routes/notes/export.py",
+    "docs/API_REFERENCE.md",
+    "docs/SCHEMA.md"
+  ],
+  "route_classes": [
+    {
+      "id": "notes_core_writes",
+      "owner": "python",
+      "routes": [
+        "POST /api/notes",
+        "PUT /api/notes/<id>",
+        "DELETE /api/notes/<id>"
+      ],
+      "db_side_effects": [
+        "Notes insert/update/delete",
+        "Note_Tags replacement",
+        "Tags create-or-link behavior",
+        "Source_Urls replacement",
+        "Note_History insertion",
+        "Foreign-key cascade behavior"
+      ],
+      "file_side_effects": [
+        "DELETE may remove note-owned image files while preserving shared references"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Browser/API write semantics remain Python-owned",
+        "Future Go candidate needs CSRF/origin and trusted-network review before execution"
+      ],
+      "rollback_requirements": [
+        "Timestamped SQLite backup before live execution",
+        "Transaction rollback parity tests",
+        "Image cleanup manifest or restore strategy for file deletes"
+      ],
+      "fixture_requirements": [
+        "Create note with category, type, tags, source URLs, remarks, and pinned/archive flags",
+        "Update note preserving history and replacing tags/source URLs",
+        "Delete note with referenced images and shared-image preservation",
+        "404 and invalid payload parity"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "notes_actions_and_batch",
+      "owner": "python",
+      "routes": [
+        "POST /api/notes/<id>/pin",
+        "POST /api/notes/<id>/archive",
+        "POST /api/notes/<id>/duplicate",
+        "PUT /api/notes/reorder",
+        "POST /api/notes/batch/type",
+        "POST /api/notes/batch/tags",
+        "POST /api/notes/batch/delete"
+      ],
+      "db_side_effects": [
+        "Notes pinned/archive/type/sort_order/parent_id changes",
+        "Batch Note_Tags updates",
+        "Tags create-or-link behavior",
+        "Duplicate note relation copying"
+      ],
+      "file_side_effects": [
+        "Batch delete can trigger note delete cleanup behavior"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Bulk writes require stricter payload and transaction failure parity than read routes"
+      ],
+      "rollback_requirements": [
+        "SQLite backup",
+        "Batch transaction rollback test with partial invalid IDs",
+        "Sort-order before/after fixture"
+      ],
+      "fixture_requirements": [
+        "Pin/archive toggles",
+        "Duplicate parent/child and tags/source URLs",
+        "Reorder within category",
+        "Batch type, tag add/remove, and delete"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "history_restore",
+      "owner": "python",
+      "routes": [
+        "GET /api/notes/<id>/history",
+        "POST /api/notes/<id>/restore/<history_id>",
+        "DELETE /api/notes/<id>/history"
+      ],
+      "db_side_effects": [
+        "Restore changes Notes content/title fields from Note_History",
+        "History delete removes Note_History rows"
+      ],
+      "file_side_effects": [],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Nonnumeric and nested /api/notes/... paths intentionally stay Python-owned under hardened Caddy matcher"
+      ],
+      "rollback_requirements": [
+        "SQLite backup",
+        "Before/after history row count and restored content fixtures"
+      ],
+      "fixture_requirements": [
+        "History list",
+        "Restore specific history version",
+        "Clear history",
+        "Missing history 404"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "category_tag_writes",
+      "owner": "python",
+      "routes": [
+        "POST /api/categories",
+        "PUT /api/categories/<id>",
+        "DELETE /api/categories/<id>",
+        "PUT /api/tags/<id>",
+        "DELETE /api/tags/<id>",
+        "POST /api/tags/merge"
+      ],
+      "db_side_effects": [
+        "Categories insert/update/delete",
+        "Notes category reassignment on category delete",
+        "Tags update/delete/merge",
+        "Note_Tags reassignment and deduplication"
+      ],
+      "file_side_effects": [],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Default category and uniqueness/collation rules must remain Python-equivalent"
+      ],
+      "rollback_requirements": [
+        "SQLite backup",
+        "Uniqueness/collation regression fixtures",
+        "Default-category guard fixture"
+      ],
+      "fixture_requirements": [
+        "Create/rename/delete category",
+        "Delete category with existing notes",
+        "Rename/delete tag",
+        "Merge tag with duplicate relation cleanup"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "attachments_and_long_content",
+      "owner": "python",
+      "routes": [
+        "GET /api/notes/<id>/attachments",
+        "POST /api/notes/<id>/attachments",
+        "GET /api/attachments/<id>",
+        "DELETE /api/attachments/<id>",
+        "GET /api/notes/<id>/check_separation",
+        "POST /api/notes/<id>/separate",
+        "POST /api/notes/<id>/restore"
+      ],
+      "db_side_effects": [
+        "Note_Attachments insert/delete",
+        "Notes content rewrite for separation and restore"
+      ],
+      "file_side_effects": [
+        "Writes markdown/text attachment files",
+        "Deletes attachment files",
+        "Reads generated attachment content"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Path traversal, extension, size, and content restoration behavior must be locked before migration"
+      ],
+      "rollback_requirements": [
+        "SQLite backup",
+        "Attachment file manifest with checksums",
+        "Restore/delete compensation plan for file and DB mismatch"
+      ],
+      "fixture_requirements": [
+        "Attach markdown/text content",
+        "Download/read attachment",
+        "Delete attachment",
+        "Separate long note and restore it"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "uploads_and_remote_fetch",
+      "owner": "python",
+      "routes": [
+        "POST /api/upload",
+        "POST /api/upload/delete",
+        "POST /api/upload/url",
+        "POST /api/upload/extract-prompt"
+      ],
+      "db_side_effects": [],
+      "file_side_effects": [
+        "Writes uploaded files under static/uploads",
+        "Deletes uploaded files",
+        "May create derived thumbnail or metadata outputs"
+      ],
+      "external_side_effects": [
+        "Fetches remote URL content for upload/url"
+      ],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Upload validation, path safety, file type checks, image metadata parsing, and SSRF protections must stay Python-owned until separately designed"
+      ],
+      "rollback_requirements": [
+        "Upload file manifest",
+        "Delete/restore compensation plan",
+        "Remote fetch timeout and blocked-host fixtures"
+      ],
+      "fixture_requirements": [
+        "Multipart image upload",
+        "Delete uploaded file",
+        "Remote URL success and blocked/invalid URL cases",
+        "Prompt extraction from supported image metadata"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "cleanup_and_media_maintenance",
+      "owner": "python",
+      "routes": [
+        "GET /api/cleanup/orphan-images",
+        "DELETE /api/cleanup/orphan-images",
+        "GET /api/cleanup/originals",
+        "DELETE /api/cleanup/originals",
+        "GET /api/cleanup/broken-images",
+        "POST /api/cleanup/broken-images"
+      ],
+      "db_side_effects": [
+        "Broken-image repair can update Notes content or cover_image references"
+      ],
+      "file_side_effects": [
+        "Scans upload files",
+        "Deletes orphan/original image files"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Cleanup is destructive file maintenance and must not be routed to Go without dry-run and rollback evidence"
+      ],
+      "rollback_requirements": [
+        "Dry-run output fixture",
+        "File manifest with checksums",
+        "SQLite backup for broken-image repair"
+      ],
+      "fixture_requirements": [
+        "Orphan scan/delete",
+        "Original scan/delete",
+        "Broken image scan/repair",
+        "Shared file preservation"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "import_export",
+      "owner": "python",
+      "routes": [
+        "GET /api/export/json",
+        "GET /api/export/markdown",
+        "GET /api/export/db",
+        "POST /api/export/images",
+        "POST /api/import/json",
+        "POST /api/notes/import/md",
+        "POST /api/notes/export/batch"
+      ],
+      "db_side_effects": [
+        "JSON and markdown import insert Notes, Tags, Note_Tags, Source_Urls, and related rows"
+      ],
+      "file_side_effects": [
+        "Exports create streamed files or zip payloads",
+        "Imports may read uploaded archive or markdown files"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Export routes are data exfiltration surfaces; import routes are bulk write surfaces"
+      ],
+      "rollback_requirements": [
+        "SQLite backup before imports",
+        "Import dry-run or staging fixture before live writes",
+        "Export byte-for-byte or manifest parity fixtures"
+      ],
+      "fixture_requirements": [
+        "JSON export/import round trip",
+        "Markdown export/import",
+        "DB export response",
+        "Image export zip manifest"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "system_maintenance",
+      "owner": "python",
+      "routes": [
+        "POST /api/system/vacuum",
+        "POST /api/system/clear-history",
+        "GET /api/system/stats",
+        "GET /api/system/startup-preference",
+        "POST /api/system/startup-preference",
+        "POST /api/system/wal-checkpoint",
+        "GET /api/system/check-consistency",
+        "GET /api/system/check-update",
+        "GET /api/system/go-read-routing",
+        "GET /api/system/migration-status",
+        "GET /api/system/port-config",
+        "POST /api/system/port-config"
+      ],
+      "db_side_effects": [
+        "VACUUM and WAL checkpoint maintenance",
+        "Clear-history deletes Note_History rows",
+        "Consistency checks read DB state"
+      ],
+      "file_side_effects": [
+        "Startup preference and port config can update local config files"
+      ],
+      "external_side_effects": [
+        "Check-update can query release/update sources"
+      ],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "System routes remain Python operational surface",
+        "Migration status remains Python SSOT"
+      ],
+      "rollback_requirements": [
+        "SQLite backup before destructive maintenance",
+        "Config-file backup before preference or port writes",
+        "Migration status parity fixture if ever considered"
+      ],
+      "fixture_requirements": [
+        "Stats and consistency read parity",
+        "VACUUM/WAL checkpoint success and failure behavior",
+        "Startup preference and port config persistence",
+        "Migration status response shape"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "server_local_operations",
+      "owner": "python",
+      "routes": [
+        "GET /api/server/hardware",
+        "GET /api/server/logs",
+        "POST /api/server/restart",
+        "GET /api/server/backup/download",
+        "POST /api/server/backup/rotate",
+        "GET /api/server/backup/list",
+        "GET /api/server/version"
+      ],
+      "db_side_effects": [],
+      "file_side_effects": [
+        "Reads logs",
+        "Reads, lists, downloads, and rotates backup files"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [
+        "Restart endpoint can invoke local service/process controls"
+      ],
+      "security_boundary": [
+        "Server routes are localhost-only operational endpoints",
+        "Prism has no built-in API token, Bearer token, or user auth layer"
+      ],
+      "rollback_requirements": [
+        "Local-only access proof",
+        "Backup rotation before/after fixture",
+        "Restart command dry-run or isolated test harness"
+      ],
+      "fixture_requirements": [
+        "Hardware and logs response shape",
+        "Backup list/download/rotate behavior",
+        "Version response remains Python-owned under Go read routing"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    },
+    {
+      "id": "prompt_and_wizard_config",
+      "owner": "python",
+      "routes": [
+        "GET /api/prompt-options",
+        "POST /api/prompt-options/category/<category_key>",
+        "PUT /api/prompt-options/category/<category_key>/<index>",
+        "DELETE /api/prompt-options/category/<category_key>/<index>",
+        "POST /api/prompt-options/template",
+        "DELETE /api/prompt-options/template/<template_id>",
+        "GET /api/wizard-options",
+        "POST /api/wizard-options/dimension/<dimension_key>",
+        "DELETE /api/wizard-options/dimension/<dimension_key>/<index>"
+      ],
+      "db_side_effects": [],
+      "file_side_effects": [
+        "Writes prompt option configuration JSON",
+        "Writes wizard option configuration JSON"
+      ],
+      "external_side_effects": [],
+      "service_process_side_effects": [],
+      "security_boundary": [
+        "Configuration writes remain Python-owned until config file locking and rollback are designed"
+      ],
+      "rollback_requirements": [
+        "Config file backup",
+        "Malformed config recovery fixture"
+      ],
+      "fixture_requirements": [
+        "Prompt option create/update/delete",
+        "Template create/delete",
+        "Wizard dimension create/delete",
+        "Config reload parity"
+      ],
+      "go_candidate_priority": "not_selected",
+      "go_implementation_authorized": false
+    }
+  ],
+  "global_requirements_before_any_future_go_write_candidate": [
+    "Choose exactly one smallest route class in a separate approved gate",
+    "Create Python baseline fixtures before implementation",
+    "Create rollback and backup proof before live execution",
+    "Keep Caddy matcher unchanged until the candidate is separately approved",
+    "Keep prism-go-readonly.service in SQLite query_only mode until a separate non-readonly runtime contract exists",
+    "Do not broaden exposure beyond localhost, trusted LAN, VPN, SSH tunnel, or an externally authenticated reverse proxy"
+  ],
+  "not_authorized_by_20_1": [
+    "Go write/file/migration implementation",
+    "Caddy route expansion beyond the validated GET read surface",
+    "Changing prism-go-readonly.service away from SQLite query_only",
+    "Frontend default API target change",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "Production DB writes from Go",
+    "Go migration framework"
+  ],
+  "result": {
+    "status": "inventory_locked_plan_only",
+    "conclusion": "The write/file/system surface is inventoried, but no Go ownership candidate has been selected or authorized."
+  },
+  "allowed_next_step": {
+    "id": "20.2",
+    "title": "Candidate Selection and Fixture Planning Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only selection of at most one future candidate or an explicit decision to stay on read-surface polish. It must define Python baseline fixtures, rollback evidence, and stop conditions before any implementation.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go write/file/migration implementation",
+      "Caddy route expansion beyond the validated GET read surface",
+      "Changing prism-go-readonly.service away from SQLite query_only",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

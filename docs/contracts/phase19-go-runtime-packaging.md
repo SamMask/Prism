@@ -1,6 +1,6 @@
 # Phase 19: Go Runtime / Packaging Promotion
 
-> Scope: Phase 19.0/19.1 proof, Phase 19.2 promotion gate, Phase 19.3 controlled read routing proof, Phase 19.4 cutover readiness audit, Phase 19.5 read-only service-level cutover plan, Phase 19.6 approved short read-only soak execution, Phase 19.7 approved bounded extended read-only soak, Phase 19.8 reverse-proxy/service cutover plan, Phase 19.9 approved Caddy read-only routing drill, Phase 19.10 approved bounded extended Caddy-level read-only soak, Phase 19.11 Caddy cutover candidate decision, Phase 19.12 approved permanent read-only Caddy cutover, and Phase 19.13 post-permanent stabilization. This does not replace the Python backend, add product features, or implement write/file/server-maintenance routes.
+> Scope: Phase 19.0/19.1 proof, Phase 19.2 promotion gate, Phase 19.3 controlled read routing proof, Phase 19.4 cutover readiness audit, Phase 19.5 read-only service-level cutover plan, Phase 19.6 approved short read-only soak execution, Phase 19.7 approved bounded extended read-only soak, Phase 19.8 reverse-proxy/service cutover plan, Phase 19.9 approved Caddy read-only routing drill, Phase 19.10 approved bounded extended Caddy-level read-only soak, Phase 19.11 Caddy cutover candidate decision, Phase 19.12 approved permanent read-only Caddy cutover, Phase 19.13 post-permanent stabilization, Phase 19.14 matcher/runbook hardening, and Phase 19.15 post-hardening stabilization closure. This does not replace the Python backend, add product features, or implement write/file/server-maintenance routes.
 
 ## Goal
 
@@ -544,11 +544,135 @@ Not authorized by Phase 19.13:
 - Python backend removal.
 - Direct public internet exposure.
 
-Next planned step: Phase 19.14 Permanent Route Matcher and Runbook Hardening Gate. It is blocked until separate explicit user approval and is limited to reviewing the retained matcher plus rollback/runbook documentation unless a fresh contract authorizes a live Caddy edit.
+Next executed step: Phase 19.14 Permanent Route Matcher and Runbook Hardening Gate. It was performed only after separate explicit user authorization and narrowed the live Caddy matcher without expanding Go ownership.
+
+## Phase 19.14 Permanent Route Matcher and Runbook Hardening Gate
+
+Execution artifact: `docs/contracts/phase19-go-caddy-matcher-runbook-hardening.json`
+
+Result: the permanent read-only Caddy route remains active, but the retained `/api/notes/*` wildcard has been removed. The matcher now routes only the exact read-list paths plus numeric note-detail IDs to Go.
+
+Matcher hardening:
+
+- Previous matcher routed `GET /api/notes/*` to Go, which could catch future unreviewed GET paths under `/api/notes/`.
+- New exact matcher routes `GET /api/test`, categories, tags, and `/api/notes`.
+- New note-detail matcher routes only `GET /api/notes/<digits>` via `path_regexp ^/api/notes/[0-9]+$`.
+- Route scope narrowed; it did not expand.
+- Fresh Caddy backup retained at `/etc/caddy/Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak`.
+- Candidate Caddyfile validated before live edit; live config validated after edit and after reload.
+
+Live verification:
+
+- Three samples verified allowed GET reads still carried `X-Prism-Go-Read-Routing: hit`.
+- Three samples verified `/api/notes/not-a-number` and `/api/notes/114/extra` returned without the Go header.
+- System/routing/server/version and POST checks remained Python-owned without the Go header.
+- Migration status stayed current/latest v16 with pending `[]`.
+- Go journal had no POST/PUT/DELETE/PATCH entries and no error/fatal/panic entries since hardening start.
+- `caddy validate` passed.
+
+Not authorized by Phase 19.14:
+
+- Route expansion beyond the validated GET read surface.
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next executed step: Phase 19.15 Post-matcher Hardening Stabilization Gate. It was performed only after separate explicit user authorization and closed Phase 19 read-only promotion as stabilized.
+
+## Phase 19.15 Post-matcher Hardening Stabilization Gate
+
+Execution artifact: `docs/contracts/phase19-go-post-matcher-hardening-stabilization.json`
+
+Result: Phase 19 Go read-only promotion is closed as `closed_stabilized`. The hardened permanent read-only Caddy route remains active.
+
+Live stabilization evidence:
+
+- Observation window ran from `2026-06-04T18:28:06+08:00` to `2026-06-04T18:28:48+08:00`.
+- Five samples ran at 10-second intervals.
+- `prism.service`, Caddy, and `prism-go-readonly.service` stayed active; `prism-go-readonly.service` stayed enabled.
+- Go sidecar stayed localhost-only at `127.0.0.1:5002` with schema version 16 and `sqlite_query_only=true`.
+- Exact read list and numeric note-detail requests carried `X-Prism-Go-Read-Routing: hit` in every sample.
+- Nonnumeric and nested `/api/notes/...` paths stayed Python-owned and did not carry the Go header.
+- System/routing/server/version and POST checks stayed Python-owned and did not carry the Go header.
+- Migration status stayed current/latest v16 with pending `[]`.
+- Go journal had no POST/PUT/DELETE/PATCH entries and no error/fatal/panic entries during the window.
+- `caddy validate` passed.
+
+Closed ownership boundary:
+
+- Go owns only `GET /api/test`, categories, tags, notes list, and numeric note detail through the hardened Caddy matcher.
+- Python owns writes, nonnumeric or unreviewed `/api/notes/...` paths, system/server routes, files/attachments, import/export/cleanup, frontend/static assets, and migrations.
+- Rollback references remain `/etc/caddy/Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak` and `/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak`.
+
+Not authorized by Phase 19.15:
+
+- Route expansion beyond the validated GET read surface.
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next executed step: Phase 20.0 Post-readonly Go Scope Assessment Gate. It was performed only after separate explicit user authorization and remained plan-only.
+
+## Phase 20.0 Post-readonly Go Scope Assessment Gate
+
+Assessment artifact: `docs/contracts/phase20-go-post-readonly-scope-assessment.json`
+
+Result: no new Go ownership is authorized. The next contract-safe step is a write/file/system route inventory, not implementation.
+
+Assessment summary:
+
+- Phase 19 read-only promotion is closed as stabilized.
+- Go currently owns only the hardened Caddy GET read surface: `/api/test`, categories, tags, notes list, and numeric note detail.
+- Python remains owner for writes, nonnumeric or unreviewed `/api/notes/...` paths, system/server routes, files/attachments, uploads, import/export/cleanup, frontend/static assets, and migrations.
+- Notes writes are high risk because they require DB transaction parity, history/source-url/tag/category behavior parity, image cleanup behavior, CSRF/origin review, and rollback drills.
+- Category/tag writes are medium-high risk because they require uniqueness/collation, default-category guard, note migration behavior, and transaction parity.
+- File/attachment/cleanup/import/export routes are very high risk because they combine DB writes with filesystem side effects and external-fetch safety.
+- System/server/migration routes are very high risk because they are operational/local-only surfaces and migrations remain Python SSOT.
+
+Recommended next step:
+
+- Phase 20.1 Write Surface Contract Inventory Gate.
+- It should create a machine-readable inventory of Python-owned mutation/file/system surfaces, side effects, backup/rollback requirements, and future parity fixture requirements.
+- It remains plan-only unless a later explicit contract authorizes implementation.
+
+Not authorized by Phase 20.0:
+
+- Go write/file/migration implementation.
+- Caddy route expansion beyond the validated GET read surface.
+- Frontend default API target changes.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next executed step: Phase 20.1 Write Surface Contract Inventory Gate. It was performed only after separate explicit user authorization and remained plan-only.
+
+## Phase 20.1 Write Surface Contract Inventory Gate
+
+Inventory artifact: `docs/contracts/phase20-go-write-surface-contract-inventory.json`
+
+Result: the Python-owned write/file/system surface is inventoried, but no future Go ownership candidate is selected or authorized.
+
+Inventory summary:
+
+- Route classes are grouped by side-effect shape: notes core writes, notes actions/batch, history restore, category/tag writes, attachments/long-content, uploads/remote fetch, cleanup/media maintenance, import/export, system maintenance, server local operations, and prompt/wizard config.
+- Each class records Python ownership, route list, DB side effects, file side effects, external fetches, service/process actions, security boundary, rollback requirements, and future parity fixture requirements.
+- Go remains limited to the hardened read-only Caddy surface and `prism-go-readonly.service` remains SQLite `query_only`.
+- 20.1 does not choose a write candidate. That must happen in a separate approved 20.2 plan-only gate.
+
+Not authorized by Phase 20.1:
+
+- Go write/file/migration implementation.
+- Caddy route expansion beyond the validated GET read surface.
+- Changing `prism-go-readonly.service` away from SQLite `query_only`.
+- Frontend default API target changes.
+- Python backend removal.
+- Direct public internet exposure.
+- Production DB writes from Go or a Go migration framework.
 
 ## Stop Conditions
 
-Phase 19.13 stops at proof, canary evidence, promotion-gate evidence, controlled routing evidence, cutover-readiness audit evidence, plan-only cutover evidence, approved short-soak evidence, approved bounded extended-soak evidence, reverse-proxy/service cutover plan evidence, approved Caddy drill evidence, approved bounded extended Caddy-level soak evidence, Caddy cutover candidate decision evidence, permanent read-only Caddy route evidence, post-permanent stabilization evidence, and retained rollback evidence:
+Phase 19.15 stops at proof, canary evidence, promotion-gate evidence, controlled routing evidence, cutover-readiness audit evidence, plan-only cutover evidence, approved short-soak evidence, approved bounded extended-soak evidence, reverse-proxy/service cutover plan evidence, approved Caddy drill evidence, approved bounded extended Caddy-level soak evidence, Caddy cutover candidate decision evidence, permanent read-only Caddy route evidence, post-permanent stabilization evidence, matcher hardening evidence, post-hardening stabilization closure evidence, and retained rollback evidence:
 
 - `go test ./...`
 - Python vs Go response diff tests
@@ -567,7 +691,11 @@ Phase 19.13 stops at proof, canary evidence, promotion-gate evidence, controlled
 - `tests/test_phase19_go_caddy_cutover_candidate_decision.py`
 - `tests/test_phase19_go_permanent_caddy_readonly_cutover.py`
 - `tests/test_phase19_go_post_permanent_caddy_stabilization.py`
-- This document, `docs/TODO.md`, `docs/contracts/phase19-go-readonly-promotion-gate.json`, `docs/contracts/phase19-go-read-routing-proof.json`, `docs/contracts/phase19-go-cutover-readiness-audit.json`, `docs/contracts/phase19-go-readonly-service-cutover-plan.json`, `docs/contracts/phase19-go-readonly-soak-execution.json`, `docs/contracts/phase19-go-readonly-long-soak-decision.json`, `docs/contracts/phase19-go-reverse-proxy-service-cutover-plan.json`, `docs/contracts/phase19-go-caddy-readonly-routing-drill.json`, `docs/contracts/phase19-go-caddy-extended-readonly-soak.json`, `docs/contracts/phase19-go-caddy-cutover-candidate-decision.json`, `docs/contracts/phase19-go-permanent-caddy-readonly-cutover.json`, and `docs/contracts/phase19-go-post-permanent-caddy-stabilization.json` updated
+- `tests/test_phase19_go_caddy_matcher_runbook_hardening.py`
+- `tests/test_phase19_go_post_matcher_hardening_stabilization.py`
+- `tests/test_phase20_go_post_readonly_scope_assessment.py`
+- `tests/test_phase20_go_write_surface_contract_inventory.py`
+- This document, `docs/TODO.md`, `docs/contracts/phase19-go-readonly-promotion-gate.json`, `docs/contracts/phase19-go-read-routing-proof.json`, `docs/contracts/phase19-go-cutover-readiness-audit.json`, `docs/contracts/phase19-go-readonly-service-cutover-plan.json`, `docs/contracts/phase19-go-readonly-soak-execution.json`, `docs/contracts/phase19-go-readonly-long-soak-decision.json`, `docs/contracts/phase19-go-reverse-proxy-service-cutover-plan.json`, `docs/contracts/phase19-go-caddy-readonly-routing-drill.json`, `docs/contracts/phase19-go-caddy-extended-readonly-soak.json`, `docs/contracts/phase19-go-caddy-cutover-candidate-decision.json`, `docs/contracts/phase19-go-permanent-caddy-readonly-cutover.json`, `docs/contracts/phase19-go-post-permanent-caddy-stabilization.json`, `docs/contracts/phase19-go-caddy-matcher-runbook-hardening.json`, and `docs/contracts/phase19-go-post-matcher-hardening-stabilization.json` updated
 
 Still out of scope:
 

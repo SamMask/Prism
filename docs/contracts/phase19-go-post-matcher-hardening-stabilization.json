@@ -1,0 +1,185 @@
+{
+  "phase": "19.15",
+  "name": "Post-matcher Hardening Stabilization Gate",
+  "decision_date": "2026-06-04",
+  "live_execution_authorized": true,
+  "runtime_change_performed": false,
+  "decision": "Keep the narrowed permanent Caddy matcher active and close Phase 19 read-only promotion as stabilized.",
+  "source_hardening": "docs/contracts/phase19-go-caddy-matcher-runbook-hardening.json",
+  "target_host": {
+    "ssh_alias": "PI5Mask24",
+    "hostname": "raspberrypi",
+    "public_exposure_changed": false,
+    "frontend_default_target_changed": false,
+    "direct_public_internet_exposure_allowed": false
+  },
+  "stabilization_window": {
+    "started_at": "2026-06-04T18:28:06+08:00",
+    "ended_at": "2026-06-04T18:28:48+08:00",
+    "sample_count": 5,
+    "sample_interval_seconds": 10,
+    "all_samples_passed": true,
+    "no_caddy_reload_or_route_edit": true
+  },
+  "service_state": {
+    "prism_service_active": true,
+    "caddy_service_active": true,
+    "go_sidecar_active": true,
+    "go_sidecar_enabled": true,
+    "go_sidecar_bind": "127.0.0.1:5002",
+    "go_healthz": {
+      "status": "ok",
+      "api_surface": "get-read-only",
+      "schema_version": 16,
+      "expected_schema_version": 16,
+      "sqlite_query_only": true
+    }
+  },
+  "matcher_state": {
+    "hardened_matcher_kept": true,
+    "exact_paths": [
+      "/api/test",
+      "/api/categories",
+      "/api/tags",
+      "/api/notes"
+    ],
+    "numeric_note_detail_regexp": "^/api/notes/[0-9]+$",
+    "wildcard_notes_matcher_restored": false,
+    "route_expansion": false
+  },
+  "route_evidence": {
+    "go_routed_each_sample": [
+      {
+        "path": "GET /api/test",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/categories",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/tags",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes?per_page=1&page=1",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes/114",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes/999999",
+        "expected_status": 404,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      }
+    ],
+    "python_owned_each_sample": [
+      {
+        "path": "GET /api/notes/not-a-number",
+        "expected_status": 404,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "GET /api/notes/114/extra",
+        "expected_status": 404,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "GET /api/system/migration-status",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "GET /api/system/go-read-routing",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing",
+        "required_body_fragment": "\"enabled\":false"
+      },
+      {
+        "path": "GET /api/server/version",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "POST /api/test",
+        "expected_status": 403,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      }
+    ],
+    "migration_status": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    },
+    "routing_endpoint": {
+      "enabled": false,
+      "base_url": null,
+      "default_owner": "python",
+      "fallback_owner": "python"
+    },
+    "caddy_validate": true,
+    "go_write_method_logs_since_window_start": [],
+    "go_error_logs_since_window_start": []
+  },
+  "closure_decision": {
+    "phase19_readonly_promotion_status": "closed_stabilized",
+    "keep_hardened_permanent_readonly_caddy_route": true,
+    "rollback_plan_retained": true,
+    "rollback_references": [
+      "/etc/caddy/Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak",
+      "/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak"
+    ],
+    "production_ownership": {
+      "go": [
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes",
+        "GET /api/notes/<numeric id>"
+      ],
+      "python": [
+        "POST / PUT / DELETE / PATCH on every path",
+        "Unreviewed or nonnumeric /api/notes/... GET paths",
+        "GET /api/system/*",
+        "GET /api/server/*",
+        "files and attachments",
+        "import/export/cleanup",
+        "frontend/static assets",
+        "database migrations"
+      ]
+    }
+  },
+  "not_authorized_by_19_15": [
+    "Route expansion beyond the validated GET read surface",
+    "Frontend default API target change",
+    "Go ownership of write/file/maintenance routes",
+    "Go migrations",
+    "Python backend removal",
+    "Direct public internet exposure"
+  ],
+  "result": {
+    "status": "phase19_readonly_promotion_closed",
+    "conclusion": "The narrowed permanent read-only Caddy route is stable and retained. Phase 19 Go read-only promotion is closed with Go owning only the validated GET read surface and Python owning all other runtime surfaces."
+  },
+  "allowed_next_step": {
+    "id": "20.0",
+    "title": "Post-readonly Go Scope Assessment Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only assessment for any future Go ownership beyond the read-only surface. This starts from contracts and risk, not implementation, and does not authorize writes, files, migrations, frontend default changes, Python removal, or public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go write/file/migration implementation",
+      "Route expansion beyond the validated GET read surface",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

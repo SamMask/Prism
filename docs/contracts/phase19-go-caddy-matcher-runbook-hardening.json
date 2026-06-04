@@ -1,0 +1,201 @@
+{
+  "phase": "19.14",
+  "name": "Permanent Route Matcher and Runbook Hardening Gate",
+  "decision_date": "2026-06-04",
+  "live_execution_authorized": true,
+  "runtime_change_performed": true,
+  "decision": "Narrow the retained permanent Caddy matcher from /api/notes/* to exact read-list paths plus numeric note-detail IDs, without expanding Go ownership.",
+  "source_stabilization": "docs/contracts/phase19-go-post-permanent-caddy-stabilization.json",
+  "target_host": {
+    "ssh_alias": "PI5Mask24",
+    "hostname": "raspberrypi",
+    "public_exposure_changed": false,
+    "frontend_default_target_changed": false,
+    "direct_public_internet_exposure_allowed": false
+  },
+  "preflight": {
+    "candidate_caddyfile_validated_before_live_edit": true,
+    "current_caddyfile_validated_before_live_edit": true,
+    "prism_service_active": true,
+    "caddy_service_active": true,
+    "go_sidecar_active": true,
+    "go_sidecar_enabled": true
+  },
+  "backups": {
+    "caddy_backup": {
+      "path": "/etc/caddy/Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak",
+      "created": true,
+      "retained_for_rollback": true
+    },
+    "previous_permanent_cutover_backup": "/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak"
+  },
+  "matcher_hardening": {
+    "old_matcher": {
+      "method": "GET",
+      "path": [
+        "/api/test",
+        "/api/categories",
+        "/api/tags",
+        "/api/notes",
+        "/api/notes/*"
+      ],
+      "risk": "The wildcard /api/notes/* could route future unreviewed GET paths under /api/notes/ to Go."
+    },
+    "new_matchers": [
+      {
+        "name": "prismGoReadExact",
+        "method": "GET",
+        "path": [
+          "/api/test",
+          "/api/categories",
+          "/api/tags",
+          "/api/notes"
+        ]
+      },
+      {
+        "name": "prismGoReadNoteDetail",
+        "method": "GET",
+        "path_regexp": "^/api/notes/[0-9]+$"
+      }
+    ],
+    "route_expansion": false,
+    "caddy_validate_after_edit": true,
+    "caddy_reload_completed": true,
+    "caddy_validate_after_reload": true,
+    "murmur_site_changed": false
+  },
+  "live_verification": {
+    "sample_count": 3,
+    "sample_interval_seconds": 2,
+    "all_samples_passed": true,
+    "go_sidecar": {
+      "bind": "127.0.0.1:5002",
+      "active": true,
+      "enabled": true,
+      "schema_version": 16,
+      "expected_schema_version": 16,
+      "sqlite_query_only": true
+    },
+    "go_routed_each_sample": [
+      {
+        "path": "GET /api/test",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/categories",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/tags",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes?per_page=1&page=1",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes/114",
+        "expected_status": 200,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes/999999",
+        "expected_status": 404,
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      }
+    ],
+    "python_owned_each_sample": [
+      {
+        "path": "GET /api/notes/not-a-number",
+        "expected_status": 404,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "GET /api/notes/114/extra",
+        "expected_status": 404,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "GET /api/system/migration-status",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "GET /api/system/go-read-routing",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing",
+        "required_body_fragment": "\"enabled\":false"
+      },
+      {
+        "path": "GET /api/server/version",
+        "expected_status": 200,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      },
+      {
+        "path": "POST /api/test",
+        "expected_status": 403,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      }
+    ],
+    "migration_status": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    },
+    "go_write_method_logs_since_hardening_start": [],
+    "go_error_logs_since_hardening_start": [],
+    "caddy_validate_final": true
+  },
+  "final_state": {
+    "permanent_readonly_caddy_route_active": true,
+    "matcher_narrowed": true,
+    "python_service_active": true,
+    "caddy_service_active": true,
+    "go_sidecar_active": true,
+    "go_sidecar_enabled": true,
+    "routing_endpoint_enabled": false,
+    "route_expansion": false
+  },
+  "rollback_plan_retained": {
+    "matcher_hardening_backup": "/etc/caddy/Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak",
+    "permanent_cutover_backup": "/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak",
+    "steps": [
+      "Restore the chosen timestamped Caddyfile backup",
+      "Run caddy validate",
+      "Reload Caddy",
+      "Verify validated GET reads still behave as intended",
+      "Verify Python-owned routes do not carry X-Prism-Go-Read-Routing",
+      "Stop and disable prism-go-readonly.service only if removing the permanent read-only route"
+    ]
+  },
+  "not_authorized_by_19_14": [
+    "Route expansion beyond the validated GET read surface",
+    "Frontend default API target change",
+    "Go ownership of write/file/maintenance routes",
+    "Go migrations",
+    "Python backend removal",
+    "Direct public internet exposure"
+  ],
+  "result": {
+    "status": "matcher_hardened",
+    "conclusion": "The permanent Caddy read-only route remains active, but /api/notes/* has been narrowed to exact /api/notes plus numeric /api/notes/<id> matches. Unreviewed nested or nonnumeric /api/notes paths now remain Python-owned."
+  },
+  "allowed_next_step": {
+    "id": "19.15",
+    "title": "Post-matcher Hardening Stabilization Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Monitor the narrowed matcher after live hardening and decide whether to keep the hardened route, roll back to the 19.14 backup, or close Phase 19 read-only promotion. This does not authorize route expansion, Go writes/files/migrations, frontend default changes, Python removal, or direct public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Route expansion beyond the validated GET read surface",
+      "Frontend default API target change",
+      "Go writes/files/migrations",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

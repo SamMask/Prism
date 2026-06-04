@@ -1,0 +1,188 @@
+{
+  "phase": "20.0",
+  "name": "Post-readonly Go Scope Assessment Gate",
+  "decision_date": "2026-06-04",
+  "live_execution_authorized": true,
+  "plan_only": true,
+  "runtime_change_performed": false,
+  "decision": "Do not implement any new Go ownership after Phase 19 closure; first create a post-readonly scope assessment and gate future work behind a write/file/migration contract inventory.",
+  "source_closure": "docs/contracts/phase19-go-post-matcher-hardening-stabilization.json",
+  "current_production_state": {
+    "go_owns": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes",
+      "GET /api/notes/<numeric id>"
+    ],
+    "python_owns": [
+      "POST / PUT / DELETE / PATCH on every path",
+      "Unreviewed or nonnumeric /api/notes/... GET paths",
+      "GET /api/system/*",
+      "GET /api/server/*",
+      "files and attachments",
+      "uploads",
+      "import/export/cleanup",
+      "frontend/static assets",
+      "database migrations"
+    ],
+    "go_sidecar": {
+      "service": "prism-go-readonly.service",
+      "bind": "127.0.0.1:5002",
+      "sqlite_query_only": true,
+      "schema_version": 16
+    },
+    "caddy_matcher": {
+      "exact_paths": [
+        "/api/test",
+        "/api/categories",
+        "/api/tags",
+        "/api/notes"
+      ],
+      "numeric_note_detail_regexp": "^/api/notes/[0-9]+$"
+    }
+  },
+  "assessment_inputs": [
+    "docs/API_REFERENCE.md",
+    "docs/SCHEMA.md",
+    "docs/contracts/phase19-go-runtime-packaging.md",
+    "docs/contracts/phase19-go-post-matcher-hardening-stabilization.json",
+    "go-shadow/main.go",
+    "routes/"
+  ],
+  "scope_candidates": [
+    {
+      "id": "read_surface_polish",
+      "candidate": "Tighten read-only parity before any write ownership",
+      "examples": [
+        "Document exact Caddy matcher in API docs",
+        "Lock Python-vs-Go diff coverage for the hardened Caddy production surface",
+        "Review whether Go search parity still misses attachment text search behavior"
+      ],
+      "risk": "low",
+      "recommended_next": true,
+      "reason": "It improves correctness of the already-promoted surface without expanding runtime ownership."
+    },
+    {
+      "id": "note_write_routes",
+      "candidate": "Go ownership for POST/PUT/DELETE /api/notes and note actions",
+      "examples": [
+        "POST /api/notes",
+        "PUT /api/notes/<id>",
+        "DELETE /api/notes/<id>",
+        "POST /api/notes/<id>/pin",
+        "POST /api/notes/<id>/archive",
+        "POST /api/notes/<id>/duplicate",
+        "PUT /api/notes/reorder"
+      ],
+      "risk": "high",
+      "blockers": [
+        "Requires DB write transaction parity",
+        "Requires Note_History and Source_Urls behavior parity",
+        "Requires tag/category creation and relation parity",
+        "Requires image cleanup behavior for deletes",
+        "Requires CSRF/origin boundary review",
+        "Requires production DB backup and rollback drill"
+      ],
+      "recommended_next": false
+    },
+    {
+      "id": "category_tag_writes",
+      "candidate": "Go ownership for category/tag mutation routes",
+      "examples": [
+        "POST /api/categories",
+        "PUT /api/categories/<id>",
+        "DELETE /api/categories/<id>",
+        "PUT /api/tags/<id>",
+        "DELETE /api/tags/<id>",
+        "POST /api/tags/merge"
+      ],
+      "risk": "medium_high",
+      "blockers": [
+        "Requires uniqueness/collation parity",
+        "Requires default-category delete guard parity",
+        "Requires category migration of existing notes parity",
+        "Requires transaction and rollback tests"
+      ],
+      "recommended_next": false
+    },
+    {
+      "id": "file_attachment_routes",
+      "candidate": "Go ownership for upload, attachment, cleanup, import, or export routes",
+      "examples": [
+        "/api/upload*",
+        "/api/notes/<id>/attachments",
+        "/api/attachments/<id>",
+        "/api/cleanup/*",
+        "/api/export/*",
+        "/api/import/*"
+      ],
+      "risk": "very_high",
+      "blockers": [
+        "Requires filesystem safety parity",
+        "Requires upload validation and SSRF guard parity",
+        "Requires attachment DB/file transaction strategy",
+        "Requires orphan image cleanup parity",
+        "Requires large rollback plan for file side effects"
+      ],
+      "recommended_next": false
+    },
+    {
+      "id": "system_server_migrations",
+      "candidate": "Go ownership for system/server/migration routes",
+      "examples": [
+        "/api/system/*",
+        "/api/server/*",
+        "database migrations"
+      ],
+      "risk": "very_high",
+      "blockers": [
+        "Server routes are localhost-only operational surface",
+        "Migrations are Python SSOT today",
+        "Requires separate migration framework design",
+        "Requires service restart/backup/rollback runbook",
+        "Must not broaden remote access"
+      ],
+      "recommended_next": false
+    }
+  ],
+  "recommended_path": {
+    "next_step_id": "20.1",
+    "title": "Write Surface Contract Inventory Gate",
+    "type": "plan_only",
+    "reason": "Before any Go write/file/migration implementation, lock the Python-owned write/file/system surfaces, side effects, rollback requirements, and tests in a machine-readable inventory.",
+    "minimum_outputs": [
+      "Machine-readable route inventory for every Python-owned mutation/file/system route",
+      "Side-effect map for DB writes, file writes/deletes, external fetches, process/service actions, and migrations",
+      "Backup and rollback requirements per route class",
+      "Python-vs-future-Go parity fixtures for candidate write surfaces",
+      "Explicit no-implementation gate for 20.1"
+    ]
+  },
+  "not_authorized_by_20_0": [
+    "Go write/file/migration implementation",
+    "Caddy route expansion beyond the validated GET read surface",
+    "Frontend default API target change",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "Changing prism-go-readonly.service mode away from SQLite query_only"
+  ],
+  "result": {
+    "status": "scope_assessed_plan_only",
+    "conclusion": "Phase 20 must not start with implementation. The next contract-safe step is a write/file/system route inventory and side-effect map before any Go ownership expansion is considered."
+  },
+  "allowed_next_step": {
+    "id": "20.1",
+    "title": "Write Surface Contract Inventory Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only inventory of Python-owned mutation, file, system, import/export, cleanup, and migration surfaces. This does not authorize Go implementation, Caddy expansion, frontend default changes, Python removal, or public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go write/file/migration implementation",
+      "Caddy route expansion beyond the validated GET read surface",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

@@ -69,7 +69,7 @@
 
 ---
 
-## 🚀 Phase 19: Go Runtime / Packaging Promotion — ✅ 19.13 Post-permanent Stabilization
+## 🚀 Phase 19: Go Runtime / Packaging Promotion — ✅ Closed (19.15 Read-only Promotion Stabilized)
 
 > **來源**: `Prism_Go_模組逐步重構計劃報告.md`、`go-shadow/`、`docs/contracts/phase19-go-runtime-packaging.md`
 > **目標**: 不是新增功能或抽象模組改寫，而是驗證 Go single binary runtime / packaging promotion：Windows 本機 exe、Pi Linux ARM64 binary、embedded React dist、external data dir、explicit DB path、schema check、health check。
@@ -178,11 +178,44 @@
 - [x] **19.13.3** Route and ownership stability — 白名單 GET (`/api/test`、categories、tags、notes list/detail/404) 每輪皆有 `X-Prism-Go-Read-Routing: hit`；`/api/system/migration-status`、`/api/system/go-read-routing`、`/api/server/version`、`POST /api/test` 無 Go header；migration current/latest v16 pending `[]`，Go journal 無 write methods 或 error。
 - [x] **19.13.4** Keep decision and regression lock — 19.13 決議保留 permanent read-only Caddy route，未改 Caddy、未 reload、未擴 route、未改 frontend default、未加入 Go writes/files/migrations、未移除 Python。新增 `tests/test_phase19_go_post_permanent_caddy_stabilization.py`。
 
-### ⛔ 19.14 Permanent Route Matcher and Runbook Hardening Gate — Blocked Pending Explicit Approval
+### ✅ 19.14 Permanent Route Matcher and Runbook Hardening Gate
 
-- [ ] **19.14.1** Matcher/runbook review approval — 另行授權後，才可檢查 retained Caddy matcher 與 rollback/runbook 文檔是否需要硬化。
-- [ ] **19.14.2** No automatic route edit — 任何 Caddy matcher narrowing、route edit 或 reload 都需要 fresh live checks；不得擴大 Go ownership 超過已驗證 GET read surface。
-- [ ] **19.14.3** Still not a Go full backend replacement — 不改 frontend default、不加入 Go writes/files/migrations、不移除 Python、不擴大 public exposure。
+- [x] **19.14.1** Matcher/runbook review approval — 使用者明確授權後，檢查 retained Caddy matcher 與 rollback/runbook 文檔；新增 `docs/contracts/phase19-go-caddy-matcher-runbook-hardening.json`。
+- [x] **19.14.2** Matcher narrowing with fresh checks — 發現 19.12 retained `/api/notes/*` wildcard 會涵蓋未來未審核 GET path；先以暫存 Caddyfile 驗證新 matcher，再建立 backup `/etc/caddy/Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak`，將 route 縮窄為 exact `/api/notes` + numeric `^/api/notes/[0-9]+$`，Caddy validate/reload 後仍 active。
+- [x] **19.14.3** Live boundary verification — 3 輪 sample 驗證白名單 GET 仍有 `X-Prism-Go-Read-Routing: hit`；`/api/notes/not-a-number`、`/api/notes/114/extra`、system/routing/server/version/POST 均無 Go header；migration v16 pending `[]`，Go journal 無 write methods/error。
+- [x] **19.14.4** Still not a Go full backend replacement — 未擴 route、未改 frontend default、未加入 Go writes/files/migrations、未移除 Python、未擴大 public exposure。新增 `tests/test_phase19_go_caddy_matcher_runbook_hardening.py`。
+
+### ✅ 19.15 Post-matcher Hardening Stabilization Gate
+
+- [x] **19.15.1** Post-hardening monitoring approval — 使用者明確授權後，監測 narrowed matcher 並決定 keep / rollback / close Phase 19 read-only promotion；新增 `docs/contracts/phase19-go-post-matcher-hardening-stabilization.json`。
+- [x] **19.15.2** Fresh live monitoring evidence — 5 輪、每輪 10 秒驗證 exact read list 與 numeric note detail 仍走 Go；非 numeric/nested `/api/notes/...`、system/routing/server/version/POST 仍 Python-owned 且無 Go header；Caddy validate 通過，migration v16 pending `[]`，Go journal 無 write/error。
+- [x] **19.15.3** Read-only promotion closure — 決議保留 hardened permanent read-only Caddy route，Phase 19 Go read-only promotion 關閉為 `closed_stabilized`。Go 只擁有已驗證 GET read surface；Python 仍擁有 writes/files/system/server/import/export/cleanup/frontend/static/migrations。
+- [x] **19.15.4** No route expansion by default — 未擴大 Go route、未改 frontend default、未加入 Go writes/files/migrations、未移除 Python、未擴大 public exposure。新增 `tests/test_phase19_go_post_matcher_hardening_stabilization.py`。
+
+## 🚦 Phase 20: Post-readonly Go Scope Assessment — 📋 Plan-only
+
+> **來源**: Phase 19 `closed_stabilized` read-only promotion、`docs/API_REFERENCE.md`、`docs/SCHEMA.md`、`routes/`、`go-shadow/`。
+> **目標**: 在不擴 runtime ownership 的前提下，評估 read-only 之後是否還有必要讓 Go 承接更多 surface；先鎖 contract、side effects、rollback 與測試，不直接實作 writes/files/migrations。
+> **原則**: Go 目前只擁有 hardened Caddy matcher 下的已驗證 GET read surface；Python 仍是 writes/files/system/server/import/export/cleanup/frontend/static/migration owner 與 rollback baseline。
+
+### ✅ 20.0 Post-readonly Go Scope Assessment Gate
+
+- [x] **20.0.1** Plan-only scope approval — 使用者明確授權後完成 read-only 之外的 Go ownership 評估；新增 `docs/contracts/phase20-go-post-readonly-scope-assessment.json`。
+- [x] **20.0.2** Boundary-first assessment — 盤點 write/file/system/migration 類候選：notes writes、category/tag writes、upload/attachments/cleanup/import/export、system/server/migrations 全部仍有 transaction、file side effects、CSRF/local-only、backup/rollback、parity fixtures 等 blocker。
+- [x] **20.0.3** Recommended next gate — 20.0 不推薦直接實作任何 Go write/file/migration；下一步只允許 20.1 `Write Surface Contract Inventory Gate`，先做 machine-readable route inventory、side-effect map、backup/rollback requirements、future parity fixture plan。
+- [x] **20.0.4** No implementation by default — 未加入 Go writes/files/migrations、未擴 Caddy route、未改 frontend default、未移除 Python、未擴大 public exposure。新增 `tests/test_phase20_go_post_readonly_scope_assessment.py`。
+
+### ✅ 20.1 Write Surface Contract Inventory Gate
+
+- [x] **20.1.1** Inventory approval — 使用者明確授權後，建立 Python-owned mutation/file/system/import/export/cleanup/migration surface 的 machine-readable inventory；見 `docs/contracts/phase20-go-write-surface-contract-inventory.json`。
+- [x] **20.1.2** Side-effect and rollback map — 依 route class 文件化 DB writes、file writes/deletes、external fetches、service/process actions、security boundary、backup/rollback 與 future parity fixture requirements。
+- [x] **20.1.3** No Go implementation — 20.1 未實作 Go write/file/migration、未擴 Caddy route、未改 frontend default、未移除 Python、未擴大 public exposure。新增 `tests/test_phase20_go_write_surface_contract_inventory.py`。
+
+### ⛔ 20.2 Candidate Selection and Fixture Planning Gate — Blocked Pending Explicit Approval
+
+- [ ] **20.2.1** Candidate decision — 另行授權後，才可 plan-only 選擇至多一個 future candidate；也可明確決議先回到 read-surface polish。
+- [ ] **20.2.2** Fixture and rollback plan — 若選擇 candidate，先定義 Python baseline fixtures、rollback evidence、stop conditions 與驗證命令。
+- [ ] **20.2.3** No implementation by default — 20.2 不授權 Go write/file/migration implementation、不擴 Caddy route、不改 `prism-go-readonly.service` query-only 模式、不改 frontend default、不移除 Python、不擴大 public exposure。
 
 ### ⏸️ Phase 19.0 不處理
 
@@ -268,6 +301,10 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **backend-go-runtime** | 2026-06-04 | Phase 20.1 write surface contract inventory — 在明確授權後完成 plan-only route class 盤點：notes core writes、batch/actions、history restore、category/tag writes、attachments/long content、uploads/remote fetch、cleanup/media maintenance、import/export、system maintenance、server local operations、prompt/wizard config 全部仍 Python-owned。新增 side-effect / rollback / fixture requirements 與 pytest lock；未實作 Go writes/files/migrations、未擴 Caddy route、未改 sidecar query-only 模式、未改 frontend default、未移除 Python；20.2 為需另行授權的 candidate selection and fixture planning gate。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 20.0 post-readonly Go scope assessment — 在明確授權後完成 plan-only 評估：Phase 19 已 `closed_stabilized`，Go 只擁有 hardened Caddy matcher 下的 GET read surface；notes writes、category/tag writes、upload/attachments/cleanup/import/export、system/server/migrations 全部仍有 transaction、file side effects、CSRF/local-only、backup/rollback、parity fixture blocker。20.0 不實作任何 Go write/file/migration、不擴 Caddy route、不改 frontend default、不移除 Python；20.1 為需另行授權的 write surface contract inventory gate。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 19.15 post-matcher hardening stabilization — 在明確授權後不改 Caddy、不 reload，只做 narrowed matcher monitoring：5 輪、每輪 10 秒驗 exact read list 與 numeric note detail 仍有 `X-Prism-Go-Read-Routing: hit`，非 numeric/nested `/api/notes/...`、system/routing/server/version/POST 無 Go header；Caddy validate 通過，migration v16 pending `[]`，Go journal 無 write/error。決議保留 hardened permanent read-only Caddy route，Phase 19 Go read-only promotion 關閉為 `closed_stabilized`。20.0 為需另行授權的 plan-only post-readonly Go scope assessment。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 19.14 permanent route matcher/runbook hardening — 在明確授權後檢查 19.12 retained Caddy matcher，將 `/api/notes/*` wildcard 縮窄為 exact `/api/notes` + numeric `^/api/notes/[0-9]+$`；先以暫存 Caddyfile validate，再建立 backup `Caddyfile.prism-pre-matcher-hardening-20260604_182035.bak`、套用、validate/reload。3 輪 live sample 驗白名單 GET 仍有 Go header，`/api/notes/not-a-number`、`/api/notes/114/extra`、system/routing/server/version/POST 無 Go header；migration v16 pending `[]`，Go journal 無 write/error。未擴 route、未改 frontend default、未加入 Go writes/files/migrations；19.15 為需另行授權的 post-hardening stabilization gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.13 post-permanent read-only cutover stabilization — 在明確授權後不改 Caddy、不 reload，只做 live monitoring / keep-or-rollback decision：5 輪、每輪 10 秒驗 `prism.service` / Caddy / `prism-go-readonly.service` active、sidecar enabled、localhost bind、schema v16、`sqlite_query_only=true`；白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/server/version/POST 無 Go header，migration v16 pending `[]`，Go journal 無 write methods/error，Caddy validate 通過。決議保留 permanent read-only route；19.14 為需另行授權的 matcher/runbook hardening gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.12 permanent read-only Caddy cutover — 在明確授權後從 Python-only Caddy route 起點建立 DB backup `prism_pre_permanent_caddy_readonly_cutover_20260604_180157.db` 與 Caddy backup `Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak`，啟用 `prism-go-readonly.service` active+enabled (`127.0.0.1:5002`, schema v16, `sqlite_query_only=true`)，Caddy validate/reload 後保留 permanent read-only route。3 輪 live sample 驗白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/POST 無 Go header，migration v16 pending `[]`，Go journal 無 write methods。未改 frontend default、未授權 Go writes/files/migrations、未移除 Python；19.13 為需另行授權的 post-permanent stabilization gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.11 Caddy cutover candidate decision gate — 在明確授權後新增 proposal-only permanent-cutover contract：Go 保留為 verified Caddy-routable read-only sidecar candidate；proposal 固定 operation window、external auth/exposure boundary、fresh DB/Caddy backups、Caddy validate、monitoring、rollback owner/triggers/revert plan。未改 live Caddy、未 reload、未 permanent route、未改 frontend default；Go writes/files/migrations、Python removal、direct public exposure 仍未授權。19.12 為需另行授權的 permanent read-only Caddy cutover approval gate。 |
