@@ -3,7 +3,7 @@
 **狀態**: 🟢 穩定運行 (Stable)
 **核心目標**: Headless KMS API + 純關鍵字 FTS 搜尋
 **文件參照**: `docs/Prism.md` (歷史背景), `docs/SCHEMA.md` (資料庫規格), `docs/FRONTEND-REDESIGN-PLAN.md` (UI/Go 重構規劃), `Prism_Go_模組逐步重構計劃報告.md` (Go shadow backend), `docs/development-history/` (完成階段與完整 Changelog 歸檔), `garbage-can/1230-審核報告.md` (Linus Audit)
-**最後更新**: 2026-06-01
+**最後更新**: 2026-06-04
 
 ---
 
@@ -69,7 +69,7 @@
 
 ---
 
-## 🚀 Phase 19: Go Runtime / Packaging Promotion — ✅ 19.8 Reverse-proxy / Service Cutover Planning Gate
+## 🚀 Phase 19: Go Runtime / Packaging Promotion — ✅ 19.13 Post-permanent Stabilization
 
 > **來源**: `Prism_Go_模組逐步重構計劃報告.md`、`go-shadow/`、`docs/contracts/phase19-go-runtime-packaging.md`
 > **目標**: 不是新增功能或抽象模組改寫，而是驗證 Go single binary runtime / packaging promotion：Windows 本機 exe、Pi Linux ARM64 binary、embedded React dist、external data dir、explicit DB path、schema check、health check。
@@ -142,11 +142,47 @@
 - [x] **19.8.3** Rollback / failure criteria — plan 定義 19.9 前置 gate：explicit approval、Caddy active + `caddy validate`、Caddy config backup、fresh DB backup、Go sidecar localhost/query_only/schema health、header/status/log monitoring、rollback commands；Go writes/files/migrations、frontend default、Python removal 仍不在 scope。
 - [x] **19.8.4** Regression lock — 新增 `tests/test_phase19_go_reverse_proxy_service_cutover_plan.py`，固定 19.8 plan-only、route policy、exposure/auth boundary、rollback/failure criteria，以及 19.9 必須另行授權。
 
-### ⛔ 19.9 Approved Caddy Read-only Routing Drill — Blocked Pending Explicit Approval
+### ✅ 19.9 Approved Caddy Read-only Routing Drill
 
-- [ ] **19.9.1** Live approval gate — 只有在另行明確授權後，才可依 19.8 plan 做短暫 Caddy-level read-only routing drill。
-- [ ] **19.9.2** Fresh preflight and config backup — 執行前必須驗 Python service、Caddy active/validate、routing off、fresh DB backup、Go sidecar localhost/query_only/schema health、Caddy config rollback copy。
-- [ ] **19.9.3** Short reversible Caddy drill — 若被授權，僅可把白名單 GET read surface 暫時路由到 Go，採集 header/status/log evidence 後立即 rollback 到 Python-only；不得改 frontend default、Go writes/files/migrations、Python removal 或 exposure boundary。
+- [x] **19.9.1** Live approval gate — 使用者明確授權後，依 19.8 plan 執行短暫 Caddy-level read-only routing drill；新增 `docs/contracts/phase19-go-caddy-readonly-routing-drill.json` 記錄 live evidence。
+- [x] **19.9.2** Fresh preflight and config backup — 驗證 Python/Caddy active、routing off、Caddy validate；建立 DB backup `/home/mask070924/prism/backups/prism_pre_caddy_readonly_drill_20260604_040342.db` 與 Caddy backup `/etc/caddy/Caddyfile.prism-pre-go-readonly-drill-20260604_040342.bak`；Go sidecar `127.0.0.1:5002` `/healthz` 回 schema v16 + `sqlite_query_only=true`。
+- [x] **19.9.3** Short reversible Caddy drill — Caddy route block validate + reload 後，3 輪、每輪 30 秒驗白名單 GET (`/api/test`、categories、tags、notes list/detail、note 404) 都有 `X-Prism-Go-Read-Routing: hit`；`/api/system/migration-status`、`/api/system/go-read-routing`、`POST /api/test` 均無 Go header；Go journal 自 drill start 起無 POST/PUT/DELETE/PATCH。
+- [x] **19.9.4** Rollback and regression lock — 使用 Caddy backup 還原、validate、reload，停止 Go sidecar；最終 `prism.service` / Caddy active、routing `enabled=false`、`/api/test` 無 Go header、migration v16 pending `[]`、sidecar inactive、5002 無 listener。新增 `tests/test_phase19_go_caddy_readonly_routing_drill.py` 固定 evidence 與 19.10 gate。
+
+### ✅ 19.10 Post-Caddy Drill Decision Gate
+
+- [x] **19.10.1** Decision checkpoint — 使用者明確授權後，選擇執行 bounded extended Caddy-level read-only soak；新增 `docs/contracts/phase19-go-caddy-extended-readonly-soak.json` 記錄 live evidence。
+- [x] **19.10.2** Extended Caddy soak execution — 從 Python-only 起點建立 DB backup `/home/mask070924/prism/backups/prism_pre_caddy_extended_soak_20260604_173527.db` 與 Caddy backup `/etc/caddy/Caddyfile.prism-pre-go-caddy-extended-soak-20260604_173527.bak`；Go sidecar `127.0.0.1:5002` `/healthz` 回 schema v16 + `sqlite_query_only=true`。Caddy route validate + reload 後跑 10 輪、每輪 60 秒，白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/POST 仍無 Go header。
+- [x] **19.10.3** Rollback and boundary lock — 使用本輪 Caddy backup 還原、validate、reload，停止 Go sidecar；最終 `prism.service` / Caddy active、routing `enabled=false`、`/api/test` 無 Go header、migration v16 pending `[]`、sidecar inactive、5002 無 listener。Permanent Caddy route、frontend default API target、Go writes/files/migrations、Python backend removal、direct public exposure 均未授權也未保留。
+- [x] **19.10.4** Regression lock — 新增 `tests/test_phase19_go_caddy_extended_readonly_soak.py`，固定 10-sample Caddy-level soak evidence、fresh backups、rollback final state、19.11 必須另行授權。
+
+### ✅ 19.11 Caddy Cutover Candidate Decision Gate
+
+- [x] **19.11.1** Candidate decision — 使用者明確授權後，決議保留 Go 為 verified Caddy-routable read-only sidecar candidate，並撰寫 proposal-only permanent-cutover contract；新增 `docs/contracts/phase19-go-caddy-cutover-candidate-decision.json`。
+- [x] **19.11.2** Permanent-cutover proposal — Proposal 固定 operation window、external auth/exposure boundary、fresh DB/Caddy backups、Caddy validate、monitoring、rollback owner、rollback triggers、revert plan；只允許白名單 GET read surface 規劃到 Go，Python 仍擁有 writes/files/system/server/import/export/cleanup/static/frontend/migrations。
+- [x] **19.11.3** Production ownership stays Python — 19.11 不授權 live Caddy config change、Caddy reload、permanent Caddy route、frontend default API target、Go writes/files/migrations、Python removal、direct public exposure。
+- [x] **19.11.4** Regression lock — 新增 `tests/test_phase19_go_caddy_cutover_candidate_decision.py`，固定 proposal-only、candidate status、route boundary、fresh preflight/monitoring/rollback requirements、exposure/auth boundary，以及 19.12 必須另行授權。
+
+### ✅ 19.12 Permanent Read-only Caddy Cutover
+
+- [x] **19.12.1** Live permanent-cutover approval — 使用者明確授權後，依 19.11 proposal 在 Pi 執行 permanent read-only Caddy cutover；新增 `docs/contracts/phase19-go-permanent-caddy-readonly-cutover.json`。
+- [x] **19.12.2** Fresh preflight and backups — 從 Python-only Caddy route 起點驗證 `prism.service` / Caddy active、routing disabled、Caddy validate；建立 DB backup `/home/mask070924/prism/backups/prism_pre_permanent_caddy_readonly_cutover_20260604_180157.db`（schema v16、notes 196）與 Caddy backup `/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak`。
+- [x] **19.12.3** Permanent Caddy read-only route — 啟用並保留 `prism-go-readonly.service`（active + enabled，`127.0.0.1:5002`，`/healthz` schema v16 + `sqlite_query_only=true`），Caddy validate + reload 後只把白名單 GET read surface 導向 Go 並加 `X-Prism-Go-Read-Routing: hit`。
+- [x] **19.12.4** Boundary and regression lock — 3 輪 live sample 驗證 `/api/test`、categories、tags、notes list/detail/404 都有 Go header；`/api/system/migration-status`、`/api/system/go-read-routing`、`POST /api/test` 無 Go header；migration current/latest v16 pending `[]`，Go journal 無 POST/PUT/DELETE/PATCH。新增 `tests/test_phase19_go_permanent_caddy_readonly_cutover.py`。
+- [x] **19.12.5** Still not a Go full backend replacement — 19.12 未改 frontend default target、未授權 Go writes/files/migrations、未移除 Python、未擴大 public exposure；Python 仍是非白名單 route owner 與 rollback target。
+
+### ✅ 19.13 Post-permanent Read-only Cutover Stabilization Gate
+
+- [x] **19.13.1** Stabilization review approval — 使用者明確授權後，執行 post-permanent route monitoring / keep-or-rollback decision；新增 `docs/contracts/phase19-go-post-permanent-caddy-stabilization.json`。
+- [x] **19.13.2** Fresh live monitoring evidence — 5 輪、每輪間隔 10 秒驗證 `prism.service` / Caddy / `prism-go-readonly.service` active、sidecar enabled 且只綁 `127.0.0.1:5002`、`/healthz` schema v16 + `sqlite_query_only=true`、Caddy validate 通過。
+- [x] **19.13.3** Route and ownership stability — 白名單 GET (`/api/test`、categories、tags、notes list/detail/404) 每輪皆有 `X-Prism-Go-Read-Routing: hit`；`/api/system/migration-status`、`/api/system/go-read-routing`、`/api/server/version`、`POST /api/test` 無 Go header；migration current/latest v16 pending `[]`，Go journal 無 write methods 或 error。
+- [x] **19.13.4** Keep decision and regression lock — 19.13 決議保留 permanent read-only Caddy route，未改 Caddy、未 reload、未擴 route、未改 frontend default、未加入 Go writes/files/migrations、未移除 Python。新增 `tests/test_phase19_go_post_permanent_caddy_stabilization.py`。
+
+### ⛔ 19.14 Permanent Route Matcher and Runbook Hardening Gate — Blocked Pending Explicit Approval
+
+- [ ] **19.14.1** Matcher/runbook review approval — 另行授權後，才可檢查 retained Caddy matcher 與 rollback/runbook 文檔是否需要硬化。
+- [ ] **19.14.2** No automatic route edit — 任何 Caddy matcher narrowing、route edit 或 reload 都需要 fresh live checks；不得擴大 Go ownership 超過已驗證 GET read surface。
+- [ ] **19.14.3** Still not a Go full backend replacement — 不改 frontend default、不加入 Go writes/files/migrations、不移除 Python、不擴大 public exposure。
 
 ### ⏸️ Phase 19.0 不處理
 
@@ -232,6 +268,11 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **backend-go-runtime** | 2026-06-04 | Phase 19.13 post-permanent read-only cutover stabilization — 在明確授權後不改 Caddy、不 reload，只做 live monitoring / keep-or-rollback decision：5 輪、每輪 10 秒驗 `prism.service` / Caddy / `prism-go-readonly.service` active、sidecar enabled、localhost bind、schema v16、`sqlite_query_only=true`；白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/server/version/POST 無 Go header，migration v16 pending `[]`，Go journal 無 write methods/error，Caddy validate 通過。決議保留 permanent read-only route；19.14 為需另行授權的 matcher/runbook hardening gate。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 19.12 permanent read-only Caddy cutover — 在明確授權後從 Python-only Caddy route 起點建立 DB backup `prism_pre_permanent_caddy_readonly_cutover_20260604_180157.db` 與 Caddy backup `Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak`，啟用 `prism-go-readonly.service` active+enabled (`127.0.0.1:5002`, schema v16, `sqlite_query_only=true`)，Caddy validate/reload 後保留 permanent read-only route。3 輪 live sample 驗白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/POST 無 Go header，migration v16 pending `[]`，Go journal 無 write methods。未改 frontend default、未授權 Go writes/files/migrations、未移除 Python；19.13 為需另行授權的 post-permanent stabilization gate。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 19.11 Caddy cutover candidate decision gate — 在明確授權後新增 proposal-only permanent-cutover contract：Go 保留為 verified Caddy-routable read-only sidecar candidate；proposal 固定 operation window、external auth/exposure boundary、fresh DB/Caddy backups、Caddy validate、monitoring、rollback owner/triggers/revert plan。未改 live Caddy、未 reload、未 permanent route、未改 frontend default；Go writes/files/migrations、Python removal、direct public exposure 仍未授權。19.12 為需另行授權的 permanent read-only Caddy cutover approval gate。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 19.10 post-Caddy drill decision gate — 在明確授權後執行 bounded extended Caddy-level read-only soak：從 Python-only 起點建立 DB backup `prism_pre_caddy_extended_soak_20260604_173527.db` 與 Caddy backup `Caddyfile.prism-pre-go-caddy-extended-soak-20260604_173527.bak`，Caddy route validate/reload 後 10 輪、每輪 60 秒驗白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/POST 無 Go header，Go journal 無 POST/PUT/DELETE/PATCH。Rollback 後 routing false、sidecar inactive、5002 無 listener。新增 19.10 contract/test；19.11 為需另行授權的 Caddy cutover candidate decision gate。 |
+| **backend-go-runtime** | 2026-06-04 | Phase 19.9 approved Caddy read-only routing drill — 依 19.8 plan 與明確授權執行短暫 Caddy-level route drill：建立 DB backup `prism_pre_caddy_readonly_drill_20260604_040342.db` 與 Caddy backup `Caddyfile.prism-pre-go-readonly-drill-20260604_040342.bak`，Go sidecar localhost/query_only/schema v16，Caddy route block validate + reload 後 3 輪、每輪 30 秒驗白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`，system/routing/POST 仍 Python-owned 且無 Go header。Rollback 已用備份還原 Caddy、validate/reload、停止 sidecar；最終 routing false、sidecar inactive、5002 無 listener。19.10 為需另行授權的 post-Caddy drill decision gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.8 reverse-proxy/service cutover planning gate — 新增 plan-only machine-readable contract，補上 Caddy/service routing gap：只允許已驗證 GET read surface 規劃到 localhost Go sidecar；Python 仍是 write/file/maintenance/migration owner 與 rollback target。Plan 固定 Caddy validate、config backup、fresh DB backup、header/status/log monitoring、rollback/failure criteria，以及 localhost/trusted LAN/VPN/SSH tunnel/protected reverse proxy exposure boundary。未改 live Caddy、未 reload Caddy、未改 frontend default；19.9 為需另行授權的 approved Caddy read-only routing drill。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.7 post-soak decision gate — 在明確授權後執行 bounded extended Python-switch read-only soak：從 Python-only 起點建立 fresh backup `prism_pre_go_readonly_long_soak_20260604_034124.db`，啟動 Go sidecar `127.0.0.1:5002` 且 `/healthz` schema v16 / `sqlite_query_only=true`，Python opt-in routing 連續 10 輪、每輪 60 秒驗白名單 GET header 與 Python-owned migration/POST boundary；Go journal 自本輪 start 起無 POST/PUT/DELETE/PATCH。Rollback 後 `routing=false`、sidecar inactive、5002 無 listener。新增 19.7 contract/test；19.8 為需另行授權的 reverse-proxy/service cutover plan gate。 |
 | **backend-go-runtime** | 2026-06-04 | Phase 19.6 approved read-only soak execution — 依使用者授權在 Pi 執行 19.5 stage 0/1：建立 production DB backup `prism_pre_go_readonly_soak_20260604_032653.db`，部署 Go sidecar `prism-go-readonly.service` 綁 `127.0.0.1:5002`，驗證 `/healthz` schema v16 + `sqlite_query_only=true`，短暫啟用 Python `PRISM_GO_READ_ROUTING` 後白名單 GET 皆有 `X-Prism-Go-Read-Routing: hit`；非白名單 / write method 仍 Python-owned。Rollback drill 已移除 drop-in、routing 回 `enabled=false`、停止 sidecar、5002 無 listener。未改 Caddy、未改 frontend default、未新增 Go writes/files/migrations；19.7 為需另行授權的 post-soak decision gate。 |

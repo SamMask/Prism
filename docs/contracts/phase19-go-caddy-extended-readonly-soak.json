@@ -1,0 +1,197 @@
+{
+  "phase": "19.10",
+  "name": "Post-Caddy Drill Decision Gate",
+  "execution_date": "2026-06-04",
+  "live_execution_authorized": true,
+  "decision": "Execute a bounded extended Caddy-level read-only soak, then roll back to Python-only.",
+  "target_host": {
+    "ssh_alias": "PI5Mask24",
+    "hostname": "raspberrypi",
+    "public_exposure_changed": false,
+    "frontend_default_target_changed": false
+  },
+  "preflight": {
+    "starting_state": "python_only",
+    "python_service_active": true,
+    "caddy_service_active": true,
+    "go_sidecar_active": false,
+    "routing_enabled": false,
+    "representative_get_without_go_header": true,
+    "port_5002_listening": false,
+    "caddy_validate_before_change": true,
+    "caddy_validate_warning": "Caddyfile input is not formatted; existing warning, config remained valid.",
+    "migration_status": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    }
+  },
+  "backups": {
+    "db_backup": {
+      "path": "/home/mask070924/prism/backups/prism_pre_caddy_extended_soak_20260604_173527.db",
+      "verified": true,
+      "schema_version": 16,
+      "notes_count": 196
+    },
+    "caddy_backup": {
+      "path": "/etc/caddy/Caddyfile.prism-pre-go-caddy-extended-soak-20260604_173527.bak",
+      "created": true,
+      "used_for_rollback": true
+    }
+  },
+  "go_sidecar": {
+    "service_name": "prism-go-readonly.service",
+    "bind": "127.0.0.1:5002",
+    "healthz_status": 200,
+    "db_path": "/home/mask070924/prism/knowledge.db",
+    "data_dir": "/home/mask070924/prism",
+    "schema_version": 16,
+    "expected_schema_version": 16,
+    "sqlite_query_only": true,
+    "public_bind_allowed": false
+  },
+  "caddy_soak_config": {
+    "validated_before_reload": true,
+    "reloaded": true,
+    "route_policy": {
+      "go_routed": [
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes",
+        "GET /api/notes/<id>"
+      ],
+      "python_owned": [
+        "POST / PUT / DELETE / PATCH on every path",
+        "GET /api/system/migration-status",
+        "GET /api/system/go-read-routing",
+        "frontend SPA assets",
+        "static uploads",
+        "server/system/import/export/cleanup/file routes",
+        "database migrations"
+      ]
+    },
+    "go_response_header_added_by_caddy": "X-Prism-Go-Read-Routing: hit",
+    "murmur_site_changed": false
+  },
+  "extended_soak": {
+    "start_time_local": "2026-06-04T17:36:20+08:00",
+    "end_time_local": "2026-06-04T17:45:23+08:00",
+    "sample_count": 10,
+    "sample_interval_seconds": 60,
+    "all_samples_passed": true,
+    "services_active_each_round": {
+      "prism": true,
+      "caddy": true,
+      "prism_go_readonly": true
+    },
+    "go_routed_each_round": [
+      {
+        "path": "GET /api/test",
+        "required_header": "X-Prism-Go-Read-Routing: hit",
+        "required_body_fragment": "\"notes_count\":196"
+      },
+      {
+        "path": "GET /api/categories",
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/tags",
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes?per_page=1&page=1",
+        "required_header": "X-Prism-Go-Read-Routing: hit",
+        "required_body_fragment": "\"total\":196"
+      },
+      {
+        "path": "GET /api/notes/114",
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      },
+      {
+        "path": "GET /api/notes/999999",
+        "required_header": "X-Prism-Go-Read-Routing: hit"
+      }
+    ],
+    "python_owned_each_round": [
+      {
+        "path": "GET /api/system/migration-status",
+        "required_no_header": "X-Prism-Go-Read-Routing",
+        "required_body_fragment": "\"current_version\":16"
+      },
+      {
+        "path": "GET /api/system/go-read-routing",
+        "required_no_header": "X-Prism-Go-Read-Routing",
+        "required_body_fragment": "\"enabled\":false"
+      },
+      {
+        "path": "POST /api/test",
+        "expected_status": 403,
+        "required_no_header": "X-Prism-Go-Read-Routing"
+      }
+    ],
+    "go_write_method_logs_since_start": [],
+    "caddy_recent_log_note": "journalctl -u caddy --since soak start returned no recent entries; route ownership was verified by response headers and Python-owned no-header checks."
+  },
+  "rollback_drill": {
+    "completed": true,
+    "actions": [
+      "Restored /etc/caddy/Caddyfile from /etc/caddy/Caddyfile.prism-pre-go-caddy-extended-soak-20260604_173527.bak",
+      "Ran caddy validate",
+      "Reloaded Caddy",
+      "Stopped prism-go-readonly.service",
+      "Verified prism.service active",
+      "Verified caddy active",
+      "Verified /api/system/go-read-routing enabled=false",
+      "Verified /api/test returns 200 without X-Prism-Go-Read-Routing",
+      "Verified migration current/latest v16 with pending []",
+      "Verified no 127.0.0.1:5002 listener remains"
+    ],
+    "final_state": {
+      "python_service_active": true,
+      "caddy_service_active": true,
+      "routing_enabled": false,
+      "routing_base_url": null,
+      "representative_get_without_go_header": true,
+      "go_sidecar_active": false,
+      "port_5002_listening": false,
+      "migration_current_version": 16,
+      "migration_latest_version": 16,
+      "migration_pending": []
+    }
+  },
+  "result": {
+    "status": "completed_and_rolled_back_to_python_only",
+    "conclusion": "Go is now a verified Caddy-routable read-only sidecar candidate for the validated GET surface after both short and bounded extended Caddy-level drills.",
+    "not_a_permanent_cutover": true,
+    "remaining_risks": [
+      "No unattended or multi-hour production Caddy-level routing has been approved.",
+      "No permanent Caddy route has been approved.",
+      "No frontend default target change has been approved.",
+      "Writes, files, maintenance, exports, and migrations remain Python-owned."
+    ]
+  },
+  "not_authorized_by_19_10": [
+    "Permanent Caddy route change",
+    "Unattended or multi-hour production Caddy-level routing",
+    "Frontend default API target change",
+    "Go ownership of write/file/maintenance routes",
+    "Go migrations",
+    "Python backend removal",
+    "Direct public internet exposure"
+  ],
+  "allowed_next_step": {
+    "id": "19.11",
+    "title": "Caddy Cutover Candidate Decision Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Decide whether to keep Go as a verified Caddy-routable read-only sidecar candidate, write a permanent-cutover proposal, or defer further cutover work.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Permanent Caddy route change",
+      "Unattended production routing",
+      "Frontend default API target change",
+      "Go writes/files/migrations",
+      "Python backend removal"
+    ]
+  }
+}

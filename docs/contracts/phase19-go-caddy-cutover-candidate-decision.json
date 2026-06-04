@@ -1,0 +1,153 @@
+{
+  "phase": "19.11",
+  "name": "Caddy Cutover Candidate Decision Gate",
+  "decision_date": "2026-06-04",
+  "live_execution_authorized": false,
+  "plan_only": true,
+  "decision": "Write a permanent-cutover proposal contract while keeping Go as a verified Caddy-routable read-only sidecar candidate.",
+  "evidence_inputs": [
+    "docs/contracts/phase19-go-caddy-readonly-routing-drill.json",
+    "docs/contracts/phase19-go-caddy-extended-readonly-soak.json",
+    "docs/contracts/phase19-go-reverse-proxy-service-cutover-plan.json"
+  ],
+  "candidate_status": {
+    "go_status": "verified_caddy_routable_readonly_sidecar_candidate",
+    "validated_surface": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes",
+      "GET /api/notes/<id>"
+    ],
+    "validated_routing_controls": [
+      "Python opt-in PRISM_GO_READ_ROUTING switch",
+      "Caddy-level route block with X-Prism-Go-Read-Routing header evidence"
+    ],
+    "validated_rollback_paths": [
+      "Disable Python read-routing drop-in and restart prism.service",
+      "Restore backed-up Caddyfile, caddy validate, reload Caddy, stop Go sidecar"
+    ],
+    "required_runtime_shape": {
+      "python_service": "primary runtime and rollback target",
+      "go_sidecar": "localhost-only read-only sidecar on 127.0.0.1:5002",
+      "caddy": "reverse proxy for a bounded GET read surface only"
+    }
+  },
+  "permanent_cutover_proposal": {
+    "proposal_only": true,
+    "target_change": "Keep a permanent Caddy route block for the validated GET read surface to the localhost Go sidecar while preserving Python for everything else.",
+    "operation_window_required": true,
+    "recommended_operation_window": "manual attended maintenance window with immediate rollback access",
+    "fresh_preflight_required": [
+      "Confirm explicit user approval for live permanent-cutover execution",
+      "Confirm Prism API exposure is limited to localhost, trusted LAN, VPN, SSH tunnel, or reverse proxy protected by external auth",
+      "Confirm prism.service and caddy are active",
+      "Confirm current Caddyfile validates before changes",
+      "Create timestamped DB backup and verify schema v16 plus notes count",
+      "Create timestamped Caddyfile backup",
+      "Start prism-go-readonly.service on 127.0.0.1:5002",
+      "Verify Go /healthz reports schema_version 16 and sqlite_query_only=true",
+      "Verify /api/system/go-read-routing reports enabled=false before Caddy-level cutover"
+    ],
+    "permanent_route_policy": {
+      "go_allowed": [
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes",
+        "GET /api/notes/<id>"
+      ],
+      "python_required": [
+        "POST / PUT / DELETE / PATCH on every path",
+        "GET /api/system/*",
+        "GET /api/server/*",
+        "/api/export/*",
+        "/api/import/*",
+        "/api/cleanup/*",
+        "/api/attachments/*",
+        "/api/upload*",
+        "frontend SPA assets",
+        "static uploads",
+        "database migrations"
+      ],
+      "required_go_header": "X-Prism-Go-Read-Routing: hit",
+      "required_absent_header_for_python_owned_routes": "X-Prism-Go-Read-Routing"
+    },
+    "monitoring_required": [
+      "systemctl is-active prism",
+      "systemctl is-active caddy",
+      "systemctl is-active prism-go-readonly",
+      "caddy validate before and after config change",
+      "Allowed GET read surface status and X-Prism-Go-Read-Routing header",
+      "Python-owned routes status and absence of X-Prism-Go-Read-Routing header",
+      "Go sidecar journal with no POST/PUT/DELETE/PATCH entries",
+      "Migration status current/latest v16 with pending []",
+      "Caddy reload success and post-reload live API checks"
+    ],
+    "rollback_owner": "operator executing the approved cutover",
+    "rollback_trigger": [
+      "Caddy validation failure",
+      "Caddy reload failure",
+      "prism.service unhealthy",
+      "prism-go-readonly.service unhealthy",
+      "Any Python-owned route carries X-Prism-Go-Read-Routing",
+      "Any POST/PUT/DELETE/PATCH reaches Go",
+      "Allowed GET read response status or JSON shape drifts unexpectedly",
+      "Migration status changes unexpectedly"
+    ],
+    "rollback_plan": [
+      "Restore timestamped Caddyfile backup",
+      "Run caddy validate",
+      "Reload Caddy",
+      "Stop prism-go-readonly.service if permanent route is disabled",
+      "Verify /api/test works without X-Prism-Go-Read-Routing",
+      "Verify /api/system/migration-status current/latest v16 pending []",
+      "Verify no 127.0.0.1:5002 listener remains if sidecar is stopped"
+    ]
+  },
+  "exposure_boundary": {
+    "allowed": [
+      "localhost",
+      "trusted LAN",
+      "VPN",
+      "SSH tunnel",
+      "reverse proxy protected by external auth"
+    ],
+    "not_allowed": [
+      "direct public internet exposure",
+      "unprotected Caddy public endpoint",
+      "public Go sidecar bind"
+    ],
+    "auth_note": "Prism still has no built-in API token, Bearer token, or user auth layer; permanent routing must not expand exposure without external protection."
+  },
+  "not_authorized_by_19_11": [
+    "Live Caddy config change",
+    "Caddy reload",
+    "Permanent Caddy route change",
+    "Unattended production routing",
+    "Frontend default API target change",
+    "Go ownership of write/file/maintenance routes",
+    "Go migrations",
+    "Python backend removal",
+    "Direct public internet exposure"
+  ],
+  "result": {
+    "status": "proposal_ready",
+    "conclusion": "Go remains a verified Caddy-routable read-only sidecar candidate; a permanent read-only Caddy cutover proposal now exists, but no live permanent cutover is authorized by this phase."
+  },
+  "allowed_next_step": {
+    "id": "19.12",
+    "title": "Permanent Read-only Caddy Cutover Approval Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Execute or defer the permanent read-only Caddy cutover proposal after explicit approval, fresh preflight, backups, monitoring, and rollback plan confirmation.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Permanent Caddy route change",
+      "Caddy reload",
+      "Unattended production routing",
+      "Frontend default API target change",
+      "Go writes/files/migrations",
+      "Python backend removal"
+    ]
+  }
+}

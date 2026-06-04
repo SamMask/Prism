@@ -1,6 +1,6 @@
 # Phase 19: Go Runtime / Packaging Promotion
 
-> Scope: Phase 19.0/19.1 proof, Phase 19.2 promotion gate, Phase 19.3 controlled read routing proof, Phase 19.4 cutover readiness audit, Phase 19.5 read-only service-level cutover plan, Phase 19.6 approved short read-only soak execution, Phase 19.7 approved bounded extended read-only soak, and Phase 19.8 reverse-proxy/service cutover plan. This does not replace the Python backend, add product features, or implement write/file/server-maintenance routes.
+> Scope: Phase 19.0/19.1 proof, Phase 19.2 promotion gate, Phase 19.3 controlled read routing proof, Phase 19.4 cutover readiness audit, Phase 19.5 read-only service-level cutover plan, Phase 19.6 approved short read-only soak execution, Phase 19.7 approved bounded extended read-only soak, Phase 19.8 reverse-proxy/service cutover plan, Phase 19.9 approved Caddy read-only routing drill, Phase 19.10 approved bounded extended Caddy-level read-only soak, Phase 19.11 Caddy cutover candidate decision, Phase 19.12 approved permanent read-only Caddy cutover, and Phase 19.13 post-permanent stabilization. This does not replace the Python backend, add product features, or implement write/file/server-maintenance routes.
 
 ## Goal
 
@@ -373,11 +373,182 @@ Not authorized by Phase 19.8:
 - Python backend removal.
 - Unattended long-running production routing.
 
-Next planned step: Phase 19.9 Approved Caddy Read-only Routing Drill. It is blocked until separate explicit user approval and must execute only a short, reversible Caddy-level read-only routing drill using the 19.8 plan, with fresh backup, `caddy validate`, live evidence, and rollback to Python-only.
+Next executed step: Phase 19.9 Approved Caddy Read-only Routing Drill. It was performed only after separate explicit user authorization and ended with rollback to Python-only routing.
+
+## Phase 19.9 Approved Caddy Read-only Routing Drill
+
+Execution artifact: `docs/contracts/phase19-go-caddy-readonly-routing-drill.json`
+
+Result: the approved short Caddy-level read-only routing drill completed and was rolled back to Python-only routing. This is not permanent cutover approval.
+
+Live evidence:
+
+- Preflight confirmed `prism.service` active, Caddy active, Python read routing disabled, migration current/latest v16 with pending `[]`, and existing Caddy config valid.
+- Fresh production DB backup was created at `/home/mask070924/prism/backups/prism_pre_caddy_readonly_drill_20260604_040342.db`.
+- Caddy rollback backup was created at `/etc/caddy/Caddyfile.prism-pre-go-readonly-drill-20260604_040342.bak`.
+- Go sidecar `prism-go-readonly.service` served `127.0.0.1:5002` with `/healthz` reporting schema version 16 and `sqlite_query_only=true`.
+- Temporary Caddy route block validated and reloaded. It routed only GET `/api/test`, categories, tags, notes list, and note detail/404 to Go and added `X-Prism-Go-Read-Routing: hit`.
+- Three samples ran at 30-second intervals. Every sample verified the Go header on the allowed GET read surface and no Go header on `/api/system/migration-status`, `/api/system/go-read-routing`, or `POST /api/test`.
+- Go journal had no POST/PUT/DELETE/PATCH request logs since the 19.9 drill start timestamp.
+- Rollback restored the backed-up Caddyfile, validated and reloaded Caddy, stopped `prism-go-readonly.service`, verified routing `enabled=false`, verified `/api/test` without the Go header, and confirmed no 5002 listener remained.
+
+Not authorized by Phase 19.9:
+
+- Permanent Caddy route changes.
+- Long-running production Caddy-level routing.
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next executed step: Phase 19.10 Post-Caddy Drill Decision Gate. It was performed only after separate explicit user authorization and chose a bounded extended Caddy-level read-only soak, followed by rollback to Python-only routing.
+
+## Phase 19.10 Post-Caddy Drill Decision Gate
+
+Execution artifact: `docs/contracts/phase19-go-caddy-extended-readonly-soak.json`
+
+Result: the approved bounded extended Caddy-level read-only soak completed and was rolled back to Python-only routing. Go is now a verified Caddy-routable read-only sidecar candidate for the approved GET surface. This is still not permanent cutover approval.
+
+Live evidence:
+
+- Started from Python-only state: `prism.service` active, Caddy active, routing disabled, `prism-go-readonly.service` inactive, no 5002 listener, and Caddy config valid.
+- Fresh production DB backup was created at `/home/mask070924/prism/backups/prism_pre_caddy_extended_soak_20260604_173527.db`.
+- Caddy rollback backup was created at `/etc/caddy/Caddyfile.prism-pre-go-caddy-extended-soak-20260604_173527.bak`.
+- Go sidecar `prism-go-readonly.service` served `127.0.0.1:5002` with `/healthz` reporting schema version 16 and `sqlite_query_only=true`.
+- Temporary Caddy route block validated and reloaded. It routed only GET `/api/test`, categories, tags, notes list, and note detail/404 to Go and added `X-Prism-Go-Read-Routing: hit`.
+- Ten samples ran at 60-second intervals. Every sample verified the Go header on the allowed GET read surface and no Go header on `/api/system/migration-status`, `/api/system/go-read-routing`, or `POST /api/test`.
+- Go journal had no POST/PUT/DELETE/PATCH request logs since the 19.10 soak start timestamp.
+- Rollback restored the backed-up Caddyfile, validated and reloaded Caddy, stopped `prism-go-readonly.service`, verified routing `enabled=false`, verified `/api/test` without the Go header, and confirmed no 5002 listener remained.
+
+Not authorized by Phase 19.10:
+
+- Permanent Caddy route changes.
+- Unattended or multi-hour production Caddy-level routing.
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next executed step: Phase 19.11 Caddy Cutover Candidate Decision Gate. It was performed only after separate explicit user authorization and stopped at a proposal-only permanent-cutover contract.
+
+## Phase 19.11 Caddy Cutover Candidate Decision Gate
+
+Decision artifact: `docs/contracts/phase19-go-caddy-cutover-candidate-decision.json`
+
+Result: Go remains a verified Caddy-routable read-only sidecar candidate, and a permanent read-only Caddy cutover proposal now exists. This is not live permanent cutover approval.
+
+Candidate decision:
+
+- Go is verified only for the validated GET read surface.
+- Python `prism.service` remains the primary runtime and rollback target.
+- Go sidecar remains localhost-only at `127.0.0.1:5002`.
+- Caddy can be considered only as a reverse proxy for the bounded GET read surface.
+- Python still owns writes, files, system/server routes, import/export, cleanup, frontend/static assets, and migrations.
+
+Permanent-cutover proposal requirements:
+
+- Explicit approval before live execution.
+- Manual attended operation window.
+- Exposure limited to localhost, trusted LAN, VPN, SSH tunnel, or reverse proxy protected by external auth.
+- Fresh DB backup and Caddyfile backup.
+- `caddy validate` before and after config change.
+- Go `/healthz` schema v16 and `sqlite_query_only=true`.
+- Header/status/log monitoring with `X-Prism-Go-Read-Routing: hit` only on Go-routed GET reads.
+- Immediate rollback triggers and Caddyfile backup restore plan.
+
+Not authorized by Phase 19.11:
+
+- Live Caddy config change or reload.
+- Permanent Caddy route change.
+- Unattended production routing.
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next executed step: Phase 19.12 Permanent Read-only Caddy Cutover Approval Gate. It was performed only after separate explicit user authorization and retained the permanent read-only Caddy route while preserving Python ownership for everything outside the validated GET read surface.
+
+## Phase 19.12 Permanent Read-only Caddy Cutover
+
+Execution artifact: `docs/contracts/phase19-go-permanent-caddy-readonly-cutover.json`
+
+Result: the approved permanent read-only Caddy cutover is now active on the Pi target. This is still not a full Go backend replacement.
+
+Live final state:
+
+- `prism.service`, Caddy, and `prism-go-readonly.service` are active.
+- `prism-go-readonly.service` is enabled and listens only on `127.0.0.1:5002`.
+- Go `/healthz` reports schema version 16 and `sqlite_query_only=true`.
+- Caddy keeps a permanent route block for only the validated GET read surface and adds `X-Prism-Go-Read-Routing: hit`.
+- Python remains owner for system/server routes, writes, files, import/export, cleanup, frontend/static assets, and migrations.
+
+Permanent cutover evidence:
+
+- Fresh DB backup: `/home/mask070924/prism/backups/prism_pre_permanent_caddy_readonly_cutover_20260604_180157.db` with schema v16 and 196 notes.
+- Fresh Caddy backup: `/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak`.
+- `caddy validate` passed before edit, after edit, and after reload.
+- Three live samples verified `/api/test`, categories, tags, notes list, note detail, and note 404 all carried `X-Prism-Go-Read-Routing: hit`.
+- Three live samples verified `/api/system/migration-status`, `/api/system/go-read-routing`, and `POST /api/test` did not carry the Go header.
+- Migration status stayed current/latest v16 with pending `[]`.
+- Go journal had no POST/PUT/DELETE/PATCH entries since cutover start.
+
+Retained rollback:
+
+- Restore the timestamped Caddyfile backup.
+- Run `caddy validate`.
+- Reload Caddy.
+- Verify representative GET reads work without `X-Prism-Go-Read-Routing`.
+- Stop and disable `prism-go-readonly.service` if removing the permanent read-only route.
+
+Not authorized by Phase 19.12:
+
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+- Unreviewed route expansion under the retained `/api/notes/*` Caddy matcher.
+
+Next executed step: Phase 19.13 Post-permanent Read-only Cutover Stabilization Gate. It was performed only after separate explicit user authorization and made no runtime changes.
+
+## Phase 19.13 Post-permanent Read-only Cutover Stabilization Gate
+
+Execution artifact: `docs/contracts/phase19-go-post-permanent-caddy-stabilization.json`
+
+Result: the permanent read-only Caddy route is kept active after stabilization checks. This phase did not edit Caddy, reload Caddy, expand route scope, change frontend defaults, add Go writes/files/migrations, or remove Python.
+
+Live stabilization evidence:
+
+- Observation window ran from `2026-06-04T18:11:31+08:00` to `2026-06-04T18:12:12+08:00`.
+- Five samples ran at 10-second intervals.
+- `prism.service`, Caddy, and `prism-go-readonly.service` stayed active; `prism-go-readonly.service` stayed enabled.
+- Go sidecar stayed localhost-only at `127.0.0.1:5002`.
+- Go `/healthz` reported schema version 16, expected schema version 16, and `sqlite_query_only=true`.
+- The validated GET read surface carried `X-Prism-Go-Read-Routing: hit` in every sample.
+- Python-owned `/api/system/migration-status`, `/api/system/go-read-routing`, `/api/server/version`, and `POST /api/test` did not carry the Go header.
+- Migration status stayed current/latest v16 with pending `[]`.
+- Go journal had no POST/PUT/DELETE/PATCH entries and no error/fatal/panic entries during the window.
+- `caddy validate` passed.
+
+Keep decision:
+
+- Keep the Phase 19.12 permanent read-only Caddy route active.
+- Retain rollback reference `/etc/caddy/Caddyfile.prism-pre-permanent-go-readonly-cutover-20260604_180157.bak`.
+- Continue treating Python as the owner for writes, files, system/server routes, frontend/static assets, import/export, cleanup, and migrations.
+
+Not authorized by Phase 19.13:
+
+- Route expansion beyond the validated GET read surface.
+- Caddy route edit or reload during stabilization review.
+- Frontend default API target changes.
+- Go writes, file routes, maintenance routes, exports, or migrations.
+- Python backend removal.
+- Direct public internet exposure.
+
+Next planned step: Phase 19.14 Permanent Route Matcher and Runbook Hardening Gate. It is blocked until separate explicit user approval and is limited to reviewing the retained matcher plus rollback/runbook documentation unless a fresh contract authorizes a live Caddy edit.
 
 ## Stop Conditions
 
-Phase 19.8 stops at proof, canary evidence, promotion-gate evidence, controlled routing evidence, cutover-readiness audit evidence, plan-only cutover evidence, approved short-soak evidence, approved bounded extended-soak evidence, reverse-proxy/service cutover plan evidence, and rollback evidence:
+Phase 19.13 stops at proof, canary evidence, promotion-gate evidence, controlled routing evidence, cutover-readiness audit evidence, plan-only cutover evidence, approved short-soak evidence, approved bounded extended-soak evidence, reverse-proxy/service cutover plan evidence, approved Caddy drill evidence, approved bounded extended Caddy-level soak evidence, Caddy cutover candidate decision evidence, permanent read-only Caddy route evidence, post-permanent stabilization evidence, and retained rollback evidence:
 
 - `go test ./...`
 - Python vs Go response diff tests
@@ -391,7 +562,12 @@ Phase 19.8 stops at proof, canary evidence, promotion-gate evidence, controlled 
 - `tests/test_phase19_go_readonly_soak_execution.py`
 - `tests/test_phase19_go_readonly_long_soak_decision.py`
 - `tests/test_phase19_go_reverse_proxy_service_cutover_plan.py`
-- This document, `docs/TODO.md`, `docs/contracts/phase19-go-readonly-promotion-gate.json`, `docs/contracts/phase19-go-read-routing-proof.json`, `docs/contracts/phase19-go-cutover-readiness-audit.json`, `docs/contracts/phase19-go-readonly-service-cutover-plan.json`, `docs/contracts/phase19-go-readonly-soak-execution.json`, `docs/contracts/phase19-go-readonly-long-soak-decision.json`, and `docs/contracts/phase19-go-reverse-proxy-service-cutover-plan.json` updated
+- `tests/test_phase19_go_caddy_readonly_routing_drill.py`
+- `tests/test_phase19_go_caddy_extended_readonly_soak.py`
+- `tests/test_phase19_go_caddy_cutover_candidate_decision.py`
+- `tests/test_phase19_go_permanent_caddy_readonly_cutover.py`
+- `tests/test_phase19_go_post_permanent_caddy_stabilization.py`
+- This document, `docs/TODO.md`, `docs/contracts/phase19-go-readonly-promotion-gate.json`, `docs/contracts/phase19-go-read-routing-proof.json`, `docs/contracts/phase19-go-cutover-readiness-audit.json`, `docs/contracts/phase19-go-readonly-service-cutover-plan.json`, `docs/contracts/phase19-go-readonly-soak-execution.json`, `docs/contracts/phase19-go-readonly-long-soak-decision.json`, `docs/contracts/phase19-go-reverse-proxy-service-cutover-plan.json`, `docs/contracts/phase19-go-caddy-readonly-routing-drill.json`, `docs/contracts/phase19-go-caddy-extended-readonly-soak.json`, `docs/contracts/phase19-go-caddy-cutover-candidate-decision.json`, `docs/contracts/phase19-go-permanent-caddy-readonly-cutover.json`, and `docs/contracts/phase19-go-post-permanent-caddy-stabilization.json` updated
 
 Still out of scope:
 

@@ -92,6 +92,16 @@ Phase 19.7 在另行授權後完成 bounded extended Python-switch read-only soa
 
 Phase 19.8 已補上 reverse-proxy / service cutover plan-only contract：Caddy 只可規劃把已驗證 GET read surface 路由到 localhost Go sidecar，其餘 writes/files/system/server/import/export/cleanup/frontend/static/migration 仍回 Python。19.8 未改 live Caddy、未 reload Caddy、未改 frontend default；19.9 若被授權，必須先 fresh backup、備份 Caddy config、`caddy validate`，再做短暫可回滾 drill。
 
+Phase 19.9 在另行授權後完成短暫 Caddy-level read-only routing drill：備份 DB 與 Caddyfile，臨時 Caddy route block 只將白名單 GET read surface 導向 localhost Go sidecar 並加 `X-Prism-Go-Read-Routing: hit`，system/routing/POST 等 Python-owned routes 無該 header。3 輪採樣後已用 Caddy backup rollback、validate/reload、停止 sidecar；最終仍是 Python-only。19.10 仍是另行授權的 post-Caddy decision gate，不是 permanent cutover。
+
+Phase 19.10 在另行授權後完成 bounded extended Caddy-level read-only soak：從 Python-only 起點建立 fresh DB / Caddy backups，臨時 Caddy route block 跑 10 輪、每輪 60 秒，白名單 GET 走 Go header，system/routing/POST 保持 Python-owned。Rollback 後 `prism.service` / Caddy active、routing `enabled=false`、Go sidecar inactive、5002 無 listener。19.11 仍是另行授權的 candidate decision gate；permanent Caddy route、frontend default、Go writes/files/migrations、Python removal 都還沒有授權。
+
+Phase 19.11 在另行授權後完成 Caddy cutover candidate decision：Go 保留為 verified Caddy-routable read-only sidecar candidate，並新增 proposal-only permanent read-only Caddy cutover contract。Proposal 要求 operation window、external auth/exposure boundary、fresh DB/Caddy backups、`caddy validate`、monitoring、rollback owner/triggers/revert plan。19.11 未改 live Caddy、未 reload、未 permanent route；19.12 仍需另行授權。
+
+Phase 19.12 在另行授權後完成 permanent read-only Caddy cutover：Pi 目前保留 Caddy route block，將已驗證 GET read surface（`/api/test`、categories、tags、notes list、note detail/404）導向 localhost Go sidecar `127.0.0.1:5002`，並以 `X-Prism-Go-Read-Routing: hit` 留證。`prism-go-readonly.service` active + enabled，Go `/healthz` 為 schema v16 + `sqlite_query_only=true`；Python `prism.service` 仍擁有 writes、files、system/server routes、frontend/static assets、import/export、cleanup 與 migrations。19.12 未改 frontend default、未授權 Go writes/files/migrations、未移除 Python、未擴大 public exposure；19.13 只可在另行授權後做 post-permanent stabilization / keep-or-rollback review。
+
+Phase 19.13 在另行授權後完成 post-permanent stabilization review：未改 Caddy、未 reload、未擴 route，只做 5 輪 live monitoring。結果保留 permanent read-only Caddy route；白名單 GET 穩定走 Go header，system/routing/server/version/POST 仍無 Go header，migration 維持 v16 pending `[]`，Go journal 無 write method/error。19.14 若被授權，也只先做 retained matcher 與 rollback/runbook hardening；任何 Caddy route edit/reload 都必須另行 fresh check，且不得擴大 Go ownership。
+
 ### Frontend Redesign Intake
 
 `docs/New_UI/Prism Redesign - standalone.html` 是 UI 原型參考，整合規劃在 `docs/FRONTEND-REDESIGN-PLAN.md`：
