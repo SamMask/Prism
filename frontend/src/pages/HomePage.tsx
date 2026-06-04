@@ -175,6 +175,10 @@ export function HomePage() {
         : selectedTagId
           ? `標籤 · ${totalNotes.toLocaleString()} 筆內容`
           : '所有筆記，依更新時間排序'
+  const emptyStateTitle = searchQuery ? '找不到符合的筆記' : '還沒有任何筆記'
+  const emptyStateDescription = searchQuery
+    ? `沒有筆記符合「${searchQuery}」。請調整關鍵字或清除搜尋。`
+    : '點擊上方「新增筆記」按鈕開始創作'
 
   // Render notes grid/list content
   const notesContent = (
@@ -243,11 +247,11 @@ export function HomePage() {
           <div className="w-16 h-16 rounded-full bg-bg-elevated flex items-center justify-center mb-4">
             <span className="text-3xl">📝</span>
           </div>
-          <h3 className="text-lg font-medium text-text-primary mb-2">
-            還沒有任何筆記
+          <h3 className="text-lg font-medium text-text-primary mb-2" data-testid="empty-state-title">
+            {emptyStateTitle}
           </h3>
-          <p className="text-text-secondary">
-            點擊上方「新增筆記」按鈕開始創作
+          <p className="text-text-secondary" data-testid="empty-state-description">
+            {emptyStateDescription}
           </p>
         </div>
       )}

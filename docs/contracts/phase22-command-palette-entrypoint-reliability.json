@@ -1,0 +1,73 @@
+{
+  "phase": "22.1",
+  "name": "Command Palette Entrypoint Reliability",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": false,
+  "plain_language_summary": {
+    "title": "> **白話說明**：",
+    "what_changes": "This step fixes how the Header Command Palette button opens the command menu. The button now calls an explicit open action instead of pretending the user pressed Ctrl+K.",
+    "why": "The old shortcut-proxy path worked, but it made the button depend on global keyboard handling. A direct open action is easier to understand and less fragile.",
+    "user_visible_difference": "Users should not see a feature change: the Header button still opens the palette, Ctrl+K/Cmd+K still toggles it, Escape still closes it, and existing commands still behave the same.",
+    "does_not_change": "This implementation does not change backend APIs, database schema, routes, note data, frontend default API target, Pi/Caddy/service runtime, Go runtime ownership, public exposure, AI/ML features, collections, or server-side UI preference persistence."
+  },
+  "source_gate": "docs/contracts/phase22-product-frontend-backlog-intake.json",
+  "selected_candidate": "command_palette_entrypoint_reliability",
+  "runtime_change_performed": false,
+  "frontend_implementation_performed": true,
+  "backend_api_change_performed": false,
+  "schema_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "go_runtime_change_performed": false,
+  "frontend_default_api_target_change_performed": false,
+  "public_exposure_change_performed": false,
+  "implementation_summary": {
+    "state_owner": "frontend/src/stores/appStore.ts now owns command palette open/close/toggle UI state.",
+    "header_entrypoint": "frontend/src/components/Header.tsx opens the palette through openCommandPalette instead of dispatching a synthetic KeyboardEvent.",
+    "keyboard_shortcut": "frontend/src/components/CommandPalette.tsx keeps Ctrl+K/Cmd+K and Escape behavior, but routes shortcut toggling through the same store action."
+  },
+  "files_touched": [
+    "frontend/src/stores/appStore.ts",
+    "frontend/src/components/Header.tsx",
+    "frontend/src/components/CommandPalette.tsx",
+    "docs/TODO.md",
+    "docs/contracts/phase22-command-palette-entrypoint-reliability.json",
+    "tests/test_phase22_command_palette_entrypoint_reliability.py",
+    "tests/test_phase22_product_frontend_backlog_intake.py"
+  ],
+  "success_criteria": [
+    "Header command palette button opens the palette without dispatching a synthetic KeyboardEvent.",
+    "Ctrl+K / Cmd+K still toggles the palette.",
+    "Escape closes the palette and resets query/active index through the existing close path.",
+    "Palette search, Settings navigation, recent note open, new note action, and theme toggle behavior remain unchanged.",
+    "No backend API, DB schema, frontend default API target, Pi/Caddy/service, Go runtime, public exposure, AI/ML, collections, or server-side preference persistence changes."
+  ],
+  "verification_plan": [
+    "cd frontend && npx tsc --noEmit",
+    "cd frontend && npm run build",
+    "pytest tests/test_phase22_command_palette_entrypoint_reliability.py -v",
+    "pytest tests/test_phase22_product_frontend_backlog_intake.py -v",
+    "pytest tests/ -v",
+    "Browser flow: app loads, Header palette button opens the dialog, command search navigates to Settings, Ctrl+K/Cmd+K opens/toggles, Escape closes, New Note action opens the editor, and console has no relevant app errors."
+  ],
+  "not_changed": [
+    "Backend API",
+    "DB schema or migrations",
+    "Frontend default API target",
+    "Pi deploy or live service reload",
+    "Caddy route expansion or reload",
+    "Go attachment file body scanning",
+    "Go write/file/migration implementation",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "AI/ML, collaboration, realtime, plugin platform, collections schema, or server-side UI preference persistence"
+  ],
+  "allowed_next_step": {
+    "id": "22.2",
+    "title": "Product Frontend Backlog Next Selection Gate",
+    "status": "planned_after_22_1_verification",
+    "scope": "Plan-only selection of the next smallest product/frontend backlog candidate, using browser evidence from current frontend behavior before implementation.",
+    "requires_explicit_user_approval": true
+  }
+}

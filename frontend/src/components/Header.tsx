@@ -28,6 +28,7 @@ export function Header() {
     selectedTagId,
     showArchived,
     totalNotes,
+    openCommandPalette,
   } = useAppStore()
 
   const [inputValue, setInputValue] = useState(searchQuery)
@@ -267,10 +268,10 @@ export function Header() {
           </div>
           )}
 
-          {/* New Note Button */}
+          {/* Command Palette Button */}
           <button
             type="button"
-            onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }))}
+            onClick={openCommandPalette}
             className="hidden items-center gap-2 rounded-md bg-bg-elevated px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary lg:flex"
             data-testid="command-palette-button"
             aria-label="開啟命令面板"

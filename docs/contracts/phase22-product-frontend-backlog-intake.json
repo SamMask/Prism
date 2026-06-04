@@ -1,0 +1,131 @@
+{
+  "phase": "22.0",
+  "name": "Product Frontend Backlog Intake Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "source_gate": "docs/contracts/phase21-post-push-product-frontend-selection.json",
+  "selected_branch": "product_frontend_backlog",
+  "runtime_change_performed": false,
+  "frontend_implementation_performed": false,
+  "backend_api_change_performed": false,
+  "schema_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "go_runtime_change_performed": false,
+  "frontend_default_api_target_change_performed": false,
+  "public_exposure_change_performed": false,
+  "audit_sources": [
+    "docs/TODO.md Phase 18 completed frontend workflow entries",
+    "docs/FRONTEND-REDESIGN-PLAN.md",
+    "frontend/src/components/Header.tsx",
+    "frontend/src/components/CommandPalette.tsx",
+    "frontend/src/stores/appStore.ts",
+    "frontend/src/pages/HomePage.tsx",
+    "frontend/src/pages/PromptBuilder.tsx",
+    "frontend/src/pages/SettingsPage.tsx"
+  ],
+  "audit_summary": {
+    "home_search_filter_navigation": "Phase 18.1 already completed shell refresh, view modes, command palette MVP, and filter strip. Current Home flow preserves local view mode, route-aware filters, manual/auto load-more, reading/editor modals, and custom sort DnD.",
+    "reading_editor_workflow": "Phase 18.2 already completed reading view, editor modal/layout refinement, Preview Editing regression lock, and attachment/image UX pass. Existing hooks remain the intended extension point.",
+    "prompt_builder_settings": "Phase 18.3 already completed Prompt Builder density pass and Settings tab re-layout. Current pages keep existing contracts and tabs without new backend APIs.",
+    "not_reopened": "Do not reopen Phase 18 as a broad redesign. Promote only a single small follow-up with a clear browser flow."
+  },
+  "candidate_matrix": [
+    {
+      "id": "command_palette_entrypoint_reliability",
+      "area": "Header / CommandPalette",
+      "finding": "The Header command palette button currently dispatches a synthetic Ctrl+K KeyboardEvent to the window. This works as a shortcut proxy but makes the palette open state indirectly owned by keyboard handling instead of an explicit UI action.",
+      "why_small": "A narrow frontend-only change can move palette open/toggle ownership into explicit state or a direct callback without changing routes, APIs, storage, schema, notes data, or command behavior.",
+      "risk": "narrow",
+      "recommended": true
+    },
+    {
+      "id": "settings_tab_deep_linking",
+      "area": "Settings",
+      "finding": "Settings tabs are local UI state only. Deep links could improve repeat navigation but would introduce URL-state behavior that is broader than the smallest current follow-up.",
+      "risk": "moderate",
+      "recommended": false
+    },
+    {
+      "id": "prompt_builder_mobile_action_bar_polish",
+      "area": "Prompt Builder",
+      "finding": "Prompt Builder already has density/layout work. Further action-bar polish should follow visual/browser evidence rather than be selected by default.",
+      "risk": "moderate",
+      "recommended": false
+    },
+    {
+      "id": "home_empty_state_context_actions",
+      "area": "Home",
+      "finding": "Home empty state could offer context-aware actions, but it touches content copy and workflow choices beyond the immediate entrypoint reliability issue.",
+      "risk": "moderate",
+      "recommended": false
+    }
+  ],
+  "selected_candidate": {
+    "id": "command_palette_entrypoint_reliability",
+    "title": "Command Palette Entrypoint Reliability",
+    "phase": "22.1",
+    "scope": "Frontend-only implementation to replace the Header synthetic Ctrl+K event dispatch with an explicit command palette open/toggle path while preserving the existing Ctrl+K keyboard shortcut.",
+    "success_criteria": [
+      "Header command palette button opens the palette without dispatching a synthetic KeyboardEvent.",
+      "Ctrl+K / Cmd+K still toggles the palette.",
+      "Palette search, Escape close, navigation commands, recent note open, new note action, and theme toggle behavior remain unchanged.",
+      "No backend API, DB schema, frontend default API target, Pi/Caddy/service, Go runtime, public exposure, AI/ML, collections, or server-side preference persistence changes."
+    ],
+    "files_likely_touched": [
+      "frontend/src/components/Header.tsx",
+      "frontend/src/components/CommandPalette.tsx",
+      "frontend/src/components/Layout.tsx",
+      "frontend/src/stores/appStore.ts"
+    ],
+    "verification_plan": [
+      "cd frontend && npx tsc --noEmit",
+      "cd frontend && npm run build",
+      "pytest tests/ -v",
+      "Browser flow: click Header command palette button, type a query, run Settings navigation, reopen with Ctrl+K/Cmd+K, close with Escape, run New Note action, verify no console errors."
+    ],
+    "rollback_plan": "Revert only the explicit palette open/toggle state changes and restore the prior keyboard listener behavior if browser flow or typecheck fails.",
+    "stop_conditions": [
+      "The fix requires a new dependency.",
+      "The fix requires backend API, schema, route, persistence, or runtime changes.",
+      "The browser flow loses Ctrl+K/Cmd+K behavior or existing command actions.",
+      "The change expands into broader navigation, Settings, Prompt Builder, or redesign work."
+    ]
+  },
+  "not_authorized_by_22_0": [
+    "Frontend implementation",
+    "New backend API or DB schema",
+    "Frontend default API target change",
+    "Pi deploy or live service reload",
+    "Caddy route expansion or reload",
+    "Go attachment file body scanning",
+    "Go write/file/migration implementation",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "AI/ML, collaboration, realtime, plugin platform, collections schema, or server-side UI preference persistence"
+  ],
+  "verification_required_for_22_0": [
+    "tests/test_phase22_product_frontend_backlog_intake.py locks the audit, selected candidate, and forbidden implementation scope",
+    "tests/test_phase21_post_push_product_frontend_selection.py continues to lock the Phase 21 branch decision",
+    "Full pytest suite remains green"
+  ],
+  "allowed_next_step": {
+    "id": "22.1",
+    "title": "Command Palette Entrypoint Reliability",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Implement only the selected frontend-only command palette entrypoint reliability fix, then verify with typecheck, build, pytest, and browser flow.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Frontend implementation",
+      "New backend API or DB schema",
+      "Frontend default API target change",
+      "Pi deploy or live service reload",
+      "Caddy route expansion or reload",
+      "Go attachment file body scanning",
+      "Go write/file/migration implementation",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

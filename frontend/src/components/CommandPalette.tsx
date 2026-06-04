@@ -53,14 +53,16 @@ export function CommandPalette() {
     setSelectedTag,
     setShowArchived,
     showArchived,
+    isCommandPaletteOpen: isOpen,
+    closeCommandPalette,
+    toggleCommandPalette,
   } = useAppStore()
 
-  const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
 
   const closePalette = () => {
-    setIsOpen(false)
+    closeCommandPalette()
     setQuery('')
     setActiveIndex(0)
   }
@@ -225,7 +227,7 @@ export function CommandPalette() {
       const isPaletteShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'
       if (isPaletteShortcut) {
         event.preventDefault()
-        setIsOpen((value) => !value)
+        toggleCommandPalette()
         return
       }
 
@@ -237,7 +239,7 @@ export function CommandPalette() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isOpen])
+  }, [isOpen, toggleCommandPalette])
 
   useEffect(() => {
     if (!isOpen) return

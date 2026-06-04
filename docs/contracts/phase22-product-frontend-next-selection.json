@@ -1,0 +1,123 @@
+{
+  "phase": "22.2",
+  "name": "Product Frontend Backlog Next Selection Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "risk_level": "P2 low-risk polish",
+  "plain_language_summary": {
+    "title": "> **白話說明**：",
+    "what_changes": "This step only decides the next small frontend task. It does not implement UI changes.",
+    "why": "After the command palette entrypoint fix, the backlog needs a fresh smallest-next-item decision instead of reopening a broad redesign.",
+    "user_visible_difference": "Users will not see a product difference from 22.2 itself because this is a planning and selection gate.",
+    "does_not_change": "This step does not change UI code, backend APIs, database schema, routes, note data, frontend default API target, Pi/Caddy/service runtime, Go runtime ownership, public exposure, AI/ML features, collections, or server-side UI preference persistence."
+  },
+  "source_gate": "docs/contracts/phase22-command-palette-entrypoint-reliability.json",
+  "selected_branch": "product_frontend_backlog",
+  "runtime_change_performed": false,
+  "frontend_implementation_performed": false,
+  "backend_api_change_performed": false,
+  "schema_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "go_runtime_change_performed": false,
+  "frontend_default_api_target_change_performed": false,
+  "public_exposure_change_performed": false,
+  "browser_evidence": {
+    "browser_plugin": "iab unavailable; used local Chrome plus Playwright fallback for read-only observation",
+    "settings_tab_deep_linking": {
+      "url_after_deploy_tab_click": "http://127.0.0.1:5173/settings",
+      "deploy_panel_visible_after_reload": false,
+      "appearance_panel_visible_after_reload": true,
+      "finding": "Settings tabs are local-only state; the URL does not preserve the selected tab and reload returns to Appearance."
+    },
+    "prompt_builder_mobile_action_bar": {
+      "viewport": "390x844",
+      "action_bar_initially_in_viewport": false,
+      "finding": "The action bar exists and is usable after scrolling, but mobile layout polish would require visual iteration beyond the smallest next item."
+    },
+    "home_search_empty_state": {
+      "search_query": "zzzz-no-result-22-2",
+      "search_result_title_visible": true,
+      "generic_no_notes_text_visible": true,
+      "finding": "A no-result search is titled as search results but still says there are no notes, which reads like an empty library rather than an empty search result."
+    }
+  },
+  "candidate_matrix": [
+    {
+      "id": "home_search_empty_state_context_copy",
+      "area": "Home empty state",
+      "finding": "When a search has zero matches, Home shows the generic no-notes message instead of a search-specific no-results message.",
+      "why_small": "A narrow frontend-only copy/state branch can make the empty state match search/filter/archive context without new APIs, storage, schema, or routing.",
+      "risk": "narrow",
+      "recommended": true
+    },
+    {
+      "id": "settings_tab_deep_linking",
+      "area": "Settings",
+      "finding": "Settings tabs do not update the URL and reload returns to Appearance.",
+      "why_not_selected": "Useful, but it introduces URL-state parsing and navigation behavior, which is broader than a copy-only Home empty state fix.",
+      "risk": "moderate",
+      "recommended": false
+    },
+    {
+      "id": "prompt_builder_mobile_action_bar_polish",
+      "area": "Prompt Builder",
+      "finding": "At a 390x844 viewport, the action bar is below the first viewport and needs scrolling.",
+      "why_not_selected": "This is visual/layout work that should use a dedicated visual iteration loop; it is broader than the next smallest copy/context fix.",
+      "risk": "moderate",
+      "recommended": false
+    }
+  ],
+  "selected_candidate": {
+    "id": "home_search_empty_state_context_copy",
+    "title": "Home Search Empty State Context Copy",
+    "phase": "22.3",
+    "scope": "Frontend-only implementation to make Home empty-state text match current search/filter/archive context, starting with search no-results copy.",
+    "success_criteria": [
+      "Searching for a term with zero matches no longer shows the generic 'no notes yet' message.",
+      "Default empty library state still says the library has no notes.",
+      "Filter/archive empty states can keep existing behavior unless the implementation can clarify them without broader workflow changes.",
+      "No backend API, DB schema, storage, routing, frontend default API target, Pi/Caddy/service, Go runtime, public exposure, AI/ML, collections, or server-side preference persistence changes."
+    ],
+    "files_likely_touched": [
+      "frontend/src/pages/HomePage.tsx",
+      "docs/TODO.md",
+      "tests/test_phase22_home_search_empty_state_context_copy.py"
+    ],
+    "verification_plan": [
+      "cd frontend && npx tsc --noEmit",
+      "cd frontend && npm run build",
+      "pytest tests/test_phase22_home_search_empty_state_context_copy.py -v",
+      "pytest tests/test_phase22_product_frontend_next_selection.py -v",
+      "pytest tests/ -v",
+      "Browser flow: search for a guaranteed no-match term and verify the empty state explains no search matches instead of saying the library has no notes."
+    ],
+    "rollback_plan": "Revert only HomePage empty-state copy/context changes if typecheck, build, tests, or browser flow fail.",
+    "stop_conditions": [
+      "The fix requires a new backend endpoint, schema change, storage, route change, or data migration.",
+      "The fix turns into Settings, Prompt Builder, redesign, or mobile layout work.",
+      "The fix adds new actions that mutate data or change note/filter state beyond clearing existing UI context.",
+      "The empty library state becomes less clear."
+    ]
+  },
+  "not_authorized_by_22_2": [
+    "Frontend implementation",
+    "New backend API or DB schema",
+    "Frontend default API target change",
+    "Pi deploy or live service reload",
+    "Caddy route expansion or reload",
+    "Go attachment file body scanning",
+    "Go write/file/migration implementation",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "AI/ML, collaboration, realtime, plugin platform, collections schema, or server-side UI preference persistence"
+  ],
+  "allowed_next_step": {
+    "id": "22.3",
+    "title": "Home Search Empty State Context Copy",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Implement only the selected frontend-only Home empty-state copy/context fix, then verify with typecheck, build, pytest, and browser flow.",
+    "requires_explicit_user_approval": true
+  }
+}

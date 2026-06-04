@@ -29,6 +29,7 @@ interface AppState {
   isReadingOpen: boolean
   readingNote: Note | null
   isDeleting: boolean
+  isCommandPaletteOpen: boolean
 
   // Filters
   searchQuery: string
@@ -50,6 +51,9 @@ interface AppState {
   closeEditor: () => void
   openReading: (note: Note) => void
   closeReading: () => void
+  openCommandPalette: () => void
+  closeCommandPalette: () => void
+  toggleCommandPalette: () => void
   setSearchQuery: (query: string) => void
   setSelectedCategory: (id: number | null) => void
   setSelectedTag: (id: number | null) => void
@@ -78,6 +82,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isReadingOpen: false,
   readingNote: null,
   isDeleting: false,
+  isCommandPaletteOpen: false,
 
   searchQuery: '',
   selectedCategoryId: null,
@@ -174,6 +179,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   openReading: (note) => set({ isReadingOpen: true, readingNote: note }),
 
   closeReading: () => set({ isReadingOpen: false, readingNote: null }),
+
+  openCommandPalette: () => set({ isCommandPaletteOpen: true }),
+
+  closeCommandPalette: () => set({ isCommandPaletteOpen: false }),
+
+  toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
 
   setSearchQuery: (query) => {
     set({ searchQuery: query, currentPage: 1 })

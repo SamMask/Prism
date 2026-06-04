@@ -82,6 +82,12 @@ Python：    python (venv)
 
 Anti-bloat 不等於最短程式碼；不得犧牲 correctness、tests、runtime safety、schema integrity 或 contract boundaries。必要的 validation、error handling 與 tests 不是 bloat。目標是減少沒有理由的 moving parts。
 
+> **白話說明**：
+> 這一段是在修「點 Header 上的 Command Palette 按鈕時，開啟方式太繞」的問題。
+> 現在 Header 可能是用「假裝使用者按下 Ctrl+K」的方式去打開 Command Palette；這能動，但不夠乾淨，也容易讓之後維護的人搞不清楚到底誰負責開關狀態。
+> 22.1 要改成 Header 直接呼叫明確的 open/toggle 方法；鍵盤快捷鍵 Ctrl+K / Cmd+K 仍然保留。
+> 修完後，使用者看到的功能不應該改變：點按鈕能開、快捷鍵能開、Esc 能關、搜尋與導覽都照舊。這是內部可靠性修正，不是新功能。
+
 ## 禁止事項
 
 - 不引入 AI/ML 依賴（numpy, sentence-transformers, torch 等）— 已拔除

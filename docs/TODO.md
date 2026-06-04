@@ -231,7 +231,7 @@
 
 ---
 
-## 🧭 Phase 21: Delivery and Queue Selection — ✅ Local Commit/Push Completed
+## 🧭 Phase 21: Delivery and Queue Selection — ✅ Closed to Product/Frontend Backlog
 
 > **來源**: Phase 20 `closed_stabilized`、未部署/未推送的本機 Phase 20.2-20.4 changes、`DEPLOY-PI.md`、GitHub publish hygiene。
 > **目標**: 在 Phase 20 關閉後，先選下一個分支：local commit/push、Pi delivery planning、file-read parity assessment，或回到 product/frontend backlog；不得把 delivery、deploy、file-read implementation 混成同一步。
@@ -255,11 +255,71 @@
 - [x] **21.2.2** Verification before commit — 依 21.1 contract 跑 `git diff --check`、targeted pytest、Phase 20 closure pytest、full `pytest tests/ -v`；失敗即停止。
 - [x] **21.2.3** Lore commit / push boundary — 依 Lore Commit Protocol stage/commit/push Phase 21 local delivery payload；未部署 Pi、未 reload Caddy/service、未實作 Go file-read/body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure。
 
-### ⛔ 21.3 Post-push Delivery Decision Gate — Blocked Pending Explicit Approval
+### ✅ 21.3 Post-push Delivery Decision Gate
 
-- [ ] **21.3.1** Post-push truth selection — 另行授權後，選下一個分支：Pi delivery planning、file-read parity assessment、product/frontend backlog，或 close Phase 21。
-- [ ] **21.3.2** Runtime boundary — 若選 Pi delivery，需先做 live preflight、rollback plan、artifact/privacy sweep；未授權前不得 deploy、reload Caddy/service 或改 public exposure。
-- [ ] **21.3.3** Implementation boundary — 21.3 不預設授權 Go file-read/body scan、Go writes/files/migrations、frontend default change、Python removal 或 public exposure。
+- [x] **21.3.1** Post-push truth selection — 使用者明確授權後，選擇下一分支為 `product/frontend backlog`；新增 `docs/contracts/phase21-post-push-product-frontend-selection.json`，不進 Pi delivery planning、file-read parity assessment 或 Go ownership expansion。
+- [x] **21.3.2** Runtime boundary — 21.3 未做 Pi deploy、未 reload Caddy/service、未改 public exposure；repo-local ignored `.omx/` runtime/cache 目錄已依使用者要求刪除一次，未動全域 Codex / oh-my-codex 安裝，且無 tracked git effect；後續工具呼叫顯示 active native hooks 仍可能重建 ignored `.omx/` state，若要 durable removal 需另行停用/解除全域 hook。
+- [x] **21.3.3** Implementation boundary — 21.3 未實作 Go file-read/body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未新增 backend API/schema、未做 frontend implementation。新增 `tests/test_phase21_post_push_product_frontend_selection.py`。
+
+---
+
+## 🎛️ Phase 22: Product Frontend Backlog Intake — 🚦 Active
+
+> **來源**: Phase 21.3 `product_frontend_backlog` branch selection、`docs/FRONTEND-REDESIGN-PLAN.md`、`docs/New_UI/Prism Redesign - standalone.html`、現有 React/Vite frontend。
+> **目標**: 先 read-only 盤點 product/frontend backlog candidate，再只 promote 一個最小、workflow-safe、可驗證的 frontend/product item；不得把 backlog intake 直接變成大改版。
+> **原則**: 保留現有 API/schema、React/Vite/Zustand/Tailwind stack、Preview Editing UX 與本地優先定位；不新增 AI/ML、協作、realtime、plugin platform、collections schema、server-side UI preference persistence 或 Go/runtime scope。
+
+### ✅ 22.0 Product Frontend Backlog Intake Gate
+
+- [x] **22.0.1** Read-only backlog audit — 使用者明確授權後，盤點 Home/search/filter/navigation、reading/editor workflow、Prompt Builder、Settings 與 frontend docs/prototype 差距；Phase 18.1-18.3 已完成大部分 redesign，不重開大改版。
+- [x] **22.0.2** Candidate selection — 新增 `docs/contracts/phase22-product-frontend-backlog-intake.json`，只選一個 smallest workflow-safe item：`command_palette_entrypoint_reliability`。現況 finding：Header command palette button 以 synthetic `KeyboardEvent('keydown', { ctrlKey: true, key: 'k' })` 間接開啟 palette；22.1 可改為 explicit open/toggle path，同時保留 Ctrl+K / Cmd+K。
+- [x] **22.0.3** Implementation boundary — 22.0 未做 frontend implementation、新 backend API/schema、frontend default API target change、Pi deploy、Caddy/service reload、Go file-read/body scan、Go writes/files/migrations、Python removal 或 public exposure。新增 `tests/test_phase22_product_frontend_backlog_intake.py`。
+
+### ✅ 22.1 Command Palette Entrypoint Reliability
+
+> **白話說明**：
+> 這一步會真的改 Command Palette 的開啟流程：Header 上的命令面板按鈕不再用「假裝按下 Ctrl+K」的方式開啟，而是直接呼叫一個明確的開啟動作。
+> 要修這個，是因為舊做法雖然能用，但把滑鼠按鈕綁到鍵盤事件上，之後維護時容易搞不清楚到底誰負責開關面板。
+> 使用者應該不會感覺到功能差異：點 Header 按鈕仍會開啟面板，Ctrl+K / Cmd+K 仍能開關，Esc 仍能關閉，搜尋、去設定頁、開最近筆記、新增筆記、切換明暗主題都照舊。
+> 這一步不改後端 API、資料庫、路由、筆記資料、Pi/Caddy/service、Go runtime、公開暴露範圍，也不新增 AI、collections 或 server-side UI preference。
+
+- [x] **22.1.1** Explicit palette open path — 使用者明確授權後，僅修 Header / CommandPalette 的開啟狀態 ownership（也就是「誰負責開關命令面板」），移除 Header synthetic keyboard event dispatch（也就是「假裝送出鍵盤快捷鍵」）；保留既有 Ctrl+K / Cmd+K keyboard shortcut。
+- [x] **22.1.2** Behavior preservation — palette search、Esc close、Settings navigation、recent note open、new note action、theme toggle 均維持現有行為；未新增 backend/API/schema/storage。
+- [x] **22.1.3** Verification — 新增 `docs/contracts/phase22-command-palette-entrypoint-reliability.json` 與 `tests/test_phase22_command_palette_entrypoint_reliability.py`；需跑 `cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v`，並做 browser flow：點 Header palette button、搜尋/導覽 Settings、Ctrl+K/Cmd+K 開關、Esc 關閉、New Note action、console clean。
+
+### ✅ 22.2 Product Frontend Backlog Next Selection Gate
+
+> **白話說明**：
+> 這一步只是決定/盤點/規劃，不會實作功能。
+> 這次是在 22.1 修完後，重新看目前前端還有哪些小而明確的改善點，最後選出下一個候選：搜尋沒有結果時，Home 不應該還說「還沒有任何筆記」。
+> 使用者在 22.2 本身不會感覺到產品差異，因為這一步只產出下一個 frontend backlog gate 的選擇與驗證計畫。
+> 這一步不改 UI 程式、不改後端 API、不改資料庫、不改 Pi/Caddy/service、不改 Go runtime，也不擴大公開暴露。
+
+- [x] **22.2.1** Next candidate sweep — 使用者明確授權後，重新盤點 Settings deep linking、Prompt Builder mobile action bar、Home empty state context actions 與 browser-evidenced frontend follow-up；新增 `docs/contracts/phase22-product-frontend-next-selection.json`，只選一個 smallest workflow-safe item：`home_search_empty_state_context_copy`。
+- [x] **22.2.2** Browser evidence and rejection log — in-app Browser 回報 unavailable，改用本機 Chrome + Playwright fallback 做 read-only evidence：Settings tab reload 會回外觀、Prompt Builder mobile action bar 首屏不可見、Home 搜尋無結果仍顯示 generic no-notes text；Settings / Prompt Builder 因 URL-state / visual layout 範圍較大，未選為 22.3。
+- [x] **22.2.3** Plan-only boundary — 22.2 未做 frontend implementation、新 backend API/schema、frontend default API target change、Pi deploy、Caddy/service reload、Go file-read/body scan、Go writes/files/migrations、Python removal 或 public exposure。新增 `tests/test_phase22_product_frontend_next_selection.py`。
+
+### ✅ 22.3 Home Search Empty State Context Copy
+
+> **白話說明**：
+> 這一步會真的改 Home 搜尋沒有結果時看到的文字：現在頁面標題已經是「搜尋結果」，但空狀態還說「還沒有任何筆記」，容易讓人以為整個資料庫是空的。
+> 要修這個，是因為搜尋沒有命中和資料庫真的沒有筆記是兩種不同情境，畫面文字應該說清楚。
+> 使用者會感覺到的差異是：搜尋沒有結果時會看到更貼近情境的說明；正常有結果、真的沒有任何筆記、閱讀/編輯/篩選/API 都不應改變。
+> 這一步不改後端 API、資料庫、路由、筆記資料、Pi/Caddy/service、Go runtime、公開暴露範圍，也不新增 AI、collections 或 server-side UI preference。
+> Risk level: `P2 low-risk polish`。這是純 UI 文案 / 低風險整理，所以直接作為同一 task 的 small patch，不新增 22.3 contract、不再拆多層 approval gate。
+
+- [x] **22.3.1** Search no-result copy — 使用者明確授權後，只在 Home empty state 依 `searchQuery` 顯示搜尋無結果文案，不再把搜尋無命中寫成「還沒有任何筆記」。
+- [x] **22.3.2** Preserve default empty library state — 真正沒有任何筆記且沒有搜尋/篩選時，仍保留目前「還沒有任何筆記」語意。
+- [x] **22.3.3** Verification — 新增 `tests/test_phase22_home_search_empty_state_context_copy.py`；需跑 `cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v`，並做 browser flow：輸入 guaranteed no-match 搜尋詞後，空狀態顯示 no-result context，不新增 console error。
+
+### 📌 Product Frontend Backlog Parking Lot — Plan When Needed
+
+> **白話說明**：
+> P2 不再開下一個儀式化 phase。22.3 後若要繼續前端小修，直接從下面候選挑一個小 patch；只有 workflow-sensitive 的改動才最多拆成 plan gate + implementation gate。
+> 目前保留兩個候選：Settings 分頁網址保存、Prompt Builder 手機動作列位置。它們都比 22.3 稍大，之後要做時先重新看 browser evidence。
+
+- [ ] **Settings tab deep linking** — `P1 workflow-sensitive`；讓 Settings tab 可被 URL 保存 / reload 回同一 tab，需避免破壞既有 tab 操作。
+- [ ] **Prompt Builder mobile action bar polish** — `P1 workflow-sensitive`；手機寬度下調整 action bar 可見性，需 visual/browser iteration。
 
 ### ⏸️ Phase 19.0 不處理
 
@@ -345,6 +405,11 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **frontend-product** | 2026-06-05 | Phase 22.3 home search empty state context copy — Risk level `P2 low-risk polish`。依新規劃粒度規則，直接做 small patch：Home 搜尋無結果時改顯示「找不到符合的筆記」與搜尋詞說明，保留真正空資料庫時的「還沒有任何筆記」。不新增 22.3 contract、不開下一個儀式化 phase；僅補 targeted source regression test、frontend typecheck/build、full pytest 與 browser flow。未新增 backend API/schema/storage、未改 Pi/Caddy/service、Go runtime 或 public exposure。 |
+| **frontend-product** | 2026-06-05 | Phase 22.2 product/frontend next selection gate — 在明確授權後完成 plan-only 下一候選選擇；in-app Browser unavailable，改用本機 Chrome + Playwright fallback 觀察 Settings tab deep link、Prompt Builder mobile action bar、Home search empty state。選定 `home_search_empty_state_context_copy` 作為 22.3，因搜尋無結果時目前仍顯示 generic「還沒有任何筆記」文案；Settings deep link 與 Prompt Builder mobile polish 因 URL-state / visual layout 範圍較大暫不選。22.2 未做 frontend implementation、新 backend API/schema、Pi deploy、Caddy/service reload、Go file-read/body scan、Go writes/files/migrations、Python removal 或 public exposure。 |
+| **frontend-product** | 2026-06-05 | Phase 22.1 command palette entrypoint reliability — 在明確授權後將 Header 命令面板按鈕改為直接呼叫 `openCommandPalette`，不再用 synthetic keyboard event 假裝按下 Ctrl+K；CommandPalette 仍保留 Ctrl+K / Cmd+K toggle、Esc close、搜尋、Settings navigation、recent note、new note 與 theme toggle。新增 22.1 contract / pytest lock，並依新要求在 22.1 / 22.2 區塊補 `> **白話說明**：`。未新增 backend API/schema/storage、未改 frontend default API target、未部署 Pi、未 reload Caddy/service、未擴 Go runtime 或 public exposure。 |
+| **frontend-product** | 2026-06-05 | Phase 22.0 product/frontend backlog intake — 在明確授權後完成 read-only audit：Phase 18.1 shell/filter/command palette、18.2 reading/editor、18.3 Prompt Builder/Settings 已完成，不重開大改版；只選一個最小候選 `command_palette_entrypoint_reliability` 作為 22.1 gate。22.0 未做 frontend implementation、新 backend API/schema、frontend default API target change、Pi deploy、Caddy/service reload、Go file-read/body scan、Go writes/files/migrations、Python removal 或 public exposure。 |
+| **frontend-product** | 2026-06-05 | Phase 21.3 post-push delivery decision gate — 在明確授權後選擇下一分支為 `product/frontend backlog`，新增 21.3 selection contract / pytest lock，將 22.0 設為 product/frontend backlog intake gate。21.3 未進 Pi delivery planning、未評估/實作 Go file-read parity、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure；repo-local ignored `.omx/` runtime/cache 目錄已依使用者要求刪除一次，未動全域 Codex / oh-my-codex 安裝且無 tracked git effect；active native hooks 後續仍可能重建 ignored `.omx/` state，durable removal 需另行停用/解除全域 hook。 |
 | **backend-go-runtime** | 2026-06-05 | Phase 21.2 explicit local commit and push approval gate — 在明確授權後重跑 pre-stage dirty tree / privacy / runtime artifact sweep，僅 stage Phase 21 docs/test delivery payload，依 Lore Commit Protocol commit/push。驗證要求包含 `git diff --check`、21.1 targeted pytest、Phase 20 closure pytest、full `pytest tests/ -v`；未部署 Pi、未 reload Caddy/service、未實作 Go attachment body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure；21.3 為需另行授權的 post-push delivery decision gate。 |
 | **backend-go-runtime** | 2026-06-05 | Phase 21.1 local commit and push readiness gate — 在明確授權後選定下一分支為 `local_commit_push`，但 commit/push 仍保留給 21.2 explicit approval gate；新增 readiness contract / pytest lock，固定 dirty tree、privacy artifact、runtime truth、proposed include/exclude、tests-before-commit 與 stop conditions。未做 git commit/push、未部署 Pi、未 reload Caddy/service、未實作 Go attachment body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure。 |
 | **backend-go-runtime** | 2026-06-05 | Phase 20.4 post-polish stabilization and candidate closure — 在明確授權後完成 plan-only stabilization review：Phase 20 關閉為 `closed_stabilized`；20.3 已補齊 DB-only attachment metadata read parity，剩餘文字附件 body 搜尋仍 Python-owned，若未來要評估 Go file-read parity，必須另開 file-read safety / data-dir / path traversal / performance / rollback contract。未實作 Go attachment body scan、Go writes/files/migrations、未擴 Caddy route、未關閉 sidecar SQLite `query_only`、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；21.0 為需另行授權的 delivery and queue selection gate。 |

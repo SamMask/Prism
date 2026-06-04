@@ -1,0 +1,94 @@
+{
+  "phase": "21.3",
+  "name": "Post-push Product Frontend Backlog Selection Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "source_gate": "Phase 21.2 explicit local commit and push approval gate",
+  "selected_branch": "product_frontend_backlog",
+  "runtime_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "frontend_default_change_performed": false,
+  "go_file_read_body_scan_performed": false,
+  "go_write_file_migration_performed": false,
+  "public_exposure_change_performed": false,
+  "repo_local_omx_removed": true,
+  "decision": "After the Phase 21 local delivery commit/push completed, select product/frontend backlog as the next branch. Do not enter Pi delivery planning, Go file-read parity assessment, or Go ownership expansion from this gate.",
+  "post_push_truth": {
+    "git_status_short_branch_before_21_3": "## main...origin/main",
+    "head_origin_divergence_before_21_3": "0 0",
+    "phase21_delivery_commit": "7255de7 Record Phase 21 local delivery gate",
+    "live_pi_verified": false,
+    "live_pi_verification_reason": "21.3 selects product/frontend backlog and does not authorize Pi deploy, service reload, Caddy reload, or live runtime mutation.",
+    "repo_local_omx_removal": {
+      "scope": "repo-local ignored .omx/ runtime/cache directory only",
+      "global_codex_or_oh_my_codex_install_touched": false,
+      "tracked_git_effect": "none",
+      "runtime_truth": "The repo-local .omx/ directory was removed once after path verification, but active Codex/OMX native hooks may recreate ignored .omx/ state during subsequent tool calls. Durable removal requires disabling or uninstalling the global hook separately."
+    }
+  },
+  "not_selected": [
+    {
+      "id": "pi_delivery_planning",
+      "reason": "Would require a separate live preflight, rollback plan, privacy/artifact sweep, and deployment authorization."
+    },
+    {
+      "id": "go_file_read_parity_assessment",
+      "reason": "Text attachment body search remains Python-owned and needs a separate file-read safety/data-dir/path traversal/performance/rollback contract before assessment or implementation."
+    },
+    {
+      "id": "go_write_file_migration_expansion",
+      "reason": "Phase 20 closed without expanding Go beyond the hardened read-only DB surface."
+    }
+  ],
+  "product_frontend_intake": {
+    "source_docs": [
+      "docs/FRONTEND-REDESIGN-PLAN.md",
+      "docs/New_UI/Prism Redesign - standalone.html",
+      "docs/TODO.md frontend/product backlog sections",
+      "Prism_Go_模組逐步重構計劃報告.md"
+    ],
+    "selection_rule": "Start with a read-only product/frontend backlog audit, then promote exactly one smallest workflow-safe item. Prefer existing React/Vite/Zustand/Tailwind patterns and existing API contracts.",
+    "allowed_assessment_scope": [
+      "Current frontend route and workflow inventory",
+      "Home/search/filter/navigation usability gaps",
+      "Reading/editor workflow gaps that preserve existing Preview Editing UX",
+      "Prompt Builder and Settings layout gaps that only reorganize existing features",
+      "Build/typecheck/browser-flow verification planning"
+    ],
+    "not_allowed_by_21_3": [
+      "Frontend default API target change",
+      "New backend API or schema implementation",
+      "Server-side UI preference persistence",
+      "AI/ML, collaboration, realtime, plugin platform, or collections schema",
+      "Pi deploy or live service reload",
+      "Go file-read/body scan or Go write/file/migration implementation",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  },
+  "verification_required_for_21_3": [
+    "tests/test_phase21_post_push_product_frontend_selection.py locks the branch selection and forbidden runtime scope",
+    "tests/test_phase21_local_commit_push_readiness.py continues to lock local delivery boundaries",
+    "Full pytest suite remains green"
+  ],
+  "allowed_next_step": {
+    "id": "22.0",
+    "title": "Product Frontend Backlog Intake Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only read-only audit of product/frontend backlog candidates, followed by selection of one smallest workflow-safe frontend/product item. This does not authorize implementation until the selected item is explicitly approved.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Frontend implementation",
+      "New backend API or DB schema",
+      "Frontend default API target change",
+      "Pi deploy or live service reload",
+      "Caddy route expansion or reload",
+      "Go attachment file body scanning",
+      "Go write/file/migration implementation",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}
