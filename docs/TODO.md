@@ -231,17 +231,35 @@
 
 ---
 
-## 🧭 Phase 21: Delivery and Queue Selection — ⛔ Blocked Pending Explicit Approval
+## 🧭 Phase 21: Delivery and Queue Selection — ✅ Local Commit/Push Completed
 
 > **來源**: Phase 20 `closed_stabilized`、未部署/未推送的本機 Phase 20.2-20.4 changes、`DEPLOY-PI.md`、GitHub publish hygiene。
 > **目標**: 在 Phase 20 關閉後，先選下一個分支：local commit/push、Pi delivery planning、file-read parity assessment，或回到 product/frontend backlog；不得把 delivery、deploy、file-read implementation 混成同一步。
 > **原則**: 未另行授權前，不做 git commit/push、不部署 Pi、不 reload Caddy/service、不新增 Go file-read/body scan、不擴 Go writes/files/migrations、不改 frontend default、不移除 Python、不擴大 public exposure。
 
-### ⛔ 21.0 Delivery and Queue Selection Gate — Blocked Pending Explicit Approval
+### ✅ 21.0 Delivery and Queue Selection Gate
 
-- [ ] **21.0.1** Branch selection — 另行授權後，才可 plan-only 選擇下一個分支：commit/push、Pi delivery plan、file-read parity assessment、或回到 product/frontend backlog。
-- [ ] **21.0.2** Delivery boundary — 若選 commit/push 或 Pi delivery，必須先做 dirty tree / privacy / runtime truth sweep；Pi delivery 需另行 live preflight 與 rollback plan。
-- [ ] **21.0.3** No implementation by default — 21.0 本身不授權 git commit/push、Pi deploy、Caddy/service reload、Go attachment body scan、Go writes/files/migrations、frontend default change、Python removal 或 public exposure。
+- [x] **21.0.1** Branch selection — 使用者明確要求 plan-only delivery sweep 後，建議下一分支選 `local commit/push`，但若 dirty tree / privacy / runtime truth sweep 有 blocker 則停止。
+- [x] **21.0.2** Delivery boundary — 已完成 dirty tree / privacy / runtime truth sweep：`main` 與 `origin/main` 同步、pre-21.1 無 tracked diff / non-ignored untracked；`.omx/`、`knowledge.db`、`app.log`、uploads、attachments、build 等為 ignored local artifacts。Pi / Caddy / systemd live state 未驗證且未宣稱更新。
+- [x] **21.0.3** No implementation by default — 21.0 未授權也未做 git commit/push、Pi deploy、Caddy/service reload、Go attachment body scan、Go writes/files/migrations、frontend default change、Python removal 或 public exposure。
+
+### ✅ 21.1 Local Commit and Push Readiness Gate
+
+- [x] **21.1.1** Recommended branch lock — 使用者明確授權後，新增 `docs/contracts/phase21-local-commit-push-readiness.json`，將下一分支鎖為 `local_commit_push`，但 commit/push 仍需 21.2 另行明確授權。
+- [x] **21.1.2** Commit scope and exclusions — 21.1 proposed commit 僅包含 `docs/contracts/phase21-local-commit-push-readiness.json`、`tests/test_phase21_local_commit_push_readiness.py`、`docs/TODO.md`；明確排除 `.omx/`、`knowledge.db`、`app.log`、uploads、attachments、notes、build、`.env*`、local DB/log/backup/runtime artifact 與非必要 dependency/vendor churn。
+- [x] **21.1.3** No delivery side effects — 21.1 未做 git commit/push、未部署 Pi、未 reload Caddy/service、未實作 Go file-read/body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure。新增 `tests/test_phase21_local_commit_push_readiness.py`。
+
+### ✅ 21.2 Explicit Local Commit and Push Approval Gate
+
+- [x] **21.2.1** Final pre-stage sweep — 使用者明確授權後，commit 前重跑 dirty tree / privacy / runtime artifact sweep；staged scope 僅限 Phase 21 docs/test delivery payload，排除 ignored local DB/log/upload/attachment/build/runtime artifacts。
+- [x] **21.2.2** Verification before commit — 依 21.1 contract 跑 `git diff --check`、targeted pytest、Phase 20 closure pytest、full `pytest tests/ -v`；失敗即停止。
+- [x] **21.2.3** Lore commit / push boundary — 依 Lore Commit Protocol stage/commit/push Phase 21 local delivery payload；未部署 Pi、未 reload Caddy/service、未實作 Go file-read/body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure。
+
+### ⛔ 21.3 Post-push Delivery Decision Gate — Blocked Pending Explicit Approval
+
+- [ ] **21.3.1** Post-push truth selection — 另行授權後，選下一個分支：Pi delivery planning、file-read parity assessment、product/frontend backlog，或 close Phase 21。
+- [ ] **21.3.2** Runtime boundary — 若選 Pi delivery，需先做 live preflight、rollback plan、artifact/privacy sweep；未授權前不得 deploy、reload Caddy/service 或改 public exposure。
+- [ ] **21.3.3** Implementation boundary — 21.3 不預設授權 Go file-read/body scan、Go writes/files/migrations、frontend default change、Python removal 或 public exposure。
 
 ### ⏸️ Phase 19.0 不處理
 
@@ -327,6 +345,8 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **backend-go-runtime** | 2026-06-05 | Phase 21.2 explicit local commit and push approval gate — 在明確授權後重跑 pre-stage dirty tree / privacy / runtime artifact sweep，僅 stage Phase 21 docs/test delivery payload，依 Lore Commit Protocol commit/push。驗證要求包含 `git diff --check`、21.1 targeted pytest、Phase 20 closure pytest、full `pytest tests/ -v`；未部署 Pi、未 reload Caddy/service、未實作 Go attachment body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure；21.3 為需另行授權的 post-push delivery decision gate。 |
+| **backend-go-runtime** | 2026-06-05 | Phase 21.1 local commit and push readiness gate — 在明確授權後選定下一分支為 `local_commit_push`，但 commit/push 仍保留給 21.2 explicit approval gate；新增 readiness contract / pytest lock，固定 dirty tree、privacy artifact、runtime truth、proposed include/exclude、tests-before-commit 與 stop conditions。未做 git commit/push、未部署 Pi、未 reload Caddy/service、未實作 Go attachment body scan、未擴 Go writes/files/migrations、未改 frontend default、未移除 Python、未擴大 public exposure。 |
 | **backend-go-runtime** | 2026-06-05 | Phase 20.4 post-polish stabilization and candidate closure — 在明確授權後完成 plan-only stabilization review：Phase 20 關閉為 `closed_stabilized`；20.3 已補齊 DB-only attachment metadata read parity，剩餘文字附件 body 搜尋仍 Python-owned，若未來要評估 Go file-read parity，必須另開 file-read safety / data-dir / path traversal / performance / rollback contract。未實作 Go attachment body scan、Go writes/files/migrations、未擴 Caddy route、未關閉 sidecar SQLite `query_only`、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；21.0 為需另行授權的 delivery and queue selection gate。 |
 | **backend-go-runtime** | 2026-06-05 | Phase 20.3 read surface parity and documentation polish — 在明確授權後完成既有 hardened Go read-only surface polish：Go `/api/notes?q=...` 補齊 DB-only `Note_Attachments.title` / `file_path` metadata 搜尋，Python vs Go diff fixture 新增 `attachment-meta-canary`；新增 20.3 contract / pytest lock，並同步 API / architecture docs 明確標示文字附件 body 搜尋仍是 Python-owned gap，未擴 Go file body scan。未實作 Go writes/files/migrations、未擴 Caddy route、未關閉 sidecar SQLite `query_only`、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；20.4 為需另行授權的 post-polish stabilization and candidate closure gate。 |
 | **backend-go-runtime** | 2026-06-05 | Phase 20.2 candidate selection and fixture planning — 在明確授權後完成 plan-only candidate decision：唯一選擇 `read_surface_polish`，先強化既有 hardened Go read-only surface 的 parity / docs / fixtures；拒絕 notes writes、batch/actions、history restore、category/tag writes、attachments/uploads/cleanup/import/export/system/server/config 等 ownership candidate。新增 fixture / rollback / stop-condition contract 與 pytest lock；未實作 Go writes/files/migrations、未擴 Caddy route、未改 sidecar query-only 模式、未改 frontend default、未移除 Python、未做 live Pi service 或 Caddy reload；20.3 為需另行授權的 read surface parity and documentation polish gate。 |

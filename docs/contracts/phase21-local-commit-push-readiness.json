@@ -1,0 +1,124 @@
+{
+  "phase": "21.1",
+  "name": "Local Commit and Push Readiness Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "source_gate": "Phase 21.0 delivery and queue selection sweep",
+  "selected_branch": "local_commit_push",
+  "runtime_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "frontend_default_change_performed": false,
+  "git_commit_performed": false,
+  "git_push_performed": false,
+  "decision": "Select local commit/push as the recommended next branch, but keep it behind an explicit approval gate. The pre-21.1 sweep found no pre-existing dirty delivery payload and no ahead commits, so 21.1 only records the readiness contract and required commit hygiene.",
+  "sweep_evidence": {
+    "git_status_short_branch": "## main...origin/main",
+    "head_origin_divergence": "0 0",
+    "tracked_diff_before_21_1": "none",
+    "untracked_non_ignored_before_21_1": "none",
+    "live_pi_verified": false,
+    "live_pi_verification_reason": "21.1 is plan-only and does not authorize Pi deploy, service reload, Caddy reload, or live runtime mutation.",
+    "privacy_artifacts_observed_ignored": [
+      ".omx/",
+      "docs/attachments/",
+      "docs/notes/",
+      "static/test_uploads/",
+      "static/uploads/",
+      "knowledge.db",
+      "app.log",
+      "build/"
+    ],
+    "privacy_artifacts_tracked": []
+  },
+  "runtime_truth": {
+    "verified_current": [
+      "Local main is synchronized with origin/main before 21.1 edits.",
+      "The repo documents Phase 20 as closed_stabilized and Phase 21 as a delivery and queue selection gate.",
+      "Phase 20.2, 20.3, and 20.4 contract and pytest lock files exist locally."
+    ],
+    "not_verified_or_not_live_claimed": [
+      "Pi runtime state",
+      "Caddy active configuration",
+      "systemd service state",
+      "Public exposure behavior"
+    ],
+    "local_only_after_21_1": [
+      "docs/contracts/phase21-local-commit-push-readiness.json",
+      "tests/test_phase21_local_commit_push_readiness.py",
+      "docs/TODO.md Phase 21.1 status updates"
+    ]
+  },
+  "proposed_commit_grouping": [
+    {
+      "id": "phase21_local_commit_push_readiness",
+      "intent": "Record the authorized 21.1 local commit/push readiness decision and keep commit/push behind explicit approval.",
+      "include": [
+        "docs/contracts/phase21-local-commit-push-readiness.json",
+        "tests/test_phase21_local_commit_push_readiness.py",
+        "docs/TODO.md"
+      ],
+      "exclude": [
+        ".omx/",
+        "knowledge.db",
+        "app.log",
+        "docs/attachments/",
+        "docs/notes/",
+        "static/uploads/",
+        "static/test_uploads/",
+        "build/",
+        ".env*",
+        "local database, log, backup, upload, attachment, and runtime artifacts",
+        "dependency or vendor churn not directly required by 21.1"
+      ]
+    }
+  ],
+  "tests_before_commit": [
+    "git diff --check",
+    "pytest tests/test_phase21_local_commit_push_readiness.py -v",
+    "pytest tests/test_phase20_go_post_polish_stabilization.py -v",
+    "pytest tests/ -v",
+    "git status --short --branch",
+    "refined privacy/secret/artifact sweep before staging"
+  ],
+  "stop_conditions": [
+    "Any DB, log, upload, attachment, backup, .omx, build, or .env artifact appears in the staged set.",
+    "Any secret, credential, bearer token, private key, or personal data artifact is found in files proposed for commit.",
+    "git status shows unexpected unrelated dirty files.",
+    "HEAD and origin/main divergence is not understood before push.",
+    "Tests fail or cannot run without a documented validation gap.",
+    "The branch requires Pi deploy, Caddy reload, systemd service reload, Go file-read/body scan, Go writes/files/migrations, frontend default change, Python removal, or public exposure expansion."
+  ],
+  "not_authorized_by_21_1": [
+    "Git commit",
+    "Git push",
+    "Pi deploy",
+    "Live service reload",
+    "Caddy reload or route expansion",
+    "Go attachment file body scanning",
+    "Go write/file/migration implementation",
+    "Frontend default API target change",
+    "Python backend removal",
+    "Direct public internet exposure"
+  ],
+  "allowed_next_step": {
+    "id": "21.2",
+    "title": "Explicit Local Commit and Push Approval Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "After 21.1 validation, the user may explicitly approve staging, committing, and pushing only the 21.1 docs/test readiness payload. The commit must exclude runtime/private artifacts and must use the Lore commit protocol.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "git add",
+      "git commit",
+      "git push",
+      "Pi deploy or live service reload",
+      "Caddy route expansion or reload",
+      "Go attachment file body scanning",
+      "Go write/file/migration implementation",
+      "Frontend default API target change",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}
