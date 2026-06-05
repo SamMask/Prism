@@ -1,0 +1,306 @@
+{
+  "phase": "23.10.1",
+  "title": "Ownership closure audit before Python reduction",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-pi-deployment-rollout.json",
+  "risk_level": "P0 safety-critical",
+  "plan_only": true,
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_route_code_changed": false,
+    "schema_changed": false,
+    "production_db_written": false,
+    "production_files_mutated": false,
+    "pi_deploy": false,
+    "prism_service_restarted": false,
+    "caddy_config_changed": false,
+    "caddy_reloaded": false,
+    "systemd_unit_changed": false,
+    "go_route_ownership_expanded": false,
+    "frontend_default_api_target_changed": false,
+    "python_removed": false,
+    "public_exposure_expanded": false
+  },
+  "inventory_inputs": [
+    "app.py",
+    "routes/__init__.py",
+    "routes/notes/crud.py",
+    "routes/notes/actions.py",
+    "routes/notes/batch.py",
+    "routes/notes/history.py",
+    "routes/notes/import_.py",
+    "routes/notes/export.py",
+    "routes/categories.py",
+    "routes/tags.py",
+    "routes/attachments.py",
+    "routes/upload.py",
+    "routes/cleanup.py",
+    "routes/export.py",
+    "routes/prompt_options.py",
+    "routes/wizard_options.py",
+    "routes/system.py",
+    "routes/server.py",
+    "migrations/__init__.py",
+    "go-shadow/main.go",
+    "go-shadow/README.md",
+    "docs/contracts/phase20-go-write-surface-contract-inventory.json",
+    "docs/contracts/phase23-go-pi-deployment-rollout.json",
+    "docs/ARCHITECTURE.md",
+    "docs/SCHEMA.md"
+  ],
+  "live_runtime_truth_after_23_9": {
+    "primary_runtime": "Python prism.service",
+    "public_tested_owner": "python",
+    "go_read_routing_enabled": false,
+    "tested_routes_without_go_header": [
+      "GET /api/test",
+      "GET /api/notes?per_page=1",
+      "GET /api/system/migration-status",
+      "GET /api/system/go-read-routing",
+      "GET /api/server/version"
+    ],
+    "go_sidecar": {
+      "state": "existing service may be active on 127.0.0.1:5002",
+      "ownership_status": "not selected by tested Caddy routes in 23.9"
+    }
+  },
+  "ownership_matrix": {
+    "go_implemented_candidates": [
+      {
+        "id": "go_health_and_core_read",
+        "owner_status": "implemented candidate; live ownership depends on explicit routing gate",
+        "routes": [
+          "GET /healthz",
+          "GET /api/test",
+          "GET /api/categories",
+          "GET /api/tags",
+          "GET /api/notes",
+          "GET /api/notes/<numeric id>"
+        ],
+        "runtime_guard": "default Go runtime keeps SQLite query_only=true unless a local write flag is enabled",
+        "live_status_after_23_9": "Python remains owner for tested public routes"
+      },
+      {
+        "id": "go_local_db_only_write_candidates",
+        "owner_status": "local/copied-DB implementation candidates only",
+        "routes": [
+          "PUT /api/tags/<id>",
+          "PUT /api/categories/<id>"
+        ],
+        "runtime_guard": "requires --enable-tag-write and/or --enable-category-write; disables query_only only for copied local DB smoke",
+        "live_status_after_23_9": "not live-routed; production writes remain Python-owned"
+      },
+      {
+        "id": "go_local_attachment_text_read_candidate",
+        "owner_status": "local/copied-DB-and-files implementation candidate only",
+        "routes": [
+          "GET /api/attachments/<id> text JSON branch"
+        ],
+        "runtime_guard": "requires --enable-attachment-text-read and explicit data-dir; raw=true/binary/send_file remain blocked",
+        "live_status_after_23_9": "not live-routed; production attachment reads remain Python-owned"
+      },
+      {
+        "id": "go_local_packaged_spa",
+        "owner_status": "local artifact capability only",
+        "routes": [
+          "embedded React SPA static files"
+        ],
+        "runtime_guard": "local smoke artifact serves bundled dist against copied data",
+        "live_status_after_23_9": "Pi production SPA serving remains Python/Flask plus existing Caddy path"
+      }
+    ],
+    "retained_python_owned_surfaces": [
+      {
+        "id": "live_primary_runtime_and_rollback",
+        "surfaces": [
+          "prism.service",
+          "Flask app startup",
+          "Python fallback/rollback owner"
+        ],
+        "retention_reason": "23.9 live verification kept Python owner and did not expand Go routing"
+      },
+      {
+        "id": "notes_write_and_nested_actions",
+        "surfaces": [
+          "POST /api/notes",
+          "PUT /api/notes/<id>",
+          "DELETE /api/notes/<id>",
+          "POST /api/notes/<id>/pin",
+          "POST /api/notes/<id>/archive",
+          "POST /api/notes/<id>/duplicate",
+          "PUT /api/notes/reorder",
+          "POST /api/notes/batch/type",
+          "POST /api/notes/batch/tags",
+          "POST /api/notes/batch/delete",
+          "GET /api/notes/<id>/history",
+          "POST /api/notes/<id>/restore/<history_id>",
+          "DELETE /api/notes/<id>/history",
+          "POST /api/notes/import/md",
+          "POST /api/notes/export/batch"
+        ],
+        "retention_reason": "multi-table writes, history, cascade/file cleanup, nested matcher risk, and rollback scope remain Python-owned"
+      },
+      {
+        "id": "category_tag_live_writes",
+        "surfaces": [
+          "POST /api/categories",
+          "PUT /api/categories/<id> live route",
+          "DELETE /api/categories/<id>",
+          "PUT /api/tags/<id> live route",
+          "DELETE /api/tags/<id>",
+          "POST /api/tags/merge"
+        ],
+        "retention_reason": "Go update candidates are local/copied-DB only; create/delete/merge/cascade behavior remains Python-owned"
+      },
+      {
+        "id": "files_uploads_attachments_cleanup_import_export",
+        "surfaces": [
+          "GET /api/notes/<id>/attachments",
+          "POST /api/notes/<id>/attachments",
+          "GET /api/attachments/<id> raw/binary/send_file",
+          "DELETE /api/attachments/<id>",
+          "GET /api/notes/<id>/check_separation",
+          "POST /api/notes/<id>/separate",
+          "POST /api/notes/<id>/restore",
+          "POST /api/upload",
+          "POST /api/upload/delete",
+          "POST /api/upload/url",
+          "POST /api/upload/extract-prompt",
+          "GET /api/cleanup/orphan-images",
+          "DELETE /api/cleanup/orphan-images",
+          "GET /api/cleanup/originals",
+          "DELETE /api/cleanup/originals",
+          "GET /api/cleanup/broken-images",
+          "POST /api/cleanup/broken-images",
+          "GET /api/export/json",
+          "GET /api/export/markdown",
+          "GET /api/export/db",
+          "POST /api/export/images",
+          "POST /api/import/json"
+        ],
+        "retention_reason": "filesystem mutation, remote fetch, thumbnails, send_file, backup/restore, import/export, and cleanup compensation remain Python-owned"
+      },
+      {
+        "id": "system_server_config_and_maintenance",
+        "surfaces": [
+          "POST /api/system/vacuum",
+          "POST /api/system/clear-history",
+          "GET /api/system/stats",
+          "GET /api/system/startup-preference",
+          "POST /api/system/startup-preference",
+          "POST /api/system/wal-checkpoint",
+          "GET /api/system/check-consistency",
+          "GET /api/system/check-update",
+          "GET /api/system/go-read-routing",
+          "GET /api/system/migration-status",
+          "GET /api/system/port-config",
+          "POST /api/system/port-config",
+          "GET /api/server/hardware",
+          "GET /api/server/logs",
+          "POST /api/server/restart",
+          "GET /api/server/backup/download",
+          "POST /api/server/backup/rotate",
+          "GET /api/server/backup/list",
+          "GET /api/server/version",
+          "GET/POST/PUT/DELETE /api/prompt-options*",
+          "GET/POST/DELETE /api/wizard-options*"
+        ],
+        "retention_reason": "maintenance, local config, process control, logs, backups, and status endpoints remain Python-owned and local/trusted-network only"
+      },
+      {
+        "id": "migrations_and_schema_upgrade",
+        "surfaces": [
+          "migrations.run_migrations()",
+          "Schema_Meta writes",
+          "DDL/DML migration execution",
+          "GET /api/system/migration-status Python current/latest/pending calculation"
+        ],
+        "retention_reason": "23.7 selected retained Python migrations; Go only reads Schema_Meta for health/status"
+      },
+      {
+        "id": "frontend_static_live_serving",
+        "surfaces": [
+          "Flask V2 SPA serving",
+          "prompt-builder.html",
+          "favicon.ico",
+          "V1 fallback templates"
+        ],
+        "retention_reason": "Go embedded SPA is local artifact capability only; Pi production serving path was not changed in 23.9"
+      }
+    ],
+    "deprecated_or_removed_surfaces": [
+      {
+        "id": "ai_ml_runtime",
+        "status": "already removed before this gate",
+        "surfaces": [
+          "numpy",
+          "sentence-transformers",
+          "torch",
+          "NVIDIA NIM",
+          "Ollama"
+        ],
+        "retention_reason": "not part of Phase 23 Python reduction"
+      },
+      {
+        "id": "future_python_removal",
+        "status": "not authorized",
+        "surfaces": [
+          "Python backend",
+          "venv",
+          "existing Pi prism.service"
+        ],
+        "retention_reason": "must remain until 23.10.2+ explicitly decides every critical retained surface"
+      }
+    ]
+  },
+  "python_removal_readiness": {
+    "decision": "blocked",
+    "reason": "Critical live writes, files, migrations, system/server maintenance, frontend/static serving, and rollback ownership still have retained Python decisions rather than Go implementations.",
+    "minimum_before_any_removal": [
+      "Every retained Python-owned critical surface has either a verified Go implementation or a signed retained-Python release strategy.",
+      "Live route ownership matrix is verified on Pi with headers, service state, Caddy validation, migration status, and rollback evidence.",
+      "Local packaged artifact and Pi deployment both pass full smoke, full pytest, frontend build, browser/API checks, backup, and rollback drill.",
+      "Docs, scripts, requirements, service units, and user-facing deployment instructions agree on the chosen runtime path."
+    ],
+    "blocked_actions": [
+      "Remove Python from normal runtime path",
+      "Disable Python prism.service",
+      "Point frontend default API target to Go",
+      "Promote Go writes/files/migrations to live ownership",
+      "Remove Pillow or Python thumbnail path",
+      "Expose Prism directly to public internet"
+    ]
+  },
+  "verification_contract": {
+    "targeted_pytest": [
+      "pytest tests/test_phase23_go_ownership_closure_audit.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_go_pi_deployment_rollout.py -v",
+      "pytest tests/test_phase23_go_migration_db_ownership_decision.py -v",
+      "pytest tests/test_phase23_go_file_attachment_ownership_gate.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "23.10.2",
+    "title": "Python removal decision",
+    "status": "blocked_until_explicit_user_approval",
+    "requires_explicit_user_approval": true,
+    "expected_decision": "retain Python unless every critical surface has a Go implementation or explicit retained-Python release strategy",
+    "scope": "Decide whether Python can be removed from the normal path. This gate may also close as retained-Python if the ownership audit shows critical gaps."
+  },
+  "parallel_deferred_track": {
+    "id": "23.8-thumb.1",
+    "title": "Go WebP encoder dependency decision",
+    "requires_explicit_user_approval": true,
+    "scope": "Thumbnail ownership remains separate; Pillow removal is not authorized by this audit."
+  }
+}

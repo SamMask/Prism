@@ -1,0 +1,90 @@
+{
+  "phase": "23.10.2",
+  "title": "Python removal decision",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-ownership-closure-audit.json",
+  "risk_level": "P0 safety-critical",
+  "plan_only": true,
+  "decision": "retain_python_normal_path",
+  "decision_summary": "Do not remove Python from the normal Prism runtime path. Treat retained Python ownership as the release strategy for critical surfaces not yet safely owned by Go.",
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_route_code_changed": false,
+    "schema_changed": false,
+    "production_db_written": false,
+    "production_files_mutated": false,
+    "pi_deploy": false,
+    "prism_service_restarted": false,
+    "caddy_config_changed": false,
+    "caddy_reloaded": false,
+    "systemd_unit_changed": false,
+    "go_route_ownership_expanded": false,
+    "frontend_default_api_target_changed": false,
+    "python_removed": false,
+    "public_exposure_expanded": false
+  },
+  "decision_basis": {
+    "python_removal_readiness_from_23_10_1": "blocked",
+    "critical_surfaces_without_live_go_ownership": [
+      "notes writes/actions/batch/history/import/export",
+      "live category/tag writes beyond local copied-DB candidates",
+      "uploads and remote fetch",
+      "attachments raw/binary/send_file/delete/separate/restore",
+      "cleanup, export/import, and server backup/log surfaces",
+      "system/server/config/maintenance endpoints",
+      "migrations and Schema_Meta writes",
+      "live frontend/static serving",
+      "rollback owner and normal Pi prism.service runtime"
+    ],
+    "accepted_release_strategy": "retained Python normal path with bounded Go local/read candidates",
+    "go_role_after_decision": [
+      "bounded read implementation/candidate surfaces remain available only where explicitly routed or locally smoked",
+      "flag-gated DB-only write candidates remain local/copied-DB only",
+      "flag-gated attachment text JSON candidate remains local/copied-DB-and-files only",
+      "local packaged Go artifact remains a smoke/release artifact path, not the Pi normal runtime owner"
+    ]
+  },
+  "normal_runtime_strategy": {
+    "primary_runtime": "Python prism.service",
+    "deployment_target": "Raspberry Pi systemd + Caddy remains the real operating target",
+    "local_artifact_role": "Go packaged artifact is retained as a local smoke/package-readiness path",
+    "rollback_owner": "Python prism.service and existing Pi data dir remain rollback owner",
+    "migrations_owner": "Python migrations.run_migrations() remains live migration owner",
+    "frontend_static_owner": "Flask/Python production path remains live static owner"
+  },
+  "blocked_actions_after_decision": [
+    "Remove Python backend, venv, or prism.service from the normal path",
+    "Route production writes to Go",
+    "Route production file/upload/import/export/cleanup/server maintenance to Go",
+    "Replace Python migration runner with Go migration runner",
+    "Change frontend default API target to Go",
+    "Remove Pillow or Python thumbnail path through this gate",
+    "Expose Prism directly to public internet"
+  ],
+  "verification_contract": {
+    "targeted_pytest": [
+      "pytest tests/test_phase23_python_removal_and_final_stabilization.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "23.10.3",
+    "title": "Final stabilization window",
+    "status": "authorized_by_user_request",
+    "requires_explicit_user_approval": true,
+    "scope": "Verify retained-Python final state with local packaged artifact smoke, frontend build/browser/API checks, full pytest, Pi backup/sync/restart/live checks, route ownership checks, and rollback evidence. Do not remove Python or expand Go ownership."
+  },
+  "parallel_deferred_track": {
+    "id": "23.8-thumb.1",
+    "title": "Go WebP encoder dependency decision",
+    "requires_explicit_user_approval": true,
+    "scope": "Thumbnail ownership remains separate; Pillow removal is not authorized by 23.10.2."
+  }
+}

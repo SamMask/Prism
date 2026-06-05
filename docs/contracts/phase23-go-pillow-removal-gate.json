@@ -1,0 +1,59 @@
+{
+  "phase": "23.8-thumb.3",
+  "title": "Pillow removal gate",
+  "status": "completed_blocked_removal",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-webp-encoder-dependency-decision.json",
+    "docs/contracts/phase23-go-thumbnail-parity-fixtures.json"
+  ],
+  "scope_type": "decision_gate_only",
+  "decision": "retain_pillow_until_go_thumbnail_candidate_exists_and_passes_packaging_smoke",
+  "removal_allowed": false,
+  "gate_criteria": {
+    "go_encoder_dependency_decision_complete": true,
+    "thumbnail_parity_fixtures_complete": true,
+    "go_thumbnail_candidate_implemented": false,
+    "go_thumbnail_candidate_packaging_smoke_passed": false,
+    "python_fallback_or_removal_strategy_proven": false,
+    "requirements_start_script_api_sequence_docs_ready_for_sync": false
+  },
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_runtime_changed": false,
+    "go_mod_changed": false,
+    "go_webp_encoder_added": false,
+    "pillow_removed": false,
+    "requirements_changed": false,
+    "start_script_changed": false,
+    "api_reference_changed": false,
+    "sequence_upload_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "retained_runtime_owner": {
+    "thumbnail_owner": "Python optional Pillow path",
+    "upload_route": "routes/upload.py",
+    "import_helper": "routes/notes/import_.py",
+    "fallback_rule": "If thumbnail generation is unavailable or fails, the original image remains the safe fallback; thumbnail_only removes the original only after a thumbnail exists."
+  },
+  "not_removed": [
+    "requirements.txt Pillow",
+    "scripts/start.bat Pillow dependency check and thumbnail-disabled note",
+    "routes/upload.py PIL import and thumbnail generation",
+    "routes/notes/import_.py PIL import and thumbnail generation",
+    "docs/API_REFERENCE.md current thumbnail_only contract",
+    "docs/SEQUENCE-UPLOAD.md current Pillow thumbnail sequence"
+  ],
+  "blocked_reason": "23.8-thumb.2 locks current Python/Pillow parity only. No Go thumbnail route/helper candidate has been implemented in go-shadow, no real go-shadow packaging smoke includes github.com/skrashevich/go-webp, and no fallback/removal strategy has been proven beyond the retained Python owner.",
+  "allowed_next_step": {
+    "id": "23.8-thumb.4",
+    "title": "Go thumbnail local implementation candidate",
+    "requires_explicit_user_approval": true,
+    "summary": "Add the selected Go WebP encoder only inside a flag-gated local/copied-data Go thumbnail candidate, prove parity against the 23.8-thumb.2 fixtures, run packaging smoke, and still retain Pillow until a later removal gate passes."
+  }
+}

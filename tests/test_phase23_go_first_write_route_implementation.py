@@ -157,7 +157,7 @@ def test_go_tag_write_is_flag_gated_and_default_runtime_stays_read_only():
     assert '"PRISM_GO_ENABLE_TAG_WRITE"' in main_go
     assert "PRAGMA query_only = ON" in main_go
     assert "http.MethodPut" in main_go
-    assert "http.MethodPost" not in main_go
+    assert "Thumbnail write route is disabled" in main_go
     assert "http.MethodDelete" not in main_go
     assert "http.MethodPatch" not in main_go
 
@@ -254,11 +254,13 @@ def test_docs_record_23_4_completion_and_23_5_pending_gate():
     assert "Phase 23.6 File / attachment ownership gate is complete as a plan-only inventory and selection gate" in architecture
     assert "Phase 23.6-next First Go file-read route implementation candidate is complete" in architecture
     assert "Phase 23.7 Migration / DB ownership decision gate is complete as plan-only" in architecture
-    assert "Next active Go gate is `23.8.2 Local smoke artifact`" in architecture
+    assert "Phase 23.9 Pi deployment rollout is complete" in architecture
+    assert "Phase 23 Go runtime reduction track is closed with retained-Python normal path" in architecture
     assert "`23.4 First Go write route implementation gate is complete`" in go_report
     assert "`23.5 Go DB-only write expansion gate is complete`" in go_report
     assert "`23.5-next.1 Second Go DB-only write implementation subgate is complete`" in go_report
     assert "`23.6-next First Go file-read route implementation candidate` is complete" in go_report
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_report
-    assert "`23.8.2 Local smoke artifact` is the next recommended packaging step" in go_report
+    assert "`23.9 Pi deployment rollout` is complete" in go_report
+    assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
     assert "`23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete`" in go_report

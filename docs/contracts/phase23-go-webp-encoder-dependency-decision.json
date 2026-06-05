@@ -1,0 +1,155 @@
+{
+  "phase": "23.8-thumb.1",
+  "title": "Go WebP encoder dependency decision",
+  "status": "completed",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-local-packaging-thumbnail-plan.json",
+    "docs/contracts/phase23-final-stabilization.json"
+  ],
+  "scope_type": "plan_only_dependency_decision",
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_code_changed": false,
+    "go_mod_changed": false,
+    "go_webp_encoder_added": false,
+    "pillow_removed": false,
+    "upload_runtime_changed": false,
+    "import_runtime_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "current_python_thumbnail_contract": {
+    "owner": "Python upload/import thumbnail generation through optional Pillow",
+    "routes_and_helpers": [
+      "POST /api/upload",
+      "POST /api/upload/url",
+      "note import image download helper"
+    ],
+    "input_mimes": [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif"
+    ],
+    "output_convention": "static/uploads/<timestamp>_<name>_thumb.webp",
+    "max_width_px": 500,
+    "quality": 80,
+    "thumbnail_only_success_behavior": "returns the thumbnail URL and deletes/does not retain the original upload only after thumbnail generation succeeds",
+    "cleanup_contract": "cleanup and note image cleanup must continue to discover _thumb.webp companion files"
+  },
+  "candidate_evaluation": [
+    {
+      "module": "golang.org/x/image/webp",
+      "license": "BSD-3-Clause",
+      "encode_support": false,
+      "cgo_status": "pure_go_decode_package",
+      "decision": "rejected_decode_only",
+      "reason": "Package exposes Decode and DecodeConfig but no WebP encoder, so it cannot satisfy the 23.8-thumb.1 encode-support gate.",
+      "source": "https://pkg.go.dev/golang.org/x/image/webp"
+    },
+    {
+      "module": "github.com/chai2010/webp",
+      "license": "BSD-3-Clause",
+      "encode_support": true,
+      "cgo_status": "cgo_and_external_toolchain_risk",
+      "decision": "rejected_for_first_spike",
+      "reason": "It can encode WebP, but its cgo/GCC/MinGW toolchain requirement adds Windows and Pi packaging risk for this track.",
+      "source": "https://pkg.go.dev/github.com/chai2010/webp"
+    },
+    {
+      "module": "github.com/kolesa-team/go-webp",
+      "license": "MIT",
+      "encode_support": true,
+      "cgo_status": "cgo_libwebp_binding",
+      "decision": "rejected_for_first_spike",
+      "reason": "It provides libwebp-backed lossy encoding controls, but requires libwebp system packages and cgo, which conflicts with the small packaging surface desired for Windows/local and Pi arm64.",
+      "source": "https://github.com/kolesa-team/go-webp"
+    },
+    {
+      "module": "github.com/HugoSmits86/nativewebp",
+      "license": "MIT",
+      "encode_support": true,
+      "cgo_status": "pure_go",
+      "decision": "fallback_or_secondary_spike_only",
+      "reason": "It is pure Go and encodes WebP, but encodes VP8L lossless output; Prism currently uses quality=80 lossy WebP thumbnails, so it is not the first parity candidate.",
+      "source": "https://pkg.go.dev/github.com/HugoSmits86/nativewebp"
+    },
+    {
+      "module": "github.com/skrashevich/go-webp",
+      "license": "Apache-2.0",
+      "encode_support": true,
+      "cgo_status": "pure_go",
+      "decision": "selected_first_spike_candidate",
+      "reason": "Pure Go encoder with lossy/lossless options, quality 0-100 controls, alpha support, and no cgo dependency; best matches Prism's current quality=80 WebP thumbnail contract for a future spike.",
+      "source": "https://pkg.go.dev/github.com/skrashevich/go-webp"
+    }
+  ],
+  "selected_candidate": {
+    "module": "github.com/skrashevich/go-webp",
+    "version_probed": "v0.1.0",
+    "selection_scope": "first spike candidate only, not a production dependency in this gate",
+    "required_future_validation": [
+      "Python-vs-Go thumbnail parity fixtures for jpeg/png/webp/gif inputs",
+      "thumbnail_only success and failure behavior fixtures",
+      "_thumb.webp path and cleanup companion-file fixtures",
+      "max width 500px and quality 80 output behavior fixtures",
+      "explicit retained-Python fallback for unsupported or failed Go thumbnail generation until Pillow removal is separately approved",
+      "packaging smoke after adding the dependency to the real go-shadow module"
+    ]
+  },
+  "build_probe": {
+    "path": "build/phase23_8_thumb_dep_probe",
+    "module_under_probe": "github.com/skrashevich/go-webp v0.1.0",
+    "fixture_inputs": [
+      "generated image/jpeg",
+      "generated image/png",
+      "generated image/gif"
+    ],
+    "operation": "decode with Go standard library image decoders, encode WebP with Lossy=true Quality=80, then decode output with github.com/skrashevich/go-webp/decoder",
+    "results": {
+      "go_run_windows": "passed",
+      "windows_build": "passed",
+      "windows_artifact": "build/phase23_8_thumb_dep_probe/webp-probe-windows.exe",
+      "windows_artifact_bytes": 3562496,
+      "linux_arm64_cgo0_build": "passed",
+      "linux_arm64_artifact": "build/phase23_8_thumb_dep_probe/webp-probe-linux-arm64",
+      "linux_arm64_artifact_bytes": 3309060
+    },
+    "limits": [
+      "Probe used synthetic images only; production upload/import parity fixtures are still required.",
+      "Probe did not add the module to go-shadow/go.mod.",
+      "Probe did not run on the Raspberry Pi device; it verified linux/arm64 cross-build with CGO_ENABLED=0."
+    ]
+  },
+  "decision": "select_skrashevich_go_webp_for_spike_only",
+  "not_authorized_by_23_8_thumb_1": [
+    "Add github.com/skrashevich/go-webp to go-shadow/go.mod",
+    "Implement Go upload or thumbnail routes",
+    "Remove Pillow from requirements.txt",
+    "Remove Python PIL imports or fallback behavior",
+    "Change routes/upload.py or routes/notes/import_.py",
+    "Change thumbnail_only runtime behavior",
+    "Write production static/uploads or docs/attachments files",
+    "Deploy to Pi",
+    "Change Caddy routing",
+    "Change systemd service",
+    "Change frontend default API target",
+    "Expose Prism directly to public internet"
+  ],
+  "fallback_policy": {
+    "live_owner": "Python/Pillow remains the thumbnail owner",
+    "future_go_candidate": "Go thumbnail generation must remain behind explicit local/copied-data or disabled-by-default gates until parity is proven.",
+    "unsupported_or_failed_go_case": "Retain Python fallback unless a later Pillow removal gate explicitly proves and documents safe removal."
+  },
+  "allowed_next_step": {
+    "id": "23.8-thumb.2",
+    "title": "Thumbnail parity fixtures",
+    "requires_explicit_user_approval": true,
+    "summary": "Lock upload, upload-url, import helper, jpg/png/webp/gif handling, thumbnail_only, _thumb.webp paths, max width 500px, quality 80, failure no-mutation behavior, and cleanup companion-file discovery before any Go implementation or Pillow removal."
+  }
+}

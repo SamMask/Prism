@@ -1,8 +1,11 @@
 module prism-go-shadow
 
-go 1.22
+go 1.26.1
 
-require modernc.org/sqlite v1.33.1
+require (
+	github.com/skrashevich/go-webp v0.1.0
+	modernc.org/sqlite v1.33.1
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

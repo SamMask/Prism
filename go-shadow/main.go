@@ -1,12 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"embed"
 	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"image"
+	"image/draw"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
+	"io"
 	"io/fs"
 	"log"
 	"math"
@@ -18,6 +25,7 @@ import (
 	"strings"
 	"time"
 
+	webp "github.com/skrashevich/go-webp"
 	_ "modernc.org/sqlite"
 )
 
@@ -26,6 +34,9 @@ const maxAttachmentFileBytes int64 = 1048576
 const maxAttachmentScanFiles = 200
 const maxAttachmentScanBytes int64 = 5242880
 const maxAttachmentScanDuration = 250 * time.Millisecond
+const maxUploadFileBytes int64 = 5 * 1024 * 1024
+const thumbnailMaxWidth = 500
+const thumbnailWebPQuality float32 = 80
 
 //go:embed web/dist/*
 var embeddedDist embed.FS
@@ -42,6 +53,7 @@ type runtimeConfig struct {
 	enableTagWrite           bool
 	enableCategoryWrite      bool
 	enableAttachmentTextRead bool
+	enableThumbnailWrite     bool
 	sqliteQueryOnly          bool
 }
 
@@ -59,9 +71,10 @@ func main() {
 	enableTagWrite := flag.Bool("enable-tag-write", envBool("PRISM_GO_ENABLE_TAG_WRITE"), "enable local/copied-DB PUT /api/tags/<id> parity candidate")
 	enableCategoryWrite := flag.Bool("enable-category-write", envBool("PRISM_GO_ENABLE_CATEGORY_WRITE"), "enable local/copied-DB PUT /api/categories/<id> parity candidate")
 	enableAttachmentTextRead := flag.Bool("enable-attachment-text-read", envBool("PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ"), "enable local/copied-DB GET /api/attachments/<id> text JSON parity candidate")
+	enableThumbnailWrite := flag.Bool("enable-thumbnail-write", envBool("PRISM_GO_ENABLE_THUMBNAIL_WRITE"), "enable local/copied-data POST /api/upload thumbnail parity candidate")
 	flag.Parse()
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableAttachmentTextRead)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableAttachmentTextRead, *enableThumbnailWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,6 +99,7 @@ func main() {
 	mux.HandleFunc("/api/notes", srv.handleNotes)
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.HandleFunc("/api/attachments/", srv.handleAttachmentDetail)
+	mux.HandleFunc("/api/upload", srv.handleUpload)
 	mux.Handle("/", staticHandler())
 
 	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
@@ -106,7 +120,7 @@ func envBool(key string) bool {
 	return value == "1" || strings.EqualFold(value, "true")
 }
 
-func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableAttachmentTextRead bool) (runtimeConfig, error) {
+func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableAttachmentTextRead, enableThumbnailWrite bool) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
 		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
@@ -116,6 +130,9 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	}
 	if filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_DB") != "1" {
 		return runtimeConfig{}, fmt.Errorf("refusing to open production-like database %s; use a copied *_test.db or *_dev.db", absDB)
+	}
+	if enableThumbnailWrite && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_UPLOADS") != "1" {
+		return runtimeConfig{}, fmt.Errorf("refusing to enable thumbnail writes with production-like database %s; use copied data or set PRISM_GO_ALLOW_PROD_UPLOADS=1", absDB)
 	}
 	if _, err := os.Stat(absDB); err != nil {
 		return runtimeConfig{}, err
@@ -136,6 +153,7 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		enableTagWrite:           enableTagWrite,
 		enableCategoryWrite:      enableCategoryWrite,
 		enableAttachmentTextRead: enableAttachmentTextRead,
+		enableThumbnailWrite:     enableThumbnailWrite,
 		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite),
 	}, nil
 }
@@ -296,17 +314,195 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) apiSurface() string {
-	switch {
-	case s.runtime.enableTagWrite && s.runtime.enableCategoryWrite:
-		return "get-read-only+local-tag-write+local-category-write"
-	case s.runtime.enableTagWrite:
-		return "get-read-only+local-tag-write"
-	case s.runtime.enableCategoryWrite:
-		return "get-read-only+local-category-write"
-	case s.runtime.enableAttachmentTextRead:
-		return "get-read-only+local-attachment-text-read"
+	parts := []string{"get-read-only"}
+	if s.runtime.enableTagWrite {
+		parts = append(parts, "local-tag-write")
 	}
-	return "get-read-only"
+	if s.runtime.enableCategoryWrite {
+		parts = append(parts, "local-category-write")
+	}
+	if s.runtime.enableAttachmentTextRead {
+		parts = append(parts, "local-attachment-text-read")
+	}
+	if s.runtime.enableThumbnailWrite {
+		parts = append(parts, "local-thumbnail-write")
+	}
+	return strings.Join(parts, "+")
+}
+
+func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.runtime.enableThumbnailWrite {
+		writeError(w, http.StatusMethodNotAllowed, "Thumbnail write route is disabled")
+		return
+	}
+
+	if err := r.ParseMultipartForm(maxUploadFileBytes); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid multipart upload")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "No file part in request")
+		return
+	}
+	defer file.Close()
+
+	filename := safeUploadFilename(header.Filename)
+	if filename == "" {
+		writeError(w, http.StatusBadRequest, "No file selected")
+		return
+	}
+	if !allowedUploadExtension(filename) {
+		writeError(w, http.StatusBadRequest, "Invalid file type. Allowed: jpg, jpeg, png, gif, webp")
+		return
+	}
+
+	content, err := io.ReadAll(io.LimitReader(file, maxUploadFileBytes+1))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Failed to read upload")
+		return
+	}
+	if int64(len(content)) > maxUploadFileBytes {
+		writeError(w, http.StatusBadRequest, "File too large. Maximum size: 5MB")
+		return
+	}
+	if !allowedUploadMIME(http.DetectContentType(content)) {
+		writeError(w, http.StatusBadRequest, "File content validation failed")
+		return
+	}
+
+	img, _, err := image.Decode(bytes.NewReader(content))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Thumbnail generation failed")
+		return
+	}
+	thumbContent, err := encodeThumbnailWebP(img)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Thumbnail generation failed")
+		return
+	}
+
+	newFilename := time.Now().Format("20060102_150405") + "_" + filename
+	nameWithoutExt := strings.TrimSuffix(newFilename, filepath.Ext(newFilename))
+	thumbFilename := nameWithoutExt + "_thumb.webp"
+	uploadsDir := filepath.Join(s.runtime.dataDir, "static", "uploads")
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	thumbnailOnly := strings.EqualFold(r.FormValue("thumbnail_only"), "true")
+	thumbPath := filepath.Join(uploadsDir, thumbFilename)
+	if thumbnailOnly {
+		if err := os.WriteFile(thumbPath, thumbContent, 0644); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
+			"url":            "/static/uploads/" + thumbFilename,
+			"filename":       thumbFilename,
+			"size":           len(content),
+			"thumbnail_only": true,
+		}})
+		return
+	}
+
+	originalPath := filepath.Join(uploadsDir, newFilename)
+	if err := os.WriteFile(originalPath, content, 0644); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := os.WriteFile(thumbPath, thumbContent, 0644); err != nil {
+		_ = os.Remove(originalPath)
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
+		"url":            "/static/uploads/" + newFilename,
+		"filename":       newFilename,
+		"size":           len(content),
+		"thumbnail_only": false,
+	}})
+}
+
+func safeUploadFilename(filename string) string {
+	base := filepath.Base(strings.ReplaceAll(strings.TrimSpace(filename), "\\", "/"))
+	base = strings.Trim(base, ".")
+	if base == "" {
+		return ""
+	}
+	cleaned := strings.Map(func(r rune) rune {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			return r
+		}
+		switch r {
+		case '.', '_', '-':
+			return r
+		default:
+			return '_'
+		}
+	}, base)
+	return strings.Trim(cleaned, "._-")
+}
+
+func allowedUploadExtension(filename string) bool {
+	switch strings.ToLower(filepath.Ext(filename)) {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp":
+		return true
+	default:
+		return false
+	}
+}
+
+func allowedUploadMIME(mime string) bool {
+	switch mime {
+	case "image/jpeg", "image/png", "image/gif", "image/webp", "application/octet-stream":
+		return true
+	default:
+		return false
+	}
+}
+
+func encodeThumbnailWebP(img image.Image) ([]byte, error) {
+	resized := resizeToMaxWidth(img, thumbnailMaxWidth)
+	var out bytes.Buffer
+	if err := webp.Encode(&out, resized, &webp.Options{Lossy: true, Quality: thumbnailWebPQuality}); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
+
+func resizeToMaxWidth(img image.Image, maxWidth int) image.Image {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+	if width <= 0 || height <= 0 {
+		return image.NewRGBA(image.Rect(0, 0, 1, 1))
+	}
+	if width <= maxWidth {
+		dst := image.NewRGBA(image.Rect(0, 0, width, height))
+		draw.Draw(dst, dst.Bounds(), img, bounds.Min, draw.Src)
+		return dst
+	}
+
+	newHeight := int(math.Round(float64(height) * float64(maxWidth) / float64(width)))
+	if newHeight < 1 {
+		newHeight = 1
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, maxWidth, newHeight))
+	for y := 0; y < newHeight; y++ {
+		srcY := bounds.Min.Y + y*height/newHeight
+		for x := 0; x < maxWidth; x++ {
+			srcX := bounds.Min.X + x*width/maxWidth
+			dst.Set(x, y, img.At(srcX, srcY))
+		}
+	}
+	return dst
 }
 
 func boolString(r *http.Request, key string) bool {

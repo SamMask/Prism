@@ -1,0 +1,106 @@
+{
+  "phase": "23.8-thumb.4",
+  "title": "Go thumbnail local implementation candidate",
+  "status": "completed",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-webp-encoder-dependency-decision.json",
+    "docs/contracts/phase23-go-thumbnail-parity-fixtures.json",
+    "docs/contracts/phase23-go-pillow-removal-gate.json"
+  ],
+  "scope_type": "flag_gated_local_copied_data_candidate",
+  "decision": "add_go_upload_thumbnail_candidate_without_changing_live_python_owner",
+  "implementation": {
+    "module": "go-shadow",
+    "route": "POST /api/upload",
+    "flag": "--enable-thumbnail-write",
+    "env": "PRISM_GO_ENABLE_THUMBNAIL_WRITE",
+    "api_surface_when_enabled": "get-read-only+local-thumbnail-write",
+    "default_state": "disabled_405",
+    "data_root": "PRISM_GO_DATA_DIR/static/uploads",
+    "db_behavior": "sqlite_query_only remains true because thumbnail candidate writes files only",
+    "production_guard": "production-like knowledge.db still requires PRISM_GO_ALLOW_PROD_DB=1; thumbnail writes additionally require PRISM_GO_ALLOW_PROD_UPLOADS=1",
+    "input_extensions": [
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "webp"
+    ],
+    "output": "_thumb.webp",
+    "max_width_px": 500,
+    "quality": 80,
+    "resize_algorithm": "nearest-neighbor local candidate, not final Pillow pixel-quality parity"
+  },
+  "dependency_changes": {
+    "go_mod_go_directive": "1.26.1",
+    "local_go_version_verified": "go1.26.3 windows/amd64",
+    "added_direct_dependency": "github.com/skrashevich/go-webp v0.1.0",
+    "dependency_reason": "first spike candidate selected by 23.8-thumb.1; pure Go WebP encode/decode registration and quality controls",
+    "packaging_risk": "builders now need Go 1.26.1 or newer for go-shadow"
+  },
+  "runtime_changes": {
+    "go_code_changed": true,
+    "go_mod_changed": true,
+    "go_webp_encoder_added": true,
+    "python_runtime_changed": false,
+    "requirements_changed": false,
+    "pillow_removed": false,
+    "upload_url_route_changed": false,
+    "import_helper_changed": false,
+    "delete_cleanup_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "retained_python_owner": {
+    "normal_upload_owner": "routes/upload.py",
+    "upload_url_owner": "routes/upload.py",
+    "import_helper_owner": "routes/notes/import_.py",
+    "delete_cleanup_owner": "routes/upload.py and routes/cleanup.py",
+    "pillow_status": "retained"
+  },
+  "verification": {
+    "go_test": {
+      "command": "cd go-shadow; go test ./...",
+      "result": "passed"
+    },
+    "windows_build": {
+      "command": "cd go-shadow; go build -o ../build/phase23-thumb4/prism-go-runtime-thumb4.exe .",
+      "result": "passed",
+      "artifact_bytes": 16430080
+    },
+    "linux_arm64_cgo0_build": {
+      "command": "cd go-shadow; GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ../build/phase23-thumb4/prism-go-runtime-thumb4-linux-arm64 .",
+      "result": "passed",
+      "artifact_bytes": 15309602
+    },
+    "unit_coverage": [
+      "default disabled route returns 405 and writes no files",
+      "enabled thumbnail candidate keeps sqlite_query_only true",
+      "thumbnail_only upload writes only _thumb.webp",
+      "standard upload writes original plus _thumb.webp",
+      "invalid content returns 400 and writes no files",
+      "production-like thumbnail writes require PRISM_GO_ALLOW_PROD_UPLOADS"
+    ]
+  },
+  "not_authorized_by_23_8_thumb_4": [
+    "Remove Pillow from requirements.txt",
+    "Change Python upload/upload-url/import runtime ownership",
+    "Route frontend or Caddy traffic to Go upload",
+    "Deploy this candidate to Pi",
+    "Change systemd units or Caddyfile",
+    "Write production DB or production uploads",
+    "Declare pixel-quality parity with Pillow LANCZOS"
+  ],
+  "pillow_removal_status_after_gate": "still_blocked_until_full_surface_candidate_and_new_removal_gate",
+  "allowed_next_step": {
+    "id": "23.8-thumb.5",
+    "title": "Go thumbnail surface expansion or removal-readiness gate",
+    "requires_explicit_user_approval": true,
+    "summary": "Decide whether to extend Go thumbnail coverage to upload-url and import helper, or explicitly retain those Python surfaces before any future Pillow removal gate."
+  }
+}

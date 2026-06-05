@@ -1,0 +1,274 @@
+{
+  "phase": "23.10.3",
+  "title": "Final stabilization window",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-python-removal-decision.json",
+  "risk_level": "P0 safety-critical",
+  "decision_context": "23.10.2 retained Python as the normal runtime path. 23.10.3 verifies that retained-Python final state locally and on the Pi without expanding Go ownership.",
+  "runtime_changes": {
+    "files_synced_to_pi": true,
+    "frontend_dist_synced": true,
+    "prism_service_restarted": true,
+    "caddy_config_changed": false,
+    "caddy_reloaded": false,
+    "systemd_unit_changed": false,
+    "go_route_ownership_expanded": false,
+    "frontend_default_api_target_changed": false,
+    "production_db_written_by_sync": false,
+    "production_uploads_or_attachments_mutated_by_sync": false,
+    "python_removed": false,
+    "public_exposure_expanded": false
+  },
+  "local_stabilization": {
+    "frontend_typecheck": {
+      "command": "cd frontend && npx tsc --noEmit",
+      "status": "passed"
+    },
+    "frontend_build": {
+      "command": "cd frontend && npm run build",
+      "status": "passed",
+      "dist_assets_seen": [
+        "dist/index.html",
+        "dist/assets/index-wZn9K3ml.css",
+        "dist/assets/index-C3HUrGix.js"
+      ],
+      "non_blocking_warning": "Browserslist/caniuse-lite data is 6 months old"
+    },
+    "go_local_artifact_smoke": {
+      "command": "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_local_artifact.ps1",
+      "status": "passed",
+      "artifact": "build/go-runtime/prism-go-runtime.exe",
+      "evidence_file": "build/go-local-smoke/evidence.json",
+      "source_db_hash_guard": "passed"
+    },
+    "local_api_smoke": {
+      "server": "Python Flask V2 on 127.0.0.1:5123",
+      "api_test": {
+        "status": "ok",
+        "notes_count": 1,
+        "categories_count": 5,
+        "tags_count": 44
+      },
+      "server_version": {
+        "version": "2.4.9",
+        "platform": "Windows",
+        "v2_mode": true
+      },
+      "migration_status": {
+        "current_version": 16,
+        "latest_version": 16,
+        "pending": []
+      },
+      "notes_smoke": {
+        "endpoint": "GET /api/notes?per_page=1",
+        "status": "success",
+        "total": 1
+      }
+    },
+    "browser_smoke": {
+      "tool": "Playwright CLI",
+      "command": "npx --yes playwright screenshot --wait-for-timeout=3000 http://127.0.0.1:5123/ build/phase23_10_browser/home.png",
+      "status": "passed",
+      "screenshot": "build/phase23_10_browser/home.png",
+      "visual_result": "SPA rendered Prism Home with sidebar, category filter row, note card, and footer status; not a blank page"
+    }
+  },
+  "pi_preflight": {
+    "ssh_alias": "PI5Mask24",
+    "remote_path": "/home/mask070924/prism",
+    "url": "https://prism.local",
+    "timestamp": "20260606_022312",
+    "prism_service": {
+      "active": true,
+      "enabled": true
+    },
+    "caddy_service": {
+      "active": true,
+      "enabled": true,
+      "validate": "passed"
+    },
+    "migration_status_before_sync": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    },
+    "route_ownership_before_sync": {
+      "go_read_routing_enabled": false,
+      "default_owner": "python",
+      "fallback_owner": "python",
+      "api_test_header": "no X-Prism-Go-Read-Routing header"
+    },
+    "backups": {
+      "db_backup": "/home/mask070924/prism/backups/prism_pre_23_10_3_stabilization_20260606_022312.db",
+      "db_backup_sha256": "ef2c3a5e2747365009665b886d968045d1472f82efb2ad56e269327abf03192c",
+      "data_snapshot": "/home/mask070924/prism/backups/prism_pre_23_10_3_data_snapshot_20260606_022312.tar.gz",
+      "data_snapshot_sha256": "bf5768de9268bbdd6137869f8c65402e766a720fc2345bc2ed8a27cae0eee9b4",
+      "caddy_backup": "/home/mask070924/prism/backups/Caddyfile.prism-pre-23-10-3-stabilization-20260606_022312.bak",
+      "caddy_backup_sha256": "9f4d38c6ba117bc46196b888e942b00516dfae05ba28e935e6ff837e96dd7c12",
+      "db_counts": {
+        "notes": 198,
+        "categories": 6,
+        "tags": 128
+      }
+    }
+  },
+  "pi_sync": {
+    "sync_method": "tar stream over SSH",
+    "remote_extract": "EXTRACT_OK",
+    "service_action": "sudo systemctl restart prism",
+    "caddy_action": "validate only; no config edit and no reload",
+    "systemd_action": "restart existing prism.service only; no unit file change",
+    "excluded_from_sync": [
+      ".git",
+      ".omx",
+      "__pycache__",
+      "*.pyc",
+      "frontend/node_modules",
+      "frontend/src",
+      "frontend/public",
+      "python",
+      "venv",
+      ".venv",
+      "knowledge.db",
+      "knowledge.db-wal",
+      "knowledge.db-shm",
+      "static/uploads",
+      "static/test_uploads",
+      "docs/attachments",
+      "docs/notes",
+      ".port_config",
+      "*.egg-info",
+      ".env",
+      ".env.*",
+      "demo",
+      "app.log",
+      "app.log.*",
+      "build"
+    ]
+  },
+  "pi_live_verification": {
+    "prism_service": {
+      "active": true,
+      "enabled": true
+    },
+    "caddy_service": {
+      "active": true,
+      "enabled": true,
+      "validate": "passed"
+    },
+    "listening_ports": {
+      "5000": "127.0.0.1 Python Flask prism.service",
+      "5001": "unrelated fava process",
+      "5002": "existing prism-go-readonly sidecar active but not selected by tested Caddy routes"
+    },
+    "api_test": {
+      "status": "ok",
+      "notes_count": 198,
+      "categories_count": 6,
+      "tags_count": 128,
+      "header": "no X-Prism-Go-Read-Routing header"
+    },
+    "server_version": {
+      "version": "2.4.9",
+      "platform": "Linux",
+      "v2_mode": true
+    },
+    "migration_status_after_sync": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    },
+    "go_read_routing_status": {
+      "enabled": false,
+      "default_owner": "python",
+      "fallback_owner": "python",
+      "blocked_methods": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "PATCH"
+      ]
+    },
+    "notes_smoke": {
+      "endpoint": "GET /api/notes?per_page=1",
+      "status": "success",
+      "total": 198,
+      "header": "no X-Prism-Go-Read-Routing header"
+    },
+    "journal_window": {
+      "service_restart_seen": true,
+      "migration_log": "資料庫已是最新版本 (v16)",
+      "port": 5000,
+      "new_errors_seen": false,
+      "write_error_seen": false
+    }
+  },
+  "rollback": {
+    "owner": "Python prism.service remains primary runtime and rollback owner",
+    "db_restore": "stop prism, copy db_backup to /home/mask070924/prism/knowledge.db, remove knowledge.db-wal/shm, start prism",
+    "data_restore": "stop prism, restore data_snapshot for static/uploads/docs/attachments/.port_config if needed, start prism",
+    "caddy_restore": "copy caddy_backup to /etc/caddy/Caddyfile, run caddy validate, reload only if a future gate actually changes Caddy",
+    "code_restore": "resync previous tree or checkout prior commit before restart"
+  },
+  "not_authorized_by_23_10_3": [
+    "Python runtime removal",
+    "Caddy route expansion",
+    "Caddy reload without config change",
+    "systemd unit rewrite",
+    "Go write route live ownership",
+    "Go file/upload/import/export/cleanup/server maintenance ownership",
+    "Go migration runner live ownership",
+    "Frontend default API target change",
+    "Pillow removal",
+    "Go WebP encoder dependency",
+    "Direct public internet exposure"
+  ],
+  "verification_contract": {
+    "local_checks": [
+      "cd frontend && npx tsc --noEmit",
+      "cd frontend && npm run build",
+      "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_local_artifact.ps1",
+      "local API smoke on 127.0.0.1:5123",
+      "Playwright CLI browser screenshot smoke"
+    ],
+    "pi_checks": [
+      "ssh PI5Mask24 service/Caddy status",
+      "sudo caddy validate --config /etc/caddy/Caddyfile",
+      "DB backup + data snapshot + Caddy backup",
+      "tar stream sync with production data exclusions",
+      "sudo systemctl restart prism",
+      "GET /api/test",
+      "GET /api/server/version",
+      "GET /api/system/migration-status",
+      "GET /api/system/go-read-routing",
+      "GET /api/notes?per_page=1",
+      "HEAD header checks for no unintended Go routing",
+      "journalctl recent prism logs"
+    ],
+    "repo_checks": [
+      "pytest tests/test_phase23_python_removal_and_final_stabilization.py -v",
+      "pytest tests/ -v",
+      "git diff --check"
+    ]
+  },
+  "phase23_closure": {
+    "status": "closed_with_retained_python_normal_path",
+    "summary": "Phase 23 closes with a verified retained-Python final state, not a Go-only runtime. Future Go ownership expansion must start from a new explicit gate and the retained-surface matrix in 23.10.1."
+  },
+  "allowed_next_steps": [
+    {
+      "id": "23.8-thumb.4",
+      "title": "Go thumbnail local implementation candidate",
+      "requires_explicit_user_approval": true,
+      "scope": "Separate thumbnail/Pillow removal track after the 23.8-thumb.2 parity fixtures and 23.8-thumb.3 blocked-removal decision; not authorized by Phase 23.10 closure."
+    },
+    {
+      "id": "post-23-release-hygiene",
+      "title": "Commit/release hygiene",
+      "requires_explicit_user_approval": true,
+      "scope": "Optional commit/push/release-note cleanup after reviewing the combined 23.8-23.10 worktree."
+    }
+  ]
+}

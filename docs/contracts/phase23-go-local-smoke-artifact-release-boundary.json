@@ -1,0 +1,133 @@
+{
+  "phase": "23.8.2-23.8.3",
+  "title": "Local smoke artifact and release boundary",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-local-packaging-thumbnail-plan.json",
+  "risk_level": "P1 workflow-sensitive with P0 data boundary guards",
+  "runtime_change": "local_build_and_smoke_script_only",
+  "packaged_artifact_created_by_validation": true,
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "production_filesystem_mutation": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "frontend_default_api_target_change": false,
+  "python_removal": false,
+  "local_smoke_artifact": {
+    "script": "scripts/smoke_go_local_artifact.ps1",
+    "build_script": "scripts/build_go_runtime.ps1",
+    "artifact": "build/go-runtime/prism-go-runtime.exe",
+    "smoke_root": "build/go-local-smoke",
+    "evidence_file": "build/go-local-smoke/evidence.json",
+    "data_rule": {
+      "source_db": "knowledge.db may be read only to create a copied smoke DB",
+      "copied_db_names": [
+        "prism_local_smoke_read_dev.db",
+        "prism_local_smoke_write_dev.db"
+      ],
+      "go_runtime_refuses_direct_knowledge_db": true,
+      "source_db_sha256_guard": true,
+      "smoke_cleanup_scope": "repo build/ only"
+    },
+    "read_only_smoke": {
+      "flags": [],
+      "sqlite_query_only": true,
+      "api_surface": "get-read-only",
+      "checks": [
+        "startup /healthz",
+        "serve embedded SPA index.html",
+        "GET /api/test",
+        "GET /api/categories",
+        "GET /api/tags",
+        "GET /api/notes?per_page=1",
+        "PUT /api/tags/<id> remains 405 when write flag is disabled"
+      ]
+    },
+    "write_candidate_smoke": {
+      "flags": [
+        "--enable-tag-write",
+        "--enable-category-write"
+      ],
+      "sqlite_query_only": false,
+      "db_scope": "copied smoke DB only",
+      "checks": [
+        "startup /healthz reports get-read-only+local-tag-write+local-category-write",
+        "PUT /api/tags/<id> succeeds against copied DB",
+        "PUT /api/categories/<id> succeeds against copied DB",
+        "source knowledge.db hash remains unchanged"
+      ]
+    }
+  },
+  "release_boundary": {
+    "local_packaging_success_means": [
+      "Windows/local Go artifact can be built",
+      "artifact can start against copied data dir",
+      "artifact can serve bundled React SPA",
+      "read-only default surface remains query_only",
+      "flag-gated local write candidates work only on copied smoke DB"
+    ],
+    "local_packaging_success_does_not_mean": [
+      "Raspberry Pi has been updated",
+      "Caddy route has been changed or reloaded",
+      "systemd service has been changed or restarted",
+      "production knowledge.db has been written",
+      "frontend default API target has changed",
+      "Go owns production writes, files, migrations, imports, exports, cleanup, or server maintenance",
+      "Python can be removed"
+    ],
+    "pi_rollout_owner": "23.9 Pi deployment rollout track",
+    "next_pi_gate": {
+      "id": "23.9.1",
+      "title": "Pi preflight",
+      "requires_explicit_user_approval": true,
+      "minimum_checks": [
+        "service status",
+        "Caddy validate",
+        "DB backup",
+        "data-dir backup or snapshot",
+        "migration status",
+        "route ownership check"
+      ]
+    }
+  },
+  "not_authorized_by_23_8_2_23_8_3": [
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change or restart",
+    "Production knowledge.db write",
+    "Production uploads or attachments mutation",
+    "Frontend default API target change",
+    "Go migration runner implementation",
+    "Go upload, cleanup, import, export, or server maintenance ownership",
+    "Pillow removal",
+    "Go WebP encoder dependency",
+    "Python runtime removal",
+    "Public exposure expansion"
+  ],
+  "verification_contract": {
+    "local_smoke": [
+      "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_local_artifact.ps1"
+    ],
+    "targeted_pytest": [
+      "pytest tests/test_phase23_go_local_smoke_artifact_release_boundary.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_go_local_packaging_thumbnail_plan.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "23.9.1",
+    "title": "Pi preflight",
+    "status": "blocked_until_explicit_user_approval",
+    "requires_explicit_user_approval": true,
+    "scope": "Before any Pi rollout, run service/Caddy/DB/data-dir/migration/route-ownership preflight and record rollback evidence. Do not change Caddy/systemd or production data until the preflight gate is explicitly approved."
+  }
+}

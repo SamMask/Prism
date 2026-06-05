@@ -1,0 +1,87 @@
+{
+  "phase": "23.8-thumb.2",
+  "title": "Thumbnail parity fixtures",
+  "status": "completed",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-webp-encoder-dependency-decision.json",
+    "docs/contracts/phase23-go-local-packaging-thumbnail-plan.json"
+  ],
+  "scope_type": "fixture_lock_only",
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_runtime_changed": false,
+    "go_mod_changed": false,
+    "go_webp_encoder_added": false,
+    "pillow_removed": false,
+    "upload_runtime_changed": false,
+    "import_runtime_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "locked_current_owner": "Python upload/import thumbnail generation through optional Pillow",
+  "fixture_coverage": {
+    "post_api_upload_standard": [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "original upload is saved",
+      "_thumb.webp companion is generated",
+      "thumbnail is WebP",
+      "thumbnail max width is 500px"
+    ],
+    "post_api_upload_thumbnail_only_success": [
+      "thumbnail_only=true returns _thumb.webp",
+      "original upload is not retained when thumbnail generation succeeds"
+    ],
+    "post_api_upload_thumbnail_failure_fallback": [
+      "when thumbnail generation is unavailable, thumbnail_only does not delete or invent a thumbnail",
+      "original upload is retained as the safe fallback",
+      "current Python response keeps thumbnail_only=true, returns the original URL, and leaves filename null"
+    ],
+    "post_api_upload_url": [
+      "remote image bytes generate _thumb.webp",
+      "thumbnail_only=true returns only the thumbnail path on success",
+      "original remote image is not retained on successful thumbnail_only"
+    ],
+    "import_image_helper": [
+      "remote image helper can generate _thumb.webp",
+      "thumbnail_only deletes original only after thumbnail generation succeeds",
+      "thumbnail generation failure keeps the original image"
+    ],
+    "cleanup_and_delete": [
+      "POST /api/upload/delete removes the original and _thumb.webp companion",
+      "orphan cleanup treats _thumb.webp as referenced when its original image is referenced"
+    ],
+    "static_contract_locks": [
+      "routes/upload.py saves WEBP thumbnails with quality=80",
+      "routes/notes/import_.py saves WEBP thumbnails with quality=80",
+      "requirements.txt still contains Pillow",
+      "go-shadow/go.mod still has no Go WebP encoder dependency"
+    ]
+  },
+  "fixture_file": "tests/test_phase23_go_thumbnail_parity_and_pillow_removal_gate.py",
+  "not_authorized_by_23_8_thumb_2": [
+    "Add github.com/skrashevich/go-webp to go-shadow/go.mod",
+    "Implement Go upload or thumbnail routes",
+    "Remove Pillow from requirements.txt",
+    "Remove Python PIL imports or fallback behavior",
+    "Change routes/upload.py or routes/notes/import_.py behavior",
+    "Write production static/uploads or docs/attachments files",
+    "Deploy to Pi",
+    "Change Caddy routing",
+    "Change systemd service",
+    "Change frontend default API target"
+  ],
+  "allowed_next_step": {
+    "id": "23.8-thumb.3",
+    "title": "Pillow removal gate",
+    "requires_explicit_user_approval": true,
+    "summary": "Evaluate whether Pillow can be removed only after dependency decision, parity fixtures, Go thumbnail candidate implementation, packaging smoke, and docs/script/requirements sync criteria are satisfied."
+  }
+}

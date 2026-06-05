@@ -148,8 +148,10 @@ def test_phase23_6_docs_record_completion_and_next_subgate():
     assert "Phase 23.6 File / attachment ownership gate is complete as a plan-only inventory and selection gate" in architecture
     assert "Phase 23.6-next First Go file-read route implementation candidate is complete" in architecture
     assert "Phase 23.7 Migration / DB ownership decision gate is complete as plan-only" in architecture
-    assert "Next active Go gate is `23.8.2 Local smoke artifact`" in architecture
+    assert "Phase 23.9 Pi deployment rollout is complete" in architecture
+    assert "Phase 23 Go runtime reduction track is closed with retained-Python normal path" in architecture
     assert "`23.6 File / attachment ownership gate` is complete as a plan-only inventory and selection gate" in go_report
     assert "`23.6-next First Go file-read route implementation candidate` is complete" in go_report
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_report
-    assert "`23.8.2 Local smoke artifact` is the next recommended packaging step" in go_report
+    assert "`23.9 Pi deployment rollout` is complete" in go_report
+    assert "Phase 23 closes with retained Python as the normal runtime path" in go_report

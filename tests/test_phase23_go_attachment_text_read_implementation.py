@@ -205,7 +205,7 @@ def test_go_attachment_text_read_is_flag_gated_and_keeps_query_only():
     assert "readAttachmentText" in main_go
     assert "Raw attachment responses remain Python-owned" in main_go
     assert "PRAGMA query_only = ON" in main_go
-    assert "http.MethodPost" not in main_go
+    assert "Thumbnail write route is disabled" in main_go
     assert "http.MethodDelete" not in main_go
     assert "http.MethodPatch" not in main_go
 
@@ -369,10 +369,13 @@ def test_docs_record_23_6_next_completion_and_23_7_next_gate():
     assert "23.6-next First Go file-read route implementation candidate — ✅ Completed (2026-06-06)" in todo
     assert "docs/contracts/phase23-go-attachment-text-read-implementation.json" in todo
     assert "23.7 Migration / DB ownership decision gate — ✅ Completed (2026-06-06)" in todo
-    assert "23.8 Local packaging execution track — Active" in todo
+    assert "23.8 Local packaging execution track — ✅ Completed (2026-06-06)" in todo
+    assert "23.8.2** Local smoke artifact" in todo
     assert "Phase 23.6-next First Go file-read route implementation candidate is complete" in architecture
     assert "Phase 23.7 Migration / DB ownership decision gate is complete as plan-only" in architecture
-    assert "Next active Go gate is `23.8.2 Local smoke artifact`" in architecture
+    assert "Phase 23.9 Pi deployment rollout is complete" in architecture
+    assert "Phase 23 Go runtime reduction track is closed with retained-Python normal path" in architecture
     assert "`23.6-next First Go file-read route implementation candidate` is complete" in go_report
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_report
-    assert "`23.8.2 Local smoke artifact` is the next recommended packaging step" in go_report
+    assert "`23.9 Pi deployment rollout` is complete" in go_report
+    assert "Phase 23 closes with retained Python as the normal runtime path" in go_report

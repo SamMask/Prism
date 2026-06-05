@@ -100,16 +100,20 @@ def test_docs_record_23_8_1_completion_and_next_subgates():
     architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
-    assert "23.8 Local packaging execution track — Active" in todo
+    assert "23.8 Local packaging execution track — ✅ Completed (2026-06-06)" in todo
     assert "23.8.1** Packaging contract + thumbnail ownership plan" in todo
     assert "docs/contracts/phase23-go-local-packaging-thumbnail-plan.json" in todo
     assert "23.8-thumb Go WebP thumbnail ownership / Pillow removal track" in todo
     assert "23.8-thumb.1** WebP encoder dependency decision" in todo
     assert "23.8-thumb.3** Pillow removal gate" in todo
     assert "Phase 23.8.1 Local packaging contract and thumbnail ownership plan is complete as plan-only" in architecture
-    assert "Next active Go gate is `23.8.2 Local smoke artifact`" in architecture
+    assert "Phase 23.8.2 Local smoke artifact is complete" in architecture
+    assert "Phase 23.9 Pi deployment rollout is complete" in architecture
+    assert "Phase 23 Go runtime reduction track is closed with retained-Python normal path" in architecture
     assert "`23.8.1 Local packaging contract and thumbnail ownership plan` is complete as plan-only" in go_report
-    assert "`23.8.2 Local smoke artifact` is the next recommended packaging step" in go_report
+    assert "`23.8.2 Local smoke artifact` is complete" in go_report
+    assert "`23.9 Pi deployment rollout` is complete" in go_report
+    assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
 
 
 def test_pillow_and_go_webp_dependency_are_not_changed_by_plan_gate():

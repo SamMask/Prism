@@ -142,8 +142,11 @@ def test_docs_record_23_7_completion_and_23_8_next_gate():
     assert contract["allowed_next_step"]["recommended_first_subgate"] == "23.8.1 Packaging contract"
     assert "23.7 Migration / DB ownership decision gate — ✅ Completed (2026-06-06)" in todo
     assert "docs/contracts/phase23-go-migration-db-ownership-decision.json" in todo
-    assert "23.8 Local packaging execution track — Active" in todo
+    assert "23.8 Local packaging execution track — ✅ Completed (2026-06-06)" in todo
+    assert "23.8.2** Local smoke artifact" in todo
     assert "Phase 23.7 Migration / DB ownership decision gate is complete as plan-only" in architecture
-    assert "Next active Go gate is `23.8.2 Local smoke artifact`" in architecture
+    assert "Phase 23.9 Pi deployment rollout is complete" in architecture
+    assert "Phase 23 Go runtime reduction track is closed with retained-Python normal path" in architecture
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_report
-    assert "`23.8.2 Local smoke artifact` is the next recommended packaging step" in go_report
+    assert "`23.9 Pi deployment rollout` is complete" in go_report
+    assert "Phase 23 closes with retained Python as the normal runtime path" in go_report

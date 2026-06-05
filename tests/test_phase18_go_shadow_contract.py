@@ -229,7 +229,9 @@ def test_go_shadow_scaffold_is_read_only():
     assert "http.MethodGet" in main_go
     assert "enableTagWrite" in main_go
     assert '"enable-tag-write"' in main_go
-    assert "http.MethodPost" not in main_go
+    assert '"enable-thumbnail-write"' in main_go
+    assert "handleUpload" in main_go
+    assert "Thumbnail write route is disabled" in main_go
     assert "http.MethodDelete" not in main_go
 
 
