@@ -104,11 +104,13 @@ def test_pillow_and_go_runtime_dependencies_are_not_changed_by_decision_gate():
 
     assert contract["runtime_changes"]["go_mod_changed"] is False
     assert contract["runtime_changes"]["go_webp_encoder_added"] is False
-    assert "Pillow" in requirements
-    assert "from PIL import Image" in upload_route
-    assert "from PIL import Image" in import_route
+    assert "Pillow" not in requirements
+    assert "from PIL import Image" not in upload_route
+    assert "from PIL import Image" not in import_route
+    assert "generate_webp_thumbnail" in upload_route
+    assert "generate_webp_thumbnail" in import_route
     assert "_thumb.webp" in upload_route
-    assert "_thumb.webp" in import_route
+    assert "thumbnail_name" in import_route
 
 
 def test_docs_record_23_8_thumb_1_completion_and_23_8_thumb_2_next_gate():

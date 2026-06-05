@@ -19,6 +19,7 @@ SEQUENCE_UPLOAD_PATH = ROOT / "docs" / "SEQUENCE-UPLOAD.md"
 UPLOAD_ROUTE_PATH = ROOT / "routes" / "upload.py"
 IMPORT_ROUTE_PATH = ROOT / "routes" / "notes" / "import_.py"
 GO_MOD_PATH = ROOT / "go-shadow" / "go.mod"
+GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
 
 
 pytest.importorskip("PIL")
@@ -111,7 +112,7 @@ def test_upload_thumbnail_unavailable_keeps_original_as_safe_fallback(
 ):
     import routes.upload as upload_route
 
-    monkeypatch.setattr(upload_route, "PIL_AVAILABLE", False)
+    monkeypatch.setattr(upload_route, "generate_webp_thumbnail", lambda *args, **kwargs: False)
 
     response = client.post(
         "/api/upload",
@@ -191,18 +192,12 @@ def test_import_image_helper_thumbnail_only_success_and_failure_fallback(
     _assert_webp_thumb(isolated_uploads / thumb_name)
     assert not [path for path in isolated_uploads.glob("imported_*.png") if not path.name.endswith("_thumb.webp")]
 
-    original_open = import_route.Image.open
-
-    def fail_open(*args, **kwargs):
-        raise RuntimeError("thumbnail unavailable")
-
-    monkeypatch.setattr(import_route.Image, "open", fail_open)
+    monkeypatch.setattr(import_route, "generate_webp_thumbnail", lambda *args, **kwargs: False)
     fallback_url, fallback_success = import_route.download_and_save_image(
         "https://example.test/fallback.png",
         str(isolated_uploads),
         thumbnail_only=True,
     )
-    monkeypatch.setattr(import_route.Image, "open", original_open)
 
     assert fallback_success is True
     assert fallback_url.endswith(".png")
@@ -287,7 +282,7 @@ def test_thumbnail_contracts_are_completed_and_pillow_removal_is_blocked():
     assert removal["allowed_next_step"]["id"] == "23.8-thumb.4"
 
 
-def test_pillow_runtime_files_are_retained_after_removal_gate():
+def test_pillow_runtime_files_are_removed_after_dependency_closure():
     removal = json.loads(REMOVAL_CONTRACT_PATH.read_text(encoding="utf-8"))
     requirements = REQUIREMENTS_PATH.read_text(encoding="utf-8")
     start_bat = START_BAT_PATH.read_text(encoding="utf-8")
@@ -295,18 +290,21 @@ def test_pillow_runtime_files_are_retained_after_removal_gate():
     sequence_upload = SEQUENCE_UPLOAD_PATH.read_text(encoding="utf-8")
     upload_route = UPLOAD_ROUTE_PATH.read_text(encoding="utf-8")
     import_route = IMPORT_ROUTE_PATH.read_text(encoding="utf-8")
+    main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
 
     assert removal["runtime_changes"]["go_mod_changed"] is False
     assert removal["runtime_changes"]["go_webp_encoder_added"] is False
-    assert "Pillow" in requirements
-    assert "import PIL" in start_bat
-    assert "Pillow install failed, thumbnails will be disabled" in start_bat
+    assert "Pillow" not in requirements
+    assert "import PIL" not in start_bat
+    assert "Pillow install failed, thumbnails will be disabled" not in start_bat
     assert "thumbnail_only" in api_reference
-    assert "Pillow" in sequence_upload
-    assert "from PIL import Image" in upload_route
-    assert "quality=80" in upload_route
-    assert "from PIL import Image" in import_route
-    assert "quality=80" in import_route
+    assert "Pillow" not in sequence_upload
+    assert "from PIL import Image" not in upload_route
+    assert "from PIL import Image" not in import_route
+    assert "generate_webp_thumbnail" in upload_route
+    assert "generate_webp_thumbnail" in import_route
+    assert "--thumbnail-input" in main_go
+    assert "thumbnailWebPQuality float32 = 80" in main_go
 
 
 def test_docs_record_thumbnail_fixture_completion_blocked_removal_and_next_gate():

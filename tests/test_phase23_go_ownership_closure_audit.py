@@ -108,7 +108,9 @@ def test_docs_record_23_10_1_completion_and_next_decision_gate():
     assert contract["allowed_next_step"]["requires_explicit_user_approval"] is True
     assert contract["allowed_next_step"]["expected_decision"].startswith("retain Python unless")
     assert contract["parallel_deferred_track"]["id"] == "23.8-thumb.1"
-    assert "23.10 Python reduction and final stabilization — Final Stage Only" in todo
+    assert "23.10 Python reduction and final stabilization — Retained-Python Final State Complete" in todo
+    assert "Python packaging removal roadmap" in todo
+    assert "不得再新增 `23.8-thumb.8`" in todo
     assert "23.10.1** Ownership closure audit" in todo
     assert "docs/contracts/phase23-go-ownership-closure-audit.json" in todo
     assert "23.10.2** Python removal decision" in todo

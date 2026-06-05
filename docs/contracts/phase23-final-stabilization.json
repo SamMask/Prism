@@ -255,14 +255,19 @@
   },
   "phase23_closure": {
     "status": "closed_with_retained_python_normal_path",
-    "summary": "Phase 23 closes with a verified retained-Python final state, not a Go-only runtime. Future Go ownership expansion must start from a new explicit gate and the retained-surface matrix in 23.10.1."
+    "summary": "Phase 23 closes with a verified retained-Python final state, not Python removal and not pure-Go packaging completion. Future packaging removal work must use the Python packaging removal roadmap A-E delivery items and the retained-surface matrix in 23.10.1.",
+    "status_semantics": {
+      "candidate_done": "partial_yes_for_bounded_go_local_candidates",
+      "live_owner": "python_remains_primary_normal_runtime_owner",
+      "dependency_removed": "no_for_python_and_no_for_pillow_until_the_A_closure_criteria_pass"
+    }
   },
   "allowed_next_steps": [
     {
-      "id": "23.8-thumb.4",
-      "title": "Go thumbnail local implementation candidate",
+      "id": "python-packaging-removal-roadmap-A-E",
+      "title": "Python packaging removal roadmap delivery item",
       "requires_explicit_user_approval": true,
-      "scope": "Separate thumbnail/Pillow removal track after the 23.8-thumb.2 parity fixtures and 23.8-thumb.3 blocked-removal decision; not authorized by Phase 23.10 closure."
+      "scope": "If the next target is packaging without Python/Pillow, choose one A-E delivery item directly. Do not add decision gates, route-by-route planning gates, or new 23.8-thumb.* items."
     },
     {
       "id": "post-23-release-hygiene",

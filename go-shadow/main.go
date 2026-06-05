@@ -2,8 +2,11 @@ package main
 
 import (
 	"bytes"
+	"context"
+	"crypto/md5"
 	"database/sql"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -17,7 +20,11 @@ import (
 	"io/fs"
 	"log"
 	"math"
+	"mime"
+	"net"
 	"net/http"
+	"net/netip"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -37,9 +44,18 @@ const maxAttachmentScanDuration = 250 * time.Millisecond
 const maxUploadFileBytes int64 = 5 * 1024 * 1024
 const thumbnailMaxWidth = 500
 const thumbnailWebPQuality float32 = 80
+const uploadURLTimeout = 30 * time.Second
 
 //go:embed web/dist/*
 var embeddedDist embed.FS
+
+var (
+	errUploadURLSSRF                        = errors.New("upload URL resolves to a private or reserved IP address")
+	uploadURLResolveHost                    = defaultUploadURLResolveHost
+	uploadURLTransport    http.RoundTripper = http.DefaultTransport
+	encodeUploadThumbnail                   = encodeThumbnailWebP
+	uploadNow                               = time.Now
+)
 
 type server struct {
 	db      *sql.DB
@@ -54,6 +70,7 @@ type runtimeConfig struct {
 	enableCategoryWrite      bool
 	enableAttachmentTextRead bool
 	enableThumbnailWrite     bool
+	enableUploadURLWrite     bool
 	sqliteQueryOnly          bool
 }
 
@@ -72,9 +89,19 @@ func main() {
 	enableCategoryWrite := flag.Bool("enable-category-write", envBool("PRISM_GO_ENABLE_CATEGORY_WRITE"), "enable local/copied-DB PUT /api/categories/<id> parity candidate")
 	enableAttachmentTextRead := flag.Bool("enable-attachment-text-read", envBool("PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ"), "enable local/copied-DB GET /api/attachments/<id> text JSON parity candidate")
 	enableThumbnailWrite := flag.Bool("enable-thumbnail-write", envBool("PRISM_GO_ENABLE_THUMBNAIL_WRITE"), "enable local/copied-data POST /api/upload thumbnail parity candidate")
+	enableUploadURLWrite := flag.Bool("enable-upload-url-write", envBool("PRISM_GO_ENABLE_UPLOAD_URL_WRITE"), "enable local/copied-data POST /api/upload/url parity candidate")
+	thumbnailInput := flag.String("thumbnail-input", "", "encode this local image file as a Prism WebP thumbnail and exit")
+	thumbnailOutput := flag.String("thumbnail-output", "", "thumbnail output path for --thumbnail-input")
 	flag.Parse()
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableAttachmentTextRead, *enableThumbnailWrite)
+	if *thumbnailInput != "" || *thumbnailOutput != "" {
+		if err := runThumbnailCLI(*thumbnailInput, *thumbnailOutput); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -99,6 +126,7 @@ func main() {
 	mux.HandleFunc("/api/notes", srv.handleNotes)
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.HandleFunc("/api/attachments/", srv.handleAttachmentDetail)
+	mux.HandleFunc("/api/upload/url", srv.handleUploadURL)
 	mux.HandleFunc("/api/upload", srv.handleUpload)
 	mux.Handle("/", staticHandler())
 
@@ -120,7 +148,42 @@ func envBool(key string) bool {
 	return value == "1" || strings.EqualFold(value, "true")
 }
 
-func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableAttachmentTextRead, enableThumbnailWrite bool) (runtimeConfig, error) {
+func runThumbnailCLI(inputPath, outputPath string) error {
+	if strings.TrimSpace(inputPath) == "" || strings.TrimSpace(outputPath) == "" {
+		return errors.New("--thumbnail-input and --thumbnail-output are required together")
+	}
+	file, err := os.Open(inputPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	content, err := io.ReadAll(io.LimitReader(file, maxUploadFileBytes+1))
+	if err != nil {
+		return err
+	}
+	if int64(len(content)) > maxUploadFileBytes {
+		return fmt.Errorf("image too large: maximum size is %d bytes", maxUploadFileBytes)
+	}
+	img, _, err := image.Decode(bytes.NewReader(content))
+	if err != nil {
+		return err
+	}
+	thumb, err := encodeThumbnailWebP(img)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(outputPath), 0755); err != nil {
+		return err
+	}
+	tmpPath := outputPath + ".tmp"
+	if err := os.WriteFile(tmpPath, thumb, 0644); err != nil {
+		return err
+	}
+	_ = os.Remove(outputPath)
+	return os.Rename(tmpPath, outputPath)
+}
+
+func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableAttachmentTextRead, enableThumbnailWrite, enableUploadURLWrite bool) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
 		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
@@ -131,8 +194,8 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	if filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_DB") != "1" {
 		return runtimeConfig{}, fmt.Errorf("refusing to open production-like database %s; use a copied *_test.db or *_dev.db", absDB)
 	}
-	if enableThumbnailWrite && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_UPLOADS") != "1" {
-		return runtimeConfig{}, fmt.Errorf("refusing to enable thumbnail writes with production-like database %s; use copied data or set PRISM_GO_ALLOW_PROD_UPLOADS=1", absDB)
+	if (enableThumbnailWrite || enableUploadURLWrite) && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_UPLOADS") != "1" {
+		return runtimeConfig{}, fmt.Errorf("refusing to enable upload writes with production-like database %s; use copied data or set PRISM_GO_ALLOW_PROD_UPLOADS=1", absDB)
 	}
 	if _, err := os.Stat(absDB); err != nil {
 		return runtimeConfig{}, err
@@ -154,6 +217,7 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		enableCategoryWrite:      enableCategoryWrite,
 		enableAttachmentTextRead: enableAttachmentTextRead,
 		enableThumbnailWrite:     enableThumbnailWrite,
+		enableUploadURLWrite:     enableUploadURLWrite,
 		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite),
 	}, nil
 }
@@ -327,6 +391,9 @@ func (s *server) apiSurface() string {
 	if s.runtime.enableThumbnailWrite {
 		parts = append(parts, "local-thumbnail-write")
 	}
+	if s.runtime.enableUploadURLWrite {
+		parts = append(parts, "local-upload-url-write")
+	}
 	return strings.Join(parts, "+")
 }
 
@@ -387,7 +454,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newFilename := time.Now().Format("20060102_150405") + "_" + filename
+	newFilename := timestampedUploadFilename(filename)
 	nameWithoutExt := strings.TrimSuffix(newFilename, filepath.Ext(newFilename))
 	thumbFilename := nameWithoutExt + "_thumb.webp"
 	uploadsDir := filepath.Join(s.runtime.dataDir, "static", "uploads")
@@ -428,6 +495,314 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		"size":           len(content),
 		"thumbnail_only": false,
 	}})
+}
+
+func (s *server) handleUploadURL(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.runtime.enableUploadURLWrite {
+		writeError(w, http.StatusMethodNotAllowed, "Upload-url write route is disabled")
+		return
+	}
+
+	var payload struct {
+		URL           string `json:"url"`
+		ThumbnailOnly bool   `json:"thumbnail_only"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil && !errors.Is(err, io.EOF) {
+		writeError(w, http.StatusBadRequest, "Invalid JSON request")
+		return
+	}
+	imageURL := strings.TrimSpace(payload.URL)
+	if imageURL == "" {
+		writeError(w, http.StatusBadRequest, "No URL provided")
+		return
+	}
+
+	parsed, err := url.Parse(imageURL)
+	if err != nil || parsed.Scheme == "" || parsed.Hostname() == "" {
+		writeError(w, http.StatusBadRequest, "Invalid URL scheme. Only http/https allowed.")
+		return
+	}
+	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		writeError(w, http.StatusBadRequest, "Invalid URL scheme. Only http/https allowed.")
+		return
+	}
+
+	content, contentType, err := downloadUploadURLImage(r.Context(), parsed, imageURL)
+	if err != nil {
+		if errors.Is(err, errUploadURLSSRF) {
+			writeError(w, http.StatusBadRequest, "URL resolves to a private or reserved IP address.")
+			return
+		}
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	contentMIME := normalizeContentType(contentType)
+	if !strings.HasPrefix(contentMIME, "image/") {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("URL does not point to an image. Content-Type: %s", contentType))
+		return
+	}
+	if int64(len(content)) > maxUploadFileBytes {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Image too large. Maximum size: %dMB", maxUploadFileBytes/(1024*1024)))
+		return
+	}
+	detectedMIME := detectUploadImageMIME(content)
+	if !allowedRemoteUploadMIME(detectedMIME) {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("Invalid image type. Detected: %s", detectedMIME))
+		return
+	}
+
+	baseName := uploadURLBaseFilename(imageURL, parsed, contentMIME)
+	newFilename := timestampedUploadFilename(baseName)
+	data, err := s.saveDownloadedUpload(content, newFilename, imageURL, payload.ThumbnailOnly)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": data})
+}
+
+func downloadUploadURLImage(ctx context.Context, parsed *url.URL, imageURL string) ([]byte, string, error) {
+	if err := validateUploadURLTarget(ctx, parsed); err != nil {
+		return nil, "", err
+	}
+	client := &http.Client{
+		Timeout:   uploadURLTimeout,
+		Transport: uploadURLTransport,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 10 {
+				return errors.New("too many redirects")
+			}
+			return validateUploadURLTarget(req.Context(), req.URL)
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return nil, "", fmt.Errorf("Failed to download image: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	req.Header.Set("Referer", parsed.Scheme+"://"+parsed.Host+"/")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		if errors.Is(err, errUploadURLSSRF) {
+			return nil, "", err
+		}
+		return nil, "", fmt.Errorf("Failed to download image: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, "", fmt.Errorf("Failed to download image: HTTP %d", resp.StatusCode)
+	}
+	contentType := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(normalizeContentType(contentType), "image/") {
+		return nil, "", fmt.Errorf("URL does not point to an image. Content-Type: %s", contentType)
+	}
+	content, err := io.ReadAll(io.LimitReader(resp.Body, maxUploadFileBytes+1))
+	if err != nil {
+		return nil, "", fmt.Errorf("Failed to download image: %w", err)
+	}
+	if int64(len(content)) > maxUploadFileBytes {
+		return nil, "", fmt.Errorf("Image too large. Maximum size: %dMB", maxUploadFileBytes/(1024*1024))
+	}
+	return content, contentType, nil
+}
+
+func validateUploadURLTarget(ctx context.Context, parsed *url.URL) error {
+	if parsed == nil || parsed.Hostname() == "" {
+		return errUploadURLSSRF
+	}
+	hostname := parsed.Hostname()
+	if addr, err := netip.ParseAddr(hostname); err == nil {
+		if blockedUploadAddr(addr) {
+			return errUploadURLSSRF
+		}
+		return nil
+	}
+	ips, err := uploadURLResolveHost(ctx, hostname)
+	if err != nil || len(ips) == 0 {
+		return errUploadURLSSRF
+	}
+	for _, ip := range ips {
+		if blockedUploadIP(ip) {
+			return errUploadURLSSRF
+		}
+	}
+	return nil
+}
+
+func defaultUploadURLResolveHost(ctx context.Context, hostname string) ([]net.IP, error) {
+	return net.DefaultResolver.LookupIP(ctx, "ip", hostname)
+}
+
+func blockedUploadIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	raw := ip
+	if v4 := ip.To4(); v4 != nil {
+		raw = v4
+	} else {
+		raw = ip.To16()
+	}
+	addr, ok := netip.AddrFromSlice(raw)
+	if !ok {
+		return true
+	}
+	addr = addr.Unmap()
+	return blockedUploadAddr(addr)
+}
+
+func blockedUploadAddr(addr netip.Addr) bool {
+	if addr.IsLoopback() || addr.IsPrivate() || addr.IsLinkLocalUnicast() ||
+		addr.IsLinkLocalMulticast() || addr.IsMulticast() || addr.IsUnspecified() {
+		return true
+	}
+	for _, prefix := range blockedUploadIPPrefixes {
+		if prefix.Contains(addr) {
+			return true
+		}
+	}
+	return false
+}
+
+var blockedUploadIPPrefixes = []netip.Prefix{
+	netip.MustParsePrefix("0.0.0.0/8"),
+	netip.MustParsePrefix("100.64.0.0/10"),
+	netip.MustParsePrefix("192.0.0.0/24"),
+	netip.MustParsePrefix("192.0.2.0/24"),
+	netip.MustParsePrefix("198.18.0.0/15"),
+	netip.MustParsePrefix("198.51.100.0/24"),
+	netip.MustParsePrefix("203.0.113.0/24"),
+	netip.MustParsePrefix("240.0.0.0/4"),
+	netip.MustParsePrefix("2001:db8::/32"),
+}
+
+func normalizeContentType(value string) string {
+	mediaType, _, err := mime.ParseMediaType(value)
+	if err == nil {
+		return strings.ToLower(mediaType)
+	}
+	return strings.ToLower(strings.TrimSpace(strings.Split(value, ";")[0]))
+}
+
+func detectUploadImageMIME(content []byte) string {
+	switch {
+	case len(content) >= 3 && content[0] == 0xff && content[1] == 0xd8 && content[2] == 0xff:
+		return "image/jpeg"
+	case len(content) >= 8 && bytes.Equal(content[:8], []byte{0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'}):
+		return "image/png"
+	case len(content) >= 6 && (bytes.Equal(content[:6], []byte("GIF87a")) || bytes.Equal(content[:6], []byte("GIF89a"))):
+		return "image/gif"
+	case len(content) >= 12 && bytes.Equal(content[:4], []byte("RIFF")) && bytes.Equal(content[8:12], []byte("WEBP")):
+		return "image/webp"
+	default:
+		return normalizeContentType(http.DetectContentType(content))
+	}
+}
+
+func allowedRemoteUploadMIME(mimeType string) bool {
+	switch mimeType {
+	case "image/jpeg", "image/png", "image/gif", "image/webp":
+		return true
+	default:
+		return false
+	}
+}
+
+func uploadURLBaseFilename(imageURL string, parsed *url.URL, contentType string) string {
+	urlPath, err := url.PathUnescape(parsed.EscapedPath())
+	if err != nil {
+		urlPath = parsed.Path
+	}
+	originalName := path.Base(urlPath)
+	if originalName == "." || originalName == "/" {
+		originalName = ""
+	}
+	if originalName != "" && strings.Contains(originalName, ".") {
+		if safeName := safeUploadFilename(originalName); safeName != "" {
+			return safeName
+		}
+	}
+	sum := md5.Sum([]byte(imageURL))
+	hash := hex.EncodeToString(sum[:])[:8]
+	return "remote_" + hash + uploadExtensionForMIME(contentType)
+}
+
+func uploadExtensionForMIME(mimeType string) string {
+	switch normalizeContentType(mimeType) {
+	case "image/jpeg":
+		return ".jpg"
+	case "image/png":
+		return ".png"
+	case "image/webp":
+		return ".webp"
+	case "image/gif":
+		return ".gif"
+	default:
+		return ".jpg"
+	}
+}
+
+func timestampedUploadFilename(filename string) string {
+	return uploadNow().Format("20060102_150405") + "_" + filename
+}
+
+func (s *server) saveDownloadedUpload(content []byte, newFilename, originalURL string, thumbnailOnly bool) (response, error) {
+	uploadsDir := filepath.Join(s.runtime.dataDir, "static", "uploads")
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		return nil, err
+	}
+
+	var thumbFilename string
+	var thumbContent []byte
+	if img, _, err := image.Decode(bytes.NewReader(content)); err == nil {
+		if encoded, err := encodeUploadThumbnail(img); err == nil {
+			nameWithoutExt := strings.TrimSuffix(newFilename, filepath.Ext(newFilename))
+			thumbFilename = nameWithoutExt + "_thumb.webp"
+			thumbContent = encoded
+		}
+	}
+
+	if thumbnailOnly && thumbFilename != "" {
+		if err := os.WriteFile(filepath.Join(uploadsDir, thumbFilename), thumbContent, 0644); err != nil {
+			return nil, err
+		}
+		return response{
+			"url":            "/static/uploads/" + thumbFilename,
+			"filename":       thumbFilename,
+			"size":           len(content),
+			"original_url":   originalURL,
+			"thumbnail_only": true,
+		}, nil
+	}
+
+	originalPath := filepath.Join(uploadsDir, newFilename)
+	if err := os.WriteFile(originalPath, content, 0644); err != nil {
+		return nil, err
+	}
+	if thumbFilename != "" {
+		if err := os.WriteFile(filepath.Join(uploadsDir, thumbFilename), thumbContent, 0644); err != nil {
+			_ = os.Remove(originalPath)
+			return nil, err
+		}
+	}
+	var returnedFilename any = newFilename
+	if thumbnailOnly {
+		returnedFilename = nil
+	}
+	return response{
+		"url":            "/static/uploads/" + newFilename,
+		"filename":       returnedFilename,
+		"size":           len(content),
+		"original_url":   originalURL,
+		"thumbnail_only": thumbnailOnly,
+	}, nil
 }
 
 func safeUploadFilename(filename string) string {

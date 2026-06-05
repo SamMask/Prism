@@ -1,0 +1,122 @@
+{
+  "phase": "23.8-thumb.7",
+  "title": "Go upload-url local implementation candidate",
+  "status": "completed",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-upload-url-remote-fetch-safety-parity-plan.json",
+    "docs/contracts/phase23-go-thumbnail-surface-expansion-gate.json",
+    "docs/contracts/phase23-go-thumbnail-local-candidate.json",
+    "docs/contracts/phase23-go-thumbnail-parity-fixtures.json"
+  ],
+  "scope_type": "flag_gated_local_copied_data_candidate",
+  "decision": "add_go_upload_url_candidate_without_changing_live_python_owner",
+  "status_semantics": {
+    "candidate_done": "partial_yes",
+    "live_owner": "no",
+    "dependency_removed": "no",
+    "summary": "23.8-thumb.7 proves only a local/copied-data upload-url thumbnail candidate. It does not promote Go to live upload/upload-url/import owner and does not remove Pillow from the packaged/runtime dependency set."
+  },
+  "implementation": {
+    "module": "go-shadow",
+    "route": "POST /api/upload/url",
+    "flag": "--enable-upload-url-write",
+    "env": "PRISM_GO_ENABLE_UPLOAD_URL_WRITE",
+    "api_surface_when_enabled": "get-read-only+local-upload-url-write",
+    "default_state": "disabled_405",
+    "data_root": "PRISM_GO_DATA_DIR/static/uploads",
+    "db_behavior": "sqlite_query_only remains true because upload-url candidate writes files only",
+    "production_guard": "production-like knowledge.db still requires PRISM_GO_ALLOW_PROD_DB=1; upload-url writes additionally require PRISM_GO_ALLOW_PROD_UPLOADS=1",
+    "dependency_policy": "reuse existing github.com/skrashevich/go-webp v0.1.0; no new Go dependency added",
+    "timeout_seconds": 30,
+    "max_download_bytes": 5242880,
+    "thumbnail_output": "_thumb.webp",
+    "max_width_px": 500,
+    "quality": 80
+  },
+  "safety_guards": [
+    "http/https scheme only",
+    "literal IP validation before DNS resolver injection",
+    "DNS resolution rejects unresolvable, private, loopback, link-local, multicast, unspecified, shared/reserved, and documentation ranges",
+    "redirect target validation before following redirects",
+    "deterministic browser-like User-Agent and origin Referer headers",
+    "Content-Type must start with image/",
+    "download is capped with MAX_CONTENT_LENGTH + 1 streaming read before any file write",
+    "magic sniff accepts only jpeg/png/webp/gif",
+    "URL basename is sanitized; no-extension URLs use deterministic remote_<md5(url)[:8]> fallback plus Content-Type extension",
+    "validation failures leave PRISM_GO_DATA_DIR/static/uploads unchanged",
+    "thumbnail_only success writes only _thumb.webp",
+    "thumbnail_only thumbnail failure keeps original image and returns filename null"
+  ],
+  "runtime_changes": {
+    "go_code_changed": true,
+    "go_upload_url_route_added": true,
+    "go_mod_changed": false,
+    "python_runtime_changed": false,
+    "requirements_changed": false,
+    "pillow_removed": false,
+    "python_upload_url_route_changed": false,
+    "import_helper_changed": false,
+    "delete_cleanup_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "retained_python_owner": {
+    "live_upload_owner": "routes/upload.py",
+    "live_upload_url_owner": "routes/upload.py download_from_url",
+    "import_helper_owner": "routes/notes/import_.py download_and_save_image",
+    "delete_cleanup_owner": "routes/upload.py and routes/cleanup.py",
+    "pillow_status": "retained",
+    "live_routing_status": "not routed by frontend, Caddy, Pi systemd, or default runtime"
+  },
+  "verification": {
+    "go_test": {
+      "command": "cd go-shadow; go test ./...",
+      "result": "passed"
+    },
+    "windows_build": {
+      "command": "cd go-shadow; go build -o ../build/phase23-thumb7/prism-go-runtime-thumb7.exe .",
+      "result": "passed",
+      "artifact_bytes": 17155584
+    },
+    "linux_arm64_cgo0_build": {
+      "command": "cd go-shadow; GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ../build/phase23-thumb7/prism-go-runtime-thumb7-linux-arm64 .",
+      "result": "passed",
+      "artifact_bytes": 15975610
+    },
+    "unit_coverage": [
+      "flag disabled route returns 405 and writes no files",
+      "flag enabled keeps sqlite_query_only true",
+      "production-like upload-url writes require PRISM_GO_ALLOW_PROD_UPLOADS",
+      "empty URL, bad scheme, literal loopback, DNS private, and unresolvable targets return 400",
+      "redirect to private host is rejected",
+      "non-image Content-Type, oversize, and magic mismatch return 400 and write no files",
+      "standard remote PNG writes original and _thumb.webp",
+      "thumbnail_only remote PNG writes only _thumb.webp",
+      "thumbnail_only thumbnail failure keeps original and returns filename null",
+      "sanitized URL basename and deterministic hash fallback filename"
+    ]
+  },
+  "not_authorized_by_23_8_thumb_7": [
+    "Remove Pillow from requirements.txt",
+    "Change Python upload/upload-url/import runtime ownership",
+    "Replace routes/notes/import_.py download_and_save_image",
+    "Change upload delete or orphan cleanup ownership",
+    "Route frontend or Caddy upload traffic to Go",
+    "Deploy this candidate to Pi",
+    "Change systemd units or Caddyfile",
+    "Write production DB or production uploads",
+    "Declare Pillow removal readiness"
+  ],
+  "pillow_removal_status_after_gate": "pending_single_pillow_dependency_removal_closure; no automatic 23.8-thumb next gate",
+  "allowed_next_step": {
+    "id": "Pillow dependency removal closure",
+    "title": "Pillow dependency removal closure",
+    "requires_explicit_user_approval": true,
+    "summary": "Single closure item to finish what is still missing before deleting Pillow: live thumbnail owner/import-helper/delete-cleanup decision, implementation if needed, verification, then Pillow dependency deletion. Do not create 23.8-thumb.8/9/10."
+  }
+}

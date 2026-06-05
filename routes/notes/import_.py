@@ -9,14 +9,8 @@ import os
 import requests
 from datetime import datetime
 from flask import request, jsonify, current_app
-from werkzeug.utils import secure_filename
 
-# Pillow 為可選依賴 (v1.3)
-try:
-    from PIL import Image
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
+from utils.image_tools import generate_webp_thumbnail, thumbnail_name
 
 from . import notes_bp
 from db import get_db
@@ -59,28 +53,10 @@ def download_and_save_image(image_url, upload_folder, thumbnail_only=False):
             # 本地路徑 - 不支援
             return None, False
         
-        # 生成縮圖
-        thumb_filename = None
-        try:
-            with Image.open(filepath) as img:
-                max_width = 500
-                if img.width > max_width:
-                    ratio = max_width / img.width
-                    new_height = int(img.height * ratio)
-                    img_resized = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                else:
-                    img_resized = img.copy()
-                
-                name_without_ext = os.path.splitext(filename)[0]
-                thumb_filename = f"{name_without_ext}_thumb.webp"
-                thumb_path = os.path.join(upload_folder, thumb_filename)
-                
-                if img_resized.mode in ('RGBA', 'LA', 'P'):
-                    img_resized = img_resized.convert('RGB')
-                
-                img_resized.save(thumb_path, 'WEBP', quality=80)
-        except Exception as e:
-            print(f"[Warning] Thumbnail generation failed: {e}")
+        thumb_filename = thumbnail_name(filename)
+        thumb_path = os.path.join(upload_folder, thumb_filename)
+        if not generate_webp_thumbnail(filepath, thumb_path):
+            thumb_filename = None
         
         # 根據設定決定回傳 URL
         if thumbnail_only and thumb_filename:

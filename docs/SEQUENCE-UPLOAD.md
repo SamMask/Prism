@@ -1,7 +1,7 @@
 # Upload Sequence Diagram
 
-> **版本**: v2.3.0
-> **更新日期**: 2026-04-04
+> **版本**: v2.4.9
+> **更新日期**: 2026-06-06
 > **注意**: AI Worker (Ollama/CLIP) 段落已於 v2.3.0 移除。
 
 ## 圖片上傳流程
@@ -30,7 +30,7 @@ sequenceDiagram
     else 新圖片
         Dedup-->>Backend: 確認不重複
         Backend->>FS: 儲存原圖 (uploads/)
-        Backend->>FS: 產生縮圖 (Pillow, 可選)
+        Backend->>FS: 產生縮圖 (Go helper, WebP)
         FS-->>Backend: 儲存完成
         Backend-->>Frontend: { url, thumb_url }
     end
@@ -66,6 +66,7 @@ sequenceDiagram
         Backend->>Remote: 下載圖片
         Remote-->>Backend: 圖片二進位
         Backend->>FS: 儲存至 uploads/
+        Backend->>FS: 產生縮圖 (Go helper, WebP)
         Backend-->>Frontend: { url: "/static/uploads/..." }
         Frontend->>Frontend: 替換 Markdown 中的遠端 URL 為本地路徑
     end
@@ -90,7 +91,7 @@ sequenceDiagram
 
     Frontend->>Backend: POST /api/upload/extract-prompt (multipart)
     activate Backend
-    Backend->>FS: 讀取圖片 EXIF / PNG metadata
+    Backend->>FS: 讀取圖片 EXIF / PNG metadata (stdlib parser)
     Backend->>Backend: 解析 SD parameters / ComfyUI workflow / NovelAI
     Backend-->>Frontend: { prompt, source }
     deactivate Backend

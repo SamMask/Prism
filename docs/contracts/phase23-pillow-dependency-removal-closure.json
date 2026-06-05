@@ -1,0 +1,64 @@
+{
+  "phase": "23.8-thumb",
+  "title": "Pillow dependency removal closure status",
+  "status": "pending_incomplete",
+  "updated_date": "2026-06-06",
+  "scope_type": "status_semantics_for_existing_closure_item",
+  "not_a_new_plan_gate": true,
+  "status_semantics": {
+    "candidate_done": "partial_yes",
+    "live_owner": "no",
+    "dependency_removed": "no",
+    "summary": "Go upload and upload-url thumbnail local/copied-data candidates exist, and some Pillow cleanup is present in the current worktree. Formal live route ownership remains Python and Pillow is still present in the Pi dependency file, so dependency removal is not complete."
+  },
+  "actual_source_evidence": {
+    "go_upload_thumbnail_candidate_done": true,
+    "go_upload_url_thumbnail_candidate_done": true,
+    "requirements_txt_contains_pillow": false,
+    "requirements_pi_txt_contains_pillow": true,
+    "python_upload_imports_pil": false,
+    "python_import_helper_imports_pil": false,
+    "start_bat_imports_pil": false,
+    "sequence_upload_mentions_pillow": false,
+    "fresh_packaged_runtime_without_python_pillow_proven": false
+  },
+  "current_owner_semantics": {
+    "upload_live_route_owner": "Python routes/upload.py",
+    "upload_url_live_route_owner": "Python routes/upload.py download_from_url",
+    "import_helper_live_owner": "Python routes/notes/import_.py download_and_save_image",
+    "go_thumbnail_status": "candidate/helper work exists, but not formal live route ownership",
+    "python_backend_dependency_removed": false,
+    "pillow_dependency_removed": false
+  },
+  "completion_criteria_for_A": [
+    "All packaged-runtime paths that produce _thumb.webp no longer require Python/Pillow.",
+    "POST /api/upload, POST /api/upload/url, and the import helper thumbnail ownership or packaged-runtime strategy are explicitly converged.",
+    "Upload delete and cleanup behavior for _thumb.webp companion files passes the existing parity fixtures.",
+    "Pillow is removed from requirements.txt and requirements-pi.txt.",
+    "Python runtime no longer has from PIL import Image, PIL_AVAILABLE fallback wording, startup Pillow checks, or API/docs/sequence wording that implies packaged runtime still depends on Pillow.",
+    "Go unit tests, Windows build, linux/arm64 CGO_ENABLED=0 build, thumbnail parity fixtures, Go local artifact smoke, and full pytest tests/ -v pass.",
+    "A fresh packaged runtime is proven to generate _thumb.webp without installing Python/Pillow."
+  ],
+  "not_authorized_by_this_semantic_correction": [
+    "Runtime implementation changes",
+    "Remove Pillow",
+    "Remove Python backend",
+    "Add 23.8-thumb.8/9/10",
+    "Add a plan-only gate",
+    "Deploy to Pi",
+    "Change Caddy or systemd",
+    "Change frontend default",
+    "Declare pure-Go package completion"
+  ],
+  "next_allowed_work": {
+    "roadmap": "Python packaging removal roadmap",
+    "allowed_items": [
+      "A. Pillow dependency removal closure",
+      "B. Runtime ownership closure for Python removal",
+      "C. Go packaged runtime release candidate",
+      "D. Live cutover and rollback proof",
+      "E. Python package deletion"
+    ],
+    "rule": "If the next target is packaging without Python/Pillow, choose one A-E delivery item directly; do not add decision gates, route-by-route planning gates, or new 23.8-thumb.* items."
+  }
+}

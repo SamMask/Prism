@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-upload-url-remote-fetch-safety-parity-plan.json"
+IMPLEMENTATION_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-upload-url-local-candidate.json"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
@@ -77,16 +78,18 @@ def test_go_candidate_plan_requires_separate_upload_url_flag_and_safety_fixtures
     assert "no-mutation checks on failure paths" in required["python_vs_go_diff_fixtures"]
 
 
-def test_go_runtime_has_not_implemented_upload_url_in_23_8_thumb_6():
+def test_go_runtime_upload_url_implementation_is_separately_authorized_by_23_8_thumb_7():
     main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
     blocked = set(_contract()["not_authorized_by_23_8_thumb_6"])
     previous = json.loads(THUMB_SURFACE_CONTRACT_PATH.read_text(encoding="utf-8"))
+    implementation = json.loads(IMPLEMENTATION_CONTRACT_PATH.read_text(encoding="utf-8"))
 
     assert 'mux.HandleFunc("/api/upload", srv.handleUpload)' in main_go
-    assert '"/api/upload/url"' not in main_go
-    assert "enable-upload-url-write" not in main_go
-    assert "PRISM_GO_ENABLE_UPLOAD_URL_WRITE" not in main_go
-    assert "downloadAndSaveImage" not in main_go
+    assert 'mux.HandleFunc("/api/upload/url", srv.handleUploadURL)' in main_go
+    assert "enable-upload-url-write" in main_go
+    assert "PRISM_GO_ENABLE_UPLOAD_URL_WRITE" in main_go
+    assert implementation["phase"] == "23.8-thumb.7"
+    assert implementation["source_contracts"][0] == "docs/contracts/phase23-go-upload-url-remote-fetch-safety-parity-plan.json"
     assert "Implement Go /api/upload/url" in blocked
     assert "Change SSRF behavior or remote request policy" in blocked
     assert "Remove Pillow from requirements.txt" in blocked

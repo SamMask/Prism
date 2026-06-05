@@ -4,6 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-thumbnail-surface-expansion-gate.json"
+UPLOAD_URL_IMPLEMENTATION_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-upload-url-local-candidate.json"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
@@ -47,14 +48,18 @@ def test_surface_matrix_keeps_only_post_upload_as_go_local_candidate():
     assert surfaces["delete_cleanup"]["status"] == "retain_python"
 
 
-def test_current_source_matches_23_8_thumb_5_retained_owner_decision():
+def test_current_source_keeps_23_8_thumb_5_live_owner_boundary_after_later_candidate():
     main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
     upload_route = UPLOAD_ROUTE_PATH.read_text(encoding="utf-8")
     import_route = IMPORT_ROUTE_PATH.read_text(encoding="utf-8")
     requirements = REQUIREMENTS_PATH.read_text(encoding="utf-8")
+    implementation = json.loads(UPLOAD_URL_IMPLEMENTATION_CONTRACT_PATH.read_text(encoding="utf-8"))
 
     assert 'mux.HandleFunc("/api/upload", srv.handleUpload)' in main_go
-    assert '"/api/upload/url"' not in main_go
+    assert 'mux.HandleFunc("/api/upload/url", srv.handleUploadURL)' in main_go
+    assert "enable-upload-url-write" in main_go
+    assert implementation["phase"] == "23.8-thumb.7"
+    assert implementation["retained_python_owner"]["live_upload_url_owner"] == "routes/upload.py download_from_url"
     assert "downloadAndSaveImage" not in main_go
     assert "_is_ssrf_target" in upload_route
     assert "@upload_bp.route('/upload/url', methods=['POST'])" in upload_route
@@ -64,9 +69,11 @@ def test_current_source_matches_23_8_thumb_5_retained_owner_decision():
     assert "def download_and_save_image" in import_route
     assert "requests.get(image_url" in import_route
     assert "thumbnail_only" in import_route
-    assert "from PIL import Image" in upload_route
-    assert "from PIL import Image" in import_route
-    assert "Pillow" in requirements
+    assert "from PIL import Image" not in upload_route
+    assert "from PIL import Image" not in import_route
+    assert "generate_webp_thumbnail" in upload_route
+    assert "generate_webp_thumbnail" in import_route
+    assert "Pillow" not in requirements
 
 
 def test_not_authorized_scope_blocks_pillow_removal_pi_and_remote_fetch_changes():

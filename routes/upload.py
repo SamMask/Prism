@@ -15,14 +15,11 @@ from werkzeug.utils import secure_filename
 from flask import request, jsonify, current_app
 from urllib.parse import urlparse, unquote
 
-# Pillow 為可選依賴 (v1.3: 安裝失敗時降級運行)
-try:
-    from PIL import Image
-    from io import BytesIO
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    print("[Info] Pillow not installed. Thumbnail generation disabled.")
+from utils.image_tools import (
+    extract_prompt_metadata,
+    generate_webp_thumbnail,
+    thumbnail_name,
+)
 
 from . import upload_bp
 
@@ -124,49 +121,22 @@ def upload_file():
         upload_folder = current_app.config['UPLOAD_FOLDER']
         file_path = os.path.join(upload_folder, new_filename)
         
-        # 用於回傳的 URL (可能是原圖或縮圖)
-        return_url = None
-        thumb_filename = None
-        
-        # 生成縮圖 (v1.6 圖片虛擬化) - 需要 Pillow
-        if PIL_AVAILABLE:
-            try:
-                # 讀取圖片到記憶體
-                file.seek(0)
-                with Image.open(file) as img:
-                    # 計算縮圖尺寸 (最大寬度 500px)
-                    max_width = 500
-                    if img.width > max_width:
-                        ratio = max_width / img.width
-                        new_height = int(img.height * ratio)
-                        img_resized = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                    else:
-                        img_resized = img.copy()
+        file.seek(0)
+        file.save(file_path)
 
-                    # 轉換並儲存為 WebP
-                    name_without_ext = os.path.splitext(new_filename)[0]
-                    thumb_filename = f"{name_without_ext}_thumb.webp"
-                    thumb_path = os.path.join(upload_folder, thumb_filename)
-
-                    if img_resized.mode in ('RGBA', 'LA', 'P'):
-                        img_resized = img_resized.convert('RGB')
-
-                    img_resized.save(thumb_path, 'WEBP', quality=80)
-                    
-            except Exception as thumb_error:
-                print(f"[Warning] Thumbnail generation failed: {thumb_error}")
-                thumb_filename = None
-        else:
-            thumb_filename = None  # Pillow 未安裝，跳過縮圖
+        thumb_filename = thumbnail_name(new_filename)
+        thumb_path = os.path.join(upload_folder, thumb_filename)
+        if not generate_webp_thumbnail(file_path, thumb_path):
+            thumb_filename = None
         
         # 根據模式決定是否保存原圖
         if thumbnail_only and thumb_filename:
             # 僅縮圖模式：不保存原圖，回傳縮圖 URL
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return_url = f"/static/uploads/{thumb_filename}"
         else:
             # 標準模式：保存原圖
-            file.seek(0)
-            file.save(file_path)
             return_url = f"/static/uploads/{new_filename}"
 
         return jsonify({
@@ -380,41 +350,23 @@ def download_from_url():
         upload_folder = current_app.config['UPLOAD_FOLDER']
         file_path = os.path.join(upload_folder, new_filename)
         
+        # 保存原圖後用 Go helper 生成縮圖；驗證失敗不會走到這裡，所以 failure
+        # fallback 只保留已驗證的本機圖片。
+        with open(file_path, 'wb') as f:
+            f.write(image_data)
+
         return_url = None
-        thumb_filename = None
-        
-        # 生成縮圖
-        if PIL_AVAILABLE:
-            try:
-                with Image.open(BytesIO(image_data)) as img:
-                    max_width = 500
-                    if img.width > max_width:
-                        ratio = max_width / img.width
-                        new_height = int(img.height * ratio)
-                        img_resized = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
-                    else:
-                        img_resized = img.copy()
-
-                    name_without_ext = os.path.splitext(new_filename)[0]
-                    thumb_filename = f"{name_without_ext}_thumb.webp"
-                    thumb_path = os.path.join(upload_folder, thumb_filename)
-
-                    if img_resized.mode in ('RGBA', 'LA', 'P'):
-                        img_resized = img_resized.convert('RGB')
-
-                    img_resized.save(thumb_path, 'WEBP', quality=80)
-                    
-            except Exception as thumb_error:
-                print(f"[Warning] Thumbnail generation failed: {thumb_error}")
-                thumb_filename = None
+        thumb_filename = thumbnail_name(new_filename)
+        thumb_path = os.path.join(upload_folder, thumb_filename)
+        if not generate_webp_thumbnail(file_path, thumb_path):
+            thumb_filename = None
         
         # 根據模式決定是否保存原圖
         if thumbnail_only and thumb_filename:
+            if os.path.exists(file_path):
+                os.remove(file_path)
             return_url = f"/static/uploads/{thumb_filename}"
         else:
-            # 保存原圖
-            with open(file_path, 'wb') as f:
-                f.write(image_data)
             return_url = f"/static/uploads/{new_filename}"
         
         return jsonify({
@@ -461,14 +413,8 @@ def extract_prompt():
         }
     }
     """
-    if not PIL_AVAILABLE:
-        return jsonify({
-            'status': 'error',
-            'message': 'Pillow is not installed'
-        }), 500
-    
     try:
-        data = request.get_json()
+        data = request.get_json() or {}
         image_path = data.get('image_path', '')
         
         if not image_path:
@@ -498,71 +444,7 @@ def extract_prompt():
         }
         
         try:
-            with Image.open(file_path) as img:
-                # Check PNG text chunks
-                if hasattr(img, 'info') and img.info:
-                    info = img.info
-
-                    # Stable Diffusion / Automatic1111 format
-                    if 'parameters' in info:
-                        params = info['parameters']
-                        prompt_data['raw_metadata'] = params
-                        prompt_data['source'] = 'stable_diffusion'
-
-                        # Parse SD format: "prompt\nNegative prompt: neg\nSteps: ..."
-                        lines = params.split('\n')
-                        prompt_lines = []
-                        neg_prompt = None
-
-                        for line in lines:
-                            if line.startswith('Negative prompt:'):
-                                neg_prompt = line.replace('Negative prompt:', '').strip()
-                            elif line.startswith('Steps:') or line.startswith('Size:') or line.startswith('Sampler:'):
-                                break
-                            else:
-                                prompt_lines.append(line)
-
-                        prompt_data['prompt'] = '\n'.join(prompt_lines).strip()
-                        prompt_data['negative_prompt'] = neg_prompt
-
-                    # ComfyUI format
-                    elif 'prompt' in info:
-                        prompt_data['prompt'] = info['prompt']
-                        prompt_data['source'] = 'comfyui'
-                        prompt_data['raw_metadata'] = info['prompt']
-
-                    # NovelAI format
-                    elif 'Comment' in info:
-                        import json
-                        try:
-                            comment = json.loads(info['Comment'])
-                            if 'prompt' in comment:
-                                prompt_data['prompt'] = comment['prompt']
-                                prompt_data['negative_prompt'] = comment.get('uc', None)
-                                prompt_data['source'] = 'novelai'
-                                prompt_data['raw_metadata'] = info['Comment']
-                        except Exception:
-                            prompt_data['raw_metadata'] = info['Comment']
-
-                    # Generic Description
-                    elif 'Description' in info:
-                        prompt_data['prompt'] = info['Description']
-                        prompt_data['source'] = 'description'
-                        prompt_data['raw_metadata'] = info['Description']
-
-                # Check EXIF data
-                if not prompt_data['prompt']:
-                    exif = img.getexif()
-                    if exif:
-                        # UserComment (0x9286)
-                        if 0x9286 in exif:
-                            user_comment = exif[0x9286]
-                            if isinstance(user_comment, bytes):
-                                user_comment = user_comment.decode('utf-8', errors='ignore')
-                            prompt_data['prompt'] = user_comment
-                            prompt_data['source'] = 'exif'
-                            prompt_data['raw_metadata'] = user_comment
-
+            prompt_data = extract_prompt_metadata(file_path)
         except Exception as e:
             print(f"[Extract Prompt] Error reading image: {e}")
             return jsonify({

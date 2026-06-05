@@ -39,6 +39,7 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/categories/")
     registered.discard("/api/attachments/")
     registered.discard("/api/upload")
+    registered.discard("/api/upload/url")
     registered.add("/api/notes/<id>")
 
     expected = {entry.removeprefix("GET ") for entry in gate["allowed_api_surface"]}

@@ -132,7 +132,8 @@ def test_23_10_3_keeps_forbidden_scope_and_closes_phase23_with_retained_python()
     assert "Frontend default API target change" in blocked
     assert "Direct public internet exposure" in blocked
     assert stabilization["phase23_closure"]["status"] == "closed_with_retained_python_normal_path"
-    assert next_steps["23.8-thumb.4"]["requires_explicit_user_approval"] is True
+    assert next_steps["python-packaging-removal-roadmap-A-E"]["requires_explicit_user_approval"] is True
+    assert "Do not add decision gates" in next_steps["python-packaging-removal-roadmap-A-E"]["scope"]
     assert next_steps["post-23-release-hygiene"]["requires_explicit_user_approval"] is True
 
 

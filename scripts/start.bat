@@ -95,16 +95,16 @@ pause
 exit /b 0
 
 :CHECK_FLASK
-REM ===== Check dependencies (Flask + Pillow) =====
+REM ===== Check dependencies (Flask + runtime packages) =====
 echo [2/4] Checking dependencies...
-%PYTHON_CMD% -c "import flask; import PIL" 2>nul
+%PYTHON_CMD% -c "import flask; import requests; import magic" 2>nul
 if %errorlevel% neq 0 (
     echo First run, installing dependencies...
     
     REM Strategy A: Try local offline packages first (wheels/)
     if exist "wheels\*.whl" (
         echo Found local packages, trying offline install...
-        %PYTHON_CMD% -m pip install --user --no-index --find-links=wheels flask pillow 2>nul
+        %PYTHON_CMD% -m pip install --user --no-index --find-links=wheels -r requirements.txt 2>nul
         if %errorlevel% equ 0 (
             echo Offline install successful!
             goto :DEPS_OK
@@ -121,12 +121,6 @@ if %errorlevel% neq 0 (
         echo Possible causes: network issues / Python version issues
         pause
         exit /b 1
-    )
-    
-    REM Try Pillow separately (for thumbnail feature)
-    %PYTHON_CMD% -c "import PIL" 2>nul
-    if %errorlevel% neq 0 (
-        echo [NOTE] Pillow install failed, thumbnails will be disabled.
     )
 ) else (
     echo Dependencies ready

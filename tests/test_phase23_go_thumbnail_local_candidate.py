@@ -70,9 +70,11 @@ def test_pillow_and_python_thumbnail_owner_are_retained_after_23_8_thumb_4():
     assert contract["retained_python_owner"]["upload_url_owner"] == "routes/upload.py"
     assert contract["retained_python_owner"]["import_helper_owner"] == "routes/notes/import_.py"
     assert contract["retained_python_owner"]["pillow_status"] == "retained"
-    assert "Pillow" in requirements
-    assert "from PIL import Image" in upload_route
-    assert "from PIL import Image" in import_route
+    assert "Pillow" not in requirements
+    assert "from PIL import Image" not in upload_route
+    assert "from PIL import Image" not in import_route
+    assert "generate_webp_thumbnail" in upload_route
+    assert "generate_webp_thumbnail" in import_route
     assert "@upload_bp.route('/upload/url', methods=['POST'])" in upload_route
     assert "def download_and_save_image" in import_route
 

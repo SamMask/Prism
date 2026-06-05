@@ -121,8 +121,9 @@ def test_pillow_and_go_webp_dependency_are_not_changed_by_plan_gate():
     upload_route = UPLOAD_ROUTE_PATH.read_text(encoding="utf-8")
     go_mod = GO_MOD_PATH.read_text(encoding="utf-8")
 
-    assert "Pillow" in requirements
-    assert "from PIL import Image" in upload_route
+    assert "Pillow" not in requirements
+    assert "from PIL import Image" not in upload_route
+    assert "generate_webp_thumbnail" in upload_route
     assert "_thumb.webp" in upload_route
     assert "github.com/chai2010/webp" not in go_mod
     assert "github.com/kolesa-team/go-webp" not in go_mod
