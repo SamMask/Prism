@@ -1,0 +1,180 @@
+{
+  "phase": "23.5",
+  "title": "Go DB-only write expansion gate",
+  "status": "completed",
+  "completed_at": "2026-06-05",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-first-write-route-implementation.json",
+  "risk_level": "P0 safety-critical",
+  "plan_only": true,
+  "runtime_change": false,
+  "go_write_implementation": false,
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "stabilization_decision": {
+    "tag_rename_candidate_status": "local_copied_db_parity_complete_only",
+    "live_tag_rename_gate_before_next_db_only_write": "deferred",
+    "reason": "23.4 proves only local/copied-DB flag-gated parity. Live write routing would require a separate Caddy/systemd/production DB/CSRF/rollback gate and must not be treated as automatic Go ownership.",
+    "default_runtime_boundary": {
+      "live_go_owned_surface": "hardened GET read-only Caddy-routed surface",
+      "tag_rename_live_owner": "Python",
+      "go_tag_rename_status": "local/copied-DB candidate behind --enable-tag-write only"
+    }
+  },
+  "schema_doc_discrepancy_gate": {
+    "subject": "Tags.name NOCASE schema/documentation discrepancy",
+    "docs_claim": "docs/SCHEMA.md documents Tags.name as UNIQUE COLLATE NOCASE and documents idx_tags_name ON Tags(name COLLATE NOCASE).",
+    "runtime_truth": [
+      "migrations/test DB currently create Tags.name as TEXT UNIQUE NOT NULL without an explicit COLLATE NOCASE clause",
+      "routes/tags.py duplicate checks use exact SELECT id FROM Tags WHERE name = ? semantics",
+      "23.4 Go parity intentionally matched current Python exact-name duplicate behavior"
+    ],
+    "decision": "defer_schema_or_runtime_correction",
+    "blocked_until_resolved": [
+      "Go expansion of tag delete",
+      "Go expansion of tag merge",
+      "Any broader tag CUD ownership that depends on name uniqueness semantics"
+    ],
+    "not_authorized_in_23_5": [
+      "Schema migration to enforce NOCASE",
+      "Python tag route behavior change",
+      "Go tag duplicate semantics change",
+      "docs/SCHEMA.md rewrite that claims a runtime correction was performed"
+    ]
+  },
+  "candidate_matrix": [
+    {
+      "id": "category_update",
+      "route": "PUT /api/categories/<category_id>",
+      "source": "routes/categories.py",
+      "decision": "selected_for_next_db_only_implementation_subgate",
+      "db_side_effects": [
+        "Categories.name update when provided",
+        "Categories.icon update when provided",
+        "Categories.sort_order update when provided"
+      ],
+      "file_side_effects": [],
+      "external_side_effects": [],
+      "process_side_effects": [],
+      "why_selected": [
+        "DB-only top-level route with no file, cascade, bulk, process, or nested /api/notes matcher expansion",
+        "Updates an existing single Categories row instead of creating a new identity",
+        "Avoids the unresolved Tags.name NOCASE discrepancy"
+      ]
+    },
+    {
+      "id": "category_create",
+      "route": "POST /api/categories",
+      "source": "routes/categories.py",
+      "decision": "deferred_after_category_update",
+      "reason": "DB-only, but creates a new identity and computes max sort_order; category_update is the smaller next proof."
+    },
+    {
+      "id": "category_delete",
+      "route": "DELETE /api/categories/<category_id>",
+      "source": "routes/categories.py",
+      "decision": "rejected_for_next_db_only_implementation",
+      "reason": "Migrates Notes.category_id, protects default categories, and has broader data movement than a single-row update."
+    },
+    {
+      "id": "notes_pin_archive",
+      "routes": [
+        "POST /api/notes/<note_id>/pin",
+        "POST /api/notes/<note_id>/archive"
+      ],
+      "source": "routes/notes/actions.py",
+      "decision": "deferred",
+      "reason": "DB-only, but nested /api/notes/... action routing intersects the hardened live matcher boundary; keep it behind an explicit later route gate."
+    },
+    {
+      "id": "tag_delete",
+      "route": "DELETE /api/tags/<tag_id>",
+      "source": "routes/tags.py",
+      "decision": "blocked_by_tag_nocase_discrepancy_and_cascade",
+      "reason": "Deletes Tags row and depends on tag ownership semantics while Tags.name discrepancy is unresolved."
+    },
+    {
+      "id": "tag_merge",
+      "route": "POST /api/tags/merge",
+      "source": "routes/tags.py",
+      "decision": "blocked_by_tag_nocase_discrepancy_and_multi_step_rewrite",
+      "reason": "Rewrites Note_Tags and deletes source Tags in one transaction; too broad for the next DB-only proof."
+    },
+    {
+      "id": "notes_duplicate_reorder_batch",
+      "routes": [
+        "POST /api/notes/<note_id>/duplicate",
+        "PUT /api/notes/reorder",
+        "POST /api/notes/batch/*"
+      ],
+      "source": "routes/notes/actions.py and related notes modules",
+      "decision": "rejected_for_next_db_only_implementation",
+      "reason": "Duplicate creates rows and copies relationships; reorder is bulk; batch routes may couple to file deletion. These are not the smallest next route class."
+    },
+    {
+      "id": "attachments_uploads_cleanup_import_export_system_server_config",
+      "decision": "rejected_until_file_or_system_gate",
+      "reason": "Filesystem, backup, process, config, import/export, or server-local side effects remain outside DB-only write expansion."
+    }
+  ],
+  "next_implementation_contract": {
+    "id": "23.5-next",
+    "title": "Second Go DB-only write implementation subgate",
+    "status": "blocked_until_explicit_user_approval",
+    "selected_route": "PUT /api/categories/<category_id>",
+    "scope": "Local/copied-DB only. Do not change live Caddy/systemd/frontend defaults or production DB. Keep live category update Python-owned until a later explicit live routing gate.",
+    "expected_enablement": "Use an explicit local flag such as --enable-category-write / PRISM_GO_ENABLE_CATEGORY_WRITE=1; default Go runtime remains GET read-only with SQLite query_only = ON.",
+    "request_response_parity": [
+      "Missing category id returns 404 with current Python response shape",
+      "Missing JSON body is accepted only if current Python behavior accepts it; otherwise match Python exactly",
+      "name/icon/sort_order omitted fields preserve existing values",
+      "name is trimmed when provided",
+      "trimmed empty name returns 400 Category name cannot be empty after 23.5-next.2 Python+Go hardening",
+      "duplicate category name returns 409 using current Python exact-name semantics",
+      "success returns {\"status\":\"success\",\"data\":{\"updated_notes_count\":0}}"
+    ],
+    "transaction_and_state_invariants": [
+      "Update exactly one Categories row on success",
+      "Notes rows must not change",
+      "No file, attachment, import/export, cleanup, server, or migration side effects",
+      "Rollback leaves Categories unchanged on validation or SQL failure"
+    ],
+    "fixture_plan": [
+      "Python vs Go response parity for name-only, icon-only, sort_order-only, combined update, missing id, empty-name 400, duplicate name",
+      "DB-state parity snapshot for Categories before/after each case",
+      "Rollback/no partial write fixture",
+      "Default Go runtime rejects PUT without the explicit category-write flag"
+    ],
+    "stop_conditions": [
+      "Any need to edit live Caddy/systemd or production DB",
+      "Any route expansion under nested /api/notes",
+      "Any schema migration or Tags.name uniqueness semantics change",
+      "Any file or attachment side effect"
+    ]
+  },
+  "not_authorized_by_23_5": [
+    "Go implementation of PUT /api/categories/<category_id>",
+    "Live tag rename routing gate",
+    "Live category write routing gate",
+    "Production knowledge.db write",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Schema migration",
+    "Tag delete or merge Go ownership",
+    "File upload or attachment ownership",
+    "Public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.5-next",
+    "title": "Second Go DB-only write implementation subgate",
+    "status": "blocked_until_explicit_user_approval",
+    "requires_explicit_user_approval": true,
+    "selected_route": "PUT /api/categories/<category_id>",
+    "scope": "Implement only the selected local/copied-DB category update candidate with parity and rollback tests; live routing remains blocked."
+  }
+}

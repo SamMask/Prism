@@ -117,10 +117,17 @@ def test_phase23_2_docs_record_completion_and_23_3_next_gate():
     assert "23.2 Go file-read parity implementation gate — ✅ Completed" in todo
     assert "23.3 Go write surface selection gate — ✅ Completed" in todo
     assert "23.4 First Go write route implementation gate — ✅ Completed" in todo
-    assert "23.5 Go DB-only write expansion gate — Pending Explicit Approval" in todo
+    assert "23.5 Go DB-only write expansion gate — ✅ Completed" in todo
+    assert "23.5 Next DB-only write implementation subgate — ✅ Completed" in todo
     assert "Phase 23.2 Go file-read parity implementation gate" in architecture
     assert "Phase 23.3 Go write surface selection gate is complete" in architecture
     assert "Phase 23.4 First Go write route implementation gate is complete" in architecture
+    assert "Phase 23.5 Go DB-only write expansion gate is complete" in architecture
+    assert "Phase 23.5-next.1 Second Go DB-only write implementation subgate is complete" in architecture
+    assert "Phase 23.5-next.2-4 category update closure is complete" in architecture
     assert "23.2 Go file-read parity implementation gate is complete" in go_report
     assert "23.3 Go write surface selection gate is complete" in go_report
     assert "23.4 First Go write route implementation gate is complete" in go_report
+    assert "23.5 Go DB-only write expansion gate is complete" in go_report
+    assert "23.5-next.1 Second Go DB-only write implementation subgate is complete" in go_report
+    assert "23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete" in go_report

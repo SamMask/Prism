@@ -36,11 +36,12 @@ type server struct {
 }
 
 type runtimeConfig struct {
-	addr            string
-	dbPath          string
-	dataDir         string
-	enableTagWrite  bool
-	sqliteQueryOnly bool
+	addr                string
+	dbPath              string
+	dataDir             string
+	enableTagWrite      bool
+	enableCategoryWrite bool
+	sqliteQueryOnly     bool
 }
 
 type response map[string]any
@@ -55,14 +56,15 @@ func main() {
 	addr := flag.String("addr", envDefault("PRISM_GO_ADDR", "127.0.0.1:5001"), "listen address")
 	dataDir := flag.String("data-dir", envDefault("PRISM_GO_DATA_DIR", "."), "external Prism user data directory")
 	enableTagWrite := flag.Bool("enable-tag-write", envBool("PRISM_GO_ENABLE_TAG_WRITE"), "enable local/copied-DB PUT /api/tags/<id> parity candidate")
+	enableCategoryWrite := flag.Bool("enable-category-write", envBool("PRISM_GO_ENABLE_CATEGORY_WRITE"), "enable local/copied-DB PUT /api/categories/<id> parity candidate")
 	flag.Parse()
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	db, err := openDB(cfg.dbPath, cfg.enableTagWrite)
+	db, err := openDB(cfg.dbPath, cfg.hasWriteCandidate())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,6 +78,7 @@ func main() {
 	mux.HandleFunc("/healthz", srv.handleHealth)
 	mux.HandleFunc("/api/test", srv.handleTest)
 	mux.HandleFunc("/api/categories", srv.handleCategories)
+	mux.HandleFunc("/api/categories/", srv.handleCategoryDetail)
 	mux.HandleFunc("/api/tags", srv.handleTags)
 	mux.HandleFunc("/api/tags/", srv.handleTagDetail)
 	mux.HandleFunc("/api/notes", srv.handleNotes)
@@ -100,7 +103,7 @@ func envBool(key string) bool {
 	return value == "1" || strings.EqualFold(value, "true")
 }
 
-func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite bool) (runtimeConfig, error) {
+func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite bool) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
 		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
@@ -124,12 +127,17 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite bool) (ru
 	}
 
 	return runtimeConfig{
-		addr:            addr,
-		dbPath:          absDB,
-		dataDir:         absData,
-		enableTagWrite:  enableTagWrite,
-		sqliteQueryOnly: !enableTagWrite,
+		addr:                addr,
+		dbPath:              absDB,
+		dataDir:             absData,
+		enableTagWrite:      enableTagWrite,
+		enableCategoryWrite: enableCategoryWrite,
+		sqliteQueryOnly:     !(enableTagWrite || enableCategoryWrite),
 	}, nil
+}
+
+func (cfg runtimeConfig) hasWriteCandidate() bool {
+	return cfg.enableTagWrite || cfg.enableCategoryWrite
 }
 
 func openDB(dbPath string, enableWrites bool) (*sql.DB, error) {
@@ -284,8 +292,13 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) apiSurface() string {
-	if s.runtime.enableTagWrite {
+	switch {
+	case s.runtime.enableTagWrite && s.runtime.enableCategoryWrite:
+		return "get-read-only+local-tag-write+local-category-write"
+	case s.runtime.enableTagWrite:
 		return "get-read-only+local-tag-write"
+	case s.runtime.enableCategoryWrite:
+		return "get-read-only+local-category-write"
 	}
 	return "get-read-only"
 }
@@ -355,6 +368,102 @@ func (s *server) handleCategories(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": items})
+}
+
+func (s *server) handleCategoryDetail(w http.ResponseWriter, r *http.Request) {
+	idText := strings.TrimPrefix(r.URL.Path, "/api/categories/")
+	categoryID, err := strconv.Atoi(idText)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodPut {
+		w.Header().Set("Allow", http.MethodPut)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.runtime.enableCategoryWrite {
+		writeError(w, http.StatusMethodNotAllowed, "Category write route is disabled")
+		return
+	}
+	s.updateCategory(w, r, categoryID)
+}
+
+func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, categoryID int) {
+	var payload map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || len(payload) == 0 {
+		writeError(w, http.StatusBadRequest, "Request body is required")
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var oldName string
+	if err := tx.QueryRow("SELECT name FROM Categories WHERE id = ?", categoryID).Scan(&oldName); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Category not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	newName := oldName
+	if rawName, ok := payload["name"]; ok {
+		name, ok := rawName.(string)
+		if !ok {
+			writeError(w, http.StatusInternalServerError, "category name must be a string")
+			return
+		}
+		newName = strings.TrimSpace(name)
+	}
+	if newName == "" {
+		writeError(w, http.StatusBadRequest, "Category name cannot be empty")
+		return
+	}
+	if newName != oldName {
+		var duplicateID int
+		if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? AND id != ?", newName, categoryID).Scan(&duplicateID); err == nil {
+			writeError(w, http.StatusConflict, "Category name already exists")
+			return
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
+	icon, hasIcon := payload["icon"]
+	if hasIcon && icon == nil {
+		hasIcon = false
+	}
+	sortOrder, hasSortOrder := payload["sort_order"]
+	if hasSortOrder && sortOrder == nil {
+		hasSortOrder = false
+	}
+
+	if hasIcon && hasSortOrder {
+		_, err = tx.Exec("UPDATE Categories SET name = ?, icon = ?, sort_order = ? WHERE id = ?", newName, icon, sortOrder, categoryID)
+	} else if hasIcon {
+		_, err = tx.Exec("UPDATE Categories SET name = ?, icon = ? WHERE id = ?", newName, icon, categoryID)
+	} else if hasSortOrder {
+		_, err = tx.Exec("UPDATE Categories SET name = ?, sort_order = ? WHERE id = ?", newName, sortOrder, categoryID)
+	} else {
+		_, err = tx.Exec("UPDATE Categories SET name = ? WHERE id = ?", newName, categoryID)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"updated_notes_count": 0}})
 }
 
 func (s *server) handleTags(w http.ResponseWriter, r *http.Request) {

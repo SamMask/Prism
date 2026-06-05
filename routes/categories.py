@@ -121,6 +121,12 @@ def update_category(category_id):
         icon = data.get('icon')
         sort_order = data.get('sort_order')
 
+        if not new_name:
+            return jsonify({
+                'status': 'error',
+                'message': 'Category name cannot be empty'
+            }), 400
+
         if new_name != old_name:
             name_exists = db.execute(
                 'SELECT id FROM Categories WHERE name = ? AND id != ?',

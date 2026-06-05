@@ -94,3 +94,28 @@ class TestCategoriesAPI:
 
         note = client.get(f'/api/notes/{note_id}').get_json()['data']
         assert note['category_id'] == default_category_id
+
+    def test_update_category_rejects_empty_trimmed_name(self, client, app):
+        """Updating a category cannot write an empty trimmed name."""
+        create_response = client.post(
+            '/api/categories',
+            data=json.dumps({'name': 'No Empty Update', 'icon': 'N'}),
+            content_type='application/json'
+        )
+        category_id = json.loads(create_response.data)['data']['id']
+
+        response = client.put(
+            f'/api/categories/{category_id}',
+            data=json.dumps({'name': '   '}),
+            content_type='application/json'
+        )
+
+        assert response.status_code == 400
+        assert response.get_json() == {
+            'status': 'error',
+            'message': 'Category name cannot be empty'
+        }
+
+        categories = client.get('/api/categories').get_json()['data']
+        category = next(cat for cat in categories if cat['id'] == category_id)
+        assert category['name'] == 'No Empty Update'

@@ -62,7 +62,21 @@ It was **plan-only**: it selected `PUT /api/tags/<tag_id>` (`tag_rename`) as the
 
 It implemented the first Go write candidate as local/copied-DB parity only. Go now supports `PUT /api/tags/<tag_id>` behind an explicit `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1` flag. Without that flag, the runtime remains `get-read-only` and keeps SQLite `query_only = ON`. The implementation updates only `Tags.name`, preserves `Tags.id` and `Note_Tags`, uses a transaction, and matches current Python response / DB-state behavior for success, validation errors, missing tag, and duplicate exact-name checks. It did not change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, remove Python, or expand public exposure.
 
-`23.5 Go DB-only write expansion gate` is the next recommended step, pending explicit approval. It should first decide whether tag rename needs a live/local routing gate before broader DB-only write expansion, then resolve or explicitly defer the `Tags.name` NOCASE schema/documentation discrepancy before tag CUD expansion.
+`23.5 Go DB-only write expansion gate is complete`.
+
+It was **plan-only**: it deferred a live tag rename routing gate, kept `PUT /api/tags/<tag_id>` as a local/copied-DB candidate only, and explicitly deferred the `Tags.name` NOCASE schema/documentation/runtime discrepancy instead of changing schema or tag duplicate behavior. Broader tag CUD remains blocked until that discrepancy gets a dedicated gate. It selected `PUT /api/categories/<category_id>` as the next DB-only implementation candidate because it is a top-level DB-only single-row update and avoids nested `/api/notes/...` matcher expansion. It did not implement Go category writes, change production DB, change Caddy/systemd/frontend defaults, deploy Pi, remove Python, or expand public exposure.
+
+`23.5-next.1 Second Go DB-only write implementation subgate is complete`.
+
+It implemented local/copied-DB `PUT /api/categories/<category_id>` behind the explicit `--enable-category-write` / `PRISM_GO_ENABLE_CATEGORY_WRITE=1` flag. Without that flag, the runtime remains `get-read-only` and keeps SQLite `query_only = ON`. The implementation updates only the existing `Categories` row fields provided by the request (`name`, `icon`, `sort_order`) and matches current Python response / DB-state behavior for success, missing body, missing category, duplicate exact-name checks, and disabled flag behavior. It does not update `Notes`, touch files, change schema, change Caddy/systemd/frontend defaults, deploy Pi, remove Python, or expand public exposure.
+
+`23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete`.
+
+It closed the category update candidate by hardening Python and Go together: trimmed empty category names now return 400 `Category name cannot be empty` instead of writing an empty string. The parity and rollback locks cover success, missing body, missing category, duplicate exact-name, empty name, disabled Go flag, unchanged `Notes.category_id`, and unchanged non-target tables/surfaces. It did not expand to category create/delete, notes actions, tag CUD, files, live routing, Caddy/systemd, production DB, Pi deploy, schema migration, Python removal, or public exposure.
+
+`23.6 File / attachment ownership gate` is complete as a plan-only inventory and selection gate. It split attachment metadata/body, uploads, cleanup, notes image cleanup, export/import, and server backup/log surfaces by data root, side effects, rollback needs, and defer reason. It selected only the text JSON branch of `GET /api/attachments/<attachment_id>` as the next file-read candidate, and did not implement Go file routes, write/delete files, change live routing, touch production DB/files, deploy Pi, remove Python, change schema, or expand public exposure.
+
+`23.6-next First Go file-read route implementation candidate` is the next recommended step, pending explicit approval. It should implement only local/copied-DB-and-files parity for the text JSON branch of `GET /api/attachments/<attachment_id>`; `raw=true`, binary/send_file, upload/delete, cleanup, import/export, server backup/logs, live routing, production DB/files, Pi deploy, schema, and Python removal remain blocked.
 
 ---
 

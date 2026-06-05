@@ -2,8 +2,12 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -70,7 +74,7 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	dataDir := filepath.Join(t.TempDir(), "data")
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,6 +86,9 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	}
 	if cfg.enableTagWrite {
 		t.Fatal("tag write should be disabled by default")
+	}
+	if cfg.enableCategoryWrite {
+		t.Fatal("category write should be disabled by default")
 	}
 	if !cfg.sqliteQueryOnly {
 		t.Fatal("default runtime must keep SQLite query_only enabled")
@@ -98,7 +105,7 @@ func TestRuntimeRefusesProductionNamedDB(t *testing.T) {
 	}
 	t.Setenv("PRISM_GO_ALLOW_PROD_DB", "")
 
-	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false)
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false)
 	if err == nil {
 		t.Fatal("expected production-like database refusal")
 	}
@@ -132,7 +139,7 @@ func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 
 func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,5 +158,61 @@ func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T)
 
 	if _, err := db.Exec("INSERT INTO Tags (name) VALUES ('writable')"); err != nil {
 		t.Fatalf("expected explicit tag write mode to allow copied-DB writes: %v", err)
+	}
+}
+
+func TestCategoryWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.enableCategoryWrite {
+		t.Fatal("category write should be enabled by explicit flag")
+	}
+	if cfg.sqliteQueryOnly {
+		t.Fatal("category write mode must report SQLite query_only disabled")
+	}
+
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec("UPDATE Categories SET name = ? WHERE id = 1", "renamed"); err != nil {
+		t.Fatalf("expected explicit category write mode to allow copied-DB writes: %v", err)
+	}
+}
+
+func TestCategoryWriteHandlerRejectsWhenFlagDisabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
+	request := httptest.NewRequest(http.MethodPut, "/api/categories/1", strings.NewReader(`{"name":"blocked"}`))
+	recorder := httptest.NewRecorder()
+	srv.handleCategoryDetail(recorder, request)
+
+	if recorder.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected disabled category write to return 405, got %d", recorder.Code)
+	}
+	var payload map[string]string
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected JSON error response: %v", err)
+	}
+	if payload["message"] != "Category write route is disabled" {
+		t.Fatalf("unexpected disabled message: %#v", payload)
+	}
+	var name string
+	if err := db.QueryRow("SELECT name FROM Categories WHERE id = 1").Scan(&name); err != nil {
+		t.Fatal(err)
+	}
+	if name != "note" {
+		t.Fatalf("disabled handler changed category name: %q", name)
 	}
 }

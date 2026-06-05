@@ -1,0 +1,327 @@
+{
+  "phase": "23.6",
+  "title": "File / attachment ownership gate",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-category-update-closure.json",
+  "risk_level": "P0 safety-critical",
+  "plan_only": true,
+  "runtime_change": "none",
+  "go_file_route_implemented": false,
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "filesystem_write_authorized": false,
+  "filesystem_delete_authorized": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "file_ownership_inventory": [
+    {
+      "id": "attachments_metadata_list",
+      "source": "routes/attachments.py",
+      "routes": [
+        "GET /api/notes/<note_id>/attachments"
+      ],
+      "data_roots": [],
+      "side_effects": [
+        "db_read"
+      ],
+      "decision": "defer_as_db_only_precursor",
+      "reason": "It enumerates Note_Attachments metadata but does not prove file path ownership."
+    },
+    {
+      "id": "attachment_text_content_read",
+      "source": "routes/attachments.py",
+      "routes": [
+        "GET /api/attachments/<attachment_id>"
+      ],
+      "route_branch": "raw query param is not true; response reads UTF-8 text and returns JSON content",
+      "data_roots": [
+        "docs/attachments"
+      ],
+      "side_effects": [
+        "db_read",
+        "filesystem_read"
+      ],
+      "decision": "selected_for_23_6_next",
+      "reason": "Smallest real file-read candidate: single attachment id, no file write/delete, no DB write, explicit attachment path, and aligned with existing 23.1/23.2 docs/attachments path-safety work."
+    },
+    {
+      "id": "attachment_raw_or_binary_read",
+      "source": "routes/attachments.py",
+      "routes": [
+        "GET /api/attachments/<attachment_id>?raw=true"
+      ],
+      "data_roots": [
+        "docs/attachments"
+      ],
+      "side_effects": [
+        "db_read",
+        "filesystem_read",
+        "binary_response_stream"
+      ],
+      "decision": "defer",
+      "reason": "Binary/raw response parity requires separate content-type, send-file, and download behavior checks."
+    },
+    {
+      "id": "attachment_upload",
+      "source": "routes/attachments.py",
+      "routes": [
+        "POST /api/notes/<note_id>/attachments"
+      ],
+      "data_roots": [
+        "docs/attachments"
+      ],
+      "side_effects": [
+        "filesystem_write",
+        "db_write"
+      ],
+      "decision": "defer_until_write_backup_restore_gate",
+      "reason": "Multipart upload couples file creation and Note_Attachments insert; partial failure rollback must be proven first."
+    },
+    {
+      "id": "attachment_delete",
+      "source": "routes/attachments.py",
+      "routes": [
+        "DELETE /api/attachments/<attachment_id>"
+      ],
+      "data_roots": [
+        "docs/attachments"
+      ],
+      "side_effects": [
+        "filesystem_delete",
+        "db_write"
+      ],
+      "decision": "defer_until_write_backup_restore_gate",
+      "reason": "Delete order can create DB/file mismatch unless rollback and missing-file behavior are locked."
+    },
+    {
+      "id": "attachment_separate_restore",
+      "source": "routes/attachments.py",
+      "routes": [
+        "GET /api/notes/<note_id>/check_separation",
+        "POST /api/notes/<note_id>/separate",
+        "POST /api/notes/<note_id>/restore"
+      ],
+      "data_roots": [
+        "docs/attachments"
+      ],
+      "side_effects": [
+        "db_read",
+        "db_write",
+        "filesystem_read",
+        "filesystem_write",
+        "filesystem_delete"
+      ],
+      "decision": "defer",
+      "reason": "Separation and restore mutate both note content and attachment files; not a first file ownership candidate."
+    },
+    {
+      "id": "upload_images",
+      "source": "routes/upload.py",
+      "routes": [
+        "POST /api/upload",
+        "POST /api/upload/url",
+        "POST /api/upload/delete",
+        "POST /api/upload/extract-prompt"
+      ],
+      "data_roots": [
+        "static/uploads"
+      ],
+      "side_effects": [
+        "filesystem_read",
+        "filesystem_write",
+        "filesystem_delete",
+        "thumbnail_write",
+        "remote_fetch"
+      ],
+      "decision": "defer",
+      "reason": "Image upload adds MIME/Pillow/libmagic, thumbnails, delete behavior, and remote URL safety; too broad for the first file route."
+    },
+    {
+      "id": "notes_image_cleanup_on_delete",
+      "source": "routes/notes/crud.py routes/notes/batch.py",
+      "routes": [
+        "DELETE /api/notes/<note_id>",
+        "POST /api/notes/batch/delete"
+      ],
+      "data_roots": [
+        "static/uploads"
+      ],
+      "side_effects": [
+        "db_write",
+        "filesystem_delete"
+      ],
+      "decision": "defer",
+      "reason": "Note deletion is cascade-like and already outside the DB-only write scope."
+    },
+    {
+      "id": "cleanup_routes",
+      "source": "routes/cleanup.py",
+      "routes": [
+        "GET /api/cleanup/orphan-images",
+        "DELETE /api/cleanup/orphan-images",
+        "GET /api/cleanup/originals",
+        "DELETE /api/cleanup/originals",
+        "GET /api/cleanup/broken-images",
+        "POST /api/cleanup/broken-images"
+      ],
+      "data_roots": [
+        "static/uploads",
+        "docs/attachments"
+      ],
+      "side_effects": [
+        "bulk_filesystem_scan",
+        "filesystem_delete",
+        "db_read",
+        "db_write"
+      ],
+      "decision": "defer",
+      "reason": "Cleanup is intentionally bulk and destructive; it needs a dedicated dry-run, backup, and rollback contract."
+    },
+    {
+      "id": "export_routes",
+      "source": "routes/export.py routes/notes/export.py",
+      "routes": [
+        "GET /api/export/json",
+        "GET /api/export/markdown",
+        "GET /api/export/db",
+        "POST /api/export/images",
+        "POST /api/notes/export/batch"
+      ],
+      "data_roots": [
+        "knowledge.db",
+        "static/uploads"
+      ],
+      "side_effects": [
+        "db_read",
+        "filesystem_read",
+        "zip_response",
+        "database_file_response"
+      ],
+      "decision": "defer",
+      "reason": "Export spans DB files, image files, and zip response semantics; not the first attachment route."
+    },
+    {
+      "id": "import_routes",
+      "source": "routes/export.py routes/notes/import_.py",
+      "routes": [
+        "POST /api/import/json",
+        "POST /api/notes/import/md"
+      ],
+      "data_roots": [
+        "static/uploads"
+      ],
+      "side_effects": [
+        "db_write",
+        "filesystem_write",
+        "remote_fetch"
+      ],
+      "decision": "defer",
+      "reason": "Import combines parser behavior, DB writes, optional image writes, and remote fetch risk."
+    },
+    {
+      "id": "server_backup_logs",
+      "source": "routes/server.py",
+      "routes": [
+        "GET /api/server/logs",
+        "GET /api/server/backup/download",
+        "POST /api/server/backup/rotate",
+        "GET /api/server/backup/list"
+      ],
+      "data_roots": [
+        "knowledge.db",
+        "backups",
+        "app.log"
+      ],
+      "side_effects": [
+        "filesystem_read",
+        "filesystem_write",
+        "filesystem_delete",
+        "database_file_copy"
+      ],
+      "decision": "defer_outside_attachment_first_route",
+      "reason": "Server backup/log routes are operational local-admin surfaces, not the first attachment ownership candidate."
+    }
+  ],
+  "selected_first_file_candidate": {
+    "id": "attachment_text_content_read",
+    "phase": "23.6-next",
+    "route": "GET /api/attachments/<attachment_id>",
+    "source": "routes/attachments.py::get_attachment_content",
+    "scope": "Text JSON branch only: raw query param is not true, reads UTF-8 attachment content from docs/attachments, and returns the existing JSON body shape.",
+    "required_gate": "local_copied_db_and_copied_files_only",
+    "required_enablement": "explicit local Go flag or env gate; default Go runtime remains get-read-only with SQLite query_only = ON until a separate gate widens it",
+    "deferred_branches": [
+      "raw=true send_file behavior",
+      "binary response streaming",
+      "attachment upload",
+      "attachment delete",
+      "separate/restore",
+      "upload image routes",
+      "cleanup routes",
+      "import/export routes",
+      "server backup/log routes"
+    ]
+  },
+  "backup_restore_contract": {
+    "read_only_candidate": {
+      "db_backup_required": "copied DB fixture only; no production DB and no live Pi DB",
+      "filesystem_backup_required": "copied docs/attachments fixture only; no production attachment tree mutation",
+      "rollback_expectation": "no rollback mutation is required because the selected candidate must not write DB or files; tests must prove DB bytes and attachment file bytes remain unchanged after success and failure cases"
+    },
+    "future_file_write_candidates": {
+      "db_backup_required": true,
+      "filesystem_backup_required": true,
+      "partial_failure_rollback_required": true,
+      "blocked_until": "a dedicated contract proves DB + filesystem snapshot/restore, file write/delete ordering, missing-file handling, and Pi rollback boundaries"
+    }
+  },
+  "path_safety_contract": {
+    "selected_allowed_root": "docs/attachments",
+    "reserved_later_root": "static/uploads",
+    "must_reject": [
+      ".. traversal",
+      "absolute path",
+      "Windows drive or volume path",
+      "UNC path",
+      "colon path segment",
+      "symlink escape outside data dir",
+      "path outside docs/attachments for selected candidate",
+      "unsupported extension for text branch"
+    ],
+    "must_match_python_for": [
+      "missing attachment id",
+      "missing file on disk",
+      "UTF-8 text content JSON body",
+      "raw=true remains Python-owned until widened"
+    ]
+  },
+  "not_authorized_by_23_6": [
+    "Go file route implementation in this gate",
+    "Attachment upload Go ownership",
+    "Attachment delete Go ownership",
+    "Raw or binary attachment response Go ownership",
+    "Upload image Go ownership",
+    "Cleanup route Go ownership",
+    "Import or export Go ownership",
+    "Server backup or log route Go ownership",
+    "Production knowledge.db write",
+    "Production attachment or upload filesystem mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Schema migration",
+    "Python packaging removal",
+    "Public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.6-next",
+    "title": "First Go file-read route implementation candidate",
+    "status": "blocked_until_explicit_user_approval",
+    "requires_explicit_user_approval": true,
+    "scope": "Implement only local/copied-DB-and-files parity for the text JSON branch of GET /api/attachments/<attachment_id>. Keep raw/binary, upload, delete, cleanup, import/export, server backup/logs, live routing, production DB/files, Pi deploy, Python removal, schema, and public exposure blocked."
+  }
+}

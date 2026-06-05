@@ -1,0 +1,82 @@
+{
+  "phase": "23.5-next.1",
+  "title": "Second Go DB-only write implementation subgate - category update",
+  "status": "completed",
+  "completed_at": "2026-06-05",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-db-only-write-expansion-selection.json",
+  "risk_level": "P0 safety-critical",
+  "selected_route": "PUT /api/categories/<category_id>",
+  "runtime_change": "local_copied_db_only",
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "implementation": {
+    "enable_flag": "--enable-category-write",
+    "enable_env": "PRISM_GO_ENABLE_CATEGORY_WRITE=1",
+    "default_runtime_mode": {
+      "api_surface": "get-read-only",
+      "sqlite_query_only": true,
+      "category_write_enabled": false
+    },
+    "explicit_local_candidate_mode": {
+      "api_surface": "get-read-only+local-category-write",
+      "sqlite_query_only": false,
+      "category_write_enabled": true,
+      "db_requirement": "copied test/dev DB only; production-like knowledge.db remains refused unless explicit existing override is used"
+    },
+    "db_side_effects": [
+      "Updates Categories.name when provided",
+      "Updates Categories.icon when provided",
+      "Updates Categories.sort_order when provided"
+    ],
+    "non_side_effects": [
+      "Does not update Notes",
+      "Does not touch Tags or Note_Tags",
+      "Does not touch files, attachments, imports, exports, cleanup, server routes, migrations, Caddy, systemd, frontend default target, or Pi runtime"
+    ]
+  },
+  "python_parity_contract": {
+    "source": "routes/categories.py",
+    "response_cases": [
+      "success returns {\"status\":\"success\",\"data\":{\"updated_notes_count\":0}}",
+      "empty JSON object returns 400 Request body is required",
+      "trimmed empty category name returns 400 Category name cannot be empty",
+      "missing category id returns 404 Category not found",
+      "duplicate category name returns 409 Category name already exists"
+    ],
+    "state_cases": [
+      "name-only update matches Python DB state",
+      "icon-only update preserves name and sort_order",
+      "sort_order-only update preserves name and icon",
+      "combined name/icon/sort_order update matches Python DB state",
+      "duplicate, empty-name, and missing-body failures leave Categories unchanged",
+      "Notes category_id assignments remain unchanged"
+    ],
+    "runtime_truth_note": "23.5-next.2 hardened Python and Go together so a trimmed empty category name returns 400 instead of writing an empty string."
+  },
+  "not_authorized_by_23_5_next_1": [
+    "Live category write routing gate",
+    "Live tag rename routing gate",
+    "Production knowledge.db write",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route change",
+    "Python route removal",
+    "Schema migration",
+    "Tag delete or merge Go ownership",
+    "Notes action Go ownership",
+    "File upload or attachment ownership",
+    "Public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.6",
+    "title": "File / attachment ownership gate",
+    "status": "blocked_until_explicit_user_approval",
+    "requires_explicit_user_approval": true,
+    "scope": "Plan-only file ownership inventory. Do not implement file routes, live routing, Caddy/systemd changes, production DB writes, Pi deploy, or Python removal without a new explicit gate."
+  }
+}

@@ -1,0 +1,91 @@
+{
+  "phase": "23.5-next.2-4",
+  "title": "Category update parity hardening, rollback lock, and boundary closure",
+  "status": "completed",
+  "completed_at": "2026-06-05",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-category-update-write-implementation.json",
+  "risk_level": "P0 safety-critical",
+  "runtime_change": "local_copied_db_go_candidate_plus_python_validation_hardening",
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "closure_decisions": {
+    "empty_name_contract": {
+      "decision": "harden_python_and_go_to_return_400",
+      "reason": "Category create and tag rename already reject empty trimmed names; allowing category update to write an empty string is a data-quality gap, not a useful contract.",
+      "python_response": {
+        "status_code": 400,
+        "body": {
+          "status": "error",
+          "message": "Category name cannot be empty"
+        }
+      },
+      "go_response": {
+        "status_code": 400,
+        "body": {
+          "status": "error",
+          "message": "Category name cannot be empty"
+        }
+      }
+    },
+    "transaction_rollback_lock": {
+      "success_invariants": [
+        "Successful category update changes only the targeted Categories row fields provided by the request",
+        "Notes.category_id assignments remain unchanged",
+        "Tags and Note_Tags remain unchanged",
+        "No file, attachment, import/export, cleanup, server, migration, Caddy, systemd, frontend default, or Pi side effect"
+      ],
+      "failure_invariants": [
+        "Missing body leaves Categories unchanged",
+        "Missing category leaves Categories unchanged",
+        "Duplicate category name leaves Categories unchanged",
+        "Trimmed empty category name leaves Categories unchanged",
+        "Disabled Go category-write flag leaves Categories unchanged"
+      ]
+    },
+    "boundary_lock": {
+      "default_go_runtime": "get-read-only with SQLite query_only = ON",
+      "local_candidate_flag": "--enable-category-write / PRISM_GO_ENABLE_CATEGORY_WRITE=1",
+      "live_owner": "Python remains live category update owner",
+      "blocked_scope": [
+        "Live category write routing gate",
+        "Live tag rename routing gate",
+        "Production knowledge.db write",
+        "Pi deployment",
+        "Caddy route edit or reload",
+        "systemd service change",
+        "Frontend default API target change",
+        "Python route removal",
+        "Schema migration",
+        "Tag delete or merge Go ownership",
+        "Notes action Go ownership",
+        "File upload or attachment ownership",
+        "Public exposure expansion"
+      ]
+    }
+  },
+  "verification_contract": {
+    "go_tests": [
+      "cd go-shadow && go test ./..."
+    ],
+    "targeted_pytest": [
+      "pytest tests/test_categories.py::TestCategoriesAPI::test_update_category_rejects_empty_trimmed_name -v",
+      "pytest tests/test_phase23_go_category_update_write_implementation.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "23.6",
+    "title": "File / attachment ownership gate",
+    "status": "blocked_until_explicit_user_approval",
+    "requires_explicit_user_approval": true,
+    "scope": "Start with plan-only file ownership inventory for uploads, attachments, cleanup, export/import, and backup/log surfaces. Do not implement file routes, Caddy/systemd changes, production DB writes, Pi deploy, or Python removal without a new explicit gate."
+  }
+}

@@ -425,32 +425,74 @@
 - [x] **23.4.3** Local/Pi gate split — 23.4 未改 Caddy、未 reload service、未碰 production DB、未部署 Pi、未改 frontend default、未移除 Python；local parity 通過後，另開 Pi/live routing gate 才能討論 live route。見 `docs/contracts/phase23-go-first-write-route-implementation.json`。
 - **收尾驗證**：`gofmt -w go-shadow/main.go go-shadow/main_test.go`、`cd go-shadow && go test ./...`、`pytest tests/test_phase23_go_first_write_route_implementation.py -v`、`pytest tests/test_phase23_go_write_surface_selection.py -v`、`pytest tests/test_phase18_go_shadow_contract.py -v`、`pytest tests/ -v`。
 
-### ⏭️ 23.5 Go DB-only write expansion gate — Pending Explicit Approval
+### ✅ 23.5 Go DB-only write expansion gate — ✅ Completed (2026-06-05)
 
 > **白話說明**：
-> 這一步會把更多「只寫 DB、不碰檔案」的 route 分批交給 Go。
-> 要修這個，是因為第一個 write 成功後，才能逐步處理 notes metadata、pin/archive、reorder、categories/tags 這些較低風險寫入。
-> 使用者不應看到操作差異；差異在後端 owner 和可封裝 runtime 越來越完整。
-> 這一步仍不碰檔案上傳、附件檔案、cleanup、import/export、migrations、Python removal。
-> Risk level: `P0 safety-critical`。每一批 DB-only writes 都要有 route list、rollback、fixtures，不允許一次全搬。
+> 這一步先不實作新的 Go write，而是決定第一個 write 成功後怎麼安全擴張。
+> 要處理的重點有三個：23.4 tag rename 只算 local/copied-DB proof、`Tags.name` NOCASE 文件/schema/runtime 差異不能混進 tag CUD、下一個 DB-only route class 只能選一個。
+> 使用者不會看到功能差異；這一步只會把 live gate、schema discrepancy、下一個 candidate 與測試邊界寫清楚。
+> 這一步不改 Go/Python runtime、不改 schema、不改 Caddy/service、不部署 Pi、不改 frontend default、不移除 Python。
+> Risk level: `P0 safety-critical`。DB writes 只能一批一個 route class，且每批都要有 request/response parity、transaction rollback 與 stop conditions。
 
-- [ ] **23.5.1** Stabilization decision — 先決定是否要在擴其他 DB-only writes 前另開 live/local routing gate for tag rename；不得把 23.4 local flag 直接視為 live Go ownership。
-- [ ] **23.5.2** Schema/doc discrepancy gate — 處理或明確延後 `Tags.name` NOCASE schema/documentation discrepancy；避免 tag CUD expansion 時把 Python runtime truth 和 docs contract 混在一起。
-- [ ] **23.5.3** Next DB-only candidate selection — 依 23.3 matrix 重新評估 category create/update、note pin/archive、tag CUD remaining routes；每批最多一個 route class，仍不得碰 filesystem-coupled routes。
-- [ ] **23.5.4** Contract locks — 每批新增 request/response parity、transaction rollback、CSRF/local-only tests，並持續更新 `docs/ARCHITECTURE.md` / `docs/TODO.md` 的 Go-owned vs Python-owned route ledger。
+- [x] **23.5.1** Stabilization decision — 決議不在擴下一個 local/copied-DB DB-only write 前先做 live tag rename gate；23.4 `PUT /api/tags/<tag_id>` 仍只是 `--enable-tag-write` / copied-DB candidate，live owner 仍是 Python。
+- [x] **23.5.2** Schema/doc discrepancy gate — `Tags.name` NOCASE discrepancy 本輪明確延後，不做 schema migration、不改 Python/Go duplicate semantics、不改 `docs/SCHEMA.md` 宣稱 runtime 已修正；tag delete / tag merge / broader tag CUD expansion 在 dedicated gate 前保持 blocked。
+- [x] **23.5.3** Next DB-only candidate selection — 選定 `PUT /api/categories/<category_id>` 作為下一個 DB-only implementation subgate；它是 top-level DB-only 單列 update，避開 nested `/api/notes/...` matcher 與 tag NOCASE discrepancy。`POST /api/categories`、pin/archive、tag delete/merge、duplicate/reorder/batch 全部延後或拒絕。
+- [x] **23.5.4** Contract locks — 新增 `docs/contracts/phase23-go-db-only-write-expansion-selection.json` 與 `tests/test_phase23_go_db_only_write_expansion_selection.py`，固定 plan-only、no live/schema/runtime change、下一步 category update scope、rollback/parity fixture plan。
+- **收尾驗證**：`pytest tests/test_phase23_go_db_only_write_expansion_selection.py -v`、`pytest tests/test_phase23_go_first_write_route_implementation.py tests/test_phase23_go_write_surface_selection.py tests/test_phase23_go_file_read_parity_implementation.py -v`、`pytest tests/ -v`。
 
-### ⏭️ 23.6 File / attachment ownership gate — Pending DB-only Writes Stabilization
+### ✅ 23.5 Next DB-only write implementation subgate — ✅ Completed (2026-06-05)
 
 > **白話說明**：
-> 這一步會處理最危險的一大塊：uploads、attachments、cleanup、export/import 這類會讀寫或刪除檔案的功能。
-> 要晚一點做，是因為這些功能同時碰 DB 和檔案系統，任何錯誤都可能造成資料或附件不一致。
-> 使用者可能感覺到的差異應該仍是零；目標是後端 owner 轉移，不是改使用流程。
-> 這一步不會一次搬全部 files surface；每個 route class 都必須有 data-dir contract、backup/restore、path safety、Pi rollback。
+> 這一步才會真的實作第二個 Go DB-only write candidate。
+> 選定的是 `PUT /api/categories/<category_id>`，因為它只更新既有分類 row，不建立新 identity、不碰檔案、不牽涉 tag NOCASE 差異，也不需要先擴 nested `/api/notes/...` live matcher。
+> 使用者不應看到功能差異；同一個分類更新 API 只是在 local/copied-DB candidate 中補 Go parity。
+> 這一步仍不授權 live route、production DB、Caddy/service、Pi deploy、schema migration、tag CUD、notes actions 或 file ownership。
+> Risk level: `P0 safety-critical`。實作必須 flag-gated，預設 Go runtime 保持 GET read-only + SQLite `query_only`。
+
+- [x] **23.5-next.1** Implement selected write — 只做 local/copied-DB `PUT /api/categories/<category_id>`，以 `--enable-category-write` / `PRISM_GO_ENABLE_CATEGORY_WRITE=1` 啟用；預設 Go runtime 仍是 GET read-only + SQLite `query_only`，且未授權 live route。見 `docs/contracts/phase23-go-category-update-write-implementation.json`。
+- [x] **23.5-next.2** Category update parity hardening and empty-name contract decision — 決議修正 Python + Go：`name: "   "` 現在回 400 `Category name cannot be empty`，避免分類名稱寫成空字串；不保留 23.5-next.1 發現的舊 runtime gap。
+- [x] **23.5-next.3** Transaction / rollback lock — 驗證每次成功只更新目標 `Categories` row，`Notes.category_id` 不變；missing body、missing category、duplicate name、empty name、disabled Go flag 都不改 `Categories` snapshot。
+- [x] **23.5-next.4** Boundary lock — 不改 live Caddy/systemd/frontend default、不碰 production DB、不部署 Pi、不做 schema migration、不處理 tag CUD、不擴 nested `/api/notes/...` action route；見 `docs/contracts/phase23-go-category-update-closure.json`。
+- **收尾驗證**：`gofmt -w go-shadow/main.go go-shadow/main_test.go`、`cd go-shadow && go test ./...`、`pytest tests/test_categories.py::TestCategoriesAPI::test_update_category_rejects_empty_trimmed_name -v`、`pytest tests/test_phase23_go_category_update_write_implementation.py -v`、`pytest tests/test_phase23_go_db_only_write_expansion_selection.py -v`、`pytest tests/ -v`。
+
+### ✅ 23.5-next.2 Category update parity hardening and empty-name contract decision — ✅ Completed (2026-06-05)
+
+> **白話說明**：
+> 這一步不是擴更多 route，而是處理 23.5-next.1 實作時發現的 contract 差異。
+> Python 目前的分類更新沒有禁止空白名稱；如果送 `name: "   "`，會 trim 成空字串並寫入 DB。23.5 原本計劃文字期待 empty name 400，但那不是目前 runtime truth。
+> 決議是同時修改 Python + Go validation，讓 empty name 回 400。
+> 這一步仍不授權 live route、Caddy/service、production DB、Pi deploy、tag CUD、notes actions 或 file ownership。
+
+- [x] **23.5-next.2.1** Runtime truth decision — 不保留 current empty-name behavior；修 Python + Go 一起禁止 empty category name。
+- [x] **23.5-next.2.2** Contract/doc sync — 已同步 `docs/contracts/phase23-go-db-only-write-expansion-selection.json`、`docs/contracts/phase23-go-category-update-write-implementation.json`、`docs/TODO.md` 與相關 pytest 斷言。
+- [x] **23.5-next.2.3** Regression lock — 新增 Python category update regression，Go parity fixture 也覆蓋 empty name 400 與 DB snapshot 不變。
+- [x] **23.5-next.2.4** No scope expansion — 未新增 category create/delete、notes actions、tag CUD、file routes 或 live routing。
+
+### ✅ 23.6 File / attachment ownership gate — ✅ Completed (2026-06-06)
+
+> **白話說明**：
+> 這一步已先完成 ownership inventory 和第一個候選 selection，沒有實作 Go file route。
+> Inventory 分拆 attachments metadata/body、upload、cleanup、notes delete image cleanup、export/import、server backup/logs，逐一標出 DB/file side effects、data root、defer reason。
+> 第一個候選選定 `GET /api/attachments/<attachment_id>` 的 text JSON branch：只讀 copied DB + copied `docs/attachments` 文字附件，不處理 raw/binary、upload、delete、cleanup、import/export。
+> Backup/restore contract 明確規定：read-only candidate 必須證明 DB bytes 與 attachment file bytes 不變；任何 file write/delete candidate 都要另開 dedicated DB + filesystem backup/restore + partial failure rollback gate。
 > Risk level: `P0 safety-critical`。這是整個 Go 重構最高風險群之一。
 
-- [ ] **23.6.1** File ownership inventory — 分拆 upload、attachments metadata/body、cleanup、export、import、server backup/logs；逐一標 side effects、data-dir、rollback。
-- [ ] **23.6.2** First file route selection — 只選第一個最小 file route，不得同時處理 upload + cleanup + export。
-- [ ] **23.6.3** Backup/restore proof — 每個 file route implementation 前必須證明 DB + filesystem backup/restore 與 partial failure rollback。
+- [x] **23.6.1** File ownership inventory — 已分拆 upload、attachments metadata/body、cleanup、notes delete image cleanup、export/import、server backup/logs；逐一標 side effects、data-dir、rollback/defer reason。見 `docs/contracts/phase23-go-file-attachment-ownership-gate.json`。
+- [x] **23.6.2** First file route selection — 已選 `attachment_text_content_read` 作為唯一 23.6-next candidate；不得同時處理 upload + cleanup + export。
+- [x] **23.6.3** Backup/restore proof — 已定義 read-only candidate 的 copied DB/files no-mutation proof；file write/delete candidates 在 dedicated backup/restore/partial-failure rollback gate 前 blocked。
+
+### ⏭️ 23.6-next First Go file-read route implementation candidate — Pending Explicit Approval
+
+> **白話說明**：
+> 這一步才會考慮實作第一個 Go file-read candidate，但 scope 必須很窄。
+> 只允許 local/copied-DB-and-files parity for `GET /api/attachments/<attachment_id>` text JSON branch；default Go runtime 仍維持 GET read-only + SQLite `query_only`。
+> 不處理 `raw=true`、binary response、attachment upload/delete、separate/restore、upload images、cleanup、import/export、server backup/logs、live routing、production DB/files、Pi deploy、schema、Python removal 或 public exposure。
+> Risk level: `P0 safety-critical`。
+
+- [ ] **23.6-next.1** Fixture setup — 建 copied DB + copied `docs/attachments` fixture，覆蓋 UTF-8 text attachment、missing attachment id、missing file、unsafe path、unsupported extension。
+- [ ] **23.6-next.2** Go local candidate — 只在 explicit local flag/env 下啟用 text JSON branch；default Go runtime 不變。
+- [ ] **23.6-next.3** No-mutation proof — 成功/失敗 cases 都要證明 DB snapshot、attachment file bytes、uploads tree 不變。
+- [ ] **23.6-next.4** Boundary lock — `raw=true`、binary/send_file、upload/delete、cleanup、import/export、server backup/logs、live route、Pi deploy、Python removal 全部保持 blocked。
 
 ### ⏭️ 23.7 Migration / DB ownership decision gate — Pending File Ownership Stabilization
 
@@ -588,6 +630,10 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **go-roadmap** | 2026-06-06 | Phase 23.6 File / attachment ownership gate — 在明確授權後完成 plan-only ownership inventory / selection / backup-restore gate：分拆 attachments metadata/body、upload、cleanup、notes image cleanup、export/import、server backup/logs，逐一標 data root、DB/file side effects、rollback/defer reason。第一個候選只選 `GET /api/attachments/<attachment_id>` text JSON branch，限定 local/copied DB + copied `docs/attachments`，不處理 `raw=true`、binary/send_file、upload/delete、cleanup、import/export、server backup/logs。Read-only candidate 必須證明 DB bytes 與 attachment file bytes 不變；任何 file write/delete candidate 都需另開 DB + filesystem backup/restore + partial failure rollback gate。未實作 Go file route、未改 live routing、未碰 production DB/files、未部署 Pi、未改 schema、未移除 Python、未擴 public exposure。下一步 23.6-next 需另行明確授權。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.5-next.2-4 category update closure — 在明確授權後完成 category update parity hardening / rollback / boundary 收尾：Python + Go 現在都拒絕 trimmed empty category name，回 400 `Category name cannot be empty`，避免分類名稱寫成空字串。Rollback lock 覆蓋 missing body、missing category、duplicate name、empty name、disabled Go flag 皆不改 `Categories` snapshot，success 只更新目標分類 row 且 `Notes.category_id` 不變。未新增 category create/delete、notes actions、tag CUD、file routes、live routing、Caddy/service、production DB、Pi deploy、schema migration、Python removal 或 public exposure。下一步 23.6 只可先做 file / attachment ownership plan-only inventory。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.5-next.1 Second Go DB-only write implementation subgate — 在明確授權後完成 local/copied-DB `PUT /api/categories/<category_id>` Go candidate：新增 `--enable-category-write` / `PRISM_GO_ENABLE_CATEGORY_WRITE=1`，預設 Go runtime 仍是 GET read-only + SQLite `query_only`。Python vs Go copied DB fixture 覆蓋 name-only、icon-only、sort_order-only、combined update、missing body 400、missing category 404、duplicate exact-name 409、disabled flag 405、`Notes.category_id` 不變。實作時發現 Python 當時允許 empty trimmed category name 寫入；該 gap 已於 23.5-next.2-4 修成 Python + Go 皆回 400。未改 live Caddy/service/frontend default、未碰 production DB、未部署 Pi、未改 schema、未移除 Python、未擴 public exposure。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.5 Go DB-only write expansion gate — 在明確授權後完成 plan-only stabilization / selection：23.4 `PUT /api/tags/<tag_id>` 維持 local/copied-DB candidate，不升 live Go ownership；`Tags.name` NOCASE schema/documentation/runtime discrepancy 本輪明確延後，tag delete / tag merge / broader tag CUD 在 dedicated gate 前 blocked。下一個 DB-only implementation subgate 選定 `PUT /api/categories/<category_id>`，只允許 local/copied-DB flag-gated parity；未實作 Go category write、未改 schema、未改 Caddy/service/frontend default、未碰 production DB、未部署 Pi、未移除 Python、未擴 public exposure。 |
 | **go-roadmap** | 2026-06-05 | Phase 23.4 First Go write route implementation gate — 在明確授權後完成 local/copied-DB first write parity：Go 新增 flag-gated `PUT /api/tags/<tag_id>`，只有 `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1` 才會進入 `get-read-only+local-tag-write`；預設 runtime 仍是 `get-read-only` + SQLite `query_only`。Python vs Go copied DB fixture 覆蓋 success/trim、missing name、empty name、missing tag 404、duplicate 409、rollback/no partial write、`Note_Tags` 不變。未改 Caddy/service/frontend default、未碰 production DB、未部署 Pi、未移除 Python、未擴 public exposure。下一步 23.5 pending explicit approval：先決定 tag rename live/local gate、處理或延後 `Tags.name` NOCASE docs/schema discrepancy，再選下一個 DB-only candidate。 |
 | **go-roadmap** | 2026-06-05 | Phase 23.3 Go write surface selection gate — 在明確授權後完成 plan-only first write candidate selection：選定 `PUT /api/tags/<tag_id>` (`tag_rename`) 作為 23.4 唯一 candidate，因為它是 single-purpose、DB-only、只更新 `Tags.name`、無檔案/cascade/bulk/process side effects，且 Python vs Go response + DB-state parity 容易鎖定。拒絕或暫緩 notes core writes、pin/archive、duplicate/reorder/batch、category delete、tag delete/merge、attachments/uploads/cleanup/import/export/system/server/config。23.3 未實作 Go write、未改 production DB、未改 Caddy/service/frontend default、未部署 Pi、未移除 Python、未擴 public exposure。下一步為需另行授權的 23.4 First Go write route implementation gate，限 local/copied-DB `PUT /api/tags/<tag_id>`。 |
 | **go-roadmap** | 2026-06-05 | Phase 23.2 Go file-read parity implementation gate — 在明確授權後完成 local/copied-DB Go read-only 文字附件 body search parity：`GET /api/notes?q=...` 會在既有 DB search 外，受限掃描 explicit `--data-dir` 內 `docs/attachments` 的 `md/markdown/txt` 相對路徑，命中 note ids 合回原查詢。安全邊界沿用 23.1：拒絕 `..`、absolute/UNC/volume/colon path、symlink escape、非 `docs/attachments`、unsupported extension，單檔 1 MiB，單 query 200 files / 5 MiB / 250 ms。新增 Python vs Go controlled files diff fixture 與 implementation pytest lock；未改 Caddy/service/frontend default、未碰 production DB、未部署 Pi、未新增 writes/files/migrations、未移除 Python、未擴 public exposure。下一步為需另行授權的 23.3 Go write surface selection gate。 |
