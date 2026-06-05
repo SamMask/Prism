@@ -512,7 +512,7 @@
 - [x] **23.7.3** Decision checkpoint — 未達成 full safety proof 前，migrations 保持 Python-owned；Go full runner blocked，Python removal blocked。
 - **收尾驗證**：`pytest tests/test_phase23_go_migration_db_ownership_decision.py -v`、`pytest tests/test_schema_regression.py -v`、`pytest tests/test_system.py::test_migration_status -v`、`pytest tests/ -v`。
 
-### ⏭️ 23.8 Local packaging execution track — Pending Explicit Approval
+### 🚦 23.8 Local packaging execution track — Active
 
 > **白話說明**：
 > 這一步會建立本機封裝執行路徑：讓 Windows / local dev 可以用明確 artifact 跑 Prism。
@@ -521,9 +521,22 @@
 > 這一步不改 Pi deployment default、不改 production Caddy、不改資料位置、不把本機 artifact 當正式 Pi rollout。
 > Risk level: `P1 workflow-sensitive` for local launcher/build flow；若封裝碰 DB/data-dir/runtime ownership，該部分升級為 `P0 safety-critical`。
 
-- [ ] **23.8.1** Packaging contract — 定義 Go binary、bundled frontend `dist`、external data dir、config file/env、logs、uploads path、SQLite WAL behavior；migration owner 依 23.7 保持 Python-owned，Go status-only 只能作 local/readiness candidate。
+- [x] **23.8.1** Packaging contract + thumbnail ownership plan — 已定義 Go binary、bundled frontend `dist`、external data dir、config file/env、logs、uploads path、SQLite WAL behavior；migration owner 依 23.7 保持 Python-owned，Go status-only 只能作 local/readiness candidate。另把「去掉 Pillow、改由 Go 引入 WebP encoder 接管縮圖」納入 `23.8-thumb` 後續規劃：本輪不移除 Pillow、不新增 Go encoder、不改 upload/import runtime。見 `docs/contracts/phase23-go-local-packaging-thumbnail-plan.json`。
 - [ ] **23.8.2** Local smoke artifact — 建立 Windows/local artifact smoke：啟動、讀 DB copy、serve SPA、核心 API health/read/write smoke。
 - [ ] **23.8.3** Release boundary — 本機封裝可用不代表 Pi 已更新；Pi rollout 仍走 23.9。
+
+### ⏭️ 23.8-thumb Go WebP thumbnail ownership / Pillow removal track — Pending Dependency Decision
+
+> **白話說明**：
+> 這一步處理縮圖 owner：目前 Python upload / upload-url / import helper 以可選 Pillow 產生 `_thumb.webp`。
+> 目標是未來改由 Go thumbnail candidate 接管 WebP encoding，最後才移除 Pillow。
+> 使用者看到的行為必須維持：支援 jpg/png/webp/gif 上傳、縮圖最大寬 500px、`_thumb.webp` 命名、`thumbnail_only` 成功時只回縮圖 URL、刪除/cleanup 仍能找到對應縮圖。
+> 這一步不是 23.8.1 的實作內容；移除 Pillow 前必須先做 encoder dependency 決策、parity fixtures、docs/start script/requirements 一次同步。
+> Risk level: `P0 safety-critical` for file mutation and dependency/runtime packaging compatibility。
+
+- [ ] **23.8-thumb.1** WebP encoder dependency decision — 選 Go WebP encoder 前必須驗證 encode support（不能只支援 decode）、Windows build、Pi arm64 build、license、cgo/pure-Go 狀態、jpg/png/webp/gif input 覆蓋或保留 Python fallback。
+- [ ] **23.8-thumb.2** Thumbnail parity fixtures — 鎖住 `POST /api/upload`、`POST /api/upload/url`、import image helper、`thumbnail_only`、`_thumb.webp` path、max-width 500px、quality 80、失敗時不誤刪原圖/不破壞 uploads。
+- [ ] **23.8-thumb.3** Pillow removal gate — 只有 Go thumbnail candidate 通過 parity 與 packaging smoke 後，才可同步移除 `requirements.txt` Pillow、`scripts/start.bat` Pillow check、Python PIL import/fallback wording、`docs/API_REFERENCE.md` 與 `docs/SEQUENCE-UPLOAD.md`。
 
 ### ⏭️ 23.9 Pi deployment rollout track — Pending Ownership Milestones
 
@@ -635,6 +648,7 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **go-roadmap** | 2026-06-06 | Phase 23.8.1 Local packaging contract and thumbnail ownership plan — 在明確授權後完成 plan-only packaging/data-dir/migration boundary：Go local artifact candidate 必須使用 external data dir，資料含 `knowledge.db`、WAL/SHM、`static/uploads`、`docs/attachments`、logs/backups/config/env；migration owner 依 23.7 保持 Python-owned，Go 只能作 status-only local/readiness candidate。另把「去掉 Pillow、改由 Go 引入 WebP encoder 接管縮圖」納入 `23.8-thumb` 後續規劃：必須先驗 WebP encode support、Windows/Pi arm64 build、license、cgo/pure-Go、jpg/png/webp/gif input 覆蓋，再做 upload/upload-url/import parity fixtures；本輪未移除 Pillow、未新增 Go encoder、未實作 Go upload/thumbnail route、未建立 packaged artifact、未碰 production files、未部署 Pi、未改 Caddy/service/frontend default。下一步 packaging 為 23.8.2 local smoke artifact；下一步縮圖為 23.8-thumb.1 encoder dependency decision。 |
 | **go-roadmap** | 2026-06-06 | Phase 23.7 Migration / DB ownership decision gate — 在明確授權後完成 plan-only migration ownership 決策：normal/live migration runner 保持 Python-owned，`migrations.run_migrations()` 與 Python `/api/system/migration-status` 繼續是正式 owner；Go 目前只讀 `Schema_Meta` 做 health/schema version check。`go_status_only` 可作未來 local/copied DB readiness candidate，但必須保持 SQLite `query_only`、不更新 `Schema_Meta`、不跑 DDL/DML，並與 Python current/latest/pending semantics parity。`go_full_migration_runner` deferred，直到 ordered migration list、idempotent skip semantics、fresh/upgraded DB fixtures、failed migration rollback、backup/restore、Pi preflight 與 Python fallback owner 全部有 dedicated proof。未實作 Go migration runner、未改 schema、未碰 production DB、未改 Caddy/service、未部署 Pi、未移除 Python、未擴 public exposure。下一步 23.8 只可先做 local packaging execution track / packaging contract。 |
 | **go-roadmap** | 2026-06-06 | Phase 23.6-next First Go file-read route implementation candidate — 在明確授權後完成 local/copied-DB-and-files `GET /api/attachments/<attachment_id>` text JSON branch Go candidate：新增 `--enable-attachment-text-read` / `PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ=1`，啟用後 API surface 為 `get-read-only+local-attachment-text-read`，SQLite 仍保持 `query_only`。Python vs Go fixture 覆蓋 UTF-8 text attachment 與 missing attachment id；Go safety fixture 覆蓋 missing file、unsafe path、unsupported extension、`raw=true` blocked、default disabled，並證明 success/failure 後 DB bytes、copied `docs/attachments` bytes、copied `static/uploads` bytes 不變。未處理 raw/binary/send_file、upload/delete、cleanup、import/export、server backup/logs、live routing、production DB/files、Pi deploy、schema migration、Python removal 或 public exposure。下一步 23.7 只可先做 migration / DB ownership decision gate。 |
 | **go-roadmap** | 2026-06-06 | Phase 23.6 File / attachment ownership gate — 在明確授權後完成 plan-only ownership inventory / selection / backup-restore gate：分拆 attachments metadata/body、upload、cleanup、notes image cleanup、export/import、server backup/logs，逐一標 data root、DB/file side effects、rollback/defer reason。第一個候選只選 `GET /api/attachments/<attachment_id>` text JSON branch，限定 local/copied DB + copied `docs/attachments`，不處理 `raw=true`、binary/send_file、upload/delete、cleanup、import/export、server backup/logs。Read-only candidate 必須證明 DB bytes 與 attachment file bytes 不變；任何 file write/delete candidate 都需另開 DB + filesystem backup/restore + partial failure rollback gate。未實作 Go file route、未改 live routing、未碰 production DB/files、未部署 Pi、未改 schema、未移除 Python、未擴 public exposure。下一步 23.6-next 需另行明確授權。 |

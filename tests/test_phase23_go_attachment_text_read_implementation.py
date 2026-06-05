@@ -369,10 +369,10 @@ def test_docs_record_23_6_next_completion_and_23_7_next_gate():
     assert "23.6-next First Go file-read route implementation candidate — ✅ Completed (2026-06-06)" in todo
     assert "docs/contracts/phase23-go-attachment-text-read-implementation.json" in todo
     assert "23.7 Migration / DB ownership decision gate — ✅ Completed (2026-06-06)" in todo
-    assert "23.8 Local packaging execution track — Pending Explicit Approval" in todo
+    assert "23.8 Local packaging execution track — Active" in todo
     assert "Phase 23.6-next First Go file-read route implementation candidate is complete" in architecture
     assert "Phase 23.7 Migration / DB ownership decision gate is complete as plan-only" in architecture
-    assert "Next active Go gate is `23.8 Local packaging execution track`, pending explicit approval" in architecture
+    assert "Next active Go gate is `23.8.2 Local smoke artifact`" in architecture
     assert "`23.6-next First Go file-read route implementation candidate` is complete" in go_report
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_report
-    assert "`23.8 Local packaging execution track` is the next recommended step" in go_report
+    assert "`23.8.2 Local smoke artifact` is the next recommended packaging step" in go_report

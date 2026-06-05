@@ -1,0 +1,118 @@
+{
+  "phase": "23.8.1",
+  "title": "Local packaging contract and Go WebP thumbnail planning",
+  "status": "completed",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase19-go-runtime-packaging.md",
+    "docs/contracts/phase23-go-migration-db-ownership-decision.json"
+  ],
+  "scope_type": "plan_only",
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_code_changed": false,
+    "pillow_removed": false,
+    "go_webp_encoder_added": false,
+    "packaged_artifact_created": false,
+    "pi_deployed": false
+  },
+  "local_packaging_contract": {
+    "binary_owner": "Go local artifact candidate",
+    "frontend_dist": "bundled or copied frontend/dist for local smoke only",
+    "data_dir": {
+      "required": true,
+      "external_to_binary": true,
+      "owns": [
+        "knowledge.db",
+        "knowledge.db-wal",
+        "knowledge.db-shm",
+        "static/uploads",
+        "docs/attachments",
+        "logs",
+        "backups",
+        "config/env"
+      ],
+      "production_db_rule": "local artifact smoke must use a copied DB/data dir unless a later explicit production rollout gate approves live data use"
+    },
+    "migration_owner": {
+      "normal_live_owner": "Python migrations.run_migrations() and Python /api/system/migration-status",
+      "go_allowed": "status-only local/readiness candidate with SQLite query_only",
+      "go_forbidden": [
+        "Schema_Meta writes",
+        "DDL",
+        "DML migration execution",
+        "live migration runner ownership"
+      ]
+    },
+    "release_boundary": "local packaging success does not update Pi, Caddy, systemd, or production routing"
+  },
+  "thumbnail_webp_plan": {
+    "current_owner": "Python upload/import thumbnail generation through optional Pillow",
+    "current_contract": {
+      "routes": [
+        "POST /api/upload",
+        "POST /api/upload/url",
+        "note import image download helper"
+      ],
+      "input_mimes": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif"
+      ],
+      "output_convention": "static/uploads/<timestamp>_<name>_thumb.webp",
+      "thumbnail_only_behavior": "when thumbnail generation succeeds, thumbnail_only returns the WebP thumbnail URL and does not keep the original upload",
+      "max_width_px": 500,
+      "quality": 80
+    },
+    "planned_go_owner": "future Go image thumbnail candidate, not implemented in 23.8.1",
+    "dependency_decision_gate": {
+      "required": true,
+      "must_verify": [
+        "WebP encode support, not decode-only support",
+        "Windows build",
+        "Raspberry Pi arm64 build",
+        "license acceptability",
+        "cgo requirement or pure-Go status",
+        "jpeg/png/webp/gif input handling or explicit retained-Python fallback for unsupported inputs"
+      ],
+      "no_dependency_selected_in_this_gate": true
+    },
+    "pillow_removal_gate": {
+      "allowed_only_after": [
+        "Go encoder dependency decision is complete",
+        "thumbnail parity fixtures cover upload, upload/url, and import helper behavior",
+        "path and deletion cleanup still find _thumb.webp",
+        "requirements.txt, scripts/start.bat, docs/API_REFERENCE.md, and docs/SEQUENCE-UPLOAD.md are updated together",
+        "Python fallback or removal decision is explicit"
+      ],
+      "blocked_in_23_8_1": true
+    }
+  },
+  "blocked_scope": [
+    "Remove Pillow from requirements.txt",
+    "Remove PIL imports from Python routes",
+    "Add a Go WebP encoder dependency",
+    "Implement Go upload or thumbnail routes",
+    "Write production static/uploads",
+    "Change Caddy routing",
+    "Change systemd service",
+    "Deploy to Pi",
+    "Remove Python upload/import ownership"
+  ],
+  "allowed_next_steps": [
+    {
+      "id": "23.8.2",
+      "title": "Local smoke artifact",
+      "requires_explicit_user_approval": false,
+      "summary": "Build and smoke a local artifact against a copied data dir: startup, bundled frontend dist, health/read/write candidate routes, DB query_only/default boundaries, and no production data mutation."
+    },
+    {
+      "id": "23.8-thumb.1",
+      "title": "Go WebP encoder dependency decision",
+      "requires_explicit_user_approval": false,
+      "summary": "Evaluate and select a WebP encoder candidate only after proving encode support, Windows/Pi arm64 build behavior, license, cgo status, and input-format coverage."
+    }
+  ]
+}
