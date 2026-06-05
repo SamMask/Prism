@@ -1,0 +1,100 @@
+{
+  "phase": "23.7",
+  "title": "Migration / DB ownership decision gate",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-attachment-text-read-implementation.json",
+  "risk_level": "P0 safety-critical",
+  "plan_only": true,
+  "runtime_change": "none",
+  "migration_runner_implemented": false,
+  "production_db_write": false,
+  "schema_migration_performed": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "current_runtime_truth": {
+    "normal_migration_owner": "Python migrations.run_migrations",
+    "status_endpoint_owner": "Python GET /api/system/migration-status",
+    "version_table": "Schema_Meta",
+    "latest_schema_version": 16,
+    "go_current_role": "Read Schema_Meta for health/schema version verification only",
+    "go_query_only_default": true
+  },
+  "ownership_options": [
+    {
+      "id": "retained_python_migrations",
+      "decision": "selected_for_normal_and_live_runtime",
+      "scope": "Python remains the migration runner for app startup, Pi deployment, production DB upgrades, and the public migration status endpoint.",
+      "reason": "Current migration chain includes Python-specific detection, idempotent duplicate-column/no-such-column handling, and rollback behavior already covered by existing pytest; keeping it avoids duplicating high-risk DB mutation semantics in Go before full proof."
+    },
+    {
+      "id": "go_status_only",
+      "decision": "allowed_future_candidate_after_23_7",
+      "scope": "Go may expose local/read-only migration readiness/status for copied DB or packaged local smoke, reading Schema_Meta and compiled expected version without applying SQL.",
+      "required_guards": [
+        "SQLite query_only remains enabled",
+        "No Schema_Meta update",
+        "No DDL or DML migration SQL execution",
+        "Response parity with Python current/latest/pending semantics",
+        "Copied DB only until a separate live route gate"
+      ]
+    },
+    {
+      "id": "go_full_migration_runner",
+      "decision": "deferred",
+      "scope": "Do not implement or route Go migration execution in 23.7.",
+      "blocked_until": [
+        "Go can reproduce the full ordered migration list and idempotent skip semantics",
+        "Fresh DB and upgraded DB fixtures prove identical final schema",
+        "Failed migration rollback leaves Schema_Meta and affected tables consistent",
+        "Production backup and restore drill is documented",
+        "Pi preflight and rollback commands are tested",
+        "Python fallback owner is explicitly retained until live proof passes"
+      ]
+    }
+  ],
+  "schema_safety_contract": {
+    "idempotency": "Any future runner must safely re-run completed migrations and skip duplicate columns / already-dropped columns without changing final schema.",
+    "version_table": "Schema_Meta key=schema_version remains the single schema version source of truth.",
+    "pending_detection": "pending = migrations with version > current_version; latest_version = highest declared migration version.",
+    "backup_required_before_live": true,
+    "rollback_required_before_live": true,
+    "failed_migration_recovery": [
+      "Failed migration must rollback the current transaction",
+      "Schema_Meta must not advance past the failed version",
+      "Partial DDL/DML effects must be detected in a copied DB fixture before any live route",
+      "Python migration runner remains the recovery owner until a dedicated Go runner gate closes"
+    ]
+  },
+  "decision_checkpoint": {
+    "normal_runtime_owner": "Python",
+    "live_pi_owner": "Python",
+    "go_status_only_next_candidate": true,
+    "go_full_runner_next_candidate": false,
+    "python_removal_blocked": true
+  },
+  "not_authorized_by_23_7": [
+    "Go migration runner implementation",
+    "Go DDL or migration DML execution",
+    "Schema_Meta writes from Go",
+    "Production knowledge.db migration",
+    "Production DB write",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Pi deployment",
+    "Frontend default API target change",
+    "Python migration removal",
+    "Python route removal",
+    "Schema migration",
+    "Public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.8",
+    "title": "Local packaging execution track",
+    "status": "pending_explicit_approval",
+    "requires_explicit_user_approval": true,
+    "recommended_first_subgate": "23.8.1 Packaging contract",
+    "scope": "Define local packaged artifact boundaries for Go binary, bundled frontend dist, external data dir, config/env/logs/uploads paths, SQLite WAL behavior, and migration ownership. Do not run production migration or deploy Pi."
+  }
+}

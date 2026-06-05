@@ -3,7 +3,7 @@
 **狀態**: 🟢 穩定運行 (Stable)
 **核心目標**: Headless KMS API + 純關鍵字 FTS 搜尋
 **文件參照**: `docs/Prism.md` (歷史背景), `docs/SCHEMA.md` (資料庫規格), `docs/FRONTEND-REDESIGN-PLAN.md` (UI/Go 重構規劃), `Prism_Go_模組逐步重構計劃報告.md` (Go shadow backend), `docs/development-history/` (完成階段與完整 Changelog 歸檔), `garbage-can/1230-審核報告.md` (Linus Audit)
-**最後更新**: 2026-06-05
+**最後更新**: 2026-06-06
 
 ---
 
@@ -481,33 +481,38 @@
 - [x] **23.6.2** First file route selection — 已選 `attachment_text_content_read` 作為唯一 23.6-next candidate；不得同時處理 upload + cleanup + export。
 - [x] **23.6.3** Backup/restore proof — 已定義 read-only candidate 的 copied DB/files no-mutation proof；file write/delete candidates 在 dedicated backup/restore/partial-failure rollback gate 前 blocked。
 
-### ⏭️ 23.6-next First Go file-read route implementation candidate — Pending Explicit Approval
+### ✅ 23.6-next First Go file-read route implementation candidate — ✅ Completed (2026-06-06)
 
 > **白話說明**：
-> 這一步才會考慮實作第一個 Go file-read candidate，但 scope 必須很窄。
-> 只允許 local/copied-DB-and-files parity for `GET /api/attachments/<attachment_id>` text JSON branch；default Go runtime 仍維持 GET read-only + SQLite `query_only`。
+> 這一步已實作第一個 Go file-read candidate，但 scope 很窄。
+> 只完成 local/copied-DB-and-files parity for `GET /api/attachments/<attachment_id>` text JSON branch；Go 需用 `--enable-attachment-text-read` / `PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ=1` 才啟用，且仍維持 SQLite `query_only`。
+> Python vs Go fixture 已覆蓋 UTF-8 text attachment、missing attachment id；Go safety fixture 另覆蓋 missing file、unsafe path、unsupported extension、raw branch blocked、default disabled。
 > 不處理 `raw=true`、binary response、attachment upload/delete、separate/restore、upload images、cleanup、import/export、server backup/logs、live routing、production DB/files、Pi deploy、schema、Python removal 或 public exposure。
 > Risk level: `P0 safety-critical`。
 
-- [ ] **23.6-next.1** Fixture setup — 建 copied DB + copied `docs/attachments` fixture，覆蓋 UTF-8 text attachment、missing attachment id、missing file、unsafe path、unsupported extension。
-- [ ] **23.6-next.2** Go local candidate — 只在 explicit local flag/env 下啟用 text JSON branch；default Go runtime 不變。
-- [ ] **23.6-next.3** No-mutation proof — 成功/失敗 cases 都要證明 DB snapshot、attachment file bytes、uploads tree 不變。
-- [ ] **23.6-next.4** Boundary lock — `raw=true`、binary/send_file、upload/delete、cleanup、import/export、server backup/logs、live route、Pi deploy、Python removal 全部保持 blocked。
+- [x] **23.6-next.1** Fixture setup — 建 copied DB + copied `docs/attachments` fixture，覆蓋 UTF-8 text attachment、missing attachment id、missing file、unsafe path、unsupported extension。
+- [x] **23.6-next.2** Go local candidate — 只在 explicit local flag/env 下啟用 text JSON branch；default Go runtime 不變。見 `docs/contracts/phase23-go-attachment-text-read-implementation.json`。
+- [x] **23.6-next.3** No-mutation proof — 成功/失敗 cases 都證明 DB bytes、attachment file bytes、uploads tree 不變。
+- [x] **23.6-next.4** Boundary lock — `raw=true`、binary/send_file、upload/delete、cleanup、import/export、server backup/logs、live route、Pi deploy、Python removal 全部保持 blocked。
+- **收尾驗證**：`gofmt -w go-shadow/main.go go-shadow/main_test.go`、`cd go-shadow && go test ./...`、`pytest tests/test_phase23_go_attachment_text_read_implementation.py -v`、`pytest tests/test_phase23_go_file_attachment_ownership_gate.py -v`、`pytest tests/test_phase23_go_file_read_parity_implementation.py -v`、`pytest tests/ -v`。
 
-### ⏭️ 23.7 Migration / DB ownership decision gate — Pending File Ownership Stabilization
+### ✅ 23.7 Migration / DB ownership decision gate — ✅ Completed (2026-06-06)
 
 > **白話說明**：
-> 這一步只是決定 migration 最後由誰負責，不會先改 production migration。
-> 要修這個，是因為如果 Go 最終要接近完整 runtime，就必須決定 schema migration 是繼續 Python-owned，還是由 Go 接手 migration status / 部分 migration。
+> 這一步只是決定 migration 最後由誰負責，沒有改 production migration。
+> 決策是：normal/live migration runner 繼續 Python-owned；Go 目前只讀 `Schema_Meta` 做 health/schema version check。
+> `go_status_only` 可以成為未來本機封裝 / copied DB readiness candidate，但只能讀狀態，不寫 `Schema_Meta`、不跑 DDL/DML。
+> `go_full_migration_runner` 延後，直到 idempotency、fresh/upgraded DB fixture、failed migration rollback、backup/restore、Pi preflight 全部有 dedicated proof。
 > 使用者不會看到功能差異；這是啟動與升級安全邊界。
-> 這一步不會直接跑 production migration、不會改正式 DB、不會移除 Python migration。
+> 這一步未直接跑 production migration、未改正式 DB、未移除 Python migration。
 > Risk level: `P0 safety-critical`。migration 只能在 idempotent tests、fresh backup、rollback 與 Pi preflight 完整後才可 implementation。
 
-- [ ] **23.7.1** Migration ownership options — 比較 retained Python migrations、Go status-only、Go full migration runner 三種方案。
-- [ ] **23.7.2** Schema safety contract — 固定 idempotency、version table、pending detection、backup、rollback、failed migration recovery。
-- [ ] **23.7.3** Decision checkpoint — 未達成 full safety proof 前，migrations 保持 Python-owned。
+- [x] **23.7.1** Migration ownership options — 已比較 retained Python migrations、Go status-only、Go full migration runner 三種方案；選定 retained Python migrations 作為 normal/live owner。
+- [x] **23.7.2** Schema safety contract — 已固定 idempotency、`Schema_Meta` version table、pending detection、backup、rollback、failed migration recovery。見 `docs/contracts/phase23-go-migration-db-ownership-decision.json`。
+- [x] **23.7.3** Decision checkpoint — 未達成 full safety proof 前，migrations 保持 Python-owned；Go full runner blocked，Python removal blocked。
+- **收尾驗證**：`pytest tests/test_phase23_go_migration_db_ownership_decision.py -v`、`pytest tests/test_schema_regression.py -v`、`pytest tests/test_system.py::test_migration_status -v`、`pytest tests/ -v`。
 
-### ⏭️ 23.8 Local packaging execution track — Can Run In Parallel After Read/Write Stabilization
+### ⏭️ 23.8 Local packaging execution track — Pending Explicit Approval
 
 > **白話說明**：
 > 這一步會建立本機封裝執行路徑：讓 Windows / local dev 可以用明確 artifact 跑 Prism。
@@ -516,7 +521,7 @@
 > 這一步不改 Pi deployment default、不改 production Caddy、不改資料位置、不把本機 artifact 當正式 Pi rollout。
 > Risk level: `P1 workflow-sensitive` for local launcher/build flow；若封裝碰 DB/data-dir/runtime ownership，該部分升級為 `P0 safety-critical`。
 
-- [ ] **23.8.1** Packaging contract — 定義 Go binary、bundled frontend `dist`、external data dir、config file/env、logs、uploads path、SQLite WAL behavior。
+- [ ] **23.8.1** Packaging contract — 定義 Go binary、bundled frontend `dist`、external data dir、config file/env、logs、uploads path、SQLite WAL behavior；migration owner 依 23.7 保持 Python-owned，Go status-only 只能作 local/readiness candidate。
 - [ ] **23.8.2** Local smoke artifact — 建立 Windows/local artifact smoke：啟動、讀 DB copy、serve SPA、核心 API health/read/write smoke。
 - [ ] **23.8.3** Release boundary — 本機封裝可用不代表 Pi 已更新；Pi rollout 仍走 23.9。
 
@@ -630,6 +635,8 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **go-roadmap** | 2026-06-06 | Phase 23.7 Migration / DB ownership decision gate — 在明確授權後完成 plan-only migration ownership 決策：normal/live migration runner 保持 Python-owned，`migrations.run_migrations()` 與 Python `/api/system/migration-status` 繼續是正式 owner；Go 目前只讀 `Schema_Meta` 做 health/schema version check。`go_status_only` 可作未來 local/copied DB readiness candidate，但必須保持 SQLite `query_only`、不更新 `Schema_Meta`、不跑 DDL/DML，並與 Python current/latest/pending semantics parity。`go_full_migration_runner` deferred，直到 ordered migration list、idempotent skip semantics、fresh/upgraded DB fixtures、failed migration rollback、backup/restore、Pi preflight 與 Python fallback owner 全部有 dedicated proof。未實作 Go migration runner、未改 schema、未碰 production DB、未改 Caddy/service、未部署 Pi、未移除 Python、未擴 public exposure。下一步 23.8 只可先做 local packaging execution track / packaging contract。 |
+| **go-roadmap** | 2026-06-06 | Phase 23.6-next First Go file-read route implementation candidate — 在明確授權後完成 local/copied-DB-and-files `GET /api/attachments/<attachment_id>` text JSON branch Go candidate：新增 `--enable-attachment-text-read` / `PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ=1`，啟用後 API surface 為 `get-read-only+local-attachment-text-read`，SQLite 仍保持 `query_only`。Python vs Go fixture 覆蓋 UTF-8 text attachment 與 missing attachment id；Go safety fixture 覆蓋 missing file、unsafe path、unsupported extension、`raw=true` blocked、default disabled，並證明 success/failure 後 DB bytes、copied `docs/attachments` bytes、copied `static/uploads` bytes 不變。未處理 raw/binary/send_file、upload/delete、cleanup、import/export、server backup/logs、live routing、production DB/files、Pi deploy、schema migration、Python removal 或 public exposure。下一步 23.7 只可先做 migration / DB ownership decision gate。 |
 | **go-roadmap** | 2026-06-06 | Phase 23.6 File / attachment ownership gate — 在明確授權後完成 plan-only ownership inventory / selection / backup-restore gate：分拆 attachments metadata/body、upload、cleanup、notes image cleanup、export/import、server backup/logs，逐一標 data root、DB/file side effects、rollback/defer reason。第一個候選只選 `GET /api/attachments/<attachment_id>` text JSON branch，限定 local/copied DB + copied `docs/attachments`，不處理 `raw=true`、binary/send_file、upload/delete、cleanup、import/export、server backup/logs。Read-only candidate 必須證明 DB bytes 與 attachment file bytes 不變；任何 file write/delete candidate 都需另開 DB + filesystem backup/restore + partial failure rollback gate。未實作 Go file route、未改 live routing、未碰 production DB/files、未部署 Pi、未改 schema、未移除 Python、未擴 public exposure。下一步 23.6-next 需另行明確授權。 |
 | **go-roadmap** | 2026-06-05 | Phase 23.5-next.2-4 category update closure — 在明確授權後完成 category update parity hardening / rollback / boundary 收尾：Python + Go 現在都拒絕 trimmed empty category name，回 400 `Category name cannot be empty`，避免分類名稱寫成空字串。Rollback lock 覆蓋 missing body、missing category、duplicate name、empty name、disabled Go flag 皆不改 `Categories` snapshot，success 只更新目標分類 row 且 `Notes.category_id` 不變。未新增 category create/delete、notes actions、tag CUD、file routes、live routing、Caddy/service、production DB、Pi deploy、schema migration、Python removal 或 public exposure。下一步 23.6 只可先做 file / attachment ownership plan-only inventory。 |
 | **go-roadmap** | 2026-06-05 | Phase 23.5-next.1 Second Go DB-only write implementation subgate — 在明確授權後完成 local/copied-DB `PUT /api/categories/<category_id>` Go candidate：新增 `--enable-category-write` / `PRISM_GO_ENABLE_CATEGORY_WRITE=1`，預設 Go runtime 仍是 GET read-only + SQLite `query_only`。Python vs Go copied DB fixture 覆蓋 name-only、icon-only、sort_order-only、combined update、missing body 400、missing category 404、duplicate exact-name 409、disabled flag 405、`Notes.category_id` 不變。實作時發現 Python 當時允許 empty trimmed category name 寫入；該 gap 已於 23.5-next.2-4 修成 Python + Go 皆回 400。未改 live Caddy/service/frontend default、未碰 production DB、未部署 Pi、未改 schema、未移除 Python、未擴 public exposure。 |

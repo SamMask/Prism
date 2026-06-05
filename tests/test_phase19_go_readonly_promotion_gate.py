@@ -37,6 +37,7 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/notes/")
     registered.discard("/api/tags/")
     registered.discard("/api/categories/")
+    registered.discard("/api/attachments/")
     registered.add("/api/notes/<id>")
 
     expected = {entry.removeprefix("GET ") for entry in gate["allowed_api_surface"]}
@@ -44,6 +45,8 @@ def test_phase19_2_gate_matches_go_runtime_surface():
 
     assert "enableTagWrite" in main_go
     assert '"enable-tag-write"' in main_go
+    assert "enableAttachmentTextRead" in main_go
+    assert '"enable-attachment-text-read"' in main_go
     forbidden_methods = ["http.MethodPost", "http.MethodDelete", "http.MethodPatch"]
     for method in forbidden_methods:
         assert method not in main_go

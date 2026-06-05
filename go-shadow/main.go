@@ -36,12 +36,13 @@ type server struct {
 }
 
 type runtimeConfig struct {
-	addr                string
-	dbPath              string
-	dataDir             string
-	enableTagWrite      bool
-	enableCategoryWrite bool
-	sqliteQueryOnly     bool
+	addr                     string
+	dbPath                   string
+	dataDir                  string
+	enableTagWrite           bool
+	enableCategoryWrite      bool
+	enableAttachmentTextRead bool
+	sqliteQueryOnly          bool
 }
 
 type response map[string]any
@@ -57,9 +58,10 @@ func main() {
 	dataDir := flag.String("data-dir", envDefault("PRISM_GO_DATA_DIR", "."), "external Prism user data directory")
 	enableTagWrite := flag.Bool("enable-tag-write", envBool("PRISM_GO_ENABLE_TAG_WRITE"), "enable local/copied-DB PUT /api/tags/<id> parity candidate")
 	enableCategoryWrite := flag.Bool("enable-category-write", envBool("PRISM_GO_ENABLE_CATEGORY_WRITE"), "enable local/copied-DB PUT /api/categories/<id> parity candidate")
+	enableAttachmentTextRead := flag.Bool("enable-attachment-text-read", envBool("PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ"), "enable local/copied-DB GET /api/attachments/<id> text JSON parity candidate")
 	flag.Parse()
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableAttachmentTextRead)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -83,6 +85,7 @@ func main() {
 	mux.HandleFunc("/api/tags/", srv.handleTagDetail)
 	mux.HandleFunc("/api/notes", srv.handleNotes)
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
+	mux.HandleFunc("/api/attachments/", srv.handleAttachmentDetail)
 	mux.Handle("/", staticHandler())
 
 	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
@@ -103,7 +106,7 @@ func envBool(key string) bool {
 	return value == "1" || strings.EqualFold(value, "true")
 }
 
-func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite bool) (runtimeConfig, error) {
+func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableAttachmentTextRead bool) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
 		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
@@ -127,12 +130,13 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	}
 
 	return runtimeConfig{
-		addr:                addr,
-		dbPath:              absDB,
-		dataDir:             absData,
-		enableTagWrite:      enableTagWrite,
-		enableCategoryWrite: enableCategoryWrite,
-		sqliteQueryOnly:     !(enableTagWrite || enableCategoryWrite),
+		addr:                     addr,
+		dbPath:                   absDB,
+		dataDir:                  absData,
+		enableTagWrite:           enableTagWrite,
+		enableCategoryWrite:      enableCategoryWrite,
+		enableAttachmentTextRead: enableAttachmentTextRead,
+		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite),
 	}, nil
 }
 
@@ -299,6 +303,8 @@ func (s *server) apiSurface() string {
 		return "get-read-only+local-tag-write"
 	case s.runtime.enableCategoryWrite:
 		return "get-read-only+local-category-write"
+	case s.runtime.enableAttachmentTextRead:
+		return "get-read-only+local-attachment-text-read"
 	}
 	return "get-read-only"
 }
@@ -576,6 +582,72 @@ func (s *server) renameTag(w http.ResponseWriter, r *http.Request, tagID int) {
 		return
 	}
 	writeJSON(w, http.StatusOK, response{"status": "success"})
+}
+
+func (s *server) handleAttachmentDetail(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) {
+		return
+	}
+	if !s.runtime.enableAttachmentTextRead {
+		writeError(w, http.StatusMethodNotAllowed, "Attachment text read route is disabled")
+		return
+	}
+	if boolString(r, "raw") {
+		writeError(w, http.StatusMethodNotAllowed, "Raw attachment responses remain Python-owned")
+		return
+	}
+
+	idText := strings.TrimPrefix(r.URL.Path, "/api/attachments/")
+	attachmentID, err := strconv.Atoi(idText)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	s.readAttachmentText(w, attachmentID)
+}
+
+func (s *server) readAttachmentText(w http.ResponseWriter, attachmentID int) {
+	row := s.db.QueryRow(`
+		SELECT id, file_path, file_type, title
+		FROM Note_Attachments
+		WHERE id = ?`, attachmentID)
+
+	var id int
+	var filePath, fileType, title sql.NullString
+	if err := row.Scan(&id, &filePath, &fileType, &title); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Attachment not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	resolved, _, ok := resolveAttachmentFile(s.runtime.dataDir, nullableString(filePath), nullableString(fileType))
+	if !ok {
+		writeError(w, http.StatusNotFound, "File not found on disk")
+		return
+	}
+	content, err := os.ReadFile(resolved)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "File not found on disk")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"id":        id,
+			"title":     nullableString(title),
+			"file_type": nullableString(fileType),
+			"content":   normalizeTextContent(string(content)),
+		},
+	})
+}
+
+func normalizeTextContent(content string) string {
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	return strings.ReplaceAll(content, "\r", "\n")
 }
 
 func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {

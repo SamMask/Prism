@@ -1,0 +1,85 @@
+{
+  "phase": "23.6-next",
+  "title": "First Go file-read route implementation candidate",
+  "status": "completed",
+  "completed_at": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-file-attachment-ownership-gate.json",
+  "risk_level": "P0 safety-critical",
+  "selected_route": "GET /api/attachments/<attachment_id>",
+  "selected_branch": "text JSON only; raw=true remains Python-owned",
+  "runtime_change": "local_copied_db_and_copied_files_only",
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "production_filesystem_mutation": false,
+  "filesystem_write_authorized": false,
+  "filesystem_delete_authorized": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "implementation": {
+    "enable_flag": "--enable-attachment-text-read",
+    "enable_env": "PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ=1",
+    "default_runtime_mode": {
+      "api_surface": "get-read-only",
+      "sqlite_query_only": true
+    },
+    "explicit_local_candidate_mode": {
+      "api_surface": "get-read-only+local-attachment-text-read",
+      "sqlite_query_only": true,
+      "data_scope": "copied DB plus copied docs/attachments fixture"
+    },
+    "allowed_response_shape": {
+      "status": "success",
+      "data": {
+        "id": "attachment id",
+        "title": "attachment title",
+        "file_type": "attachment file_type",
+        "content": "UTF-8 file content"
+      }
+    }
+  },
+  "fixture_contract": {
+    "required_cases": [
+      "UTF-8 text attachment matches Python response",
+      "missing attachment id returns 404 Attachment not found",
+      "missing file returns 404 File not found on disk",
+      "unsafe path returns 404 File not found on disk",
+      "unsupported extension returns 404 File not found on disk",
+      "raw=true remains blocked in Go candidate"
+    ],
+    "no_mutation_proof": [
+      "DB file bytes are unchanged after success and failure requests",
+      "copied docs/attachments file bytes are unchanged after success and failure requests",
+      "copied static/uploads tree is unchanged after success and failure requests"
+    ]
+  },
+  "not_authorized_by_23_6_next": [
+    "raw=true Go ownership",
+    "binary or send_file response Go ownership",
+    "attachment upload Go ownership",
+    "attachment delete Go ownership",
+    "separate or restore Go ownership",
+    "upload image Go ownership",
+    "cleanup route Go ownership",
+    "import or export Go ownership",
+    "server backup or log route Go ownership",
+    "live route expansion",
+    "Production knowledge.db write",
+    "Production attachment or upload filesystem mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Schema migration",
+    "Python packaging removal",
+    "Public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.7",
+    "title": "Migration / DB ownership decision gate",
+    "status": "pending_file_ownership_stabilization",
+    "requires_explicit_user_approval": true,
+    "scope": "Plan-only comparison of retained Python migrations, Go status-only, and Go migration runner options. No production migration or DB ownership change."
+  }
+}

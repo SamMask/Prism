@@ -125,9 +125,14 @@ def test_docs_record_23_3_completion_and_23_4_pending_gate():
     assert "Phase 23.5-next.1 Second Go DB-only write implementation subgate is complete" in architecture
     assert "Phase 23.5-next.2-4 category update closure is complete" in architecture
     assert "Phase 23.6 File / attachment ownership gate is complete as a plan-only inventory and selection gate" in architecture
-    assert "Next active Go gate is `23.6-next First Go file-read route implementation candidate`, pending explicit approval" in architecture
+    assert "Phase 23.6-next First Go file-read route implementation candidate is complete" in architecture
+    assert "Phase 23.7 Migration / DB ownership decision gate is complete as plan-only" in architecture
+    assert "Next active Go gate is `23.8 Local packaging execution track`, pending explicit approval" in architecture
     assert "`23.3 Go write surface selection gate is complete`" in go_roadmap
     assert "`23.4 First Go write route implementation gate is complete`" in go_roadmap
     assert "`23.5 Go DB-only write expansion gate is complete`" in go_roadmap
+    assert "`23.6-next First Go file-read route implementation candidate` is complete" in go_roadmap
+    assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_roadmap
+    assert "`23.8 Local packaging execution track` is the next recommended step" in go_roadmap
     assert "`23.5-next.1 Second Go DB-only write implementation subgate is complete`" in go_roadmap
     assert "`23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete`" in go_roadmap

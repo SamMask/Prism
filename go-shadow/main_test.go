@@ -55,6 +55,16 @@ func createSpikeDB(t *testing.T) string {
 			tag_id INTEGER,
 			PRIMARY KEY (note_id, tag_id)
 		);
+		CREATE TABLE Note_Attachments (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			note_id INTEGER NOT NULL,
+			file_path TEXT NOT NULL,
+			file_type TEXT,
+			title TEXT,
+			size_bytes INTEGER,
+			is_auto_extracted INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
 		CREATE VIRTUAL TABLE Notes_FTS USING fts5(
 			title, content,
 			content='Notes',
@@ -74,7 +84,7 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	dataDir := filepath.Join(t.TempDir(), "data")
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,6 +99,9 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	}
 	if cfg.enableCategoryWrite {
 		t.Fatal("category write should be disabled by default")
+	}
+	if cfg.enableAttachmentTextRead {
+		t.Fatal("attachment text read should be disabled by default")
 	}
 	if !cfg.sqliteQueryOnly {
 		t.Fatal("default runtime must keep SQLite query_only enabled")
@@ -105,7 +118,7 @@ func TestRuntimeRefusesProductionNamedDB(t *testing.T) {
 	}
 	t.Setenv("PRISM_GO_ALLOW_PROD_DB", "")
 
-	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false)
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false)
 	if err == nil {
 		t.Fatal("expected production-like database refusal")
 	}
@@ -139,7 +152,7 @@ func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 
 func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -163,7 +176,7 @@ func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T)
 
 func TestCategoryWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -182,6 +195,87 @@ func TestCategoryWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testi
 
 	if _, err := db.Exec("UPDATE Categories SET name = ? WHERE id = 1", "renamed"); err != nil {
 		t.Fatalf("expected explicit category write mode to allow copied-DB writes: %v", err)
+	}
+}
+
+func TestAttachmentTextReadKeepsQueryOnlyWhenExplicitlyEnabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	dataDir := t.TempDir()
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.enableAttachmentTextRead {
+		t.Fatal("attachment text read should be enabled by explicit flag")
+	}
+	if !cfg.sqliteQueryOnly {
+		t.Fatal("attachment text read must keep SQLite query_only enabled")
+	}
+
+	attachmentDir := filepath.Join(dataDir, "docs", "attachments")
+	if err := os.MkdirAll(attachmentDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(attachmentDir, "fixture.md"), []byte("hello attachment"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	writableDB, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := writableDB.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title) VALUES (1, 'docs/attachments/fixture.md', 'md', 'Fixture')"); err != nil {
+		t.Fatal(err)
+	}
+	writableDB.Close()
+
+	readDB, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readDB.Close()
+
+	srv := &server{db: readDB, runtime: cfg}
+	request := httptest.NewRequest(http.MethodGet, "/api/attachments/1", nil)
+	recorder := httptest.NewRecorder()
+	srv.handleAttachmentDetail(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected attachment text read to return 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected JSON response: %v", err)
+	}
+	data := payload["data"].(map[string]any)
+	if data["content"] != "hello attachment" {
+		t.Fatalf("unexpected content: %#v", data)
+	}
+
+	_, err = readDB.Exec("INSERT INTO Notes (title, content) VALUES ('blocked', 'query only')")
+	if err == nil {
+		t.Fatal("attachment text read mode must keep DB writes blocked")
+	}
+}
+
+func TestAttachmentTextReadRejectsWhenFlagDisabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
+	request := httptest.NewRequest(http.MethodGet, "/api/attachments/1", nil)
+	recorder := httptest.NewRecorder()
+	srv.handleAttachmentDetail(recorder, request)
+
+	if recorder.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected disabled attachment text read to return 405, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "Attachment text read route is disabled") {
+		t.Fatalf("unexpected disabled response: %s", recorder.Body.String())
 	}
 }
 
