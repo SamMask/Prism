@@ -22,6 +22,10 @@ import (
 )
 
 const expectedSchemaVersion = 16
+const maxAttachmentFileBytes int64 = 1048576
+const maxAttachmentScanFiles = 200
+const maxAttachmentScanBytes int64 = 5242880
+const maxAttachmentScanDuration = 250 * time.Millisecond
 
 //go:embed web/dist/*
 var embeddedDist embed.FS
@@ -32,9 +36,11 @@ type server struct {
 }
 
 type runtimeConfig struct {
-	addr    string
-	dbPath  string
-	dataDir string
+	addr            string
+	dbPath          string
+	dataDir         string
+	enableTagWrite  bool
+	sqliteQueryOnly bool
 }
 
 type response map[string]any
@@ -48,14 +54,15 @@ func main() {
 	dbPath := flag.String("db", os.Getenv("PRISM_GO_DB"), "path to a copied Prism SQLite database")
 	addr := flag.String("addr", envDefault("PRISM_GO_ADDR", "127.0.0.1:5001"), "listen address")
 	dataDir := flag.String("data-dir", envDefault("PRISM_GO_DATA_DIR", "."), "external Prism user data directory")
+	enableTagWrite := flag.Bool("enable-tag-write", envBool("PRISM_GO_ENABLE_TAG_WRITE"), "enable local/copied-DB PUT /api/tags/<id> parity candidate")
 	flag.Parse()
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	db, err := openReadOnlyDB(cfg.dbPath)
+	db, err := openDB(cfg.dbPath, cfg.enableTagWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -70,6 +77,7 @@ func main() {
 	mux.HandleFunc("/api/test", srv.handleTest)
 	mux.HandleFunc("/api/categories", srv.handleCategories)
 	mux.HandleFunc("/api/tags", srv.handleTags)
+	mux.HandleFunc("/api/tags/", srv.handleTagDetail)
 	mux.HandleFunc("/api/notes", srv.handleNotes)
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.Handle("/", staticHandler())
@@ -87,7 +95,12 @@ func envDefault(key, fallback string) string {
 	return fallback
 }
 
-func resolveRuntimeConfig(addr, dbPath, dataDir string) (runtimeConfig, error) {
+func envBool(key string) bool {
+	value := strings.TrimSpace(os.Getenv(key))
+	return value == "1" || strings.EqualFold(value, "true")
+}
+
+func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite bool) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
 		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
@@ -110,13 +123,22 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string) (runtimeConfig, error) {
 		return runtimeConfig{}, err
 	}
 
-	return runtimeConfig{addr: addr, dbPath: absDB, dataDir: absData}, nil
+	return runtimeConfig{
+		addr:            addr,
+		dbPath:          absDB,
+		dataDir:         absData,
+		enableTagWrite:  enableTagWrite,
+		sqliteQueryOnly: !enableTagWrite,
+	}, nil
 }
 
-func openReadOnlyDB(dbPath string) (*sql.DB, error) {
+func openDB(dbPath string, enableWrites bool) (*sql.DB, error) {
 	db, err := sql.Open("sqlite", dbPath)
 	if err != nil {
 		return nil, err
+	}
+	if enableWrites {
+		return db, nil
 	}
 	if _, err := db.Exec("PRAGMA query_only = ON"); err != nil {
 		db.Close()
@@ -255,10 +277,17 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 			"db_path":                 s.runtime.dbPath,
 			"schema_version":          version,
 			"expected_schema_version": expectedSchemaVersion,
-			"sqlite_query_only":       true,
-			"api_surface":             "get-read-only",
+			"sqlite_query_only":       s.runtime.sqliteQueryOnly,
+			"api_surface":             s.apiSurface(),
 		},
 	})
+}
+
+func (s *server) apiSurface() string {
+	if s.runtime.enableTagWrite {
+		return "get-read-only+local-tag-write"
+	}
+	return "get-read-only"
 }
 
 func boolString(r *http.Request, key string) bool {
@@ -357,6 +386,89 @@ func (s *server) handleTags(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": items})
 }
 
+func (s *server) handleTagDetail(w http.ResponseWriter, r *http.Request) {
+	idText := strings.TrimPrefix(r.URL.Path, "/api/tags/")
+	tagID, err := strconv.Atoi(idText)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if r.Method != http.MethodPut {
+		w.Header().Set("Allow", http.MethodPut)
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	if !s.runtime.enableTagWrite {
+		writeError(w, http.StatusMethodNotAllowed, "Tag write route is disabled")
+		return
+	}
+	s.renameTag(w, r, tagID)
+}
+
+func (s *server) renameTag(w http.ResponseWriter, r *http.Request, tagID int) {
+	var payload map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "Tag name is required")
+		return
+	}
+	rawName, ok := payload["name"].(string)
+	if !ok || rawName == "" {
+		writeError(w, http.StatusBadRequest, "Tag name is required")
+		return
+	}
+	newName := strings.TrimSpace(rawName)
+	if newName == "" {
+		writeError(w, http.StatusBadRequest, "Tag name cannot be empty")
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var existingID int
+	if err := tx.QueryRow("SELECT id FROM Tags WHERE id = ?", tagID).Scan(&existingID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Tag not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var duplicateID int
+	if err := tx.QueryRow("SELECT id FROM Tags WHERE name = ? AND id != ?", newName, tagID).Scan(&duplicateID); err == nil {
+		writeError(w, http.StatusConflict, "Tag name already exists")
+		return
+	} else if !errors.Is(err, sql.ErrNoRows) {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	result, err := tx.Exec("UPDATE Tags SET name = ? WHERE id = ?", newName, tagID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	affected, err := result.RowsAffected()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if affected != 1 {
+		writeError(w, http.StatusNotFound, "Tag not found")
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success"})
+}
+
 func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 	if !requireGET(w, r) {
 		return
@@ -378,7 +490,7 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 		perPage = 100
 	}
 
-	where, args := buildNotesWhere(r)
+	where, args := s.buildNotesWhere(r)
 	var total int
 	if err := s.db.QueryRow("SELECT COUNT(*) FROM Notes n LEFT JOIN Categories c ON n.category_id = c.id "+where, args...).Scan(&total); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -430,7 +542,7 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func buildNotesWhere(r *http.Request) (string, []any) {
+func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
 	clauses := []string{"1 = 1"}
 	args := []any{}
 	if boolString(r, "archived") {
@@ -468,16 +580,175 @@ func buildNotesWhere(r *http.Request) (string, []any) {
 		if len(q) > 200 {
 			q = q[:200]
 		}
+		attachmentNoteIDs := s.attachmentContentNoteIDs(q)
 		like := "%" + q + "%"
-		clauses = append(clauses, `(n.title LIKE ? OR n.content LIKE ? OR n.remarks LIKE ? OR n.id IN (
+		searchClause := `(n.title LIKE ? OR n.content LIKE ? OR n.remarks LIKE ? OR n.id IN (
 			SELECT nt.note_id FROM Note_Tags nt JOIN Tags t ON nt.tag_id = t.id WHERE t.name LIKE ?
 		) OR n.id IN (
 			SELECT a.note_id FROM Note_Attachments a
 			WHERE a.title LIKE ? OR a.file_path LIKE ?
-		))`)
+		)`
+		if len(attachmentNoteIDs) > 0 {
+			searchClause += " OR n.id IN (" + placeholders(len(attachmentNoteIDs)) + ")"
+		}
+		searchClause += ")"
+		clauses = append(clauses, searchClause)
 		args = append(args, like, like, like, like, like, like)
+		for _, noteID := range attachmentNoteIDs {
+			args = append(args, noteID)
+		}
 	}
 	return "WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func placeholders(count int) string {
+	if count <= 0 {
+		return ""
+	}
+	return strings.TrimRight(strings.Repeat("?,", count), ",")
+}
+
+func searchTokens(keyword string) []string {
+	keyword = strings.ToLower(keyword)
+	var builder strings.Builder
+	for _, r := range keyword {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r > 127 {
+			builder.WriteRune(r)
+		} else {
+			builder.WriteRune(' ')
+		}
+	}
+	parts := strings.Fields(builder.String())
+	if len(parts) > 10 {
+		return parts[:10]
+	}
+	return parts
+}
+
+func (s *server) attachmentContentNoteIDs(keyword string) []int {
+	tokens := searchTokens(keyword)
+	if len(tokens) == 0 {
+		return nil
+	}
+	rows, err := s.db.Query(`
+		SELECT note_id, file_path, file_type
+		FROM Note_Attachments
+		WHERE LOWER(COALESCE(file_type, '')) IN ('md', 'markdown', 'txt')`)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	deadline := time.Now().Add(maxAttachmentScanDuration)
+	filesRead := 0
+	var totalBytes int64
+	noteIDs := map[int]bool{}
+	for rows.Next() {
+		if filesRead >= maxAttachmentScanFiles || totalBytes >= maxAttachmentScanBytes || time.Now().After(deadline) {
+			break
+		}
+		var noteID int
+		var filePath, fileType sql.NullString
+		if err := rows.Scan(&noteID, &filePath, &fileType); err != nil {
+			return sortedIntKeys(noteIDs)
+		}
+		resolved, size, ok := resolveAttachmentFile(s.runtime.dataDir, nullableString(filePath), nullableString(fileType))
+		if !ok {
+			continue
+		}
+		if totalBytes+size > maxAttachmentScanBytes {
+			break
+		}
+		content, err := os.ReadFile(resolved)
+		filesRead++
+		totalBytes += size
+		if err != nil {
+			continue
+		}
+		text := strings.ToLower(strings.TrimPrefix(string(content), "\ufeff"))
+		if containsAllTokens(text, tokens) {
+			noteIDs[noteID] = true
+		}
+	}
+	return sortedIntKeys(noteIDs)
+}
+
+func resolveAttachmentFile(dataDir, relativePath, fileType string) (string, int64, bool) {
+	if !isAllowedAttachmentPath(relativePath, fileType) {
+		return "", 0, false
+	}
+	root, err := filepath.Abs(dataDir)
+	if err != nil {
+		return "", 0, false
+	}
+	candidate := filepath.Join(root, filepath.FromSlash(relativePath))
+	absCandidate, err := filepath.Abs(candidate)
+	if err != nil || !isSubpath(absCandidate, root) {
+		return "", 0, false
+	}
+	info, err := os.Lstat(absCandidate)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxAttachmentFileBytes {
+		return "", 0, false
+	}
+	resolved, err := filepath.EvalSymlinks(absCandidate)
+	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+		return "", 0, false
+	}
+	return resolved, info.Size(), true
+}
+
+func isAllowedAttachmentPath(relativePath, fileType string) bool {
+	relativePath = strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))
+	fileType = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(fileType)), ".")
+	if relativePath == "" || filepath.IsAbs(relativePath) || filepath.VolumeName(relativePath) != "" || strings.Contains(relativePath, ":") {
+		return false
+	}
+	parts := strings.Split(relativePath, "/")
+	for _, part := range parts {
+		if part == ".." {
+			return false
+		}
+	}
+	cleaned := path.Clean(relativePath)
+	if cleaned == "." || strings.HasPrefix(cleaned, "../") || cleaned == ".." || !strings.HasPrefix(cleaned, "docs/attachments/") {
+		return false
+	}
+	ext := strings.TrimPrefix(strings.ToLower(path.Ext(cleaned)), ".")
+	return ext == fileType && (ext == "md" || ext == "markdown" || ext == "txt")
+}
+
+func isSubpath(candidate, root string) bool {
+	rel, err := filepath.Rel(filepath.Clean(root), filepath.Clean(candidate))
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
+}
+
+func containsAllTokens(text string, tokens []string) bool {
+	for _, token := range tokens {
+		if !strings.Contains(text, token) {
+			return false
+		}
+	}
+	return true
+}
+
+func sortedIntKeys(values map[int]bool) []int {
+	out := []int{}
+	for value := range values {
+		out = append(out, value)
+	}
+	for i := 1; i < len(out); i++ {
+		current := out[i]
+		j := i - 1
+		for j >= 0 && out[j] > current {
+			out[j+1] = out[j]
+			j--
+		}
+		out[j+1] = current
+	}
+	return out
 }
 
 func parseCSVInts(value string) []int {

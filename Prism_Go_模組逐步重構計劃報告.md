@@ -4,6 +4,68 @@
 
 ---
 
+## 2026-06-05 主線校準：本機封裝目標 + Pi 部署不變
+
+> **白話說明**：
+> 這一段是在把 Go 重構重新定為 Prism 的主線，而不是繼續從前端找零碎小修。
+> 最後目標是：Prism 可以有明確的本機封裝執行方式，但使用者日常使用仍維持部署在樹莓派，透過 systemd + Caddy + 既有資料目錄運行。
+> 使用者現在不會立刻看到功能差異，因為這是 roadmap / ownership 規劃；真正改 runtime、DB、file system、Caddy 或 Pi 前都還需要下一個明確 gate。
+> 這段明確不會改：不直接實作 Go file-read/body scan、不擴 Go writes/files/migrations、不移除 Python、不改 frontend default、不改 Caddy、不部署 Pi、不擴 public exposure。
+
+### Risk level
+
+`P0 safety-critical` for Go ownership / runtime / DB / file system / migration / Caddy / Pi deploy.
+
+### Final Target
+
+- **Local packaged run**: Prism should eventually have a clear local packaging path for Windows/dev machines: bundled React `dist`, Go runtime artifact, explicit config, external data dir, and repeatable local startup.
+- **Pi deployment unchanged**: Daily/real usage remains Raspberry Pi deployment with `prism.service`, Caddy, existing data dir, SQLite WAL mode, and the established backup/rollback discipline.
+- **Gradual ownership transfer**: Go takes ownership one surface at a time. Python remains the owner for every route class not explicitly promoted and verified.
+- **No implicit cutover**: A passing local build, single curl, or docs update never means Go owns a production surface.
+
+### Current Runtime Truth
+
+- Go currently owns only the hardened permanent read-only Caddy-routed GET surface already verified in Phase 19-20: `/api/test`, `/api/categories`, `/api/tags`, `/api/notes`, and numeric `/api/notes/{id}`.
+- Python still owns writes, files/attachments, import/export, cleanup, system/server routes, migrations, frontend/static serving, and any unreviewed `/api/notes/...` path.
+- Go `GET /api/notes?q=...` has DB-only attachment metadata parity for `Note_Attachments.title` / `file_path`.
+- Text attachment body search is still Python-owned because it performs request-time file scanning.
+
+### Roadmap Big Items
+
+| Order | Workstream | Risk | Purpose | Completion Criteria |
+|---|---|---|---|---|
+| 1 | Runtime truth and roadmap consolidation | P0 | Keep future agents on the Go track and stop frontend-polish drift | `docs/TODO.md`, this report, and `docs/ARCHITECTURE.md` agree on active Go next step |
+| 2 | Go read parity completion | P0 | Close the remaining read-only gap: text attachment body search | File-read contract, path safety, performance bounds, Python vs Go diff fixtures |
+| 3 | Go write surface selection | P0 | Choose the first DB-write surface without file side effects | Side-effect map, transaction/rollback plan, CSRF/local-only boundary, fixture plan |
+| 4 | First Go write route | P0 | Promote one smallest write route to Go | Parity tests, rollback proof, Python fallback/owner boundaries |
+| 5 | File / attachment ownership | P0 | Move upload/attachment/cleanup/export/import only after DB writes are stable | Data-dir ownership, filesystem safety, backup/restore, Pi rollback |
+| 6 | Migration / DB ownership decision | P0 | Decide whether migrations stay Python-owned or move partly to Go | Idempotent migration tests, schema lock, rollback and production safety plan |
+| 7 | Local packaging track | P1/P0 mixed | Make local packaged execution repeatable | Local artifact, external data dir, config contract, smoke tests |
+| 8 | Pi deployment track | P0 | Keep real usage on Pi while Go ownership expands | Pi preflight, service health, Caddy boundary, backups, rollback |
+| 9 | Python reduction/removal | P0 | Only after every owned surface has a Go or explicit retained-Python decision | No orphan Python-owned runtime surfaces; rollback and release plan complete |
+
+### Active Next Gate
+
+`23.1 Go file-read parity plan gate is complete`.
+
+It was **plan-only**: it defined explicit `--data-dir`, `docs/attachments` relative roots, `md` / `markdown` / `txt`, canonical path defense, rejection of `..` / symlink escape / absolute external path, 1 MiB per file, 200 files / 5 MiB / 250 ms per query, UTF-8 replacement decoding, Python vs Go copied-DB fixture cases, and rollback boundaries. It did not implement Go file scanning, change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, remove Python, or expand public exposure.
+
+`23.2 Go file-read parity implementation gate is complete`.
+
+It implemented bounded local/copied-DB read-only text attachment body search inside the 23.1 contract. Go `GET /api/notes?q=...` can now scan text bodies for `md` / `markdown` / `txt` attachments under explicit `--data-dir` `docs/attachments`, then merge matching note ids into the existing search query. It still rejects traversal, absolute/volume/UNC/colon paths, symlink escape, unsupported extension, oversized files, missing files, and read errors as non-matches. It did not change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, add Go writes/files/migrations, remove Python, or expand public exposure.
+
+`23.3 Go write surface selection gate is complete`.
+
+It was **plan-only**: it selected `PUT /api/tags/<tag_id>` (`tag_rename`) as the first Go write implementation candidate. The selected route only updates `Tags.name`, has no file/cascade/bulk/process side effects, and can be verified with Python-vs-Go response plus DB-state parity fixtures. It rejected or deferred broader notes writes, nested note actions, duplicate/reorder/batch, category delete, tag delete/merge, attachments/uploads/cleanup/import/export/system/server/config. It did not implement Go writes, change production DB, change Caddy/systemd/frontend defaults, deploy Pi, remove Python, or expand public exposure.
+
+`23.4 First Go write route implementation gate is complete`.
+
+It implemented the first Go write candidate as local/copied-DB parity only. Go now supports `PUT /api/tags/<tag_id>` behind an explicit `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1` flag. Without that flag, the runtime remains `get-read-only` and keeps SQLite `query_only = ON`. The implementation updates only `Tags.name`, preserves `Tags.id` and `Note_Tags`, uses a transaction, and matches current Python response / DB-state behavior for success, validation errors, missing tag, and duplicate exact-name checks. It did not change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, remove Python, or expand public exposure.
+
+`23.5 Go DB-only write expansion gate` is the next recommended step, pending explicit approval. It should first decide whether tag rename needs a live/local routing gate before broader DB-only write expansion, then resolve or explicitly defer the `Tags.name` NOCASE schema/documentation discrepancy before tag CUD expansion.
+
+---
+
 ## A. 模組分級總覽
 
 ### 🟢 Tier 1 — 可優先替換（唯讀、低耦合、無副作用）

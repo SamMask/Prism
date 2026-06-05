@@ -42,6 +42,15 @@ func createSpikeDB(t *testing.T) string {
 			is_default INTEGER DEFAULT 0,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+		CREATE TABLE Tags (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL COLLATE NOCASE
+		);
+		CREATE TABLE Note_Tags (
+			note_id INTEGER,
+			tag_id INTEGER,
+			PRIMARY KEY (note_id, tag_id)
+		);
 		CREATE VIRTUAL TABLE Notes_FTS USING fts5(
 			title, content,
 			content='Notes',
@@ -61,7 +70,7 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	dataDir := filepath.Join(t.TempDir(), "data")
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -70,6 +79,12 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	}
 	if cfg.dataDir != dataDir {
 		t.Fatalf("data dir mismatch: %s", cfg.dataDir)
+	}
+	if cfg.enableTagWrite {
+		t.Fatal("tag write should be disabled by default")
+	}
+	if !cfg.sqliteQueryOnly {
+		t.Fatal("default runtime must keep SQLite query_only enabled")
 	}
 	if _, err := os.Stat(dataDir); err != nil {
 		t.Fatalf("data dir was not created: %v", err)
@@ -83,7 +98,7 @@ func TestRuntimeRefusesProductionNamedDB(t *testing.T) {
 	}
 	t.Setenv("PRISM_GO_ALLOW_PROD_DB", "")
 
-	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir())
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false)
 	if err == nil {
 		t.Fatal("expected production-like database refusal")
 	}
@@ -91,7 +106,7 @@ func TestRuntimeRefusesProductionNamedDB(t *testing.T) {
 
 func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	db, err := openReadOnlyDB(dbPath)
+	db, err := openDB(dbPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,5 +127,29 @@ func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 	_, err = db.Exec("INSERT INTO Notes (title, content) VALUES ('blocked', 'query only')")
 	if err == nil {
 		t.Fatal("expected query_only mode to block writes")
+	}
+}
+
+func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.enableTagWrite {
+		t.Fatal("tag write should be enabled by explicit flag")
+	}
+	if cfg.sqliteQueryOnly {
+		t.Fatal("tag write mode must report SQLite query_only disabled")
+	}
+
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec("INSERT INTO Tags (name) VALUES ('writable')"); err != nil {
+		t.Fatalf("expected explicit tag write mode to allow copied-DB writes: %v", err)
 	}
 }

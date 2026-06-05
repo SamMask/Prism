@@ -3,7 +3,7 @@
 **狀態**: 🟢 穩定運行 (Stable)
 **核心目標**: Headless KMS API + 純關鍵字 FTS 搜尋
 **文件參照**: `docs/Prism.md` (歷史背景), `docs/SCHEMA.md` (資料庫規格), `docs/FRONTEND-REDESIGN-PLAN.md` (UI/Go 重構規劃), `Prism_Go_模組逐步重構計劃報告.md` (Go shadow backend), `docs/development-history/` (完成階段與完整 Changelog 歸檔), `garbage-can/1230-審核報告.md` (Linus Audit)
-**最後更新**: 2026-06-04
+**最後更新**: 2026-06-05
 
 ---
 
@@ -263,7 +263,7 @@
 
 ---
 
-## 🎛️ Phase 22: Product Frontend Backlog Intake — 🚦 Active
+## 🎛️ Phase 22: Product Frontend Backlog Intake — ✅ Closed
 
 > **來源**: Phase 21.3 `product_frontend_backlog` branch selection、`docs/FRONTEND-REDESIGN-PLAN.md`、`docs/New_UI/Prism Redesign - standalone.html`、現有 React/Vite frontend。
 > **目標**: 先 read-only 盤點 product/frontend backlog candidate，再只 promote 一個最小、workflow-safe、可驗證的 frontend/product item；不得把 backlog intake 直接變成大改版。
@@ -312,14 +312,197 @@
 - [x] **22.3.2** Preserve default empty library state — 真正沒有任何筆記且沒有搜尋/篩選時，仍保留目前「還沒有任何筆記」語意。
 - [x] **22.3.3** Verification — 新增 `tests/test_phase22_home_search_empty_state_context_copy.py`；需跑 `cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v`，並做 browser flow：輸入 guaranteed no-match 搜尋詞後，空狀態顯示 no-result context，不新增 console error。
 
+### ✅ Settings tab deep linking
+
+> **白話說明**：
+> 這一步會真的改 Settings 分頁的使用流程：切到「資料、搜尋、部署、關於」後，網址會記住目前分頁，重新整理或直接打開該網址時會回到同一個分頁。
+> 要修這個，是因為原本分頁只存在 React 本地 state，reload 會回到外觀分頁；對部署/資料維護這類低頻但重要的設定頁，網址不能保存狀態會讓操作中斷。
+> 使用者會感覺到的差異是：`/settings?tab=deploy` 會直接打開部署分頁，點分頁也會更新網址；既有分頁內容、設定控制項、Sidebar/Command Palette 進入 Settings 的預設外觀分頁都照舊。
+> 這一步不新增 backend API、資料庫 schema、Pi/Caddy/service、Go runtime 或 public exposure，也不新增 server-side UI preference。
+> Risk level: `P1 workflow-sensitive`。這類前端 workflow 修正最多 plan gate + implementation gate；本次已由使用者明確授權，直接做單一 implementation task 並以 browser reload/click flow 驗證。
+
+- [x] **Settings tab deep linking** — 使用者明確授權後，讓 Settings tab 由 `tab` query param 決定；有效值包含 `appearance`、`data`、`search`、`deploy`、`about`，無效或缺省時回到 `appearance`。
+- [x] **URL update behavior** — 點 Settings tab 時使用 `replace` 更新目前 URL 的 `tab` query，不新增 browser history spam，也保留其他 query param。
+- [x] **Verification** — 新增 `tests/test_phase22_settings_tab_deep_linking.py`；需跑 targeted pytest、`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v`，並做 browser flow：直開 `/settings?tab=deploy`、reload 後仍顯示部署分頁、點資料/關於時 URL 與 panel 同步，不新增 console error。
+
+### ✅ Prompt Builder mobile action bar polish
+
+> **白話說明**：
+> 這一步會真的改 Prompt Builder 手機版的操作動線：手機寬度下，「儲存至筆記庫 / 重置」不再只出現在控制項最底部，而是在標題下方就能看到並跟著頁面上方停留。
+> 要修這個，是因為 Prompt Builder 表單很長，手機使用者填完主要描述或前幾個設定時，原本必須一路滑到底才找得到主要動作，容易中斷操作。
+> 使用者會感覺到的差異是：手機版進入 Prompt Builder 後第一屏就能看到儲存/重置；桌面版仍保留原本左側設定區底部 sticky action bar，輸出預覽、複製、AI 優化、表單欄位與輸出格式都不改。
+> 這一步不新增 backend API、資料庫 schema、Pi/Caddy/service、Go runtime 或 public exposure，也不新增 AI/ML dependency、server-side UI preference 或 prompt schema。
+> Risk level: `P1 workflow-sensitive`。這類前端 workflow 修正最多 plan gate + implementation gate；本次已由使用者明確授權，直接做單一 implementation task 並以 mobile/desktop browser flow 驗證。
+
+- [x] **Mobile action availability** — 使用者明確授權後，新增 mobile-only `prompt-builder-mobile-actions` action bar；手機寬度下在 Prompt Builder header 下方可見並 sticky top。
+- [x] **Desktop behavior preservation** — desktop 仍使用既有 `prompt-builder-actions` bottom sticky bar；儲存與重置 handler 仍是既有 `saveToLibrary` / `resetForm`。
+- [x] **Verification** — 新增 `tests/test_phase22_prompt_builder_mobile_action_bar.py`；需跑 targeted pytest、`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v`，並做 browser flow：mobile first viewport action bar 可見、scroll 後仍可操作、desktop 仍顯示原 bottom action bar，不新增 console error。
+
 ### 📌 Product Frontend Backlog Parking Lot — Plan When Needed
 
 > **白話說明**：
-> P2 不再開下一個儀式化 phase。22.3 後若要繼續前端小修，直接從下面候選挑一個小 patch；只有 workflow-sensitive 的改動才最多拆成 plan gate + implementation gate。
-> 目前保留兩個候選：Settings 分頁網址保存、Prompt Builder 手機動作列位置。它們都比 22.3 稍大，之後要做時先重新看 browser evidence。
+> P2 不再開下一個儀式化 phase。Settings 分頁網址保存與 Prompt Builder 手機動作列已完成；後續若要繼續前端小修，需先從實際使用或 browser evidence 找下一個具體候選。
+> 目前沒有已選 active frontend item；下一步先做收斂盤點，不預設開新 phase。
 
-- [ ] **Settings tab deep linking** — `P1 workflow-sensitive`；讓 Settings tab 可被 URL 保存 / reload 回同一 tab，需避免破壞既有 tab 操作。
-- [ ] **Prompt Builder mobile action bar polish** — `P1 workflow-sensitive`；手機寬度下調整 action bar 可見性，需 visual/browser iteration。
+---
+
+## 🧭 Phase 23: Go Refactor Roadmap Consolidation — 🚦 Active
+
+> **來源**: `Prism_Go_模組逐步重構計劃報告.md`、`docs/ARCHITECTURE.md` Phase 19-20 runtime truth、Phase 20.4 `closed_stabilized`、使用者明確要求「直接規劃好大項最後可以本機封裝執行；實際使用仍部署在樹莓派」。
+> **目標**: 把主線從 product/frontend backlog 收回 Go 漸進重構；先固定大項 roadmap、最終本機封裝目標與 Pi deployment 不變的邊界，再進下一個 Go P0 gate。
+> **原則**: Go ownership / runtime / DB / file system / migration / Caddy / Pi deploy 都視為 `P0 safety-critical`；不得用 P1/P2 小修節奏直接實作。Frontend backlog 已關閉，除非使用者另行指定，不再主動尋找前端小毛病。
+
+### ✅ 23.0 Go Refactor Roadmap Consolidation
+
+> **白話說明**：
+> 這一步只是決定/盤點/規劃，不會實作功能。
+> 這段是在把專案主線重新拉回 Go 重構：最後 Prism 要能有明確的本機封裝執行路徑，但使用者日常使用仍維持部署在樹莓派、由 systemd + Caddy 管理。
+> 要修這個，是因為前面 frontend backlog 已完成幾個小修，但 Go 重構才是長線主軸；如果不寫回權威文檔，後續 agent 會繼續從小 UI 候選找事做。
+> 使用者不會立刻看到功能差異，因為 23.0 只改文檔；它明確規定下一步回到 Go P0 gate，而不是繼續挖 frontend polish。
+> 這一步不改 Go code、不改 Python route、不改資料庫、不改 Caddy、不部署 Pi、不改 frontend default、不移除 Python、不擴大 public exposure。
+> Risk level: `P0 safety-critical`。這類工作只允許 strict phase gate、explicit approval、rollback、contract、pytest lock；23.0 本身是 plan-only consolidation，下一個 implementation 前必須另行授權。
+
+- [x] **23.0.1** Final target architecture — 固定最終方向：本機可封裝執行（single binary / bundled frontend / external data dir / explicit config），但正式使用與部署仍以 Raspberry Pi + systemd + Caddy + existing data dir 為主。
+- [x] **23.0.2** Go ownership roadmap — 固定大項順序：current runtime truth → read parity completion → write surface selection → first Go write route → file/attachment ownership → migration/DB ownership decision → local packaging track → Pi deployment track → Python reduction/removal。
+- [x] **23.0.3** Active next gate — 下一個 active Go step 為 `23.1 Go file-read parity plan gate`，只做 plan/contract，不直接實作 attachment body scan；原因是文字附件 body 搜尋目前仍 Python-owned，涉及 file system、path traversal、data dir、large file/performance 與 rollback。
+- [x] **23.0.4** No frontend drift — Phase 22 product/frontend backlog 關閉；目前沒有已選 active frontend item。除非使用者明確指定，後續 agent 不得繼續主動找 frontend polish 當下一步。
+- [x] **23.0.5** Documentation sync — 同步 `Prism_Go_模組逐步重構計劃報告.md` 與 `docs/ARCHITECTURE.md`，讓未來 agent 從 AGENTS.md 指定文檔即可讀到 Go 主線、local packaging target 與 Pi deployment unchanged boundary。
+
+### ✅ 23.1 Go file-read parity plan gate — ✅ Completed (2026-06-05)
+
+> **白話說明**：
+> 這一步只是決定/盤點/規劃，不會實作功能。
+> 它要處理的是 Go read-only surface 目前還缺的「文字附件內容搜尋」：Python 現在會在 request 期間讀 `.md` / `.markdown` / `.txt` 附件內容，Go 目前只補齊 DB 裡的附件 title / file_path metadata。
+> 使用者不會在 23.1 看到功能差異；23.1 只會把 data dir、可讀副檔名、檔案大小上限、路徑穿越防護、效能界線、Python vs Go diff fixture、Pi rollback 寫清楚。
+> 23.1 明確不會寫 Go file scanner、不會改 Caddy route、不會改 production DB、不會改 frontend default、不會部署 Pi、不會移除 Python。
+> Risk level: `P0 safety-critical`。因為會碰 file system ownership，必須先有 contract / rollback / pytest lock，再另行授權 implementation。
+
+- [x] **23.1.1** File-read contract — 定義 Go 可讀 data dir、允許副檔名、路徑 canonicalization、禁止 `..` / symlink escape / absolute external path、file size limit、encoding fallback 與 timeout/performance boundary。見 `docs/contracts/phase23-go-file-read-parity-plan.json`。
+- [x] **23.1.2** Parity fixture plan — 設計 Python vs Go diff fixture：同一 copied DB + controlled attachment files，覆蓋 title/file_path metadata hit、body hit、missing file、oversized file、unsupported extension、path traversal attempt。
+- [x] **23.1.3** Runtime boundary — 23.1 不改 `prism-go-readonly.service` query_only、不擴 Caddy matcher、不碰 production `knowledge.db`、不改 frontend default、不部署 Pi；23.2 若被授權才可做 implementation。
+- **收尾驗證**：`pytest tests/test_phase23_go_file_read_parity_plan.py -v`、`pytest tests/test_phase20_go_read_surface_polish.py -v`、`pytest tests/ -v`。
+
+### ✅ 23.2 Go file-read parity implementation gate — ✅ Completed (2026-06-05)
+
+> **白話說明**：
+> 這一步會真的讓 Go 補上「文字附件內容搜尋」能力，但只限已定義安全邊界內的 read-only file scan。
+> 要修這個，是因為目前 Go 已能搜尋 DB 裡的筆記與附件 metadata，但 `.md` / `.txt` 附件內容仍只有 Python 會讀，read parity 還沒完整。
+> 使用者可能感覺到的差異是：走 Go read surface 時，搜尋文字附件內容也能命中；但 UI、API 參數、資料庫 schema、Pi 部署方式不應改變。
+> 這一步不改 writes、不改 upload/attachment writes、不改 Caddy matcher、不改 frontend default、不移除 Python、不部署 Pi；只做 local/copy DB + controlled files 的 Go read parity implementation。
+> Risk level: `P0 safety-critical`。因為會碰 file system read ownership，必須先通過 23.1 contract、path safety tests、Python vs Go diff fixtures，失敗即 rollback 到 Python-owned gap。
+
+- [x] **23.2.1** Go file scanner — 在 Go read-only notes search 內加入受限文字附件 body scanner；只讀 23.1 contract 允許的 data dir / extension / size。
+- [x] **23.2.2** Safety tests — 新增 `tests/test_phase23_go_file_read_parity_implementation.py`，鎖住 path traversal、missing file、oversized file、unsupported extension、encoding fallback、timeout/performance guard 與 forbidden live/write scope。
+- [x] **23.2.3** Python vs Go parity — `tests/test_phase18_go_shadow_contract.py` 使用同一 copied DB + controlled temp attachment files，證明 `.md` / `.markdown` / `.txt` body-only hit 與 Python response 一致。
+- [x] **23.2.4** No live route expansion — 不改 production Caddy、不 reload service、不切 Pi；23.2 只完成 local/copied-DB Go read parity，不進 live candidate。
+- **收尾驗證**：`gofmt -w go-shadow/main.go`、`cd go-shadow && go test ./...`、`pytest tests/test_phase23_go_file_read_parity_implementation.py -v`、`pytest tests/test_phase23_go_file_read_parity_plan.py -v`、`pytest tests/test_phase18_go_shadow_contract.py -v`、`pytest tests/ -v`。
+
+### ✅ 23.3 Go write surface selection gate — ✅ Completed (2026-06-05)
+
+> **白話說明**：
+> 這一步只是決定/盤點/規劃，不會實作功能。
+> 它要從所有 DB 寫入功能中選第一個最小、可回滾、最不容易牽連檔案系統的 Go write route。
+> 使用者不會看到功能差異；這一步只會決定第一個要交給 Go 的寫入候選，並把 transaction、CSRF/local-only、rollback、Python fallback 寫清楚。
+> 這一步不會寫 Go write code、不會改 production DB、不會改 Caddy、不會部署 Pi、不會改 frontend default、不會移除 Python、不碰 upload/attachments/files。
+> Risk level: `P0 safety-critical`。所有 write ownership 都必須先有 side-effect map、rollback、contract、pytest lock。
+
+- [x] **23.3.1** Candidate matrix — 重新評估 notes create/update/delete、pin/archive、duplicate、reorder、categories CUD、tags CUD/merge、attachments/uploads/cleanup/import/export/system/server/config；拒絕 filesystem-coupled、cascade、bulk、process/config 或 route-expansion-heavy candidate。見 `docs/contracts/phase23-go-write-surface-selection.json`。
+- [x] **23.3.2** First write recommendation — 選定 `PUT /api/tags/<tag_id>` (`tag_rename`) 作為 23.4 第一個 candidate：single-purpose、DB-only、只更新 `Tags.name`、transaction 清楚、Python parity 容易驗證。
+- [x] **23.3.3** Write contract — 固定 request/response schema、transaction semantics、CSRF/local-only behavior、Python fallback/rollback、failure stop conditions；23.3 不授權 Go write implementation、production DB、Caddy/service、Pi deploy、frontend default、Python removal 或 public exposure。
+- **收尾驗證**：`pytest tests/test_phase23_go_write_surface_selection.py -v`、`pytest tests/test_phase23_go_file_read_parity_implementation.py -v`、`pytest tests/ -v`。
+
+### ✅ 23.4 First Go write route implementation gate — ✅ Completed (2026-06-05)
+
+> **白話說明**：
+> 這一步會真的讓 Go 接手第一個小型 DB 寫入 route。
+> 要修這個，是因為 Go 不能永遠停在 read-only；但第一個 write 必須非常小，先證明 transaction、錯誤處理、rollback 與 Python parity 都可控。
+> 使用者理論上不應感覺到 API 或 UI 差異；同一個操作只是後端 owner 逐步從 Python 轉到 Go。
+> 這一步不碰 upload、attachments、cleanup、import/export、migrations、Caddy route expansion、frontend default、Python removal。
+> Risk level: `P0 safety-critical`。只允許 23.3 選出的 single route；不得順手多搬其他 writes。
+
+- [x] **23.4.1** Implement selected write — 在 Go local/copied-DB candidate 中實作 flag-gated `PUT /api/tags/<tag_id>`；需明確使用 `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1` 才會進入 `get-read-only+local-tag-write`。預設 Go runtime 仍是 `get-read-only` + SQLite `query_only`。
+- [x] **23.4.2** Transaction and rollback tests — 新增 `tests/test_phase23_go_first_write_route_implementation.py`，覆蓋 success/trimmed name、missing body/name、empty name、missing tag id 404、duplicate 409、rollback/no partial write、`Note_Tags` 不變、Python vs Go response + DB-state parity。Duplicate parity 依目前 Python `routes/tags.py` exact-name 查詢；`docs/SCHEMA.md` 的 NOCASE wording discrepancy 先記為 23.5 前需處理/明確延後的風險，不在 23.4 擴成 schema 修正。
+- [x] **23.4.3** Local/Pi gate split — 23.4 未改 Caddy、未 reload service、未碰 production DB、未部署 Pi、未改 frontend default、未移除 Python；local parity 通過後，另開 Pi/live routing gate 才能討論 live route。見 `docs/contracts/phase23-go-first-write-route-implementation.json`。
+- **收尾驗證**：`gofmt -w go-shadow/main.go go-shadow/main_test.go`、`cd go-shadow && go test ./...`、`pytest tests/test_phase23_go_first_write_route_implementation.py -v`、`pytest tests/test_phase23_go_write_surface_selection.py -v`、`pytest tests/test_phase18_go_shadow_contract.py -v`、`pytest tests/ -v`。
+
+### ⏭️ 23.5 Go DB-only write expansion gate — Pending Explicit Approval
+
+> **白話說明**：
+> 這一步會把更多「只寫 DB、不碰檔案」的 route 分批交給 Go。
+> 要修這個，是因為第一個 write 成功後，才能逐步處理 notes metadata、pin/archive、reorder、categories/tags 這些較低風險寫入。
+> 使用者不應看到操作差異；差異在後端 owner 和可封裝 runtime 越來越完整。
+> 這一步仍不碰檔案上傳、附件檔案、cleanup、import/export、migrations、Python removal。
+> Risk level: `P0 safety-critical`。每一批 DB-only writes 都要有 route list、rollback、fixtures，不允許一次全搬。
+
+- [ ] **23.5.1** Stabilization decision — 先決定是否要在擴其他 DB-only writes 前另開 live/local routing gate for tag rename；不得把 23.4 local flag 直接視為 live Go ownership。
+- [ ] **23.5.2** Schema/doc discrepancy gate — 處理或明確延後 `Tags.name` NOCASE schema/documentation discrepancy；避免 tag CUD expansion 時把 Python runtime truth 和 docs contract 混在一起。
+- [ ] **23.5.3** Next DB-only candidate selection — 依 23.3 matrix 重新評估 category create/update、note pin/archive、tag CUD remaining routes；每批最多一個 route class，仍不得碰 filesystem-coupled routes。
+- [ ] **23.5.4** Contract locks — 每批新增 request/response parity、transaction rollback、CSRF/local-only tests，並持續更新 `docs/ARCHITECTURE.md` / `docs/TODO.md` 的 Go-owned vs Python-owned route ledger。
+
+### ⏭️ 23.6 File / attachment ownership gate — Pending DB-only Writes Stabilization
+
+> **白話說明**：
+> 這一步會處理最危險的一大塊：uploads、attachments、cleanup、export/import 這類會讀寫或刪除檔案的功能。
+> 要晚一點做，是因為這些功能同時碰 DB 和檔案系統，任何錯誤都可能造成資料或附件不一致。
+> 使用者可能感覺到的差異應該仍是零；目標是後端 owner 轉移，不是改使用流程。
+> 這一步不會一次搬全部 files surface；每個 route class 都必須有 data-dir contract、backup/restore、path safety、Pi rollback。
+> Risk level: `P0 safety-critical`。這是整個 Go 重構最高風險群之一。
+
+- [ ] **23.6.1** File ownership inventory — 分拆 upload、attachments metadata/body、cleanup、export、import、server backup/logs；逐一標 side effects、data-dir、rollback。
+- [ ] **23.6.2** First file route selection — 只選第一個最小 file route，不得同時處理 upload + cleanup + export。
+- [ ] **23.6.3** Backup/restore proof — 每個 file route implementation 前必須證明 DB + filesystem backup/restore 與 partial failure rollback。
+
+### ⏭️ 23.7 Migration / DB ownership decision gate — Pending File Ownership Stabilization
+
+> **白話說明**：
+> 這一步只是決定 migration 最後由誰負責，不會先改 production migration。
+> 要修這個，是因為如果 Go 最終要接近完整 runtime，就必須決定 schema migration 是繼續 Python-owned，還是由 Go 接手 migration status / 部分 migration。
+> 使用者不會看到功能差異；這是啟動與升級安全邊界。
+> 這一步不會直接跑 production migration、不會改正式 DB、不會移除 Python migration。
+> Risk level: `P0 safety-critical`。migration 只能在 idempotent tests、fresh backup、rollback 與 Pi preflight 完整後才可 implementation。
+
+- [ ] **23.7.1** Migration ownership options — 比較 retained Python migrations、Go status-only、Go full migration runner 三種方案。
+- [ ] **23.7.2** Schema safety contract — 固定 idempotency、version table、pending detection、backup、rollback、failed migration recovery。
+- [ ] **23.7.3** Decision checkpoint — 未達成 full safety proof 前，migrations 保持 Python-owned。
+
+### ⏭️ 23.8 Local packaging execution track — Can Run In Parallel After Read/Write Stabilization
+
+> **白話說明**：
+> 這一步會建立本機封裝執行路徑：讓 Windows / local dev 可以用明確 artifact 跑 Prism。
+> 要修這個，是因為最後你希望能本機封裝執行；但它不是取代 Pi 使用方式，而是讓 runtime 更完整、更容易測試與發布。
+> 使用者會看到的差異是本機啟動方式更清楚；Pi 日常部署仍不變。
+> 這一步不改 Pi deployment default、不改 production Caddy、不改資料位置、不把本機 artifact 當正式 Pi rollout。
+> Risk level: `P1 workflow-sensitive` for local launcher/build flow；若封裝碰 DB/data-dir/runtime ownership，該部分升級為 `P0 safety-critical`。
+
+- [ ] **23.8.1** Packaging contract — 定義 Go binary、bundled frontend `dist`、external data dir、config file/env、logs、uploads path、SQLite WAL behavior。
+- [ ] **23.8.2** Local smoke artifact — 建立 Windows/local artifact smoke：啟動、讀 DB copy、serve SPA、核心 API health/read/write smoke。
+- [ ] **23.8.3** Release boundary — 本機封裝可用不代表 Pi 已更新；Pi rollout 仍走 23.9。
+
+### ⏭️ 23.9 Pi deployment rollout track — Pending Ownership Milestones
+
+> **白話說明**：
+> 這一步處理真正使用環境：樹莓派部署。
+> 要修這個，是因為你日常使用仍維持 Pi + systemd + Caddy；任何 Go ownership 擴大後，都要能在 Pi 上用實際 service、Caddy、DB、uploads 驗證。
+> 使用者會看到的差異應該是服務仍照常可用；若出問題必須能快速 rollback 到前一個 Python/Go ownership 狀態。
+> 這一步不會跳過 local parity，也不會把未驗證的 Go writes/files/migrations 直接推到 Pi。
+> Risk level: `P0 safety-critical`。
+
+- [ ] **23.9.1** Pi preflight — 每次 Pi rollout 前必跑 service status、Caddy validate、DB backup、data-dir backup/snapshot、migration status、route ownership check。
+- [ ] **23.9.2** Caddy/systemd rollout — 只對已通過 local parity 的 route class 調整 live routing/service；每次保留 rollback owner、backup path、revert commands。
+- [ ] **23.9.3** Live verification — 驗 `/api/test`、migration status、selected route parity、write/file side effects、journal 無 write errors；失敗立即 rollback。
+
+### ⏭️ 23.10 Python reduction and final stabilization — Final Stage Only
+
+> **白話說明**：
+> 這一步才是最後收尾：決定 Python 還剩什麼、能不能移除、以及最終 Go runtime 是否完整。
+> 要最後才做，是因為 Python 現在仍是很多高風險功能的 owner；過早移除會讓 rollback 和資料安全都失去保護。
+> 使用者最後會看到的是更單純的 runtime / packaging / Pi deployment，但功能與資料必須保持一致。
+> 這一步不會在 writes/files/migrations/import/export 全部有 Go ownership 或明確 retained-Python 決策前開始。
+> Risk level: `P0 safety-critical`。
+
+- [ ] **23.10.1** Ownership closure audit — 列出所有 API/static/migration/file/system surfaces：Go-owned、retained Python-owned、deprecated/removed。
+- [ ] **23.10.2** Python removal decision — 只有所有 critical surfaces 已有 Go implementation 或明確保留策略，才允許移除 Python runtime from normal path。
+- [ ] **23.10.3** Final stabilization window — 本機 packaged run + Pi live deployment 都需連續穩定驗證；包含 backups、rollback drill、docs sync、full pytest/build/browser/API smoke。
 
 ### ⏸️ Phase 19.0 不處理
 
@@ -405,6 +588,14 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **go-roadmap** | 2026-06-05 | Phase 23.4 First Go write route implementation gate — 在明確授權後完成 local/copied-DB first write parity：Go 新增 flag-gated `PUT /api/tags/<tag_id>`，只有 `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1` 才會進入 `get-read-only+local-tag-write`；預設 runtime 仍是 `get-read-only` + SQLite `query_only`。Python vs Go copied DB fixture 覆蓋 success/trim、missing name、empty name、missing tag 404、duplicate 409、rollback/no partial write、`Note_Tags` 不變。未改 Caddy/service/frontend default、未碰 production DB、未部署 Pi、未移除 Python、未擴 public exposure。下一步 23.5 pending explicit approval：先決定 tag rename live/local gate、處理或延後 `Tags.name` NOCASE docs/schema discrepancy，再選下一個 DB-only candidate。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.3 Go write surface selection gate — 在明確授權後完成 plan-only first write candidate selection：選定 `PUT /api/tags/<tag_id>` (`tag_rename`) 作為 23.4 唯一 candidate，因為它是 single-purpose、DB-only、只更新 `Tags.name`、無檔案/cascade/bulk/process side effects，且 Python vs Go response + DB-state parity 容易鎖定。拒絕或暫緩 notes core writes、pin/archive、duplicate/reorder/batch、category delete、tag delete/merge、attachments/uploads/cleanup/import/export/system/server/config。23.3 未實作 Go write、未改 production DB、未改 Caddy/service/frontend default、未部署 Pi、未移除 Python、未擴 public exposure。下一步為需另行授權的 23.4 First Go write route implementation gate，限 local/copied-DB `PUT /api/tags/<tag_id>`。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.2 Go file-read parity implementation gate — 在明確授權後完成 local/copied-DB Go read-only 文字附件 body search parity：`GET /api/notes?q=...` 會在既有 DB search 外，受限掃描 explicit `--data-dir` 內 `docs/attachments` 的 `md/markdown/txt` 相對路徑，命中 note ids 合回原查詢。安全邊界沿用 23.1：拒絕 `..`、absolute/UNC/volume/colon path、symlink escape、非 `docs/attachments`、unsupported extension，單檔 1 MiB，單 query 200 files / 5 MiB / 250 ms。新增 Python vs Go controlled files diff fixture 與 implementation pytest lock；未改 Caddy/service/frontend default、未碰 production DB、未部署 Pi、未新增 writes/files/migrations、未移除 Python、未擴 public exposure。下一步為需另行授權的 23.3 Go write surface selection gate。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.1 Go file-read parity plan gate — 在明確授權後完成 plan-only file-read safety contract：Go 若於 23.2 補文字附件 body 搜尋，只能讀 explicit `--data-dir` 內 `docs/attachments` 的 `md/markdown/txt` 相對路徑，需拒絕 `..`、symlink escape、absolute/UNC/external path，單檔上限 1 MiB，單 query 上限 200 files / 5 MiB / 250 ms，missing / oversized / unsupported extension 均只當 non-match。新增 Python vs Go copied DB + controlled files fixture plan 與 pytest lock；未實作 Go scanner、未改 Caddy/service/frontend default、未碰 production DB、未部署 Pi、未移除 Python、未擴 public exposure。下一步為需另行授權的 23.2 Go file-read parity implementation gate。 |
+| **go-roadmap** | 2026-06-05 | Phase 23 full Go roadmap expansion — 依使用者要求直接把幾個大項到最終完成寫入 `docs/TODO.md`，不再只停在 23.1 或轉回 frontend polish。Phase 23 現在完整列出：23.1 file-read parity plan、23.2 file-read implementation、23.3 write surface selection、23.4 first Go write route、23.5 DB-only write expansion、23.6 file/attachment ownership、23.7 migration/DB ownership decision、23.8 local packaging execution、23.9 Pi deployment rollout、23.10 Python reduction/final stabilization。每段標明 `P0/P1` risk、白話說明、完成條件與不做邊界；正式使用仍維持 Raspberry Pi + systemd + Caddy，local packaging 是 artifact path，不取代 Pi deployment。 |
+| **go-roadmap** | 2026-06-05 | Phase 23.0 Go refactor roadmap consolidation — Risk level `P0 safety-critical`，plan-only。依使用者要求停止 frontend polish drift，直接把 Go 重構主線寫回 `docs/TODO.md`、`Prism_Go_模組逐步重構計劃報告.md`、`docs/ARCHITECTURE.md`：最終目標是本機可封裝執行，但日常/正式使用仍部署在 Raspberry Pi + systemd + Caddy + existing data dir。下一個 active Go gate 固定為 `23.1 Go file-read parity plan gate`，只規劃文字附件 body search parity 的 data-dir / path traversal / file type / performance / rollback / Python vs Go diff fixtures，不實作 Go file scanner、不改 Caddy、不部署 Pi、不改 production DB、不改 frontend default、不移除 Python、不擴 public exposure。 |
+| **frontend-product** | 2026-06-05 | Prompt Builder mobile action bar polish — Risk level `P1 workflow-sensitive`。在明確授權後完成單一 implementation task：mobile 寬度下新增 header 下方 sticky action bar，讓「儲存至筆記庫 / 重置」第一屏可見且 scroll 後仍可操作；desktop 保留既有左側設定區底部 sticky action bar。新增 targeted source regression test、frontend typecheck/build、full pytest 與 mobile/desktop browser flow。未新增 backend API、DB schema、Pi/Caddy/service、Go runtime、AI/ML dependency、server-side UI preference 或 public exposure。 |
+| **frontend-product** | 2026-06-05 | Settings tab deep linking — Risk level `P1 workflow-sensitive`。在明確授權後完成單一 implementation task：Settings 分頁改由 `tab` query param 保存與還原，`/settings?tab=deploy` reload 後仍停在部署分頁，點分頁會用 `replace` 更新 URL 並保留其他 query param；無效/缺省 tab 回到外觀。新增 targeted source regression test、frontend typecheck/build、full pytest 與 browser reload/click flow。未新增 backend API、DB schema、Pi/Caddy/service、Go runtime、server-side UI preference 或 public exposure。 |
 | **frontend-product** | 2026-06-05 | Phase 22.3 home search empty state context copy — Risk level `P2 low-risk polish`。依新規劃粒度規則，直接做 small patch：Home 搜尋無結果時改顯示「找不到符合的筆記」與搜尋詞說明，保留真正空資料庫時的「還沒有任何筆記」。不新增 22.3 contract、不開下一個儀式化 phase；僅補 targeted source regression test、frontend typecheck/build、full pytest 與 browser flow。未新增 backend API/schema/storage、未改 Pi/Caddy/service、Go runtime 或 public exposure。 |
 | **frontend-product** | 2026-06-05 | Phase 22.2 product/frontend next selection gate — 在明確授權後完成 plan-only 下一候選選擇；in-app Browser unavailable，改用本機 Chrome + Playwright fallback 觀察 Settings tab deep link、Prompt Builder mobile action bar、Home search empty state。選定 `home_search_empty_state_context_copy` 作為 22.3，因搜尋無結果時目前仍顯示 generic「還沒有任何筆記」文案；Settings deep link 與 Prompt Builder mobile polish 因 URL-state / visual layout 範圍較大暫不選。22.2 未做 frontend implementation、新 backend API/schema、Pi deploy、Caddy/service reload、Go file-read/body scan、Go writes/files/migrations、Python removal 或 public exposure。 |
 | **frontend-product** | 2026-06-05 | Phase 22.1 command palette entrypoint reliability — 在明確授權後將 Header 命令面板按鈕改為直接呼叫 `openCommandPalette`，不再用 synthetic keyboard event 假裝按下 Ctrl+K；CommandPalette 仍保留 Ctrl+K / Cmd+K toggle、Esc close、搜尋、Settings navigation、recent note、new note 與 theme toggle。新增 22.1 contract / pytest lock，並依新要求在 22.1 / 22.2 區塊補 `> **白話說明**：`。未新增 backend API/schema/storage、未改 frontend default API target、未部署 Pi、未 reload Caddy/service、未擴 Go runtime 或 public exposure。 |

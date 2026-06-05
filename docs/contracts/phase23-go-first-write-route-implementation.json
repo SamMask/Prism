@@ -1,0 +1,130 @@
+{
+  "phase": "23.4",
+  "title": "First Go write route implementation gate",
+  "status": "completed",
+  "completed_on": "2026-06-05",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-write-surface-selection.json",
+  "selected_route": "PUT /api/tags/<tag_id>",
+  "selected_candidate": "tag_rename",
+  "runtime_change": "local_copied_db_only",
+  "live_execution_authorized": false,
+  "go_write_implementation": true,
+  "production_db_write": false,
+  "caddy_or_service_change": false,
+  "pi_deploy": false,
+  "frontend_default_change": false,
+  "python_route_removal": false,
+  "public_exposure_change": false,
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "route": "PUT /api/tags/<tag_id>",
+    "enable_flag": "--enable-tag-write",
+    "enable_env": "PRISM_GO_ENABLE_TAG_WRITE=1",
+    "default_runtime_mode": {
+      "sqlite_query_only": true,
+      "api_surface": "get-read-only",
+      "tag_write_enabled": false
+    },
+    "explicit_local_candidate_mode": {
+      "sqlite_query_only": false,
+      "api_surface": "get-read-only+local-tag-write",
+      "copied_db_required": true,
+      "production_like_knowledge_db_still_refused_without_existing_explicit_allow_flag": true
+    }
+  },
+  "request_response_contract": {
+    "request": {
+      "name": "required string; trim before validation and update"
+    },
+    "success": {
+      "status_code": 200,
+      "body": {
+        "status": "success"
+      }
+    },
+    "errors": [
+      {
+        "status_code": 400,
+        "body": {
+          "status": "error",
+          "message": "Tag name is required"
+        },
+        "cases": [
+          "missing JSON body",
+          "missing name"
+        ]
+      },
+      {
+        "status_code": 400,
+        "body": {
+          "status": "error",
+          "message": "Tag name cannot be empty"
+        },
+        "cases": [
+          "empty name after trim"
+        ]
+      },
+      {
+        "status_code": 404,
+        "body": {
+          "status": "error",
+          "message": "Tag not found"
+        }
+      },
+      {
+        "status_code": 409,
+        "body": {
+          "status": "error",
+          "message": "Tag name already exists"
+        }
+      }
+    ]
+  },
+  "transaction_and_state_invariants": [
+    "Validate request before write.",
+    "Check tag existence before duplicate check and update.",
+    "Use a transaction for the update path.",
+    "Commit only after exactly one Tags row is updated.",
+    "Rollback leaves Tags unchanged on validation, missing tag, duplicate, and DB errors.",
+    "Only Tags.name may change on success.",
+    "Tags.id must not change.",
+    "Note_Tags relationships must not change.",
+    "No file path may be read, written, renamed, or deleted."
+  ],
+  "parity_evidence": {
+    "python_vs_go_test": "tests/test_phase23_go_first_write_route_implementation.py",
+    "covered_cases": [
+      "success with trimmed name",
+      "missing JSON object name",
+      "empty name after trim",
+      "missing tag id 404",
+      "duplicate exact tag name 409",
+      "failure rollback leaves Tags and Note_Tags unchanged",
+      "default Go runtime remains query_only and rejects tag writes unless flag is enabled"
+    ],
+    "runtime_note": "Current Python duplicate detection uses exact SELECT name matching in routes/tags.py. The docs/SCHEMA.md NOCASE wording is not expanded into a schema correction in 23.4."
+  },
+  "not_authorized_by_23_4": [
+    "Live Caddy route edit or reload",
+    "systemd service change",
+    "Production knowledge.db write",
+    "Pi deployment",
+    "Frontend default API target change",
+    "Python route removal",
+    "Go ownership of any route except local/copied-DB PUT /api/tags/<tag_id>",
+    "File upload, attachment, cleanup, import/export, migration, system, or server ownership",
+    "Public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.5",
+    "title": "Go DB-only write expansion gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "plan-only stabilization/selection for the next DB-only write route class after first-write local parity",
+    "recommended_focus": [
+      "Stabilize tag rename evidence and decide whether live routing gate is needed before any broader DB-only writes.",
+      "Resolve or explicitly defer the Tags.name NOCASE schema/documentation discrepancy before tag CUD expansion.",
+      "Re-evaluate category create/update and note pin/archive without adding filesystem-coupled routes."
+    ]
+  }
+}

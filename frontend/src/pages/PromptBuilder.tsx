@@ -57,6 +57,19 @@ export function PromptBuilder() {
     setWizardAppend,
   } = usePromptBuilder()
 
+  const renderActionButtons = () => (
+    <>
+      <Button onClick={saveToLibrary} variant="primary" className="flex-1 flex items-center justify-center gap-2">
+        <Save size={18} />
+        儲存至筆記庫
+      </Button>
+      <Button onClick={resetForm} variant="ghost" className="flex items-center gap-2">
+        <RotateCcw size={18} />
+        重置
+      </Button>
+    </>
+  )
+
   // Loading State
   if (isLoading) {
     return (
@@ -114,6 +127,10 @@ export function PromptBuilder() {
             />
             <span className="text-sm text-text-secondary">權重模式</span>
           </label>
+        </div>
+
+        <div className="sticky top-0 z-20 -mx-1 flex gap-3 border-y border-border-subtle bg-bg-base/95 p-3 backdrop-blur lg:hidden" data-testid="prompt-builder-mobile-actions">
+          {renderActionButtons()}
         </div>
 
         {/* Quick Templates */}
@@ -267,15 +284,8 @@ export function PromptBuilder() {
         </div>
 
         {/* Action Buttons */}
-        <div className="sticky bottom-0 z-10 -mx-1 flex gap-3 border-t border-border-subtle bg-bg-base/95 p-3 backdrop-blur" data-testid="prompt-builder-actions">
-          <Button onClick={saveToLibrary} variant="primary" className="flex-1 flex items-center justify-center gap-2">
-            <Save size={18} />
-            儲存至筆記庫
-          </Button>
-          <Button onClick={resetForm} variant="ghost" className="flex items-center gap-2">
-            <RotateCcw size={18} />
-            重置
-          </Button>
+        <div className="sticky bottom-0 z-10 -mx-1 hidden gap-3 border-t border-border-subtle bg-bg-base/95 p-3 backdrop-blur lg:flex" data-testid="prompt-builder-actions">
+          {renderActionButtons()}
         </div>
       </div>
 

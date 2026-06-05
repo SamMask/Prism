@@ -1,6 +1,7 @@
 
 import { ReactNode, useState, useEffect } from 'react';
 import { Database, FolderOpen, Info, Palette, Rocket, Search, ShieldAlert } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 import { ToastContainer } from '../components/ui/Toast';
 import { DataManager } from '../components/DataManager';
 import { SystemMaintenance } from '../components/SystemMaintenance';
@@ -37,6 +38,12 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
   { id: 'about', label: '關於', icon: <Info size={16} /> },
 ];
 
+const SETTINGS_TAB_IDS = SETTINGS_TABS.map((tab) => tab.id);
+
+function isSettingsTab(value: string | null): value is SettingsTab {
+  return SETTINGS_TAB_IDS.includes(value as SettingsTab);
+}
+
 function SectionPanel({
   title,
   icon,
@@ -61,9 +68,17 @@ function SectionPanel({
 
 export function SettingsPage() {
   const { categories } = useAppStore();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<SettingsTab>('appearance');
+  const tabParam = searchParams.get('tab');
+  const activeTab: SettingsTab = isSettingsTab(tabParam) ? tabParam : 'appearance';
+
+  const setActiveTab = (tab: SettingsTab) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', tab);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   // Fetch system stats
   const fetchStats = async () => {

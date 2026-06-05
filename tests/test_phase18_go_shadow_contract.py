@@ -67,7 +67,35 @@ def _read_json(url):
         return exc.code, json.loads(exc.read().decode("utf-8"))
 
 
-def _seed_diff_matrix_data(db_path):
+def _write_attachment(data_dir, relative_path, content):
+    attachment_path = Path(data_dir) / relative_path
+    attachment_path.parent.mkdir(parents=True, exist_ok=True)
+    attachment_path.write_text(content, encoding="utf-8")
+    return attachment_path.stat().st_size
+
+
+def _seed_attachment_note(conn, category_id, title, file_path, file_type, attachment_title, size_bytes):
+    cursor = conn.execute(
+        """
+        INSERT INTO Notes (
+            title, content, category_id, sort_order, remarks
+        ) VALUES (?, 'ordinary body', ?, 999, 'attachment body parity seed')
+        """,
+        (title, category_id),
+    )
+    note_id = cursor.lastrowid
+    conn.execute(
+        """
+        INSERT INTO Note_Attachments (
+            note_id, file_path, file_type, title, size_bytes
+        ) VALUES (?, ?, ?, ?, ?)
+        """,
+        (note_id, file_path, file_type, attachment_title, size_bytes),
+    )
+    return note_id
+
+
+def _seed_diff_matrix_data(db_path, data_dir):
     conn = sqlite3.connect(db_path)
     try:
         conn.execute("INSERT OR IGNORE INTO Tags (name) VALUES ('matrix-tag')")
@@ -107,6 +135,77 @@ def _seed_diff_matrix_data(db_path):
                 "attachment-meta-canary reference",
             ),
         )
+        body_md = "docs/attachments/bodymdcanary.md"
+        body_markdown = "docs/attachments/bodymarkdowncanary.markdown"
+        body_txt = "docs/attachments/bodytxtcanary.txt"
+        missing_file = "docs/attachments/missingbodynocanary.md"
+        unsupported_file = "docs/attachments/unsupportedbodycanary.html"
+        traversal_file = "../outsidebodycanary.md"
+        absolute_file = str(Path(data_dir).parent / "absolutebodycanary.md")
+
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Body MD Fixture",
+            body_md,
+            "md",
+            "Body MD Fixture",
+            _write_attachment(data_dir, body_md, "bodymdcanary appears only in this md file."),
+        )
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Body Markdown Fixture",
+            body_markdown,
+            "markdown",
+            "Body Markdown Fixture",
+            _write_attachment(data_dir, body_markdown, "bodymarkdowncanary appears only in this markdown file."),
+        )
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Body TXT Fixture",
+            body_txt,
+            "txt",
+            "Body TXT Fixture",
+            _write_attachment(data_dir, body_txt, "bodytxtcanary appears only in this txt file."),
+        )
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Missing Body Canary",
+            missing_file,
+            "md",
+            "Missing Body Fixture",
+            123,
+        )
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Unsupported Body Canary",
+            unsupported_file,
+            "html",
+            "Unsupported Body Fixture",
+            _write_attachment(data_dir, unsupported_file, "unsupportedbodycanary should not match."),
+        )
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Traversal Body Canary",
+            traversal_file,
+            "md",
+            "Traversal Body Fixture",
+            123,
+        )
+        _seed_attachment_note(
+            conn,
+            category_id,
+            "Absolute Body Canary",
+            absolute_file,
+            "md",
+            "Absolute Body Fixture",
+            123,
+        )
         conn.commit()
         return category_id, tag_id
     finally:
@@ -125,28 +224,38 @@ def test_go_shadow_scaffold_is_read_only():
     assert '"/api/test"' in main_go
     assert '"/api/categories"' in main_go
     assert '"/api/tags"' in main_go
+    assert '"/api/tags/"' in main_go
     assert '"/api/notes"' in main_go
     assert "http.MethodGet" in main_go
+    assert "enableTagWrite" in main_go
+    assert '"enable-tag-write"' in main_go
     assert "http.MethodPost" not in main_go
-    assert "http.MethodPut" not in main_go
     assert "http.MethodDelete" not in main_go
 
 
-def test_go_shadow_python_response_diff(client, temp_db):
+def test_go_shadow_python_response_diff(client, app, temp_db, monkeypatch):
     go_bin = shutil.which("go")
     if not go_bin:
         pytest.skip("Go CLI is not installed; scaffold/static read-only checks still run.")
 
-    category_id, tag_id = _seed_diff_matrix_data(temp_db)
+    port = _free_port()
+    data_dir = tempfile.mkdtemp(prefix="prism-go-runtime-")
+    monkeypatch.setattr(app, "root_path", data_dir)
+    category_id, tag_id = _seed_diff_matrix_data(temp_db, data_dir)
     cases = CASES + [
+        "/api/notes?q=bodymdcanary&page=1&per_page=20",
+        "/api/notes?q=bodymarkdowncanary&page=1&per_page=20",
+        "/api/notes?q=bodytxtcanary&page=1&per_page=20",
+        "/api/notes?q=missingfilenomatchcanary&page=1&per_page=20",
+        "/api/notes?q=unsupportedbodycanary&page=1&per_page=20",
+        "/api/notes?q=outsidebodycanary&page=1&per_page=20",
+        "/api/notes?q=absolutebodycanary&page=1&per_page=20",
         (
             f"/api/notes?page=1&per_page=20&category_id={category_id}"
             f"&tags={tag_id}&tag_mode=OR&sort=created"
         )
     ]
 
-    port = _free_port()
-    data_dir = tempfile.mkdtemp(prefix="prism-go-runtime-")
     env = os.environ.copy()
     env["PRISM_GO_DB"] = temp_db
     env["PRISM_GO_ADDR"] = f"127.0.0.1:{port}"

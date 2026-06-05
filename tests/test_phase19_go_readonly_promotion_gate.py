@@ -35,12 +35,15 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered = set(re.findall(r'mux\.HandleFunc\("([^"]+)"', main_go))
     registered.discard("/")
     registered.discard("/api/notes/")
+    registered.discard("/api/tags/")
     registered.add("/api/notes/<id>")
 
     expected = {entry.removeprefix("GET ") for entry in gate["allowed_api_surface"]}
     assert registered == expected
 
-    forbidden_methods = ["http.MethodPost", "http.MethodPut", "http.MethodDelete", "http.MethodPatch"]
+    assert "enableTagWrite" in main_go
+    assert '"enable-tag-write"' in main_go
+    forbidden_methods = ["http.MethodPost", "http.MethodDelete", "http.MethodPatch"]
     for method in forbidden_methods:
         assert method not in main_go
 

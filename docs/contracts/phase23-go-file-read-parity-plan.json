@@ -1,0 +1,180 @@
+{
+  "phase": "23.1",
+  "name": "Go File-read Parity Plan Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "source_gate": "23.0 Go Refactor Roadmap Consolidation",
+  "risk_level": "P0 safety-critical",
+  "runtime_change_performed": false,
+  "go_file_scanner_implemented": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "frontend_default_change_performed": false,
+  "production_db_change_performed": false,
+  "python_removal_performed": false,
+  "public_exposure_change_performed": false,
+  "decision": "Plan the remaining Go read-only parity gap for text attachment body search, but do not implement file scanning in 23.1.",
+  "current_runtime_truth": {
+    "python_behavior": "Python GET /api/notes?q=... tokenizes the keyword, reads text attachment file bodies for md/markdown/txt attachments, and merges matching note_id values into the existing SQL search.",
+    "go_behavior_before_23_1": "Go GET /api/notes?q=... searches note fields, tags, and Note_Attachments title/file_path metadata only. It does not read attachment file bodies.",
+    "go_live_route_truth": "The hardened Go read-only route remains limited to GET /api/test, /api/categories, /api/tags, /api/notes, and numeric /api/notes/{id}.",
+    "python_owned_surfaces": [
+      "Text attachment body search until 23.2 is explicitly authorized and verified",
+      "Attachment upload/read/delete/write endpoints",
+      "All POST / PUT / DELETE / PATCH routes",
+      "Files, uploads, cleanup, import/export, system/server, migrations, frontend/static assets, and unreviewed routes"
+    ]
+  },
+  "file_read_contract": {
+    "data_dir_rule": "Go may read only under the explicit runtime --data-dir root. For local parity tests this must be a temporary copied data dir; for any later Pi candidate it must be the existing Prism data dir approved by a separate live gate.",
+    "attachment_path_source": "Use Note_Attachments.file_path as a relative path only. Treat empty, absolute, volume-qualified, UNC, URL-like, or malformed paths as non-matches.",
+    "allowed_relative_roots": [
+      "docs/attachments"
+    ],
+    "allowed_extensions": [
+      "md",
+      "markdown",
+      "txt"
+    ],
+    "path_canonicalization": [
+      "Join data dir root and Note_Attachments.file_path.",
+      "Clean and resolve the candidate path before opening.",
+      "Reject any path containing parent traversal segments before or after normalization.",
+      "Reject candidates whose resolved path is not strictly inside the resolved data dir.",
+      "Reject symlinks or any resolved path that escapes the data dir.",
+      "Reject absolute external paths even if they point to an allowed extension."
+    ],
+    "file_size_limit_bytes": 1048576,
+    "oversized_file_behavior": "Skip the file as a non-match and do not fail the notes query.",
+    "missing_file_behavior": "Skip the file as a non-match and do not fail the notes query.",
+    "unsupported_extension_behavior": "Skip the file as a non-match and do not fail the notes query.",
+    "encoding_policy": "Read as UTF-8 text, accepting UTF-8 BOM and replacing invalid bytes; do not add charset detection or external dependencies.",
+    "timeout_performance_boundary": {
+      "scope": "Per request bounded read-only scan over candidate text attachments that survived SQL file_type filtering and path validation.",
+      "max_files_per_query": 200,
+      "max_total_bytes_per_query": 5242880,
+      "timeout_ms": 250,
+      "on_limit_or_timeout": "Stop scanning additional files and return the DB-backed result plus matches found before the limit. Do not fail the request."
+    },
+    "side_effects_allowed": [
+      "SQLite query_only reads",
+      "Bounded filesystem reads inside data dir"
+    ],
+    "side_effects_forbidden": [
+      "File writes, deletes, renames, chmod/chown, directory creation, uploads, extraction, cleanup, indexing cache writes, DB writes, migrations, service reloads, or network access"
+    ]
+  },
+  "parity_fixture_plan": {
+    "test_scope": "Python vs Go diff using the same copied DB and controlled temporary attachment files under a copied data dir.",
+    "fixture_cases": [
+      {
+        "id": "metadata_hit",
+        "expectation": "A query matching Note_Attachments.title or file_path returns the same Python and Go note list without requiring body scan."
+      },
+      {
+        "id": "body_hit_md",
+        "expectation": "A query matching only an allowed .md attachment body returns the same Python and Go note list after 23.2 implementation."
+      },
+      {
+        "id": "body_hit_markdown",
+        "expectation": "A query matching only an allowed .markdown attachment body returns the same Python and Go note list after 23.2 implementation."
+      },
+      {
+        "id": "body_hit_txt",
+        "expectation": "A query matching only an allowed .txt attachment body returns the same Python and Go note list after 23.2 implementation."
+      },
+      {
+        "id": "missing_file",
+        "expectation": "A missing attachment file is skipped as a non-match and the query still succeeds."
+      },
+      {
+        "id": "oversized_file",
+        "expectation": "A file larger than 1048576 bytes is skipped as a non-match and the query still succeeds."
+      },
+      {
+        "id": "unsupported_extension",
+        "expectation": "A file with an unsupported extension is skipped as a non-match even if its body contains the keyword."
+      },
+      {
+        "id": "path_traversal_attempt",
+        "expectation": "A file_path containing parent traversal or resolving outside data dir is rejected before open and cannot produce a match."
+      },
+      {
+        "id": "absolute_external_path",
+        "expectation": "An absolute or volume-qualified path is rejected before open and cannot produce a match."
+      },
+      {
+        "id": "invalid_utf8",
+        "expectation": "Invalid UTF-8 bytes do not crash the request; replacement decoding still allows ordinary ASCII/UTF-8 tokens around invalid bytes to match."
+      }
+    ],
+    "required_23_2_tests": [
+      "A source-level Go test or pytest lock for path canonicalization and traversal rejection.",
+      "A Python vs Go diff fixture extending tests/test_phase18_go_shadow_contract.py with controlled attachment files.",
+      "A negative test proving POST/PUT/DELETE/PATCH and attachment write routes are still absent from Go.",
+      "A contract test proving Caddy/service/frontend defaults were not changed by file-read implementation."
+    ]
+  },
+  "runtime_boundary": {
+    "prism_go_readonly_service_change_allowed": false,
+    "sqlite_query_only_must_remain_enabled": true,
+    "caddy_matcher_expansion_allowed": false,
+    "production_knowledge_db_access_allowed": false,
+    "frontend_default_api_target_change_allowed": false,
+    "live_pi_deploy_allowed": false,
+    "python_backend_removal_allowed": false,
+    "direct_public_internet_exposure_allowed": false,
+    "rollback_owner": "Python remains the owner for text attachment body search until Go file-read parity passes local copied-DB fixtures and a later live gate explicitly promotes it.",
+    "rollback_plan": [
+      "Do not route Go file-read parity to production in 23.1.",
+      "If 23.2 local implementation fails safety or parity tests, remove the Go scanner changes and keep text attachment body search Python-owned.",
+      "If a later live candidate fails, remove the route/service change and return to Python-owned attachment body search using the existing hardened read-only surface boundaries."
+    ],
+    "stop_conditions": [
+      "Any path traversal or symlink escape can be opened.",
+      "Any unsupported, oversized, missing, absolute, or external path causes request failure instead of a skipped non-match.",
+      "Go writes DB or filesystem state.",
+      "Go handles write methods or attachment write/file routes.",
+      "Caddy, systemd, frontend default API target, production DB, or public exposure changes appear without a separate authorization gate."
+    ]
+  },
+  "not_authorized_by_23_1": [
+    "Go attachment file body scanner implementation",
+    "Go write/file/migration implementation",
+    "Changing prism-go-readonly.service away from SQLite query_only",
+    "Caddy route expansion or reload",
+    "Frontend default API target change",
+    "Production knowledge.db access or writes from Go",
+    "Pi deploy or live service reload",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "New AI/ML dependency, charset detection dependency, indexing cache, or server-side search cache"
+  ],
+  "verification_required_for_23_1": [
+    "tests/test_phase23_go_file_read_parity_plan.py locks the file-read contract, fixture plan, runtime boundary, and 23.2 next-step limits",
+    "tests/test_phase20_go_read_surface_polish.py continues to document the pre-23.2 Python-owned body-search gap",
+    "Full pytest suite remains green"
+  ],
+  "result": {
+    "status": "file_read_parity_planned",
+    "conclusion": "23.1 authorizes only a plan and contract for Go text attachment body search parity. It does not implement scanning or change runtime routing."
+  },
+  "allowed_next_step": {
+    "id": "23.2",
+    "title": "Go File-read Parity Implementation Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Implement a bounded read-only Go text attachment body scanner only inside the 23.1 data-dir/path/extension/size/performance contract, using local copied DB and controlled files first. This still must not change live Caddy, systemd, frontend defaults, production DB, writes/files/migrations, Python removal, or public exposure.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go attachment file body scanner implementation",
+      "Go write/file/migration implementation",
+      "Caddy route expansion or reload",
+      "Frontend default API target change",
+      "Production knowledge.db access or writes from Go",
+      "Pi deploy or live service reload",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}

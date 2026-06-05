@@ -1,0 +1,202 @@
+{
+  "phase": "23.3",
+  "title": "Go write surface selection gate",
+  "status": "completed",
+  "completed_on": "2026-06-05",
+  "explicit_user_approval": true,
+  "plan_only": true,
+  "source_contract": "docs/contracts/phase23-go-file-read-parity-implementation.json",
+  "runtime_change": false,
+  "go_write_implementation": false,
+  "live_execution_authorized": false,
+  "candidate_matrix": [
+    {
+      "id": "tag_rename",
+      "route": "PUT /api/tags/<tag_id>",
+      "source": "routes/tags.py",
+      "decision": "selected_for_23_4",
+      "why": "Smallest mapped DB-only write: one JSON field, one Tags row update, no file system, no cascade, no bulk behavior, and easy Python-vs-Go parity fixture.",
+      "db_side_effects": [
+        "Tags.name update only"
+      ],
+      "file_side_effects": [],
+      "external_side_effects": [],
+      "process_side_effects": [],
+      "transaction_shape": "single-row update committed after validation",
+      "request_schema": {
+        "name": "non-empty string after trim"
+      },
+      "success_response": {
+        "status": "success"
+      },
+      "failure_cases": [
+        "400 missing JSON body or missing name",
+        "400 empty name after trim",
+        "404 tag id not found",
+        "409 duplicate tag name",
+        "500 database error"
+      ]
+    },
+    {
+      "id": "category_create",
+      "route": "POST /api/categories",
+      "source": "routes/categories.py",
+      "decision": "deferred",
+      "why": "DB-only, but creates new identity and depends on max sort_order/default-category semantics; less minimal than tag rename for the first write."
+    },
+    {
+      "id": "category_update",
+      "route": "PUT /api/categories/<category_id>",
+      "source": "routes/categories.py",
+      "decision": "deferred",
+      "why": "DB-only, but optional multi-field update and category UI semantics are broader than one-field tag rename."
+    },
+    {
+      "id": "category_delete",
+      "route": "DELETE /api/categories/<category_id>",
+      "source": "routes/categories.py",
+      "decision": "rejected_for_first_write",
+      "why": "May migrate Notes.category_id before deleting the category and must protect default categories."
+    },
+    {
+      "id": "tag_delete",
+      "route": "DELETE /api/tags/<tag_id>",
+      "source": "routes/tags.py",
+      "decision": "rejected_for_first_write",
+      "why": "Deletes a tag and relies on Note_Tags cleanup/cascade behavior, so it has broader relational side effects than rename."
+    },
+    {
+      "id": "tag_merge",
+      "route": "POST /api/tags/merge",
+      "source": "routes/tags.py",
+      "decision": "rejected_for_first_write",
+      "why": "Multi-step transaction that rewrites Note_Tags and deletes source Tags."
+    },
+    {
+      "id": "notes_core_writes",
+      "routes": [
+        "POST /api/notes",
+        "PUT /api/notes/<note_id>",
+        "DELETE /api/notes/<note_id>"
+      ],
+      "decision": "rejected_for_first_write",
+      "why": "Notes writes carry wider contract surface including tags, source URLs, note history, and delete-side file cleanup."
+    },
+    {
+      "id": "notes_actions_pin_archive",
+      "routes": [
+        "POST /api/notes/<note_id>/pin",
+        "POST /api/notes/<note_id>/archive"
+      ],
+      "decision": "deferred",
+      "why": "Likely DB-only, but nested /api/notes/... write routing would require expanding the currently hardened Go/Caddy note matcher and is not the smallest safe first write."
+    },
+    {
+      "id": "notes_duplicate_reorder_batch",
+      "routes": [
+        "POST /api/notes/<note_id>/duplicate",
+        "PUT /api/notes/reorder",
+        "POST /api/notes/batch/*"
+      ],
+      "decision": "rejected_for_first_write",
+      "why": "Broader row creation/order/batch semantics; batch delete can become file-coupled."
+    },
+    {
+      "id": "attachments_and_file_routes",
+      "routes": [
+        "POST /api/notes/<note_id>/attachments",
+        "DELETE /api/attachments/<attachment_id>",
+        "POST /api/upload/*",
+        "POST /api/cleanup/*",
+        "DELETE /api/cleanup/*"
+      ],
+      "decision": "rejected_for_first_write",
+      "why": "Filesystem-coupled and outside DB-only write scope."
+    },
+    {
+      "id": "uploads_cleanup_import_export_system_server_config",
+      "decision": "rejected_for_first_write",
+      "why": "Bulk/file/process/config/service side effects are explicitly outside the first Go write route."
+    }
+  ],
+  "selected_candidate": {
+    "id": "tag_rename",
+    "route": "PUT /api/tags/<tag_id>",
+    "python_owner_until_23_4": true,
+    "go_owner_after_23_3": false
+  },
+  "first_write_contract_for_23_4": {
+    "allowed_scope": "Implement only local/copied-DB Go parity for PUT /api/tags/<tag_id> after explicit 23.4 approval.",
+    "request_schema": {
+      "name": "required string; trim before validation and update"
+    },
+    "response_schema": {
+      "success": {
+        "status": "success"
+      },
+      "errors": [
+        "400 missing JSON body or name",
+        "400 empty name after trim",
+        "404 missing tag id",
+        "409 duplicate tag name",
+        "500 database error"
+      ]
+    },
+    "transaction_semantics": [
+      "Validate request before write.",
+      "Reject duplicate names before update using the Tags.name uniqueness contract.",
+      "Update exactly one Tags row.",
+      "Commit only after the update succeeds.",
+      "Rollback on validation, duplicate, missing-row, or database errors."
+    ],
+    "state_invariants": [
+      "Only Tags.name may change on success.",
+      "Tags.id must not change.",
+      "Note_Tags relationships must not change.",
+      "No file paths may be read, written, renamed, or deleted.",
+      "No Caddy, systemd, frontend default, production DB, Pi deploy, or public exposure change."
+    ],
+    "csrf_and_local_only_boundary": [
+      "23.4 local/copied-DB implementation must not disable the live prism-go-readonly.service query_only guard.",
+      "Live routing remains Python-owned until a later explicit gate.",
+      "Any future live route must preserve Prism's local/trusted-network boundary and Python-compatible CSRF/origin behavior."
+    ],
+    "fixture_plan": [
+      "Python baseline and Go candidate use copied DB fixtures only.",
+      "Cover success with trimmed name.",
+      "Cover missing JSON body or missing name.",
+      "Cover empty name after trim.",
+      "Cover missing tag id 404.",
+      "Cover duplicate name 409, including case-insensitive uniqueness behavior.",
+      "Assert Note_Tags rows are unchanged.",
+      "Assert rollback leaves Tags unchanged on every failure."
+    ],
+    "stop_conditions": [
+      "Implementation touches any route other than PUT /api/tags/<tag_id>.",
+      "Implementation needs file system side effects.",
+      "Implementation disables live query_only or changes prism-go-readonly.service.",
+      "Implementation changes Caddy, frontend default API target, production DB, Pi deployment, public exposure, or Python removal.",
+      "Python-vs-Go response or DB-state parity cannot be proven with targeted fixtures."
+    ]
+  },
+  "not_authorized_by_23_3": [
+    "Go write implementation",
+    "Production DB write",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "frontend default API target change",
+    "live prism-go-readonly.service query_only change",
+    "Python route removal",
+    "file upload or attachment ownership",
+    "public exposure expansion"
+  ],
+  "allowed_next_step": {
+    "id": "23.4",
+    "title": "First Go write route implementation gate",
+    "status": "blocked_until_explicit_user_approval",
+    "selected_route": "PUT /api/tags/<tag_id>",
+    "selected_candidate": "tag_rename",
+    "scope": "local/copied-DB Go parity implementation only; live routing remains blocked"
+  }
+}

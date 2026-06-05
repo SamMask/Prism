@@ -116,6 +116,27 @@ Phase 20.3 在另行授權後完成 read surface parity polish：Go `GET /api/no
 
 Phase 20.4 在另行授權後完成 post-polish stabilization review，並將 Phase 20 關閉為 `closed_stabilized`。結論是：Go read-only surface 已完成 DB-only polish；文字附件 body 搜尋維持 Python-owned，不自動升格為 Go file-read parity；任何 future file-read parity 都必須先另開 data-dir / path traversal / file type / performance / rollback contract。20.4 未擴 Caddy route、未改 `query_only`、未新增 Go writes/files/migrations、未改 frontend default、未做 live Pi service / Caddy reload。
 
+Phase 23.0 將 Go 重構重新定為 active roadmap 主線，但只做 plan-only consolidation：
+
+> **白話說明**：
+> 這一步是在架構文件裡講清楚：Prism 長期要能本機封裝執行，但使用者實際使用時仍部署在樹莓派。
+> 要補這段，是因為 Go 重構涉及 runtime、DB、檔案、Caddy、Pi deploy，不能被前端小修或單次本機測試帶偏。
+> 使用者現在不會看到功能差異；這只是把後續方向寫回權威文件。
+> 這一步不改 Go code、不改 Python route、不改資料庫、不改 Caddy、不部署 Pi、不改 frontend default、不移除 Python、不擴 public exposure。
+
+- Risk level: `P0 safety-critical` for Go ownership / runtime / DB / file system / migration / Caddy / Pi deploy.
+- Final target: local packaged run is a supported artifact path, not a replacement for the Raspberry Pi deployment path.
+- Pi deployment remains the real operating target: `prism.service`, Caddy, existing data dir, SQLite WAL mode, backups, health checks, and rollback stay mandatory.
+- Current Go-owned runtime surface remains the hardened GET read-only set: `/api/test`, categories, tags, notes list, numeric note detail.
+- Current Python-owned surface remains writes, files/attachments, import/export, cleanup, system/server, migrations, frontend/static, non-numeric or unreviewed `/api/notes/...`.
+- Phase 23.1 Go file-read parity plan gate is complete. It defines the file-read contract for a future Go text attachment body scanner: explicit `--data-dir`, `docs/attachments` relative roots, `md` / `markdown` / `txt`, canonical path checks, no `..`, no symlink escape, no absolute external path, 1 MiB per file, 200 files / 5 MiB / 250 ms per query, UTF-8 replacement decoding, and copied-DB fixture coverage. 23.1 did not implement Go file scanning, change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, remove Python, or expand public exposure.
+- Phase 23.2 Go file-read parity implementation gate is complete for local/copied-DB parity only. Go `GET /api/notes?q=...` now scans bounded text attachment bodies under the explicit `--data-dir` `docs/attachments` subtree and merges matching note ids into the existing read-only search. The scanner rejects parent traversal, absolute/volume/UNC/colon paths, symlink escape, non-attachment roots, unsupported extensions, oversized files, missing files, and read errors as non-matches. 23.2 did not change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, add writes/files/migrations, remove Python, or expand public exposure.
+- Phase 23.3 Go write surface selection gate is complete. It is plan-only and selects `PUT /api/tags/<tag_id>` (`tag_rename`) as the first Go write implementation candidate because it only updates `Tags.name`, has no file/cascade/bulk/process side effects, and can be verified by Python-vs-Go response plus DB-state parity fixtures. 23.3 did not implement Go writes, change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, remove Python, or expand public exposure.
+- Phase 23.4 First Go write route implementation gate is complete for local/copied-DB parity only. Go now has a flag-gated `PUT /api/tags/<tag_id>` candidate enabled only by `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1`; the default runtime remains `get-read-only` with SQLite `query_only = ON`. Python-vs-Go copied DB fixtures verify success/trim, validation errors, missing tag, duplicate exact-name behavior, rollback/no partial write, and unchanged `Note_Tags`. 23.4 did not change Caddy/systemd/frontend defaults, touch production DB, deploy Pi, remove Python, or expand public exposure.
+- Current live Go-owned runtime surface remains the hardened Caddy-routed GET read-only set. `PUT /api/tags/<tag_id>` is only a local/copied-DB implementation candidate until a later explicit live routing gate.
+- Next active Go gate is `23.5 Go DB-only write expansion gate`, pending explicit approval. It should first decide whether tag rename needs a live/local routing gate before broader write expansion, and it must resolve or explicitly defer the `Tags.name` NOCASE schema/documentation discrepancy before tag CUD expansion.
+- Frontend backlog is no longer the active default queue. Future frontend work requires a concrete user-selected candidate or fresh browser evidence, not automatic polish hunting.
+
 ### Frontend Redesign Intake
 
 `docs/New_UI/Prism Redesign - standalone.html` 是 UI 原型參考，整合規劃在 `docs/FRONTEND-REDESIGN-PLAN.md`：

@@ -37,8 +37,8 @@ def test_phase20_3_go_search_includes_attachment_metadata_without_write_methods(
     assert "a.file_path LIKE ?" in main_go
     assert "PRAGMA query_only = ON" in main_go
     assert "http.MethodGet" in main_go
+    assert "enableTagWrite" in main_go
     assert "http.MethodPost" not in main_go
-    assert "http.MethodPut" not in main_go
     assert "http.MethodDelete" not in main_go
 
 

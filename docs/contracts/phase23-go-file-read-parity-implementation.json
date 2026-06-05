@@ -1,0 +1,87 @@
+{
+  "phase": "23.2",
+  "name": "Go File-read Parity Implementation Gate",
+  "decision_date": "2026-06-05",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-file-read-parity-plan.json",
+  "risk_level": "P0 safety-critical",
+  "runtime_change_performed": false,
+  "live_pi_change_performed": false,
+  "caddy_change_performed": false,
+  "frontend_default_change_performed": false,
+  "production_db_change_performed": false,
+  "go_write_file_migration_performed": false,
+  "python_removal_performed": false,
+  "public_exposure_change_performed": false,
+  "implementation_scope": "local copied-DB Go read-only text attachment body search parity",
+  "implemented": {
+    "surface": "GET /api/notes?q=...",
+    "behavior": "Go now scans bounded text attachment bodies for md/markdown/txt files under the explicit --data-dir docs/attachments subtree, then merges matching note ids into the existing read-only notes search OR clause.",
+    "data_dir": "explicit runtime --data-dir only",
+    "allowed_relative_root": "docs/attachments",
+    "allowed_extensions": [
+      "md",
+      "markdown",
+      "txt"
+    ],
+    "path_safety": [
+      "relative Note_Attachments.file_path only",
+      "reject parent traversal",
+      "reject absolute, volume-qualified, UNC, URL-like, or colon-containing paths",
+      "reject paths outside docs/attachments",
+      "reject symlinks and resolved paths outside data dir"
+    ],
+    "limits": {
+      "file_size_limit_bytes": 1048576,
+      "max_files_per_query": 200,
+      "max_total_bytes_per_query": 5242880,
+      "timeout_ms": 250
+    },
+    "skip_as_non_match": [
+      "missing file",
+      "oversized file",
+      "unsupported extension",
+      "invalid or unsafe path",
+      "read error"
+    ],
+    "side_effects": "SQLite query_only reads plus bounded filesystem reads only"
+  },
+  "verification_fixtures": {
+    "python_vs_go_diff": "tests/test_phase18_go_shadow_contract.py seeds controlled md/markdown/txt body-only hits under temp data dir and compares Python Flask responses with Go responses.",
+    "safety_lock": "tests/test_phase23_go_file_read_parity_implementation.py checks source-level path, extension, size, timeout, query_only, and forbidden method boundaries.",
+    "plan_lock": "tests/test_phase23_go_file_read_parity_plan.py continues to lock the 23.1 contract inherited by 23.2."
+  },
+  "not_authorized_by_23_2": [
+    "Go write/file/migration implementation beyond bounded read-only body scan",
+    "Attachment upload/read/delete/write route ownership",
+    "Caddy route expansion or reload",
+    "Changing prism-go-readonly.service away from SQLite query_only",
+    "Frontend default API target change",
+    "Production knowledge.db access or writes from Go",
+    "Pi deploy or live service reload",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "New AI/ML dependency, charset detection dependency, indexing cache, or server-side search cache"
+  ],
+  "result": {
+    "status": "file_read_parity_implemented_locally",
+    "conclusion": "23.2 closes the local Go read-only text attachment body search parity gap under copied-DB/temp-data-dir tests. It does not promote live routing or file ownership beyond bounded read-only search."
+  },
+  "allowed_next_step": {
+    "id": "23.3",
+    "title": "Go Write Surface Selection Gate",
+    "status": "blocked_until_explicit_user_approval",
+    "scope": "Plan-only candidate matrix for the first DB-only Go write surface. It must reject filesystem-coupled candidates and must not implement writes until a later gate.",
+    "requires_explicit_user_approval": true,
+    "not_authorized_without_approval": [
+      "Go write implementation",
+      "Attachment/file route ownership",
+      "Caddy route expansion or reload",
+      "Frontend default API target change",
+      "Production knowledge.db access or writes from Go",
+      "Pi deploy or live service reload",
+      "Python backend removal",
+      "Direct public internet exposure"
+    ]
+  }
+}
