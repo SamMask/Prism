@@ -207,12 +207,14 @@ export function HomePage() {
     <>
       <div className="mb-5 flex items-end justify-between gap-4 px-1">
         <div className="min-w-0">
-          <h1 className="truncate text-3xl font-semibold leading-tight tracking-tight text-text-primary">
-            {sectionTitle}
-          </h1>
-          <p className="mt-1 text-sm text-text-muted">
-            {sectionSub}
-          </p>
+          <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="truncate text-3xl font-semibold leading-tight tracking-tight text-text-primary">
+              {sectionTitle}
+            </h1>
+            <p className="text-sm text-text-muted">
+              {sectionSub}
+            </p>
+          </div>
         </div>
       </div>
 

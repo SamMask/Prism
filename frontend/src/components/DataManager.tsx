@@ -164,16 +164,25 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
             ) : (
               <>
                 <span className="text-lg">{cat.icon || '📁'}</span>
-                <span className="flex-1 text-sm text-text-primary">{cat.name}</span>
-                <span className="text-xs text-text-muted px-2 py-0.5 bg-bg-elevated rounded">{cat.count || 0}</span>
-                <IconButton size="sm" onClick={() => startEdit(cat)} className="opacity-0 group-hover:opacity-100" aria-label="編輯">
-                  <Pencil size={14} />
-                </IconButton>
-                {!cat.is_default && (
-                  <IconButton size="sm" variant="danger-solid" onClick={() => handleDelete(cat)} disabled={isLoading} className="opacity-0 group-hover:opacity-100" aria-label="刪除">
-                    <Trash2 size={14} />
+                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{cat.name}</span>
+                <span
+                  className="w-12 shrink-0 rounded bg-bg-elevated px-2 py-0.5 text-right text-xs tabular-nums text-text-muted"
+                  data-testid="category-count"
+                >
+                  {cat.count || 0}
+                </span>
+                <span className="flex w-16 shrink-0 justify-end gap-1" data-testid="category-actions">
+                  <IconButton size="sm" onClick={() => startEdit(cat)} className="opacity-0 group-hover:opacity-100" aria-label="編輯">
+                    <Pencil size={14} />
                   </IconButton>
-                )}
+                  {!cat.is_default ? (
+                    <IconButton size="sm" variant="danger-solid" onClick={() => handleDelete(cat)} disabled={isLoading} className="opacity-0 group-hover:opacity-100" aria-label="刪除">
+                      <Trash2 size={14} />
+                    </IconButton>
+                  ) : (
+                    <span className="h-7 w-7" aria-hidden="true" />
+                  )}
+                </span>
               </>
             )}
           </div>

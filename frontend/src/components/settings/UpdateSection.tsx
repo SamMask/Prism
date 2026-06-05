@@ -46,6 +46,11 @@ export function UpdateSection() {
       </div>
 
       <div className="space-y-4">
+        <div className="rounded-lg border border-border-subtle bg-bg-elevated/60 p-3 text-xs text-text-muted">
+          <p>本機版本更新以覆蓋程式檔為主，保留 `knowledge.db`、`static/uploads` 與 `docs/attachments` 資料目錄；不需要另外選補丁檔。</p>
+          <p className="mt-1">Raspberry Pi 部署通常由既有同步流程處理，這裡的檢查只提供版本資訊與下載入口。</p>
+        </div>
+
         {/* Current version */}
         <div className="flex items-center justify-between text-sm">
           <span className="text-text-secondary">目前版本</span>

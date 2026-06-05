@@ -126,7 +126,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
               <div>
                 <p className="text-text-primary">匯出 Markdown</p>
                 <p className="text-text-muted text-sm">
-                  每筆記一個 .md 檔（YAML frontmatter + body），跨工具可讀（Obsidian / VSCode）
+                  每筆記一個 .md 檔，並把本機圖片打包到 zip 內（Obsidian / VSCode 可讀）
                 </p>
               </div>
               <Button

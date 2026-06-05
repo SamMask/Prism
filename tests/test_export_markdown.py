@@ -6,6 +6,7 @@ Tests for /api/export/markdown — Phase 15 (v2.4.7)
 import io
 import json
 import zipfile
+from pathlib import Path
 
 from db import get_db
 
@@ -119,3 +120,46 @@ def test_export_markdown_handles_empty_title(client, app):
     # Note C has empty title — should still produce a file (slug → "untitled")
     untitled_files = [n for n in zf.namelist() if 'untitled' in n.lower()]
     assert len(untitled_files) == 1
+
+
+def test_export_markdown_includes_local_upload_images(client, app, tmp_path):
+    upload_dir = tmp_path / 'uploads'
+    app.config['UPLOAD_FOLDER'] = str(upload_dir)
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    image_path = upload_dir / 'export-image.png'
+    image_path.write_bytes(b'fake-png-bytes')
+
+    with app.app_context():
+        db = get_db()
+        default_category = db.execute(
+            "SELECT id FROM Categories WHERE is_default = 1 LIMIT 1"
+        ).fetchone()
+        db.execute(
+            """
+            INSERT INTO Notes (title, content, category_id, cover_image)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                'Image Export',
+                'Markdown image ![sample](/static/uploads/export-image.png)\n'
+                '<img src="/static/uploads/export-image.png">',
+                default_category['id'],
+                '/static/uploads/export-image.png',
+            ),
+        )
+        db.commit()
+
+    resp = client.get('/api/export/markdown')
+    zf = zipfile.ZipFile(io.BytesIO(resp.data))
+
+    assert 'images/export-image.png' in zf.namelist()
+    assert zf.read('images/export-image.png') == b'fake-png-bytes'
+
+    md_files = [n for n in zf.namelist() if 'Image-Export' in n]
+    assert len(md_files) == 1
+    content = zf.read(md_files[0]).decode('utf-8')
+    assert '/static/uploads/export-image.png' not in content
+    assert 'images/export-image.png' in content
+
+    manifest = json.loads(zf.read('_manifest.json').decode('utf-8'))
+    assert manifest['export_info']['images_count'] >= 1

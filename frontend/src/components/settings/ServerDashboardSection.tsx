@@ -18,6 +18,7 @@ import {
   ChevronUp,
   Shield,
   Tag,
+  Trash2,
 } from 'lucide-react';
 import { Button } from '../ui';
 import { api } from '../../services/api';
@@ -51,6 +52,10 @@ interface HardwareStatus {
     machine: string;
     hostname: string;
     python_version: string;
+  };
+  service_management?: {
+    available: boolean;
+    reason: string;
   };
   uptime_seconds: number | null;
 }
@@ -142,6 +147,7 @@ export function ServerDashboardSection() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
+  const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
   const [isRestarting, setIsRestarting] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
@@ -221,6 +227,20 @@ export function ServerDashboardSection() {
     }
   };
 
+  const handleDeleteBackup = async (backup: BackupInfo) => {
+    if (!await confirm({ title: '刪除備份', message: `確定要刪除備份「${backup.filename}」嗎？`, variant: 'danger' })) return;
+    setDeletingBackup(backup.filename);
+    try {
+      await api.deleteBackup(backup.filename);
+      toast.success('備份已刪除');
+      fetchBackups();
+    } catch (error: any) {
+      toast.error('刪除備份失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
+    } finally {
+      setDeletingBackup(null);
+    }
+  };
+
   // Handle service restart
   const handleRestart = async () => {
     if (!await confirm({ title: '重啟服務', message: '確定要重啟 Prism 服務嗎？重啟期間將暫時無法使用。', variant: 'warning' })) return;
@@ -249,7 +269,7 @@ export function ServerDashboardSection() {
     fetchBackups();
   }, [fetchHardware, fetchVersion, fetchBackups]);
 
-  const isLinux = hardware?.platform?.system === 'Linux';
+  const canManageService = hardware?.service_management?.available === true;
 
   return (
     <div className="glass rounded-lg p-5" data-testid="server-dashboard-section">
@@ -451,7 +471,7 @@ export function ServerDashboardSection() {
         </div>
 
         <div className="flex items-center justify-between text-xs text-text-muted mb-2">
-          <span>保留最近 3 份備份，自動清理舊檔案</span>
+          <span>輪換備份會保留最近 3 份；一鍵下載不會自動清理</span>
           <button
             onClick={() => { setShowBackups(!showBackups); if (!showBackups) fetchBackups(); }}
             className="text-text-muted hover:text-text-secondary flex items-center gap-1"
@@ -476,6 +496,16 @@ export function ServerDashboardSection() {
                 <div className="flex items-center gap-3 text-text-muted">
                   <span>{backup.size_mb} MB</span>
                   <span>{new Date(backup.created_at).toLocaleDateString()}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteBackup(backup)}
+                    disabled={deletingBackup === backup.filename}
+                    className="inline-flex h-7 w-7 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label={`刪除備份 ${backup.filename}`}
+                    title="刪除備份"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -562,7 +592,7 @@ export function ServerDashboardSection() {
       {/* ============================================================= */}
       {/* Service Restart (Linux only) */}
       {/* ============================================================= */}
-      {isLinux && (
+      {canManageService && (
         <div className="bg-bg-elevated rounded-lg p-4 border border-red-500/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

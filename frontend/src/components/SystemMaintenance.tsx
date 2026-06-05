@@ -78,6 +78,10 @@ export function SystemMaintenance() {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-border-subtle bg-bg-elevated/60 p-3 text-xs text-text-muted">
+        這區仍保留作為進階維護與疑難排解工具；日常使用不需要手動執行，備份前或懷疑資料異常時再使用即可。
+      </div>
+
       {/* WAL Checkpoint */}
       <div className="p-4 rounded-lg bg-bg-elevated">
         <div className="flex items-center justify-between mb-3">

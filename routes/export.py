@@ -8,6 +8,7 @@ import os
 import json
 from datetime import datetime
 from flask import jsonify, send_file, current_app, request
+from urllib.parse import unquote, urlparse
 
 from . import export_bp
 from db import get_db  # v1.8.9: 統一資料庫連線層
@@ -108,7 +109,7 @@ def export_markdown():
         db = get_db()
         rows = db.execute('''
             SELECT
-                n.id, n.title, n.content, n.remarks,
+                n.id, n.title, n.content, n.remarks, n.cover_image,
                 n.is_pinned, n.is_archived,
                 n.created_at, n.updated_at,
                 COALESCE(c.name, 'Uncategorized') as category,
@@ -131,11 +132,92 @@ def export_markdown():
             s = str(s).replace('"', '\\"').replace('\n', ' ')
             return f'"{s}"'
 
+        uploads_dir = current_app.config.get(
+            'UPLOAD_FOLDER',
+            os.path.join(current_app.root_path, 'static', 'uploads')
+        )
+        uploads_abs = os.path.abspath(uploads_dir)
+        included_images = {}
+        used_arcnames = {}
+
+        def resolve_upload_image(ref):
+            """Return a safe local upload file path for Prism image refs."""
+            if not ref:
+                return None
+
+            parsed = urlparse(str(ref).strip())
+            if parsed.scheme and parsed.scheme not in ('http', 'https'):
+                return None
+
+            path = unquote(parsed.path if parsed.scheme else str(ref).strip())
+            marker = '/static/uploads/'
+            if marker in path:
+                relative = path.split(marker, 1)[1]
+            elif path.startswith('static/uploads/'):
+                relative = path[len('static/uploads/'):]
+            elif path.startswith('/uploads/'):
+                relative = path[len('/uploads/'):]
+            else:
+                return None
+
+            relative = relative.replace('\\', '/').lstrip('/')
+            if not relative or '..' in relative.split('/'):
+                return None
+
+            image_path = os.path.abspath(os.path.join(uploads_abs, *relative.split('/')))
+            if not image_path.startswith(uploads_abs + os.sep):
+                return None
+            if not os.path.isfile(image_path):
+                return None
+            return image_path
+
+        def get_image_arcname(image_path):
+            image_abs = os.path.abspath(image_path)
+            if image_abs in included_images:
+                return included_images[image_abs]
+
+            basename = os.path.basename(image_abs)
+            stem, ext = os.path.splitext(basename)
+            arcname = f'images/{basename}'
+            index = 2
+            while arcname in used_arcnames and used_arcnames[arcname] != image_abs:
+                arcname = f'images/{stem}-{index}{ext}'
+                index += 1
+
+            included_images[image_abs] = arcname
+            used_arcnames[arcname] = image_abs
+            return arcname
+
+        def add_image_to_zip(zf, ref):
+            image_path = resolve_upload_image(ref)
+            if not image_path:
+                return None
+            arcname = get_image_arcname(image_path)
+            if arcname not in zf.namelist():
+                zf.write(image_path, arcname)
+            return arcname
+
+        def collect_content_refs(body):
+            body = body or ''
+            refs = []
+            refs.extend(match.group(1) for match in re.finditer(r'!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)', body))
+            refs.extend(match.group(1) for match in re.finditer(r'<img\b[^>]*\bsrc=["\']([^"\']+)["\']', body, re.IGNORECASE))
+            return refs
+
+        def rewrite_content_image_refs(zf, body):
+            rewritten = body or ''
+            for ref in collect_content_refs(rewritten):
+                arcname = add_image_to_zip(zf, ref)
+                if arcname:
+                    rewritten = rewritten.replace(ref, arcname)
+            return rewritten
+
         memory_file = io.BytesIO()
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for row in rows:
                 tags = row['tags'].split('||') if row['tags'] else []
                 tags_yaml = '[' + ', '.join(yaml_escape(t) for t in tags) + ']' if tags else '[]'
+                cover_image = add_image_to_zip(zf, row['cover_image'])
 
                 frontmatter = (
                     '---\n'
@@ -148,11 +230,13 @@ def export_markdown():
                     f'created_at: {yaml_escape(row["created_at"])}\n'
                     f'updated_at: {yaml_escape(row["updated_at"])}\n'
                 )
+                if cover_image:
+                    frontmatter += f'cover_image: {yaml_escape(cover_image)}\n'
                 if row['remarks']:
                     frontmatter += f'remarks: {yaml_escape(row["remarks"])}\n'
                 frontmatter += '---\n\n'
 
-                body = row['content'] or ''
+                body = rewrite_content_image_refs(zf, row['content'])
                 filename = f'{row["id"]:04d}-{slug(row["title"])}.md'
                 zf.writestr(filename, frontmatter + body)
 
@@ -163,6 +247,7 @@ def export_markdown():
                     'format': 'markdown',
                     'exported_at': datetime.now().isoformat(),
                     'notes_count': len(rows),
+                    'images_count': len(included_images),
                 },
             }
             zf.writestr('_manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2))

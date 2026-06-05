@@ -1,0 +1,105 @@
+{
+  "phase": "23.8-thumb.5",
+  "title": "Go thumbnail surface expansion or removal-readiness gate",
+  "status": "completed_blocked_expansion",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-thumbnail-parity-fixtures.json",
+    "docs/contracts/phase23-go-thumbnail-local-candidate.json",
+    "docs/contracts/phase23-go-pillow-removal-gate.json"
+  ],
+  "scope_type": "decision_gate_only",
+  "decision": "retain_python_upload_url_and_import_helper_until_remote_fetch_safety_and_import_workflow_contracts_are_split",
+  "removal_allowed": false,
+  "expansion_allowed_in_this_gate": false,
+  "surface_readiness": {
+    "post_api_upload": {
+      "python_owner": "routes/upload.py",
+      "go_candidate": "go-shadow POST /api/upload behind --enable-thumbnail-write",
+      "status": "local_candidate_exists",
+      "remaining_gap": "not routed live, not pixel-quality parity with Pillow LANCZOS, Pillow fallback still retained"
+    },
+    "post_api_upload_url": {
+      "python_owner": "routes/upload.py download_from_url",
+      "go_candidate": null,
+      "status": "retain_python",
+      "required_before_go_candidate": [
+        "SSRF guard parity",
+        "http/https scheme validation",
+        "remote request timeout and header policy",
+        "Content-Type and magic-number validation",
+        "download size cap before file writes",
+        "thumbnail_only success and fallback parity",
+        "no production upload writes without explicit copied-data guard"
+      ]
+    },
+    "import_image_helper": {
+      "python_owner": "routes/notes/import_.py download_and_save_image",
+      "go_candidate": null,
+      "status": "retain_python",
+      "required_before_go_candidate": [
+        "Markdown import workflow boundary decision",
+        "remote download streaming and size cap contract",
+        "thumbnail_only success and thumbnail failure fallback parity",
+        "return tuple compatibility or explicit replacement API",
+        "SSRF decision because current helper fetches remote URLs directly"
+      ]
+    },
+    "delete_cleanup": {
+      "python_owner": "routes/upload.py and routes/cleanup.py",
+      "go_candidate": null,
+      "status": "retain_python",
+      "required_before_go_candidate": [
+        "file delete ownership decision",
+        "orphan cleanup companion discovery parity",
+        "backup/rollback path for file mutation"
+      ]
+    }
+  },
+  "risk_decision": {
+    "reason": "23.8-thumb.4 proves only a local/copied-data multipart upload candidate. Expanding to upload-url or import helper would add remote network fetch, SSRF policy, stream/size enforcement, and Markdown import workflow ownership in the same gate.",
+    "anti_bloat_choice": "do not add new Go route/helper code in 23.8-thumb.5; keep the smallest contract-safe closure as a removal-readiness decision",
+    "pillow_status": "retained"
+  },
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_runtime_changed": false,
+    "go_mod_changed": false,
+    "requirements_changed": false,
+    "pillow_removed": false,
+    "upload_url_route_changed": false,
+    "import_helper_changed": false,
+    "delete_cleanup_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "not_authorized_by_23_8_thumb_5": [
+    "Remove Pillow from requirements.txt",
+    "Route frontend or Caddy upload traffic to Go",
+    "Implement Go /api/upload/url in this gate",
+    "Replace routes/notes/import_.py download_and_save_image",
+    "Change SSRF behavior or remote request policy",
+    "Deploy to Pi",
+    "Change systemd units or Caddyfile",
+    "Write production DB or production uploads"
+  ],
+  "verification_plan": {
+    "contract_guard": "tests/test_phase23_go_thumbnail_surface_expansion_gate.py",
+    "required_commands": [
+      "go test ./...",
+      "pytest tests/test_phase23_go_thumbnail_surface_expansion_gate.py -v",
+      "pytest tests/test_phase23_go_thumbnail_local_candidate.py tests/test_phase23_go_thumbnail_parity_and_pillow_removal_gate.py -v",
+      "pytest tests/ -v"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "23.8-thumb.6",
+    "title": "Go upload-url remote-fetch safety parity plan",
+    "requires_explicit_user_approval": true,
+    "summary": "If Go thumbnail ownership should expand, split POST /api/upload/url into its own remote-fetch safety/parity plan before any implementation or Pillow removal gate."
+  }
+}

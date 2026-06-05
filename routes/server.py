@@ -61,6 +61,7 @@ def get_hardware_status():
                 'hostname': platform.node(),
                 'python_version': platform.python_version(),
             },
+            'service_management': _get_service_management_status(),
             'uptime_seconds': _get_uptime(),
         }
 
@@ -94,6 +95,27 @@ def _get_cpu_temp():
         pass
 
     return None
+
+
+def _get_service_management_status():
+    """Report whether the UI should expose systemd service controls."""
+    is_linux = platform.system() == 'Linux'
+    has_systemctl = shutil.which('systemctl') is not None
+    available = is_linux and has_systemctl and not getattr(sys, 'frozen', False)
+
+    if available:
+        reason = 'systemd service controls available'
+    elif getattr(sys, 'frozen', False):
+        reason = 'hidden for packaged local executable'
+    elif not is_linux:
+        reason = 'hidden outside Linux/systemd deployments'
+    else:
+        reason = 'systemctl not available'
+
+    return {
+        'available': available,
+        'reason': reason,
+    }
 
 
 def _get_memory_info():
@@ -319,9 +341,24 @@ def restart_service():
 
 def _get_backup_dir():
     """Get or create backup directory"""
-    backup_dir = os.path.join(current_app.root_path, 'backups')
+    backup_dir = current_app.config.get('PRISM_BACKUP_DIR') or os.path.join(current_app.root_path, 'backups')
     os.makedirs(backup_dir, exist_ok=True)
     return backup_dir
+
+
+def _resolve_backup_path(filename):
+    """Resolve a managed Prism backup filename inside the backup directory."""
+    if not filename or filename != os.path.basename(filename):
+        return None
+    if not filename.startswith('prism_backup_') or not filename.endswith('.db'):
+        return None
+
+    backup_dir = _get_backup_dir()
+    backup_path = os.path.abspath(os.path.join(backup_dir, filename))
+    backup_dir_abs = os.path.abspath(backup_dir)
+    if not backup_path.startswith(backup_dir_abs + os.sep):
+        return None
+    return backup_path
 
 
 @server_bp.route('/server/backup/download', methods=['GET'])
@@ -482,6 +519,36 @@ def list_backups():
                 'backups': backups,
                 'count': len(backups),
                 'total_size_mb': round(total_size / 1024 / 1024, 2),
+            }
+        })
+
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@server_bp.route('/server/backup/<path:filename>', methods=['DELETE'])
+def delete_backup(filename):
+    """Delete a specific managed Prism database backup."""
+    try:
+        backup_path = _resolve_backup_path(filename)
+        if backup_path is None:
+            return jsonify({
+                'status': 'error',
+                'message': '無效的備份檔名'
+            }), 400
+
+        if not os.path.exists(backup_path):
+            return jsonify({
+                'status': 'error',
+                'message': '備份檔案不存在'
+            }), 404
+
+        os.remove(backup_path)
+
+        return jsonify({
+            'status': 'success',
+            'data': {
+                'deleted': filename
             }
         })
 

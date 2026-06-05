@@ -104,6 +104,10 @@ export interface HardwareStatus {
     hostname: string;
     python_version: string;
   };
+  service_management?: {
+    available: boolean;
+    reason: string;
+  };
   uptime_seconds: number | null;
 }
 
@@ -132,6 +136,10 @@ export interface BackupListResponse {
   backups: BackupItem[];
   count: number;
   total_size_mb: number;
+}
+
+export interface DeleteBackupResponse {
+  deleted: string;
 }
 
 export interface ServerLogsResponse {
@@ -802,6 +810,11 @@ export const api = {
 
   rotateBackups: async (keepCount: number = 3): Promise<RotateBackupsResponse> => {
     const { data } = await client.post('/server/backup/rotate', { keep_count: keepCount });
+    return data.data;
+  },
+
+  deleteBackup: async (filename: string): Promise<DeleteBackupResponse> => {
+    const { data } = await client.delete(`/server/backup/${encodeURIComponent(filename)}`);
     return data.data;
   },
 

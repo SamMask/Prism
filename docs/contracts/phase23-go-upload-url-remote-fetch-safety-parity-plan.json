@@ -1,0 +1,152 @@
+{
+  "phase": "23.8-thumb.6",
+  "title": "Go upload-url remote-fetch safety parity plan",
+  "status": "completed",
+  "completed_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-thumbnail-surface-expansion-gate.json",
+    "docs/contracts/phase23-go-thumbnail-local-candidate.json",
+    "docs/contracts/phase23-go-thumbnail-parity-fixtures.json"
+  ],
+  "scope_type": "plan_only_remote_fetch_safety_contract",
+  "decision": "split_post_api_upload_url_into_a_separate_go_candidate_gate_before_any_runtime_change",
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_runtime_changed": false,
+    "go_mod_changed": false,
+    "requirements_changed": false,
+    "pillow_removed": false,
+    "upload_url_route_changed": false,
+    "import_helper_changed": false,
+    "delete_cleanup_changed": false,
+    "production_files_touched": false,
+    "pi_deployed": false,
+    "caddy_changed": false,
+    "systemd_changed": false,
+    "frontend_default_changed": false
+  },
+  "current_python_contract": {
+    "owner": "routes/upload.py download_from_url",
+    "route": "POST /api/upload/url",
+    "request": {
+      "content_type": "application/json",
+      "required_fields": [
+        "url"
+      ],
+      "optional_fields": [
+        "thumbnail_only"
+      ]
+    },
+    "validation_order": [
+      "non-empty url",
+      "http or https scheme only",
+      "_is_ssrf_target(hostname) rejects unresolvable, private, loopback, link-local, or reserved IPs",
+      "requests.get(url, headers=browser-like user-agent and referer, timeout=30, stream=True)",
+      "HTTP status success via raise_for_status",
+      "Content-Type must start with image/",
+      "response body size must be <= MAX_CONTENT_LENGTH",
+      "magic.from_buffer first 2048 bytes must be image/jpeg, image/png, image/webp, or image/gif when magic validation succeeds",
+      "filename comes from secure URL basename or remote_<md5(url)[:8]> plus Content-Type extension",
+      "Pillow thumbnail writes _thumb.webp at max width 500 and quality 80 when available"
+    ],
+    "success_response": [
+      "status=success",
+      "data.url is /static/uploads/<filename or thumb_filename>",
+      "data.filename is the returned local filename",
+      "data.size is downloaded byte length",
+      "data.original_url echoes the requested URL",
+      "data.thumbnail_only echoes request thumbnail_only"
+    ],
+    "thumbnail_only_contract": {
+      "thumbnail_success": "return _thumb.webp and do not retain original",
+      "thumbnail_unavailable_or_failure": "retain original image and return original URL"
+    },
+    "known_python_runtime_detail_not_to_expand_in_23_8_thumb_6": "Python currently reads response.content before size rejection even though stream=True; the Go candidate plan should enforce the size cap while streaming without changing Python in this gate."
+  },
+  "go_candidate_plan": {
+    "target_gate": "23.8-thumb.7",
+    "route": "POST /api/upload/url",
+    "default_state": "disabled_405",
+    "flag": "--enable-upload-url-write",
+    "env": "PRISM_GO_ENABLE_UPLOAD_URL_WRITE",
+    "api_surface_when_enabled": "get-read-only+local-upload-url-write",
+    "data_root": "PRISM_GO_DATA_DIR/static/uploads",
+    "db_behavior": "sqlite_query_only remains true because upload-url writes files only",
+    "production_guard": "production-like knowledge.db still requires PRISM_GO_ALLOW_PROD_DB=1; upload-url writes additionally require PRISM_GO_ALLOW_PROD_UPLOADS=1",
+    "dependency_policy": "reuse existing github.com/skrashevich/go-webp v0.1.0; add no new dependency without a separate decision",
+    "network_policy": [
+      "http/https only",
+      "resolve hostname before dialing",
+      "reject unresolvable, private, loopback, link-local, multicast, unspecified, or reserved IPs",
+      "validate every redirect target before following it",
+      "set request timeout no longer than current Python 30 seconds",
+      "send deterministic User-Agent and Referer compatible with the Python route",
+      "read at most MAX_CONTENT_LENGTH + 1 bytes and fail before any file write when exceeded"
+    ],
+    "response_parity_policy": [
+      "match current 400 vs success behavior for empty URL, bad scheme, SSRF, download failure, non-image Content-Type, size overflow, and magic mismatch",
+      "standard success writes original plus _thumb.webp when thumbnail generation succeeds",
+      "thumbnail_only success writes only _thumb.webp",
+      "thumbnail_only thumbnail failure keeps original as safe fallback",
+      "all validation failures leave data_dir/static/uploads unchanged"
+    ]
+  },
+  "required_23_8_thumb_7_fixtures": {
+    "go_unit_tests": [
+      "flag disabled route returns 405 and writes no files",
+      "flag enabled keeps sqlite_query_only true",
+      "empty URL returns 400",
+      "non-http/https scheme returns 400",
+      "numeric loopback/private/link-local/reserved host returns 400",
+      "DNS-resolved private host returns 400 with injectable resolver or test hook",
+      "redirect to private host is rejected",
+      "download request includes expected timeout and headers",
+      "non-image Content-Type returns 400 and writes no files",
+      "oversized response is capped while streaming and writes no files",
+      "magic mismatch returns 400 and writes no files",
+      "standard PNG/JPEG/WebP/GIF URL writes original and _thumb.webp",
+      "thumbnail_only success writes only _thumb.webp",
+      "thumbnail_only thumbnail failure keeps original",
+      "URL basename is sanitized and hash fallback is deterministic"
+    ],
+    "python_vs_go_diff_fixtures": [
+      "success response keys and thumbnail_only semantics",
+      "empty URL, bad scheme, SSRF, non-image, oversize, and magic mismatch error status class",
+      "original_url echo and filename/url conventions",
+      "no-mutation checks on failure paths"
+    ],
+    "packaging_smoke": [
+      "Windows build",
+      "linux/arm64 CGO_ENABLED=0 build",
+      "copied-data smoke only; source knowledge.db and production uploads unchanged"
+    ]
+  },
+  "not_authorized_by_23_8_thumb_6": [
+    "Implement Go /api/upload/url",
+    "Change routes/upload.py behavior",
+    "Change SSRF behavior or remote request policy",
+    "Remove Pillow from requirements.txt",
+    "Replace routes/notes/import_.py download_and_save_image",
+    "Change upload delete or orphan cleanup ownership",
+    "Route frontend or Caddy upload traffic to Go",
+    "Deploy to Pi",
+    "Change systemd units or Caddyfile",
+    "Write production DB or production uploads"
+  ],
+  "verification": {
+    "contract_guard": "tests/test_phase23_go_upload_url_remote_fetch_safety_parity_plan.py",
+    "expected_commands": [
+      "go test ./...",
+      "pytest tests/test_phase23_go_upload_url_remote_fetch_safety_parity_plan.py -v",
+      "pytest tests/test_phase23_go_thumbnail_surface_expansion_gate.py tests/test_security_guards.py -v",
+      "pytest tests/ -v"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "23.8-thumb.7",
+    "title": "Go upload-url local implementation candidate",
+    "requires_explicit_user_approval": true,
+    "summary": "Implement only a disabled-by-default, copied-data POST /api/upload/url Go candidate behind its own flag, using the 23.8-thumb.6 safety/parity fixtures before any Pillow removal or live routing."
+  }
+}

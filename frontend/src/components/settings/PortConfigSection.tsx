@@ -21,6 +21,9 @@ export function PortConfigSection() {
   const [preferredPort, setPreferredPort] = useState(8080);
   const [fallbackEnabled, setFallbackEnabled] = useState(true);
   const [fallbackRange, setFallbackRange] = useState(10);
+  const currentUrl = config && typeof window !== 'undefined'
+    ? `${window.location.protocol}//${window.location.hostname}:${config.current_port}`
+    : null;
 
   const loadConfig = async () => {
     setIsLoading(true);
@@ -91,8 +94,18 @@ export function PortConfigSection() {
               <p className="text-sm text-success">
                 目前使用端口: <strong>{config.current_port}</strong>
               </p>
+              {currentUrl && (
+                <p className="mt-1 text-xs text-text-muted">
+                  目前可用網址：<span className="font-mono text-text-secondary">{currentUrl}</span>
+                </p>
+              )}
             </div>
           )}
+
+          <div className="rounded-lg border border-border-subtle bg-bg-elevated/60 p-3 text-xs text-text-muted">
+            <p>這項設定主要用於本機啟動與 Raspberry Pi 部署；若頁面已完全連不上，必須先在主機上修改 `.port_config` 或啟動參數後重啟 Prism。</p>
+            <p className="mt-1">啟用自動備用時，實際端口會顯示在啟動 console / log；連進頁面後也會在此處顯示目前端口與網址。</p>
+          </div>
 
           {/* Preferred Port */}
           <div>
@@ -176,8 +189,8 @@ export function PortConfigSection() {
           </button>
 
           <p className="text-xs text-text-muted">
-            💡 端口設定變更需要重新啟動應用程式才會生效。Windows 更新後某些端口可能暫時無法使用，
-            建議開啟自動備用功能。
+            端口設定變更需要重新啟動應用程式才會生效。Windows 更新後某些端口可能暫時無法使用，
+            一般本機使用建議保留自動備用。
           </p>
         </div>
       )}

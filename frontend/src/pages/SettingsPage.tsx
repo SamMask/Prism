@@ -15,6 +15,7 @@ import { UpdateSection } from '../components/settings/UpdateSection';
 import { ServerDashboardSection } from '../components/settings/ServerDashboardSection';
 
 interface SystemStats {
+  version?: string;
   notes_count: number;
   categories_count: number;
   tags_count: number;
@@ -88,6 +89,7 @@ export function SettingsPage() {
       const data = await response.json();
       if (data.status === 'ok') {
         setStats({
+          version: data.version,
           notes_count: data.stats?.notes_count || 0,
           categories_count: data.stats?.categories_count || 0,
           tags_count: data.stats?.tags_count || 0,
@@ -145,7 +147,7 @@ export function SettingsPage() {
 
           {activeTab === 'data' && (
             <>
-              <SectionPanel title="資料庫維護" icon={<Database size={20} className="text-warning" />} testId="settings-data-maintenance">
+              <SectionPanel title="資料庫維護（進階）" icon={<Database size={20} className="text-warning" />} testId="settings-data-maintenance">
                 <SystemMaintenance />
               </SectionPanel>
               <SystemStatsSection
@@ -182,11 +184,14 @@ export function SettingsPage() {
             <SectionPanel title="關於" icon={<Info size={20} className="text-primary" />} testId="settings-about">
               <div className="space-y-2 text-text-secondary">
                 <p><strong className="text-text-primary">Prism</strong></p>
-                <p>版本: 2.0.0-alpha</p>
+                <p>版本: {stats?.version || '2.4.9'}</p>
                 <p>前端: Vite + React + TypeScript + Tailwind CSS</p>
                 <p>後端: Flask + SQLite (FTS5)</p>
                 <p className="text-text-muted text-sm pt-2">
-                  本地知識管理系統，所有資料儲存在您的電腦上
+                  本地優先的知識管理系統；目前穩定使用路徑是 Source / Dev mode 與 Raspberry Pi 部署。
+                </p>
+                <p className="text-text-muted text-sm">
+                  使用者資料保存在 `knowledge.db`、`static/uploads` 與 `docs/attachments`；本機更新程式時不應覆蓋這些資料目錄。
                 </p>
               </div>
             </SectionPanel>
