@@ -26,7 +26,7 @@ def test_b_runtime_ownership_closure_is_final_retained_python_without_runtime_mu
     assert contract["closure_decision"]["no_python_packaging_track_closed"] is True
     assert contract["final_closure"]["no_auto_next_detail"] is True
     assert contract["final_closure"]["no_b_next"] is True
-    assert contract["final_closure"]["no_start_c_d_e"] is True
+    assert contract["final_closure"]["no_start_c_d_e_from_b_closure"] is True
     assert "phase23-go-ownership-closure-audit.json" in contract["source_contracts"][0]
     assert all(changed is False for changed in runtime.values())
     assert runtime["python_removed"] is False
@@ -95,7 +95,7 @@ def test_docs_record_b_final_closure_without_active_next_detail():
     assert "docs/contracts/phase23-python-runtime-ownership-closure.json" in todo
     assert "B-next.1 Notes write/actions/history/batch packaged-runtime ownership bundle" in todo
     assert "不再新增或自動排 `B-next.*`" in todo
-    assert "C/D/E 不啟動" in todo
+    assert "C/D/E 不從 B 自動啟動" in todo
     assert "Phase 23 Python packaging removal roadmap B runtime ownership closure is complete as `completed_final_retained_python_closure`" in architecture
     assert "no further B-next item is created automatically" in architecture
     assert "`B. Runtime ownership closure for Python removal` is complete as `completed_final_retained_python_closure`" in go_report

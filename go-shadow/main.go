@@ -128,6 +128,7 @@ func main() {
 	mux.HandleFunc("/api/notes", srv.handleNotes)
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.HandleFunc("/api/attachments/", srv.handleAttachmentDetail)
+	mux.HandleFunc("/api/system/migration-status", srv.handleMigrationStatus)
 	mux.HandleFunc("/api/upload/url", srv.handleUploadURL)
 	mux.HandleFunc("/api/upload", srv.handleUpload)
 	mux.Handle("/", staticHandler())
@@ -276,6 +277,30 @@ func schemaVersion(db *sql.DB) (int, error) {
 	return version, nil
 }
 
+type migrationDefinition struct {
+	Version int
+	Name    string
+}
+
+var migrationDefinitions = []migrationDefinition{
+	{1, "add_is_pinned"},
+	{2, "add_cover_position"},
+	{3, "add_editor_layout"},
+	{4, "add_is_archived"},
+	{5, "add_sort_order"},
+	{6, "add_category_id"},
+	{7, "populate_category_id"},
+	{8, "add_note_attachments"},
+	{9, "add_text_embedding"},
+	{10, "add_ai_metadata_and_lineage"},
+	{11, "create_embeddings_table"},
+	{12, "kill_notes_type"},
+	{13, "create_ai_tasks_table"},
+	{14, "strip_ai_features"},
+	{15, "add_prompt_params"},
+	{16, "normalize_editor_layout"},
+}
+
 func staticHandler() http.Handler {
 	sub, err := fs.Sub(embeddedDist, "web/dist")
 	if err != nil {
@@ -376,6 +401,40 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 			"expected_schema_version": expectedSchemaVersion,
 			"sqlite_query_only":       s.runtime.sqliteQueryOnly,
 			"api_surface":             s.apiSurface(),
+		},
+	})
+}
+
+func (s *server) handleMigrationStatus(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) {
+		return
+	}
+	current, err := schemaVersion(s.db)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	latest := 0
+	completed := []response{}
+	pending := []response{}
+	for _, migration := range migrationDefinitions {
+		if migration.Version > latest {
+			latest = migration.Version
+		}
+		item := response{"version": migration.Version, "name": migration.Name}
+		if migration.Version > current {
+			pending = append(pending, item)
+		} else {
+			completed = append(completed, item)
+		}
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"current_version": current,
+			"latest_version":  latest,
+			"completed":       completed,
+			"pending":         pending,
 		},
 	})
 }

@@ -1,0 +1,120 @@
+{
+  "phase": "python-packaging-removal-C",
+  "title": "Go packaged runtime release candidate",
+  "status": "completed_release_candidate",
+  "completed_on": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-python-runtime-ownership-closure.json",
+    "docs/contracts/phase23-go-local-smoke-artifact-release-boundary.json",
+    "docs/contracts/phase23-b-next-notes-write-bundle.json",
+    "docs/contracts/phase23-b-next-notes-live-default-media-boundary.json"
+  ],
+  "risk_level": "P0 safety-critical",
+  "no_auto_next_detail": true,
+  "no_c_next": true,
+  "runtime_changes": {
+    "go_code_changed": true,
+    "python_route_code_changed": false,
+    "schema_changed": false,
+    "production_db_written": false,
+    "production_files_mutated": false,
+    "pi_deploy": false,
+    "caddy_or_service_change": false,
+    "systemd_change": false,
+    "frontend_default_changed": false,
+    "python_removed": false,
+    "public_exposure_expanded": false
+  },
+  "release_candidate": {
+    "windows_artifact": "build/go-runtime/prism-go-runtime.exe",
+    "linux_arm64_artifact": "build/go-runtime/prism-go-runtime-linux-arm64",
+    "build_script": "scripts/build_go_runtime.ps1",
+    "smoke_script": "scripts/smoke_go_local_artifact.ps1",
+    "evidence_file": "build/go-local-smoke/evidence.json",
+    "python_or_venv_required_by_artifact": false,
+    "external_data_dir_required": true,
+    "source_db_hash_guard": true,
+    "smoke_scope": "repo build/ only with copied DB and copied data dir"
+  },
+  "artifact_smoke_coverage": {
+    "health": [
+      "GET /healthz reports schema_version, expected_schema_version, sqlite_query_only, and api_surface"
+    ],
+    "migration_status": [
+      "GET /api/system/migration-status returns current_version, latest_version, completed, and pending using Go read-only schema metadata"
+    ],
+    "read": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes?per_page=1",
+      "embedded SPA index.html"
+    ],
+    "write_candidate": [
+      "Default artifact rejects tag and notes writes with 405",
+      "Explicit copied-DB candidate enables tag/category/notes writes",
+      "POST /api/notes, PUT /api/notes/<id>, GET /api/notes/<id>/history, DELETE /api/notes/<id>"
+    ],
+    "file_read_candidate": [
+      "Default artifact rejects attachment text read with 405",
+      "Explicit --enable-attachment-text-read candidate keeps SQLite query_only=true",
+      "GET /api/attachments/<id> reads a copied text attachment from copied data dir"
+    ],
+    "thumbnail": [
+      "Built artifact encodes a local PNG to _thumb.webp via --thumbnail-input / --thumbnail-output",
+      "Output has RIFF/WEBP signature"
+    ],
+    "data_guards": [
+      "Source knowledge.db is read only for copying",
+      "Source knowledge.db SHA256 remains unchanged after smoke",
+      "Smoke cleanup is restricted to repo build/"
+    ]
+  },
+  "implementation": {
+    "go_runtime": "go-shadow/main.go",
+    "new_go_route": "GET /api/system/migration-status",
+    "new_go_route_mode": "read-only, no migration runner, no Schema_Meta writes",
+    "smoke_seed": "scripts/smoke_go_local_artifact.ps1 creates copied attachment fixture through Go-only seed code under build/go-local-smoke",
+    "build_outputs": [
+      "Windows amd64 executable",
+      "linux/arm64 executable"
+    ]
+  },
+  "not_authorized_by_C": [
+    "Deploy to Pi",
+    "Edit or reload Caddy",
+    "Change systemd unit or service owner",
+    "Write production knowledge.db",
+    "Mutate production uploads or attachments",
+    "Change frontend default API target",
+    "Remove Python backend",
+    "Start D. Live cutover and rollback proof",
+    "Start E. Python package deletion",
+    "Create C-next automatically",
+    "Create any automatic next detail"
+  ],
+  "verification_contract": {
+    "local_smoke": [
+      "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_local_artifact.ps1"
+    ],
+    "targeted_pytest": [
+      "pytest tests/test_phase23_go_packaged_runtime_release_candidate.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_go_local_smoke_artifact_release_boundary.py -v",
+      "pytest tests/test_phase23_python_runtime_ownership_closure.py -v",
+      "pytest tests/test_phase23_b_next_notes_write_bundle.py -v",
+      "pytest tests/test_phase23_b_next_notes_live_default_media_boundary.py -v"
+    ],
+    "go_tests": [
+      "cd go-shadow && go test ./..."
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  }
+}

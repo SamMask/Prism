@@ -186,6 +186,55 @@ func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 	}
 }
 
+func TestMigrationStatusHandlerMatchesPythonShapeAndKeepsQueryOnly(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
+	request := httptest.NewRequest(http.MethodGet, "/api/system/migration-status", nil)
+	recorder := httptest.NewRecorder()
+	srv.handleMigrationStatus(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected migration status 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected JSON response: %v", err)
+	}
+	if payload["status"] != "success" {
+		t.Fatalf("unexpected status payload: %#v", payload)
+	}
+	data := payload["data"].(map[string]any)
+	if data["current_version"].(float64) != 16 {
+		t.Fatalf("unexpected current version: %#v", data)
+	}
+	if data["latest_version"].(float64) != 16 {
+		t.Fatalf("unexpected latest version: %#v", data)
+	}
+	completed := data["completed"].([]any)
+	pending := data["pending"].([]any)
+	if len(completed) != 16 {
+		t.Fatalf("expected 16 completed migrations, got %d", len(completed))
+	}
+	if len(pending) != 0 {
+		t.Fatalf("expected no pending migrations, got %#v", pending)
+	}
+	last := completed[len(completed)-1].(map[string]any)
+	if last["name"] != "normalize_editor_layout" {
+		t.Fatalf("unexpected last migration: %#v", last)
+	}
+
+	_, err = db.Exec("INSERT INTO Notes (title, content) VALUES ('blocked', 'query only')")
+	if err == nil {
+		t.Fatal("migration status must keep DB writes blocked")
+	}
+}
+
 func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true, false, false, false, false, false)

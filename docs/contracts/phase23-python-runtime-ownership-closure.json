@@ -40,12 +40,12 @@
     "close_mode": "retained_python_final",
     "no_auto_next_detail": true,
     "no_b_next": true,
-    "no_start_c_d_e": true,
+    "no_start_c_d_e_from_b_closure": true,
     "simple_explanation": "B is closed by deciding not to pursue Python removal from the current packaged runtime; unresolved no-Python gaps remain retained Python responsibilities, not a queue of automatic new B-next items.",
     "what_this_means": [
       "The normal packaged/runtime owner remains Python Flask plus the existing frontend build.",
       "Go local/copied-DB candidates remain evidence and optional future material, not live/default owners.",
-      "C. Go packaged runtime release candidate, D. live cutover, and E. Python package deletion are not active follow-ups from this B closure."
+      "C. Go packaged runtime release candidate, D. live cutover, and E. Python package deletion are not automatic follow-ups from this B closure; a later explicit user authorization is required."
     ]
   },
   "classification_rules": {

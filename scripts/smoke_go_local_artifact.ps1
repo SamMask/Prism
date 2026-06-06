@@ -130,6 +130,75 @@ function Stop-GoArtifact($Process) {
     }
 }
 
+function Add-AttachmentFixture([string]$DbPath, [string]$DataDir, [string]$SeedProgram) {
+    $seedSource = @'
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"os"
+	"path/filepath"
+
+	_ "modernc.org/sqlite"
+)
+
+func main() {
+	if len(os.Args) != 3 {
+		panic("usage: seed_attachment_fixture <db> <data-dir>")
+	}
+	dbPath := os.Args[1]
+	dataDir := os.Args[2]
+	relPath := "docs/attachments/c_release_candidate_file.md"
+	attachmentDir := filepath.Join(dataDir, "docs", "attachments")
+	if err := os.MkdirAll(attachmentDir, 0755); err != nil {
+		panic(err)
+	}
+	if err := os.WriteFile(filepath.Join(dataDir, filepath.FromSlash(relPath)), []byte("C release candidate attachment\nsecond line"), 0644); err != nil {
+		panic(err)
+	}
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		panic(err)
+	}
+	defer db.Close()
+	var noteID int64
+	if err := db.QueryRow("SELECT id FROM Notes ORDER BY id LIMIT 1").Scan(&noteID); err != nil {
+		panic(err)
+	}
+	result, err := db.Exec(
+		"INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted) VALUES (?, ?, 'md', 'C Release Candidate File', 48, 0)",
+		noteID,
+		relPath,
+	)
+	if err != nil {
+		panic(err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Print(id)
+}
+'@
+    Set-Content -Path $SeedProgram -Value $seedSource -Encoding UTF8
+    Push-Location (Join-Path $repoRoot "go-shadow")
+    try {
+        $seedOutput = & go run $SeedProgram $DbPath $DataDir
+        if ($LASTEXITCODE -ne 0) {
+            throw "Attachment fixture seed failed with exit code $LASTEXITCODE"
+        }
+    }
+    finally {
+        Pop-Location
+    }
+    $attachmentIdText = ($seedOutput | Out-String).Trim()
+    if (-not ($attachmentIdText -match '^\d+$')) {
+        throw "Attachment fixture seed returned invalid id: $attachmentIdText"
+    }
+    return [int]$attachmentIdText
+}
+
 if (-not $SkipBuild) {
     & (Join-Path $repoRoot "scripts/build_go_runtime.ps1") -OutputDir $BuildOutputDir
 }
@@ -138,6 +207,10 @@ $outDir = Resolve-RepoPath $BuildOutputDir
 $artifact = Join-Path $outDir "prism-go-runtime.exe"
 if (-not (Test-Path $artifact)) {
     throw "Missing local Go artifact: $artifact"
+}
+$linuxArm64Artifact = Join-Path $outDir "prism-go-runtime-linux-arm64"
+if (-not (Test-Path $linuxArm64Artifact)) {
+    throw "Missing linux/arm64 Go artifact: $linuxArm64Artifact"
 }
 
 $sourceDbPath = Resolve-RepoPath $SourceDb
@@ -168,6 +241,8 @@ $readDb = Join-Path $dataDir "prism_local_smoke_read_dev.db"
 $writeDb = Join-Path $dataDir "prism_local_smoke_write_dev.db"
 Copy-Item -LiteralPath $sourceDbPath -Destination $readDb -Force
 Copy-Item -LiteralPath $sourceDbPath -Destination $writeDb -Force
+$attachmentSeedProgram = Join-Path $smokeRootPath "seed_attachment_fixture.go"
+$attachmentId = Add-AttachmentFixture $readDb $dataDir $attachmentSeedProgram
 
 $thumbnailInput = Join-Path $dataDir "pillow_closure_source.png"
 $thumbnailOutput = Join-Path $dataDir "static/uploads/pillow_closure_thumb.webp"
@@ -218,6 +293,13 @@ try {
             throw "Read smoke failed for $endpoint with HTTP $($response.StatusCode)"
         }
     }
+    $migration = Invoke-HttpJson "$readBase/api/system/migration-status"
+    if ($migration.StatusCode -ne 200) {
+        throw "Migration-status smoke failed with HTTP $($migration.StatusCode): $($migration.Raw)"
+    }
+    if ($migration.Body.data.current_version -ne 16 -or $migration.Body.data.latest_version -ne 16 -or @($migration.Body.data.pending).Count -ne 0) {
+        throw "Migration-status smoke drifted: $($migration.Raw)"
+    }
 
     $spa = Invoke-HttpJson "$readBase/"
     if ($spa.StatusCode -ne 200 -or -not $spa.Raw.ToLowerInvariant().Contains("<html")) {
@@ -232,9 +314,39 @@ try {
     if ($disabledNotesWrite.StatusCode -ne 405) {
         throw "Default runtime unexpectedly accepted notes write candidate route"
     }
+    $disabledAttachmentTextRead = Invoke-HttpJson "$readBase/api/attachments/$attachmentId"
+    if ($disabledAttachmentTextRead.StatusCode -ne 405) {
+        throw "Default runtime unexpectedly accepted attachment text read candidate route"
+    }
 }
 finally {
     Stop-GoArtifact $readProc
+}
+
+$fileReadPort = Get-FreeTcpPort
+$fileReadBase = "http://127.0.0.1:$fileReadPort"
+$fileReadProc = $null
+try {
+    $fileReadProc = Start-GoArtifact $artifact @(
+        "--db", $readDb,
+        "--addr", "127.0.0.1:$fileReadPort",
+        "--data-dir", $dataDir,
+        "--enable-attachment-text-read"
+    ) "file-read-candidate"
+    $fileReadHealth = Wait-ForGoRuntime $fileReadBase
+    if ($fileReadHealth.Body.runtime.sqlite_query_only -ne $true) {
+        throw "File-read candidate must keep SQLite query_only enabled"
+    }
+    if ($fileReadHealth.Body.runtime.api_surface -ne "get-read-only+local-attachment-text-read") {
+        throw "File-read candidate API surface drifted: $($fileReadHealth.Body.runtime.api_surface)"
+    }
+    $attachmentRead = Invoke-HttpJson "$fileReadBase/api/attachments/$attachmentId"
+    if ($attachmentRead.StatusCode -ne 200 -or $attachmentRead.Body.data.content -ne "C release candidate attachment`nsecond line") {
+        throw "Attachment text read smoke failed with HTTP $($attachmentRead.StatusCode): $($attachmentRead.Raw)"
+    }
+}
+finally {
+    Stop-GoArtifact $fileReadProc
 }
 
 $writePort = Get-FreeTcpPort
@@ -320,6 +432,7 @@ if ($sourceHashAfter -ne $sourceHashBefore) {
 $evidence = [pscustomobject]@{
     status = "passed"
     artifact = $artifact
+    linux_arm64_artifact = $linuxArm64Artifact
     smoke_root = $smokeRootPath
     source_db = $sourceDbPath
     source_db_sha256 = $sourceHashAfter
@@ -328,9 +441,19 @@ $evidence = [pscustomobject]@{
         base_url = $readBase
         sqlite_query_only = $true
         api_surface = "get-read-only"
-        endpoints = @("/healthz", "/", "/api/test", "/api/categories", "/api/tags", "/api/notes?per_page=1")
+        endpoints = @("/healthz", "/", "/api/test", "/api/system/migration-status", "/api/categories", "/api/tags", "/api/notes?per_page=1")
         disabled_write_status = 405
         disabled_notes_write_status = 405
+        disabled_attachment_text_read_status = 405
+    }
+    file_read_candidate_smoke = @{
+        base_url = $fileReadBase
+        flags = @("--enable-attachment-text-read")
+        sqlite_query_only = $true
+        api_surface = "get-read-only+local-attachment-text-read"
+        route = "GET /api/attachments/<id>"
+        db_scope = "copied DB only"
+        data_scope = "copied data dir only"
     }
     write_candidate_smoke = @{
         base_url = $writeBase
