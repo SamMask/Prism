@@ -1,0 +1,132 @@
+{
+  "phase": "python-packaging-removal-D",
+  "title": "Live cutover and rollback proof",
+  "status": "completed_rollback_proof_no_permanent_cutover",
+  "completed_on": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-packaged-runtime-release-candidate.json",
+  "risk_level": "P0 safety-critical",
+  "no_auto_next_detail": true,
+  "no_d_next": true,
+  "result": {
+    "permanent_cutover": false,
+    "rollback_completed": true,
+    "normal_runtime_owner_after_D": "retained Python prism.service",
+    "reason_no_permanent_cutover": "The Go release candidate can serve read/status routes and local candidates, but live upload/delete/cleanup/import/export/server/migration-runner ownership is still retained by Python. D therefore proves a controlled live route cutover and rollback rather than promoting Go as the full runtime owner."
+  },
+  "preflight": {
+    "host": "PI5Mask24",
+    "python_service": "prism.service active/enabled on 127.0.0.1:5000",
+    "caddy_service": "caddy active/enabled with valid /etc/caddy/Caddyfile",
+    "existing_go_sidecar": "prism-go-readonly.service active on 127.0.0.1:5002",
+    "existing_live_go_routes_before_D": [
+      "GET /api/test",
+      "GET /api/categories",
+      "GET /api/tags",
+      "GET /api/notes",
+      "GET /api/notes/<id>"
+    ]
+  },
+  "backups": {
+    "timestamp": "20260606_152013",
+    "db": "/home/mask070924/prism/backups/prism_pre_D_cutover_20260606_152013.db",
+    "data_snapshot": "/home/mask070924/prism/backups/prism_data_pre_D_cutover_20260606_152013.tar.gz",
+    "caddyfile": "/home/mask070924/prism/backups/Caddyfile.prism-pre-D-cutover-20260606_152013.bak",
+    "python_service_unit": "/home/mask070924/prism/backups/prism.service.pre-D-cutover-20260606_152013.bak",
+    "go_sidecar_unit": "/home/mask070924/prism/backups/prism-go-readonly.service.pre-D-cutover-20260606_152013.bak",
+    "go_sidecar_binary": "/home/mask070924/prism/backups/prism-go-runtime-linux-arm64.pre-D-cutover-20260606_152013.bak"
+  },
+  "temporary_cutover": {
+    "artifact_deployed_temporarily": "build/go-runtime/prism-go-runtime-linux-arm64",
+    "artifact_sha256": "be2681ae95abba505493f36f7e93ec591406eecb2dcd6c1440afdc0d95a50fa7",
+    "sidecar_binary_path": "/home/mask070924/prism-go-readonly/prism-go-runtime-linux-arm64",
+    "service_restarted": "prism-go-readonly.service",
+    "caddy_route_added_temporarily": "GET /api/system/migration-status was added to the existing Go read matcher",
+    "caddy_reload": "sudo caddy validate --config /etc/caddy/Caddyfile && sudo systemctl reload caddy",
+    "production_db_write_flags": false,
+    "sqlite_query_only": true
+  },
+  "live_cutover_evidence": {
+    "go_routed_headers": {
+      "GET /api/test": "HTTP 200 with x-prism-go-read-routing: hit",
+      "GET /api/categories": "HTTP 200 with x-prism-go-read-routing: hit",
+      "GET /api/tags": "HTTP 200 with x-prism-go-read-routing: hit",
+      "GET /api/notes?per_page=1": "HTTP 200 with x-prism-go-read-routing: hit",
+      "GET /api/system/migration-status": "HTTP 200 with x-prism-go-read-routing: hit"
+    },
+    "python_retained_headers": {
+      "GET /api/server/version": "HTTP 200 from Werkzeug/Python with no x-prism-go-read-routing header",
+      "GET /api/export/json": "HTTP 200 application/json from Werkzeug/Python with no x-prism-go-read-routing header",
+      "GET /api/export/markdown": "HTTP 200 application/zip from Werkzeug/Python with no x-prism-go-read-routing header",
+      "POST /api/upload without Origin": "HTTP 403 CSRF from Werkzeug/Python with no x-prism-go-read-routing header",
+      "POST /api/notes/import/md without Origin": "HTTP 403 CSRF from Werkzeug/Python with no x-prism-go-read-routing header"
+    },
+    "migration_status": {
+      "current_version": 16,
+      "latest_version": 16,
+      "pending": []
+    },
+    "journal": {
+      "go_sidecar": "Started cleanly and logged 200 responses for temporary Go-routed read/status requests",
+      "python": "Handled retained Python export/upload/import/server routes during proof",
+      "caddy": "Reloaded with valid config"
+    }
+  },
+  "rollback_evidence": {
+    "caddyfile_restored": true,
+    "restored_caddy_matcher": "path /api/test /api/categories /api/tags /api/notes",
+    "migration_status_route_removed_from_go_matcher": true,
+    "live_migration_status_after_rollback": "HTTP 200 from Werkzeug/Python with no x-prism-go-read-routing header",
+    "existing_pre_D_go_read_route_after_rollback": "GET /api/test still returns x-prism-go-read-routing: hit, matching the pre-D sidecar state",
+    "go_sidecar_binary_restored_sha256": "2b810b3c2de1c233ee0e8772ee4555d03a837761cc7304a27090a4d91725cc34",
+    "db_backup_sha256": "14dc194050ae22fe25c383802738b8075156da9cbeb28f50c32a9be3e6471e39",
+    "db_after_rollback_sha256": "14dc194050ae22fe25c383802738b8075156da9cbeb28f50c32a9be3e6471e39",
+    "services_after_rollback": [
+      "prism.service active",
+      "caddy active",
+      "prism-go-readonly.service active"
+    ]
+  },
+  "not_promoted_by_D": [
+    "Full Go runtime ownership",
+    "Go live writes",
+    "Go upload/delete/cleanup owner",
+    "Go import/export owner",
+    "Go migration runner",
+    "Frontend default API target change",
+    "Systemd primary service rewrite",
+    "Python backend removal",
+    "Python package deletion",
+    "Public exposure expansion",
+    "Create D-next automatically",
+    "Create any automatic next detail"
+  ],
+  "verification_contract": {
+    "local_artifact_smoke": [
+      "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_local_artifact.ps1"
+    ],
+    "pi_live_proof": [
+      "Pi preflight service/Caddy validation",
+      "DB/data/Caddy/service/binary backups",
+      "Temporary Go sidecar artifact replacement",
+      "Temporary Caddy route expansion for GET /api/system/migration-status",
+      "Live route/header verification",
+      "Rollback Caddyfile and sidecar binary",
+      "DB hash equality after rollback",
+      "Post-rollback live route/header verification"
+    ],
+    "targeted_pytest": [
+      "pytest tests/test_phase23_go_live_cutover_rollback_proof.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_go_packaged_runtime_release_candidate.py -v",
+      "pytest tests/test_phase23_python_runtime_ownership_closure.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  }
+}
