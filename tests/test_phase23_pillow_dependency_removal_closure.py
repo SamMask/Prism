@@ -12,6 +12,8 @@ STABILIZATION_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-final-stabi
 REQUIREMENTS_PATH = ROOT / "requirements.txt"
 REQUIREMENTS_PI_PATH = ROOT / "requirements-pi.txt"
 START_BAT_PATH = ROOT / "scripts" / "start.bat"
+SMOKE_SCRIPT_PATH = ROOT / "scripts" / "smoke_go_local_artifact.ps1"
+README_PATH = ROOT / "README.md"
 UPLOAD_ROUTE_PATH = ROOT / "routes" / "upload.py"
 IMPORT_ROUTE_PATH = ROOT / "routes" / "notes" / "import_.py"
 SEQUENCE_UPLOAD_PATH = ROOT / "docs" / "SEQUENCE-UPLOAD.md"
@@ -65,41 +67,50 @@ def test_pillow_dependency_removal_status_matches_actual_sources():
     upload_route = UPLOAD_ROUTE_PATH.read_text(encoding="utf-8")
     import_route = IMPORT_ROUTE_PATH.read_text(encoding="utf-8")
     sequence = SEQUENCE_UPLOAD_PATH.read_text(encoding="utf-8")
+    readme = README_PATH.read_text(encoding="utf-8")
+    smoke_script = SMOKE_SCRIPT_PATH.read_text(encoding="utf-8")
 
-    assert closure["status"] == "pending_incomplete"
+    assert closure["status"] == "completed"
     assert closure["not_a_new_plan_gate"] is True
-    assert semantics["candidate_done"] == "partial_yes"
-    assert semantics["live_owner"] == "no"
-    assert semantics["dependency_removed"] == "no"
+    assert semantics["candidate_done"] == "yes_for_thumbnail_dependency_closure"
+    assert semantics["live_owner"] == "retained_python_routes_delegate_thumbnail_generation_to_go_helper"
+    assert semantics["dependency_removed"] == "yes_for_pillow"
 
     assert "Pillow" not in requirements
-    assert "Pillow" in requirements_pi
+    assert "Pillow" not in requirements_pi
     assert "from PIL import Image" not in upload_route
     assert "from PIL import Image" not in import_route
     assert "PIL_AVAILABLE" not in upload_route
     assert "PIL_AVAILABLE" not in import_route
     assert "import PIL" not in start_bat
     assert "Pillow" not in sequence
+    assert "Pillow（可選" not in readme
+    assert "Python runtime 不依賴 Pillow" in readme
+    assert "--thumbnail-input" in smoke_script
+    assert "--thumbnail-output" in smoke_script
+    assert "pillow_closure_thumb.webp" in smoke_script
+    assert "RIFF" in smoke_script and "WEBP" in smoke_script
 
     assert evidence["requirements_txt_contains_pillow"] is False
-    assert evidence["requirements_pi_txt_contains_pillow"] is True
+    assert evidence["requirements_pi_txt_contains_pillow"] is False
     assert evidence["python_upload_imports_pil"] is False
     assert evidence["python_import_helper_imports_pil"] is False
     assert evidence["start_bat_imports_pil"] is False
     assert evidence["sequence_upload_mentions_pillow"] is False
-    assert evidence["fresh_packaged_runtime_without_python_pillow_proven"] is False
+    assert evidence["readme_mentions_pillow_runtime_dependency"] is False
+    assert evidence["fresh_packaged_runtime_without_python_pillow_proven"] is True
 
 
-def test_todo_keeps_pillow_closure_pending_and_lists_A_completion_criteria():
+def test_todo_records_pillow_closure_complete_and_keeps_next_work_b_to_e():
     todo = TODO_PATH.read_text(encoding="utf-8")
 
-    assert "23.8-thumb Go WebP thumbnail ownership / Pillow removal track — Candidate Partial, Dependency Removal Pending" in todo
-    assert "- [ ] **Pillow dependency removal closure**" in todo
-    assert "- [ ] **A. Pillow dependency removal closure**" in todo
-    assert "requirements-pi.txt` 仍含 `Pillow`" in todo
-    assert "fresh packaged runtime 不安裝 Python/Pillow 也能產生 `_thumb.webp` 尚未證明" in todo
-    assert "移除 `requirements.txt` / `requirements-pi.txt` 的 Pillow dependency" in todo
-    assert "證明 fresh packaged runtime 不安裝 Python/Pillow 也能產生 `_thumb.webp`" in todo
+    assert "23.8-thumb Go WebP thumbnail ownership / Pillow removal track — Pillow Dependency Removal Closed" in todo
+    assert "- [x] **Pillow dependency removal closure**" in todo
+    assert "- [x] **A. Pillow dependency removal closure**" in todo
+    assert "`requirements.txt` 與 `requirements-pi.txt` 均不含 Pillow" in todo
+    assert "fresh local packaged artifact 以 `--thumbnail-input` / `--thumbnail-output` 產生 `_thumb.webp`" in todo
+    assert "`dependency_removed: yes for Pillow`" in todo
+    assert "- [x] **B. Runtime ownership closure for Python removal — final retained-Python closure" in todo
     assert "不得新增 decision gate、route-by-route planning gate、`23.8-thumb.8/9/10`" in todo
     assert "23.8-thumb.8**" not in todo
 
@@ -116,11 +127,13 @@ def test_23_10_retained_python_is_not_dependency_removed_or_pure_go_packaging():
     assert closure["status"] == "closed_with_retained_python_normal_path"
     assert "not Python removal and not pure-Go packaging completion" in closure["summary"]
     assert semantics["live_owner"] == "python_remains_primary_normal_runtime_owner"
-    assert semantics["dependency_removed"] == "no_for_python_and_no_for_pillow_until_the_A_closure_criteria_pass"
+    assert semantics["dependency_removed"] == "no_for_python_yes_for_pillow_after_A_closure"
     assert "python-packaging-removal-roadmap-A-E" in next_steps
     assert "Do not add decision gates" in next_steps["python-packaging-removal-roadmap-A-E"]["scope"]
+    assert "B runtime ownership closure is the active blocked item" in next_steps["python-packaging-removal-roadmap-A-E"]["scope"]
 
     assert "23.10 retained-Python stabilization 不是 Python removal" in todo
+    assert "Pillow dependency removal 已在 A 完成" in todo
     assert "不是 Python removal and not pure-Go packaging completion" not in todo
     assert "retained-Python stabilization is not Python removal and not pure-Go packaging completion" in architecture
     assert "retained-Python stabilization is not Python removal and not pure-Go packaging completion" in go_report

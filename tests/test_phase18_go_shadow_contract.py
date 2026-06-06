@@ -232,7 +232,8 @@ def test_go_shadow_scaffold_is_read_only():
     assert '"enable-thumbnail-write"' in main_go
     assert "handleUpload" in main_go
     assert "Thumbnail write route is disabled" in main_go
-    assert "http.MethodDelete" not in main_go
+    assert "enableNotesWrite" in main_go
+    assert "Notes write route is disabled" in main_go
 
 
 def test_go_shadow_python_response_diff(client, app, temp_db, monkeypatch):

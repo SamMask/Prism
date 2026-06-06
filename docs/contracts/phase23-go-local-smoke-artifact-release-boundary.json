@@ -42,21 +42,40 @@
         "GET /api/categories",
         "GET /api/tags",
         "GET /api/notes?per_page=1",
-        "PUT /api/tags/<id> remains 405 when write flag is disabled"
+        "PUT /api/tags/<id> remains 405 when write flag is disabled",
+        "POST /api/notes remains 405 when notes write flag is disabled"
       ]
     },
     "write_candidate_smoke": {
       "flags": [
         "--enable-tag-write",
-        "--enable-category-write"
+        "--enable-category-write",
+        "--enable-notes-write"
       ],
       "sqlite_query_only": false,
       "db_scope": "copied smoke DB only",
       "checks": [
-        "startup /healthz reports get-read-only+local-tag-write+local-category-write",
+        "startup /healthz reports get-read-only+local-tag-write+local-category-write+local-notes-write",
         "PUT /api/tags/<id> succeeds against copied DB",
         "PUT /api/categories/<id> succeeds against copied DB",
+        "POST /api/notes succeeds against copied DB",
+        "PUT /api/notes/<id> creates history against copied DB",
+        "GET /api/notes/<id>/history succeeds against copied DB",
+        "DELETE /api/notes/<id> succeeds against copied DB",
         "source knowledge.db hash remains unchanged"
+      ]
+    },
+    "thumbnail_helper_smoke": {
+      "flags": [
+        "--thumbnail-input",
+        "--thumbnail-output"
+      ],
+      "output_convention": "_thumb.webp",
+      "checks": [
+        "built Go artifact encodes a local PNG to _thumb.webp",
+        "output exists",
+        "output has RIFF/WEBP signature",
+        "Python/Pillow install is not required for the artifact helper path"
       ]
     }
   },

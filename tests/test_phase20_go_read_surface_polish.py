@@ -39,7 +39,8 @@ def test_phase20_3_go_search_includes_attachment_metadata_without_write_methods(
     assert "http.MethodGet" in main_go
     assert "enableTagWrite" in main_go
     assert "Thumbnail write route is disabled" in main_go
-    assert "http.MethodDelete" not in main_go
+    assert "enableNotesWrite" in main_go
+    assert "Notes write route is disabled" in main_go
 
 
 def test_phase20_3_diff_fixture_covers_attachment_metadata_search():

@@ -1,0 +1,147 @@
+{
+  "phase": "B-next.1",
+  "title": "Notes write/actions/history/batch packaged-runtime ownership bundle",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-python-runtime-ownership-closure.json",
+  "risk_level": "P0 safety-critical",
+  "runtime_change": "local_copied_db_only",
+  "live_execution_authorized": false,
+  "production_db_write": false,
+  "production_files_mutated": false,
+  "pi_deploy": false,
+  "caddy_or_service_change": false,
+  "systemd_change": false,
+  "frontend_default_change": false,
+  "python_backend_removal": false,
+  "b_completion_status_after_final_closure": "closed_retained_python",
+  "why_b_did_not_continue_to_more_b_next_items": [
+    "The Go notes bundle is a local/copied-DB candidate behind an explicit flag, not the default packaged runtime owner.",
+    "Live route ownership, Caddy/systemd rollout, production rollback, CSRF/origin review, and frontend default routing are not authorized.",
+    "Notes delete and batch delete are DB-parity covered here; destructive media file cleanup remains part of the files/uploads/cleanup blocker before no-Python packaging can be claimed.",
+    "Category/tag live create/delete/merge, uploads/attachments, import/export, prompt/wizard options, migrations/schema/db maintenance, frontend static default, and rollback owner remain retained-Python responsibilities under the final B closure instead of becoming automatic B-next work."
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "enable_flag": "--enable-notes-write",
+    "enable_env": "PRISM_GO_ENABLE_NOTES_WRITE=1",
+    "default_runtime_mode": {
+      "sqlite_query_only": true,
+      "api_surface": "get-read-only",
+      "notes_write_enabled": false
+    },
+    "explicit_local_candidate_mode": {
+      "sqlite_query_only": false,
+      "api_surface": "get-read-only+local-notes-write",
+      "copied_db_required": true,
+      "production_like_knowledge_db_still_refused_without_existing_explicit_allow_flag": true
+    }
+  },
+  "owned_local_candidate_routes": [
+    "POST /api/notes",
+    "PUT /api/notes/<id>",
+    "DELETE /api/notes/<id>",
+    "POST /api/notes/<id>/pin",
+    "POST /api/notes/<id>/archive",
+    "POST /api/notes/<id>/duplicate",
+    "PUT /api/notes/reorder",
+    "POST /api/notes/batch/type",
+    "POST /api/notes/batch/tags",
+    "POST /api/notes/batch/delete",
+    "GET /api/notes/<id>/history",
+    "POST /api/notes/<id>/restore/<history_id>",
+    "DELETE /api/notes/<id>/history"
+  ],
+  "parity_contract": {
+    "response_cases": [
+      "Create note with category, remarks, tags, source URLs, and pinned flag",
+      "Update note with content history insertion, category, tags, source URLs, and archive flag",
+      "Pin and archive explicit-state actions",
+      "Duplicate as variant with parent_id",
+      "Reorder sort_order list",
+      "Batch category update",
+      "Batch tag append",
+      "History list, restore, and delete-history",
+      "Batch delete and single delete"
+    ],
+    "state_cases": [
+      "Notes rows match Python after the full bundle flow, excluding timestamp-only drift",
+      "Tags and Note_Tags match Python after create/update/batch/duplicate",
+      "Source_Urls match Python after create/update/duplicate/delete",
+      "Note_History content and diff summaries match Python after update/restore/delete-history",
+      "Failure and disabled-default paths leave copied DB state unchanged"
+    ],
+    "known_local_candidate_limit": "Image file cleanup parity is not promoted by this bundle; media cleanup stays under the files/uploads/cleanup blocker. Notes delete and batch delete intentionally match current Python DB behavior instead of adding new child-row cleanup semantics."
+  },
+  "package_smoke": {
+    "script": "scripts/smoke_go_local_artifact.ps1",
+    "notes_write_coverage": [
+      "Default artifact rejects POST /api/notes with 405",
+      "Explicit notes-write artifact starts against copied DB",
+      "POST /api/notes succeeds on copied DB",
+      "PUT /api/notes/<id> creates history on copied DB",
+      "GET /api/notes/<id>/history succeeds on copied DB",
+      "DELETE /api/notes/<id> succeeds on copied DB"
+    ],
+    "source_db_hash_must_remain_unchanged": true
+  },
+  "not_authorized_by_b_next_1": [
+    "Production knowledge.db write",
+    "Production file mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Live notes write routing gate",
+    "CSRF/origin policy change",
+    "Media file cleanup ownership claim",
+    "Category/tag create/delete/merge Go ownership",
+    "Uploads, attachments, cleanup, import/export, prompt/wizard, migration, system, server, or frontend static ownership",
+    "Start C. Go packaged runtime release candidate",
+    "Start D. Live cutover and rollback proof",
+    "Start E. Python package deletion",
+    "Declare B complete",
+    "Public exposure expansion"
+  ],
+  "remaining_no_python_gaps_closed_as_retained_python_after_b_final": [
+    "Promote or explicitly reject live/default ownership for the notes write bundle",
+    "Close media cleanup side effects for notes delete/batch delete",
+    "Category/tag live create/delete/merge",
+    "Uploads/attachments/raw/delete/cleanup",
+    "Import/export and long-content movement",
+    "Prompt/wizard options",
+    "Migrations/schema status and DB maintenance",
+    "Frontend static/default owner and rollback owner"
+  ],
+  "executed_followup_decision": {
+    "id": "B-next.2",
+    "title": "Notes bundle live/default ownership decision and media-cleanup boundary",
+    "status_after_execution": "completed_decision_no_promotion",
+    "result_contract": "docs/contracts/phase23-b-next-notes-live-default-media-boundary.json",
+    "decision": "Do not promote the B-next.1 notes bundle to live/default owner yet.",
+    "reason": "B-next.1 is copied-DB only and notes delete/batch delete still have Python-owned media cleanup side effects.",
+    "simple_explanation": "Go can edit notes in a test DB, but live deletion also has to safely delete or preserve uploaded image files.",
+    "no_auto_next_detail": true,
+    "final_b_role": "historical decision only; B final closure stops the automatic B-next chain"
+  },
+  "verification_contract": {
+    "targeted_pytest": [
+      "pytest tests/test_phase23_b_next_notes_write_bundle.py -v"
+    ],
+    "go_tests": [
+      "cd go-shadow && go test ./..."
+    ],
+    "package_smoke": [
+      "scripts/smoke_go_local_artifact.ps1"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  }
+}

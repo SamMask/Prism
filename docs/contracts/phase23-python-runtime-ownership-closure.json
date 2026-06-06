@@ -1,0 +1,271 @@
+{
+  "phase": "python-packaging-removal-B",
+  "title": "Runtime ownership closure for Python removal",
+  "status": "completed_final_retained_python_closure",
+  "updated_date": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contracts": [
+    "docs/contracts/phase23-go-ownership-closure-audit.json",
+    "docs/contracts/phase23-python-removal-decision.json",
+    "docs/contracts/phase23-final-stabilization.json",
+    "docs/contracts/phase23-pillow-dependency-removal-closure.json"
+  ],
+  "risk_level": "P0 safety-critical",
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_route_code_changed": false,
+    "schema_changed": false,
+    "production_db_written": false,
+    "production_files_mutated": false,
+    "pi_deploy": false,
+    "prism_service_restarted": false,
+    "caddy_config_changed": false,
+    "caddy_reloaded": false,
+    "systemd_unit_changed": false,
+    "go_route_ownership_expanded": false,
+    "frontend_default_api_target_changed": false,
+    "python_removed": false,
+    "public_exposure_expanded": false
+  },
+  "closure_decision": {
+    "python_removal_ready": false,
+    "b_completion_standard_met": false,
+    "b_closed": true,
+    "no_python_packaging_track_closed": true,
+    "result": "Retain Python as packaged/runtime owner; do not continue automatic Python-removal subgates.",
+    "reason": "Request-time and packaged-runtime surfaces still require Python backend ownership. Pillow dependency removal is complete and Go has local candidates, but normal Prism workflows still rely on Python for live writes, files/uploads/attachments/delete/cleanup, import/export, prompt/wizard options, migrations/schema/db maintenance, frontend static serving, and rollback ownership."
+  },
+  "final_closure": {
+    "closed_on": "2026-06-06",
+    "close_mode": "retained_python_final",
+    "no_auto_next_detail": true,
+    "no_b_next": true,
+    "no_start_c_d_e": true,
+    "simple_explanation": "B is closed by deciding not to pursue Python removal from the current packaged runtime; unresolved no-Python gaps remain retained Python responsibilities, not a queue of automatic new B-next items.",
+    "what_this_means": [
+      "The normal packaged/runtime owner remains Python Flask plus the existing frontend build.",
+      "Go local/copied-DB candidates remain evidence and optional future material, not live/default owners.",
+      "C. Go packaged runtime release candidate, D. live cutover, and E. Python package deletion are not active follow-ups from this B closure."
+    ]
+  },
+  "classification_rules": {
+    "go_owned": "A surface has a verified Go implementation selected for packaged runtime ownership, with parity, rollback, and package smoke evidence.",
+    "removed": "A surface is deleted or no longer user-facing/runtime reachable.",
+    "external_maintenance_tool": "A surface is explicitly outside packaged runtime and must not be required for normal request-time app use.",
+    "request_time_blocker": "A surface is normal app behavior or package startup/runtime behavior and still requires Python."
+  },
+  "surface_classification": {
+    "go_owned_or_package_ready": [
+      {
+        "id": "thumbnail_generation_helper",
+        "classification": "go_owned",
+        "surfaces": [
+          "_thumb.webp generation invoked by retained Python upload/import routes"
+        ],
+        "evidence": "Pillow closure smoke uses the built Go artifact with --thumbnail-input / --thumbnail-output and verifies _thumb.webp output."
+      },
+      {
+        "id": "core_get_read_candidate",
+        "classification": "not_package_ready",
+        "surfaces": [
+          "GET /api/test",
+          "GET /api/categories",
+          "GET /api/tags",
+          "GET /api/notes",
+          "GET /api/notes/<numeric id>"
+        ],
+        "evidence": "Implemented in Go and previously live-routed as read-only, but the retained-Python final state keeps Python as the normal owner and the package path has not selected Go as default runtime owner."
+      }
+    ],
+    "external_maintenance_candidates": [
+      {
+        "id": "server_dashboard_process_controls",
+        "classification": "external_maintenance_candidate",
+        "surfaces": [
+          "GET /api/server/hardware",
+          "GET /api/server/logs",
+          "POST /api/server/restart",
+          "GET /api/server/backup/download",
+          "POST /api/server/backup/rotate",
+          "GET /api/server/backup/list"
+        ],
+        "decision_needed": "May be excluded from future no-Python packaged runtime only if docs/UI hide or relabel them as external maintenance tools and package smoke proves normal app workflows do not require them."
+      },
+      {
+        "id": "developer_update_and_local_config_tools",
+        "classification": "external_maintenance_candidate",
+        "surfaces": [
+          "GET /api/system/check-update",
+          "GET /api/system/port-config",
+          "POST /api/system/port-config",
+          "GET /api/system/startup-preference",
+          "POST /api/system/startup-preference"
+        ],
+        "decision_needed": "May be excluded or replaced by package config files, but current Settings UI still exposes these Python endpoints."
+      }
+    ],
+    "request_time_python_blockers": [
+      {
+        "id": "notes_write_actions_history_batch",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "POST /api/notes",
+          "PUT /api/notes/<id>",
+          "DELETE /api/notes/<id>",
+          "POST /api/notes/<id>/pin",
+          "POST /api/notes/<id>/archive",
+          "POST /api/notes/<id>/duplicate",
+          "PUT /api/notes/reorder",
+          "POST /api/notes/batch/type",
+          "POST /api/notes/batch/tags",
+          "POST /api/notes/batch/delete",
+          "GET /api/notes/<id>/history",
+          "POST /api/notes/<id>/restore/<history_id>",
+          "DELETE /api/notes/<id>/history"
+        ],
+        "why_blocking": "Core note editing workflow cannot be downgraded out of packaged runtime without removing the app's primary behavior."
+      },
+      {
+        "id": "category_tag_live_writes",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "POST /api/categories",
+          "PUT /api/categories/<id>",
+          "DELETE /api/categories/<id>",
+          "PUT /api/tags/<id>",
+          "DELETE /api/tags/<id>",
+          "POST /api/tags/merge"
+        ],
+        "why_blocking": "Go has local copied-DB update candidates only; live create/delete/merge/cascade behavior remains Python-owned."
+      },
+      {
+        "id": "files_uploads_attachments_cleanup",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "POST /api/upload",
+          "POST /api/upload/url",
+          "POST /api/upload/delete",
+          "POST /api/upload/extract-prompt",
+          "GET /api/notes/<id>/attachments",
+          "POST /api/notes/<id>/attachments",
+          "GET /api/attachments/<id> raw/binary/send_file",
+          "DELETE /api/attachments/<id>",
+          "GET /api/cleanup/orphan-images",
+          "DELETE /api/cleanup/orphan-images",
+          "GET /api/cleanup/originals",
+          "DELETE /api/cleanup/originals",
+          "GET /api/cleanup/broken-images",
+          "POST /api/cleanup/broken-images"
+        ],
+        "why_blocking": "Normal editor/media workflows still require Python filesystem mutation, raw file serving, cleanup compensation, and remote-fetch safety behavior."
+      },
+      {
+        "id": "import_export_and_long_content",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "POST /api/notes/import/md",
+          "POST /api/notes/export/batch",
+          "GET /api/export/json",
+          "GET /api/export/markdown",
+          "GET /api/export/db",
+          "POST /api/export/images",
+          "POST /api/import/json",
+          "GET /api/notes/<id>/check_separation",
+          "POST /api/notes/<id>/separate",
+          "POST /api/notes/<id>/restore"
+        ],
+        "why_blocking": "Backup/export/import and long-content split/restore workflows are user-visible data movement paths, not optional maintenance internals."
+      },
+      {
+        "id": "prompt_wizard_options",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "GET/POST/PUT/DELETE /api/prompt-options*",
+          "GET/POST/DELETE /api/wizard-options*"
+        ],
+        "why_blocking": "Prompt Builder remains a first-class app workflow and still writes through Python."
+      },
+      {
+        "id": "migrations_schema_status_and_db_maintenance",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "migrations.run_migrations() startup path",
+          "Schema_Meta writes",
+          "GET /api/system/migration-status",
+          "POST /api/system/vacuum",
+          "POST /api/system/wal-checkpoint",
+          "GET /api/system/check-consistency",
+          "POST /api/system/clear-history",
+          "GET /api/system/stats"
+        ],
+        "why_blocking": "A no-Python package still needs startup schema safety and runtime DB maintenance/status contracts."
+      },
+      {
+        "id": "frontend_static_and_rollback_owner",
+        "classification": "request_time_blocker",
+        "surfaces": [
+          "Flask V2 SPA serving in current normal runtime",
+          "V1 fallback templates",
+          "Python prism.service rollback owner"
+        ],
+        "why_blocking": "Go local artifact can serve embedded SPA, but normal package/default runtime ownership and rollback strategy have not been cut over."
+      }
+    ]
+  },
+  "unmet_no_python_completion_criteria_closed_as_retained_python": [
+    "Every request_time_python_blocker would need to be implemented in Go with parity tests and package smoke, removed from the product surface, or explicitly downgraded outside packaged runtime without breaking normal workflows.",
+    "External maintenance candidates would need to be hidden, relabeled, replaced, or documented so normal packaged runtime does not call Python.",
+    "A no-Python packaged runtime would need to start, migrate or validate schema safely, serve SPA, and support normal note/search/editor/media/import/export workflows without Python backend.",
+    "Pi/live route ownership and rollback evidence would need to confirm no request-time packaged surface depends on Python."
+  ],
+  "not_authorized_by_B_assessment": [
+    "Remove Python backend",
+    "Start C. Go packaged runtime release candidate",
+    "Start D. Live cutover and rollback proof",
+    "Start E. Python package deletion",
+    "Deploy to Pi",
+    "Change Caddy or systemd",
+    "Change frontend default API target",
+    "Declare no-Python packaged runtime complete",
+    "Expand public exposure"
+  ],
+  "executed_notes_bundle_candidate": {
+    "id": "B-next.1",
+    "title": "Notes write/actions/history/batch packaged-runtime ownership bundle",
+    "status_after_execution": "completed_local_candidate",
+    "result_contract": "docs/contracts/phase23-b-next-notes-write-bundle.json",
+    "why_first": "It is the primary request-time blocker. Without note create/update/delete/actions/history/batch, a no-Python package cannot preserve Prism's core workflow.",
+    "scope": [
+      "Implement or explicitly retain/downgrade notes core writes/actions/history/batch as one ownership bundle.",
+      "Use copied DB fixtures first; no production DB, Pi, Caddy, or systemd changes.",
+      "Require Python vs Go response and DB-state parity, rollback/no-partial-write assertions, and package smoke before any live route promotion."
+    ],
+    "final_role": "historical local candidate only; not a trigger for more B-next work"
+  },
+  "executed_notes_promotion_decision": {
+    "id": "B-next.2",
+    "title": "Notes bundle live/default ownership decision and media-cleanup boundary",
+    "status_after_execution": "completed_decision_no_promotion",
+    "result_contract": "docs/contracts/phase23-b-next-notes-live-default-media-boundary.json",
+    "decision": "Do not promote the B-next.1 notes bundle to live/default owner yet.",
+    "reason": "The notes bundle remains copied-DB only and note deletion media cleanup remains Python-owned.",
+    "simple_explanation": "B-next.2 closed the notes promotion decision; the final B closure now stops the automatic B-next chain entirely.",
+    "no_auto_next_detail": true
+  },
+  "verification_contract": {
+    "targeted_pytest": [
+      "pytest tests/test_phase23_python_runtime_ownership_closure.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_go_ownership_closure_audit.py -v",
+      "pytest tests/test_phase23_python_removal_and_final_stabilization.py -v",
+      "pytest tests/test_phase23_pillow_dependency_removal_closure.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  }
+}

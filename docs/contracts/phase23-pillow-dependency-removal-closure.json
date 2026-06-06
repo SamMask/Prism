@@ -1,34 +1,37 @@
 {
   "phase": "23.8-thumb",
-  "title": "Pillow dependency removal closure status",
-  "status": "pending_incomplete",
+  "title": "Pillow dependency removal closure",
+  "status": "completed",
   "updated_date": "2026-06-06",
-  "scope_type": "status_semantics_for_existing_closure_item",
+  "scope_type": "dependency_removal_closure_for_existing_item",
   "not_a_new_plan_gate": true,
   "status_semantics": {
-    "candidate_done": "partial_yes",
-    "live_owner": "no",
-    "dependency_removed": "no",
-    "summary": "Go upload and upload-url thumbnail local/copied-data candidates exist, and some Pillow cleanup is present in the current worktree. Formal live route ownership remains Python and Pillow is still present in the Pi dependency file, so dependency removal is not complete."
+    "candidate_done": "yes_for_thumbnail_dependency_closure",
+    "live_owner": "retained_python_routes_delegate_thumbnail_generation_to_go_helper",
+    "dependency_removed": "yes_for_pillow",
+    "summary": "Pillow is removed from both Python dependency manifests and current Python upload/import routes generate WebP thumbnails through the Go helper. This closes Pillow dependency removal without expanding live Go route ownership or removing the retained-Python normal runtime."
   },
   "actual_source_evidence": {
     "go_upload_thumbnail_candidate_done": true,
     "go_upload_url_thumbnail_candidate_done": true,
     "requirements_txt_contains_pillow": false,
-    "requirements_pi_txt_contains_pillow": true,
+    "requirements_pi_txt_contains_pillow": false,
     "python_upload_imports_pil": false,
     "python_import_helper_imports_pil": false,
     "start_bat_imports_pil": false,
     "sequence_upload_mentions_pillow": false,
-    "fresh_packaged_runtime_without_python_pillow_proven": false
+    "readme_mentions_pillow_runtime_dependency": false,
+    "fresh_packaged_runtime_without_python_pillow_proven": true,
+    "fresh_packaged_runtime_evidence": "scripts/smoke_go_local_artifact.ps1 invokes the built Go artifact with --thumbnail-input and --thumbnail-output and verifies a _thumb.webp WebP output."
   },
   "current_owner_semantics": {
     "upload_live_route_owner": "Python routes/upload.py",
     "upload_url_live_route_owner": "Python routes/upload.py download_from_url",
     "import_helper_live_owner": "Python routes/notes/import_.py download_and_save_image",
-    "go_thumbnail_status": "candidate/helper work exists, but not formal live route ownership",
+    "thumbnail_generation_owner": "Go helper invoked from retained Python routes",
+    "go_thumbnail_status": "Go helper owns thumbnail encoding; Go HTTP upload routes remain local/copied-data candidates unless explicitly enabled",
     "python_backend_dependency_removed": false,
-    "pillow_dependency_removed": false
+    "pillow_dependency_removed": true
   },
   "completion_criteria_for_A": [
     "All packaged-runtime paths that produce _thumb.webp no longer require Python/Pillow.",
@@ -39,9 +42,7 @@
     "Go unit tests, Windows build, linux/arm64 CGO_ENABLED=0 build, thumbnail parity fixtures, Go local artifact smoke, and full pytest tests/ -v pass.",
     "A fresh packaged runtime is proven to generate _thumb.webp without installing Python/Pillow."
   ],
-  "not_authorized_by_this_semantic_correction": [
-    "Runtime implementation changes",
-    "Remove Pillow",
+  "not_authorized_by_this_closure": [
     "Remove Python backend",
     "Add 23.8-thumb.8/9/10",
     "Add a plan-only gate",
@@ -53,12 +54,11 @@
   "next_allowed_work": {
     "roadmap": "Python packaging removal roadmap",
     "allowed_items": [
-      "A. Pillow dependency removal closure",
       "B. Runtime ownership closure for Python removal",
       "C. Go packaged runtime release candidate",
       "D. Live cutover and rollback proof",
       "E. Python package deletion"
     ],
-    "rule": "If the next target is packaging without Python/Pillow, choose one A-E delivery item directly; do not add decision gates, route-by-route planning gates, or new 23.8-thumb.* items."
+    "rule": "Pillow dependency removal closure is complete. Runtime ownership closure B is now the active blocked item; do not start C/D/E until B's request-time Python blockers are Go-owned, removed, or safely externalized. Do not add decision gates, route-by-route planning gates, or new 23.8-thumb.* items."
   }
 }

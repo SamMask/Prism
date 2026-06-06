@@ -206,7 +206,8 @@ def test_go_attachment_text_read_is_flag_gated_and_keeps_query_only():
     assert "Raw attachment responses remain Python-owned" in main_go
     assert "PRAGMA query_only = ON" in main_go
     assert "Thumbnail write route is disabled" in main_go
-    assert "http.MethodDelete" not in main_go
+    assert "enableNotesWrite" in main_go
+    assert "Notes write route is disabled" in main_go
     assert "http.MethodPatch" not in main_go
 
 

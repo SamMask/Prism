@@ -169,6 +169,32 @@ $writeDb = Join-Path $dataDir "prism_local_smoke_write_dev.db"
 Copy-Item -LiteralPath $sourceDbPath -Destination $readDb -Force
 Copy-Item -LiteralPath $sourceDbPath -Destination $writeDb -Force
 
+$thumbnailInput = Join-Path $dataDir "pillow_closure_source.png"
+$thumbnailOutput = Join-Path $dataDir "static/uploads/pillow_closure_thumb.webp"
+Add-Type -AssemblyName System.Drawing
+$bitmap = [System.Drawing.Bitmap]::new(16, 16)
+$graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+try {
+    $graphics.Clear([System.Drawing.Color]::FromArgb(40, 120, 200))
+    $bitmap.Save($thumbnailInput, [System.Drawing.Imaging.ImageFormat]::Png)
+}
+finally {
+    $graphics.Dispose()
+    $bitmap.Dispose()
+}
+& $artifact --thumbnail-input $thumbnailInput --thumbnail-output $thumbnailOutput
+if ($LASTEXITCODE -ne 0) {
+    throw "Go artifact thumbnail helper failed with exit code $LASTEXITCODE"
+}
+if (-not (Test-Path $thumbnailOutput)) {
+    throw "Go artifact thumbnail helper did not create _thumb.webp"
+}
+$thumbBytes = [System.IO.File]::ReadAllBytes($thumbnailOutput)
+$thumbText = [System.Text.Encoding]::ASCII.GetString($thumbBytes, 0, [Math]::Min($thumbBytes.Length, 12))
+if (-not ($thumbText.StartsWith("RIFF") -and $thumbText.Contains("WEBP"))) {
+    throw "Go artifact thumbnail helper output is not a WebP file"
+}
+
 $readPort = Get-FreeTcpPort
 $readBase = "http://127.0.0.1:$readPort"
 $readProc = $null
@@ -202,6 +228,10 @@ try {
     if ($disabledWrite.StatusCode -ne 405) {
         throw "Default runtime unexpectedly accepted write candidate route"
     }
+    $disabledNotesWrite = Invoke-HttpJson "$readBase/api/notes" "POST" @{ title = "blocked"; content = "blocked" }
+    if ($disabledNotesWrite.StatusCode -ne 405) {
+        throw "Default runtime unexpectedly accepted notes write candidate route"
+    }
 }
 finally {
     Stop-GoArtifact $readProc
@@ -217,13 +247,14 @@ try {
         "--addr", "127.0.0.1:$writePort",
         "--data-dir", $dataDir,
         "--enable-tag-write",
-        "--enable-category-write"
+        "--enable-category-write",
+        "--enable-notes-write"
     ) "write-candidate"
     $writeHealth = Wait-ForGoRuntime $writeBase
     if ($writeHealth.Body.runtime.sqlite_query_only -ne $false) {
         throw "Write-candidate smoke should disable SQLite query_only only on the copied DB"
     }
-    if ($writeHealth.Body.runtime.api_surface -ne "get-read-only+local-tag-write+local-category-write") {
+    if ($writeHealth.Body.runtime.api_surface -ne "get-read-only+local-tag-write+local-category-write+local-notes-write") {
         throw "Write-candidate API surface drifted: $($writeHealth.Body.runtime.api_surface)"
     }
 
@@ -245,6 +276,36 @@ try {
     $categoryWrite = Invoke-HttpJson "$writeBase/api/categories/$($category.id)" "PUT" @{ icon = "S" }
     if ($categoryWrite.StatusCode -ne 200) {
         throw "Category write smoke failed with HTTP $($categoryWrite.StatusCode): $($categoryWrite.Raw)"
+    }
+
+    $noteCreate = Invoke-HttpJson "$writeBase/api/notes" "POST" @{
+        title = "local-smoke-note-$stamp"
+        content = "local smoke note content"
+        category_id = $category.id
+        tags = @("local-smoke-note-tag-$stamp")
+        urls = @("https://local-smoke.example/$stamp")
+    }
+    if ($noteCreate.StatusCode -ne 201) {
+        throw "Notes create smoke failed with HTTP $($noteCreate.StatusCode): $($noteCreate.Raw)"
+    }
+    $noteId = $noteCreate.Body.data.note_id
+    $noteUpdate = Invoke-HttpJson "$writeBase/api/notes/$noteId" "PUT" @{
+        title = "local-smoke-note-updated-$stamp"
+        content = "local smoke note content updated"
+        category_id = $category.id
+        tags = @("local-smoke-note-updated-tag-$stamp")
+        urls = @("https://local-smoke-updated.example/$stamp")
+    }
+    if ($noteUpdate.StatusCode -ne 200) {
+        throw "Notes update smoke failed with HTTP $($noteUpdate.StatusCode): $($noteUpdate.Raw)"
+    }
+    $noteHistory = Invoke-HttpJson "$writeBase/api/notes/$noteId/history"
+    if ($noteHistory.StatusCode -ne 200 -or $noteHistory.Body.data.total -lt 1) {
+        throw "Notes history smoke failed with HTTP $($noteHistory.StatusCode): $($noteHistory.Raw)"
+    }
+    $noteDelete = Invoke-HttpJson "$writeBase/api/notes/$noteId" "DELETE"
+    if ($noteDelete.StatusCode -ne 200) {
+        throw "Notes delete smoke failed with HTTP $($noteDelete.StatusCode): $($noteDelete.Raw)"
     }
 }
 finally {
@@ -269,13 +330,20 @@ $evidence = [pscustomobject]@{
         api_surface = "get-read-only"
         endpoints = @("/healthz", "/", "/api/test", "/api/categories", "/api/tags", "/api/notes?per_page=1")
         disabled_write_status = 405
+        disabled_notes_write_status = 405
     }
     write_candidate_smoke = @{
         base_url = $writeBase
         sqlite_query_only = $false
-        api_surface = "get-read-only+local-tag-write+local-category-write"
-        routes = @("PUT /api/tags/<id>", "PUT /api/categories/<id>")
+        api_surface = "get-read-only+local-tag-write+local-category-write+local-notes-write"
+        routes = @("PUT /api/tags/<id>", "PUT /api/categories/<id>", "POST /api/notes", "PUT /api/notes/<id>", "GET /api/notes/<id>/history", "DELETE /api/notes/<id>")
         db_scope = "copied DB only"
+    }
+    thumbnail_helper_smoke = @{
+        command = "--thumbnail-input $thumbnailInput --thumbnail-output $thumbnailOutput"
+        output = $thumbnailOutput
+        output_convention = "_thumb.webp"
+        python_or_pillow_required = $false
     }
     release_boundary = @{
         pi_deployed = $false

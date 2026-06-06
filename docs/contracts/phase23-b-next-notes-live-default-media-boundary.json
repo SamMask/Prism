@@ -1,0 +1,128 @@
+{
+  "phase": "B-next.2",
+  "title": "Notes bundle live/default ownership decision and media-cleanup boundary",
+  "status": "completed_decision_no_promotion",
+  "completed_on": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-b-next-notes-write-bundle.json",
+  "risk_level": "P0 safety-critical",
+  "decision": {
+    "promote_notes_bundle_to_live_default_owner": false,
+    "simple_explanation": "Go can exercise the notes bundle on copied DBs, but live/default ownership also has to own note deletion file cleanup and rollback evidence.",
+    "reason": "B-next.1 intentionally stayed local/copied-DB only, while current Python notes delete and batch delete still call _cleanup_note_images before DB deletion."
+  },
+  "runtime_changes": {
+    "go_code_changed": false,
+    "python_runtime_changed": false,
+    "production_db_write": false,
+    "production_files_mutated": false,
+    "pi_deploy": false,
+    "caddy_or_service_change": false,
+    "systemd_change": false,
+    "frontend_default_change": false,
+    "python_backend_removal": false
+  },
+  "ownership_boundary_after_b_next_2": {
+    "notes_bundle_go_status": "local_copied_db_candidate_only",
+    "live_default_notes_owner": "Python Flask routes",
+    "packaged_runtime_default_owner": "not_promoted",
+    "media_cleanup_owner": "Python routes/notes/crud.py::_cleanup_note_images",
+    "batch_delete_media_cleanup_owner": "Python routes/notes/batch.py calls _cleanup_note_images",
+    "b_completion_status_after_final_closure": "closed_retained_python"
+  },
+  "media_cleanup_boundary": {
+    "current_python_entrypoints": [
+      "routes/notes/crud.py::_cleanup_note_images",
+      "routes/notes/crud.py::delete_note",
+      "routes/notes/batch.py::batch_delete_notes"
+    ],
+    "behavior_that_blocks_promotion": [
+      "Extract /static/uploads/ image references from note content and cover_image",
+      "Skip deletion when another note still references the same image path",
+      "Remove original images and matching _thumb.webp companions when safe"
+    ],
+    "simple_explanation": "Deleting a note can delete or preserve upload files based on cross-note references; copied-DB parity alone cannot prove that filesystem side effect is safe."
+  },
+  "why_not_promoted": [
+    {
+      "reason": "Local-only evidence",
+      "simple_explanation": "B-next.1 was verified against copied DBs and default-disabled Go routes, not the normal live app path."
+    },
+    {
+      "reason": "Media cleanup still Python-owned",
+      "simple_explanation": "Single and batch note deletion still rely on Python cleanup code to mutate uploads safely."
+    },
+    {
+      "reason": "No live rollback proof",
+      "simple_explanation": "No Pi, Caddy, systemd, frontend default, production DB, or rollback gate was authorized by B-next.2."
+    },
+    {
+      "reason": "Security and routing policy not promoted",
+      "simple_explanation": "CSRF/origin/live route policy remains part of a future controlled rollout decision, not this copied-DB candidate."
+    }
+  ],
+  "no_auto_next_detail": true,
+  "reason_no_new_detail": "The user explicitly requested no infinite detail expansion; B-next.2 closes the notes bundle promotion decision and the final B closure stops the automatic B-next chain.",
+  "remaining_no_python_gap_classes_closed_as_retained_python_not_auto_next": [
+    {
+      "id": "category_tag_live_writes",
+      "reason": "Still normal app writes",
+      "simple_explanation": "Create/delete/merge behavior can change user-visible taxonomy and must be owned or explicitly retained."
+    },
+    {
+      "id": "uploads_attachments_raw_delete_cleanup",
+      "reason": "Filesystem side effects",
+      "simple_explanation": "Uploads, attachments, delete, and cleanup mutate files as well as DB rows."
+    },
+    {
+      "id": "import_export_long_content",
+      "reason": "Data movement and file packaging",
+      "simple_explanation": "Import/export moves user data across DB, Markdown, attachments, and zip output."
+    },
+    {
+      "id": "migrations_schema_db_maintenance",
+      "reason": "Startup and data safety",
+      "simple_explanation": "A no-Python package still needs a clear owner for schema versioning and DB maintenance."
+    },
+    {
+      "id": "frontend_static_default_rollback_owner",
+      "reason": "Runtime entrypoint and recovery",
+      "simple_explanation": "Packaged default routing and rollback must be proven before Python can stop being the normal owner."
+    }
+  ],
+  "not_authorized_by_b_next_2": [
+    "Promote Go notes bundle to live/default owner",
+    "Write production knowledge.db",
+    "Mutate production uploads or attachments",
+    "Deploy to Pi",
+    "Edit or reload Caddy",
+    "Change systemd unit or service owner",
+    "Change frontend default API target",
+    "Change CSRF/origin policy",
+    "Remove Python routes",
+    "Remove Python backend",
+    "Start C. Go packaged runtime release candidate",
+    "Start D. Live cutover and rollback proof",
+    "Start E. Python package deletion",
+    "Create B-next.3 automatically",
+    "Create any automatic B-next item"
+  ],
+  "verification_contract": {
+    "targeted_pytest": [
+      "pytest tests/test_phase23_b_next_notes_live_default_media_boundary.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_b_next_notes_write_bundle.py -v",
+      "pytest tests/test_phase23_python_runtime_ownership_closure.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "json_parse": [
+      "python -m json.tool docs/contracts/phase23-b-next-notes-live-default-media-boundary.json"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  }
+}

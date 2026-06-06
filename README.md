@@ -127,7 +127,7 @@ curl http://127.0.0.1:5000/api/system/check-consistency
 | Backend | Python 3.10+ / Flask 3.0 / SQLite (FTS5, WAL) |
 | Frontend | React 18 / TypeScript / Vite 5 / Zustand / Tailwind CSS |
 | Search | SQLite FTS5（純關鍵字，無向量） |
-| Image | Pillow（可選，無則降級不生縮圖） |
+| Image | Go WebP thumbnail helper（Python runtime 不依賴 Pillow） |
 | Deploy | Source / Dev mode、Raspberry Pi (systemd + Caddy + avahi)；PyInstaller 為實驗性內部打包流程 |
 | Test | pytest（後端）/ Playwright（前端 E2E） |
 

@@ -51,7 +51,9 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     assert '"enable-attachment-text-read"' in main_go
     assert '"enable-thumbnail-write"' in main_go
     assert "Thumbnail write route is disabled" in main_go
-    forbidden_methods = ["http.MethodDelete", "http.MethodPatch"]
+    assert "enableNotesWrite" in main_go
+    assert "Notes write route is disabled" in main_go
+    forbidden_methods = ["http.MethodPatch"]
     for method in forbidden_methods:
         assert method not in main_go
 

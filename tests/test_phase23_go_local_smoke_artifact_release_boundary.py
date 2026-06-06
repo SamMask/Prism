@@ -61,6 +61,7 @@ def test_local_smoke_covers_startup_spa_read_and_flag_gated_write_candidates():
     contract = _contract()
     read_smoke = contract["local_smoke_artifact"]["read_only_smoke"]
     write_smoke = contract["local_smoke_artifact"]["write_candidate_smoke"]
+    thumbnail_smoke = contract["local_smoke_artifact"]["thumbnail_helper_smoke"]
     script = SMOKE_SCRIPT_PATH.read_text(encoding="utf-8")
     build_script = BUILD_SCRIPT_PATH.read_text(encoding="utf-8")
 
@@ -70,15 +71,33 @@ def test_local_smoke_covers_startup_spa_read_and_flag_gated_write_candidates():
     assert read_smoke["api_surface"] == "get-read-only"
     assert "serve embedded SPA index.html" in read_smoke["checks"]
     assert "PUT /api/tags/<id> remains 405 when write flag is disabled" in read_smoke["checks"]
-    assert write_smoke["flags"] == ["--enable-tag-write", "--enable-category-write"]
+    assert "POST /api/notes remains 405 when notes write flag is disabled" in read_smoke["checks"]
+    assert write_smoke["flags"] == ["--enable-tag-write", "--enable-category-write", "--enable-notes-write"]
     assert write_smoke["sqlite_query_only"] is False
     assert write_smoke["db_scope"] == "copied smoke DB only"
     assert "PUT /api/tags/<id> succeeds against copied DB" in write_smoke["checks"]
     assert "PUT /api/categories/<id> succeeds against copied DB" in write_smoke["checks"]
+    assert "POST /api/notes succeeds against copied DB" in write_smoke["checks"]
+    assert "PUT /api/notes/<id> creates history against copied DB" in write_smoke["checks"]
+    assert "GET /api/notes/<id>/history succeeds against copied DB" in write_smoke["checks"]
+    assert "DELETE /api/notes/<id> succeeds against copied DB" in write_smoke["checks"]
     assert "--enable-tag-write" in script
     assert "--enable-category-write" in script
+    assert "--enable-notes-write" in script
     assert "/api/notes?per_page=1" in script
     assert "Default runtime unexpectedly accepted write candidate route" in script
+    assert "Default runtime unexpectedly accepted notes write candidate route" in script
+    assert "Notes create smoke failed" in script
+    assert "Notes update smoke failed" in script
+    assert "Notes history smoke failed" in script
+    assert "Notes delete smoke failed" in script
+    assert thumbnail_smoke["flags"] == ["--thumbnail-input", "--thumbnail-output"]
+    assert thumbnail_smoke["output_convention"] == "_thumb.webp"
+    assert "built Go artifact encodes a local PNG to _thumb.webp" in thumbnail_smoke["checks"]
+    assert "pillow_closure_thumb.webp" in script
+    assert "--thumbnail-input" in script
+    assert "--thumbnail-output" in script
+    assert "RIFF" in script and "WEBP" in script
 
 
 def test_release_boundary_blocks_pi_caddy_systemd_and_python_removal():

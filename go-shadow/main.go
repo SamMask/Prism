@@ -68,6 +68,7 @@ type runtimeConfig struct {
 	dataDir                  string
 	enableTagWrite           bool
 	enableCategoryWrite      bool
+	enableNotesWrite         bool
 	enableAttachmentTextRead bool
 	enableThumbnailWrite     bool
 	enableUploadURLWrite     bool
@@ -87,6 +88,7 @@ func main() {
 	dataDir := flag.String("data-dir", envDefault("PRISM_GO_DATA_DIR", "."), "external Prism user data directory")
 	enableTagWrite := flag.Bool("enable-tag-write", envBool("PRISM_GO_ENABLE_TAG_WRITE"), "enable local/copied-DB PUT /api/tags/<id> parity candidate")
 	enableCategoryWrite := flag.Bool("enable-category-write", envBool("PRISM_GO_ENABLE_CATEGORY_WRITE"), "enable local/copied-DB PUT /api/categories/<id> parity candidate")
+	enableNotesWrite := flag.Bool("enable-notes-write", envBool("PRISM_GO_ENABLE_NOTES_WRITE"), "enable local/copied-DB notes write/actions/history/batch parity candidate")
 	enableAttachmentTextRead := flag.Bool("enable-attachment-text-read", envBool("PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ"), "enable local/copied-DB GET /api/attachments/<id> text JSON parity candidate")
 	enableThumbnailWrite := flag.Bool("enable-thumbnail-write", envBool("PRISM_GO_ENABLE_THUMBNAIL_WRITE"), "enable local/copied-data POST /api/upload thumbnail parity candidate")
 	enableUploadURLWrite := flag.Bool("enable-upload-url-write", envBool("PRISM_GO_ENABLE_UPLOAD_URL_WRITE"), "enable local/copied-data POST /api/upload/url parity candidate")
@@ -101,7 +103,7 @@ func main() {
 		return
 	}
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableNotesWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -183,7 +185,7 @@ func runThumbnailCLI(inputPath, outputPath string) error {
 	return os.Rename(tmpPath, outputPath)
 }
 
-func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableAttachmentTextRead, enableThumbnailWrite, enableUploadURLWrite bool) (runtimeConfig, error) {
+func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCategoryWrite, enableNotesWrite, enableAttachmentTextRead, enableThumbnailWrite, enableUploadURLWrite bool) (runtimeConfig, error) {
 	if strings.TrimSpace(dbPath) == "" {
 		return runtimeConfig{}, errors.New("database path is required; pass --db or PRISM_GO_DB")
 	}
@@ -215,15 +217,16 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		dataDir:                  absData,
 		enableTagWrite:           enableTagWrite,
 		enableCategoryWrite:      enableCategoryWrite,
+		enableNotesWrite:         enableNotesWrite,
 		enableAttachmentTextRead: enableAttachmentTextRead,
 		enableThumbnailWrite:     enableThumbnailWrite,
 		enableUploadURLWrite:     enableUploadURLWrite,
-		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite),
+		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite),
 	}, nil
 }
 
 func (cfg runtimeConfig) hasWriteCandidate() bool {
-	return cfg.enableTagWrite || cfg.enableCategoryWrite
+	return cfg.enableTagWrite || cfg.enableCategoryWrite || cfg.enableNotesWrite
 }
 
 func openDB(dbPath string, enableWrites bool) (*sql.DB, error) {
@@ -384,6 +387,9 @@ func (s *server) apiSurface() string {
 	}
 	if s.runtime.enableCategoryWrite {
 		parts = append(parts, "local-category-write")
+	}
+	if s.runtime.enableNotesWrite {
+		parts = append(parts, "local-notes-write")
 	}
 	if s.runtime.enableAttachmentTextRead {
 		parts = append(parts, "local-attachment-text-read")
@@ -1222,11 +1228,19 @@ func normalizeTextContent(content string) string {
 }
 
 func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
-	if !requireGET(w, r) {
-		return
-	}
 	if r.URL.Path != "/api/notes" {
 		http.NotFound(w, r)
+		return
+	}
+	if r.Method == http.MethodPost {
+		if !s.runtime.enableNotesWrite {
+			writeError(w, http.StatusMethodNotAllowed, "Notes write route is disabled")
+			return
+		}
+		s.createNote(w, r)
+		return
+	}
+	if !requireGET(w, r) {
 		return
 	}
 
@@ -1292,6 +1306,194 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 			"total_pages": int(math.Ceil(float64(total) / float64(perPage))),
 		},
 	})
+}
+
+func (s *server) createNote(w http.ResponseWriter, r *http.Request) {
+	payload, ok := decodeJSONObject(w, r, "Content is required")
+	if !ok {
+		return
+	}
+	content := stringField(payload, "content")
+	if content == "" {
+		writeError(w, http.StatusBadRequest, "Content is required")
+		return
+	}
+
+	title := strings.TrimSpace(stringField(payload, "title"))
+	if title == "" {
+		title = autoNoteTitle(content)
+	}
+	categoryID, ok := intField(payload, "category_id")
+	if !ok {
+		var defaultID sql.NullInt64
+		if err := s.db.QueryRow("SELECT id FROM Categories WHERE is_default = 1 LIMIT 1").Scan(&defaultID); err == nil && defaultID.Valid {
+			categoryID = int(defaultID.Int64)
+		}
+	}
+	promptParams, err := marshalJSONField(payload, "prompt_params")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	cursor, err := tx.Exec(`
+		INSERT INTO Notes (
+			title, content, category_id, remarks, cover_image,
+			cover_position, editor_layout, prompt_params, is_pinned, is_archived
+		)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		title, content, nullableIntArg(categoryID, ok),
+		stringField(payload, "remarks"), nullableStringArg(payload, "cover_image"),
+		defaultStringField(payload, "cover_position", "top"),
+		defaultStringField(payload, "editor_layout", "single"),
+		promptParams, boolIntField(payload, "is_pinned"), boolIntField(payload, "is_archived"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	noteID, err := cursor.LastInsertId()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := replaceNoteTags(tx, int(noteID), stringArrayField(payload, "tags"), false); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := replaceNoteURLs(tx, int(noteID), stringArrayField(payload, "urls")); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, response{"status": "success", "data": response{"note_id": int(noteID)}})
+}
+
+func (s *server) updateNote(w http.ResponseWriter, r *http.Request, noteID int) {
+	payload, ok := decodeJSONObject(w, r, "Title and content are required")
+	if !ok {
+		return
+	}
+	title := stringField(payload, "title")
+	content := stringField(payload, "content")
+	if title == "" || content == "" {
+		writeError(w, http.StatusBadRequest, "Title and content are required")
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var oldContent string
+	var isPinned, isArchived int
+	if err := tx.QueryRow("SELECT content, COALESCE(is_pinned, 0), COALESCE(is_archived, 0) FROM Notes WHERE id = ?", noteID).Scan(&oldContent, &isPinned, &isArchived); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if oldContent != content {
+		summary := fmt.Sprintf("字數變化: %d → %d", len([]rune(oldContent)), len([]rune(content)))
+		if _, err := tx.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, ?, ?)", noteID, oldContent, summary); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	categoryID, hasCategoryID := intField(payload, "category_id")
+	if !hasCategoryID {
+		var existing sql.NullInt64
+		if err := tx.QueryRow("SELECT category_id FROM Notes WHERE id = ?", noteID).Scan(&existing); err == nil && existing.Valid {
+			categoryID = int(existing.Int64)
+			hasCategoryID = true
+		}
+	}
+	if _, ok := payload["is_pinned"]; ok {
+		isPinned = boolIntField(payload, "is_pinned")
+	}
+	if _, ok := payload["is_archived"]; ok {
+		isArchived = boolIntField(payload, "is_archived")
+	}
+	promptParams, err := marshalJSONField(payload, "prompt_params")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE Notes
+		SET title = ?, content = ?, category_id = ?, remarks = ?, cover_image = ?,
+		    cover_position = ?, editor_layout = ?, prompt_params = ?,
+		    is_pinned = ?, is_archived = ?, updated_at = CURRENT_TIMESTAMP
+		WHERE id = ?`,
+		title, content, nullableIntArg(categoryID, hasCategoryID),
+		stringField(payload, "remarks"), nullableStringArg(payload, "cover_image"),
+		defaultStringField(payload, "cover_position", "top"),
+		defaultStringField(payload, "editor_layout", "single"),
+		promptParams, isPinned, isArchived, noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := tx.Exec("DELETE FROM Note_Tags WHERE note_id = ?", noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := replaceNoteTags(tx, noteID, stringArrayField(payload, "tags"), false); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := replaceNoteURLs(tx, noteID, stringArrayField(payload, "urls")); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success"})
+}
+
+func (s *server) deleteNote(w http.ResponseWriter, noteID int) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var existingID int
+	if err := tx.QueryRow("SELECT id FROM Notes WHERE id = ?", noteID).Scan(&existingID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := deleteNotesByID(tx, []int{noteID}); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success"})
 }
 
 func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
@@ -1583,14 +1785,278 @@ func (s *server) noteURLs(noteID int) ([]string, error) {
 	return urls, nil
 }
 
+func decodeJSONObject(w http.ResponseWriter, r *http.Request, message string) (map[string]any, bool) {
+	var payload map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil || payload == nil {
+		writeError(w, http.StatusBadRequest, message)
+		return nil, false
+	}
+	return payload, true
+}
+
+func stringField(payload map[string]any, key string) string {
+	value, _ := payload[key].(string)
+	return value
+}
+
+func defaultStringField(payload map[string]any, key, fallback string) string {
+	if value, ok := payload[key].(string); ok {
+		return value
+	}
+	return fallback
+}
+
+func nullableStringArg(payload map[string]any, key string) any {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return nil
+	}
+	if text, ok := value.(string); ok {
+		return text
+	}
+	return nil
+}
+
+func intField(payload map[string]any, key string) (int, bool) {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return 0, false
+	}
+	switch v := value.(type) {
+	case float64:
+		if v == math.Trunc(v) {
+			return int(v), true
+		}
+	case int:
+		return v, true
+	}
+	return 0, false
+}
+
+func nullableIntArg(value int, ok bool) any {
+	if !ok {
+		return nil
+	}
+	return value
+}
+
+func boolIntField(payload map[string]any, key string) int {
+	if value, ok := payload[key].(bool); ok && value {
+		return 1
+	}
+	return 0
+}
+
+func stringArrayField(payload map[string]any, key string) []string {
+	raw, ok := payload[key]
+	if !ok || raw == nil {
+		return nil
+	}
+	items, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	out := []string{}
+	for _, item := range items {
+		if text, ok := item.(string); ok {
+			out = append(out, text)
+		}
+	}
+	return out
+}
+
+func intArrayField(payload map[string]any, key string) ([]int, bool) {
+	raw, ok := payload[key]
+	if !ok || raw == nil {
+		return nil, false
+	}
+	items, ok := raw.([]any)
+	if !ok {
+		return nil, false
+	}
+	out := []int{}
+	for _, item := range items {
+		value, ok := item.(float64)
+		if !ok || value != math.Trunc(value) {
+			return nil, false
+		}
+		out = append(out, int(value))
+	}
+	return out, true
+}
+
+func marshalJSONField(payload map[string]any, key string) (any, error) {
+	value, ok := payload[key]
+	if !ok || value == nil {
+		return nil, nil
+	}
+	if _, ok := value.(map[string]any); !ok {
+		return nil, nil
+	}
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return string(encoded), nil
+}
+
+func autoNoteTitle(content string) string {
+	first := strings.TrimSpace(strings.Split(content, "\n")[0])
+	first = strings.TrimSpace(strings.TrimLeft(first, "#>-*"))
+	if first != "" {
+		runes := []rune(first)
+		if len(runes) > 50 {
+			return string(runes[:50]) + "..."
+		}
+		return first
+	}
+	return "Note - " + time.Now().Format("2006/01/02 15:04")
+}
+
+func replaceNoteTags(tx *sql.Tx, noteID int, tags []string, clearExisting bool) error {
+	if clearExisting {
+		if _, err := tx.Exec("DELETE FROM Note_Tags WHERE note_id = ?", noteID); err != nil {
+			return err
+		}
+	}
+	_, err := appendNoteTags(tx, noteID, tags)
+	return err
+}
+
+func appendNoteTags(tx *sql.Tx, noteID int, tags []string) (int, error) {
+	added := 0
+	for _, tagName := range tags {
+		tagName = strings.TrimSpace(tagName)
+		if tagName == "" {
+			continue
+		}
+		if _, err := tx.Exec("INSERT OR IGNORE INTO Tags (name) VALUES (?)", tagName); err != nil {
+			return added, err
+		}
+		var tagID int
+		if err := tx.QueryRow("SELECT id FROM Tags WHERE name = ?", tagName).Scan(&tagID); err != nil {
+			return added, err
+		}
+		result, err := tx.Exec("INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)", noteID, tagID)
+		if err != nil {
+			return added, err
+		}
+		if rows, _ := result.RowsAffected(); rows > 0 {
+			added++
+		}
+	}
+	return added, nil
+}
+
+func replaceNoteURLs(tx *sql.Tx, noteID int, urls []string) error {
+	if _, err := tx.Exec("DELETE FROM Source_Urls WHERE note_id = ?", noteID); err != nil {
+		return err
+	}
+	for _, sourceURL := range urls {
+		sourceURL = strings.TrimSpace(sourceURL)
+		if sourceURL == "" {
+			continue
+		}
+		if _, err := tx.Exec("INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)", noteID, sourceURL); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func deleteNotesByID(tx *sql.Tx, noteIDs []int) (int, error) {
+	if len(noteIDs) == 0 {
+		return 0, nil
+	}
+	ids := intsToAny(noteIDs)
+	inClause := placeholders(len(noteIDs))
+	result, err := tx.Exec("DELETE FROM Notes WHERE id IN ("+inClause+")", ids...)
+	if err != nil {
+		return 0, err
+	}
+	rows, _ := result.RowsAffected()
+	return int(rows), nil
+}
+
+func intsToAny(values []int) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, value)
+	}
+	return out
+}
+
+func nullableVariantParent(noteID int, asVariant bool) any {
+	if !asVariant {
+		return nil
+	}
+	return noteID
+}
+
 func (s *server) handleNoteDetail(w http.ResponseWriter, r *http.Request) {
-	if !requireGET(w, r) {
+	rel := strings.TrimPrefix(r.URL.Path, "/api/notes/")
+	if rel == "reorder" {
+		if r.Method != http.MethodPut {
+			w.Header().Set("Allow", http.MethodPut)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if !s.runtime.enableNotesWrite {
+			writeError(w, http.StatusMethodNotAllowed, "Notes write route is disabled")
+			return
+		}
+		s.reorderNotes(w, r)
 		return
 	}
-	idText := strings.TrimPrefix(r.URL.Path, "/api/notes/")
-	noteID, err := strconv.Atoi(idText)
+	if strings.HasPrefix(rel, "batch/") {
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if !s.runtime.enableNotesWrite {
+			writeError(w, http.StatusMethodNotAllowed, "Notes write route is disabled")
+			return
+		}
+		s.handleNoteBatch(w, r, strings.TrimPrefix(rel, "batch/"))
+		return
+	}
+
+	parts := strings.Split(rel, "/")
+	if len(parts) == 0 {
+		http.NotFound(w, r)
+		return
+	}
+	noteID, err := strconv.Atoi(parts[0])
 	if err != nil {
 		http.NotFound(w, r)
+		return
+	}
+	if len(parts) > 1 {
+		if !s.runtime.enableNotesWrite {
+			writeError(w, http.StatusMethodNotAllowed, "Notes write route is disabled")
+			return
+		}
+		s.handleNoteAction(w, r, noteID, parts[1:])
+		return
+	}
+	if r.Method == http.MethodPut {
+		if !s.runtime.enableNotesWrite {
+			writeError(w, http.StatusMethodNotAllowed, "Notes write route is disabled")
+			return
+		}
+		s.updateNote(w, r, noteID)
+		return
+	}
+	if r.Method == http.MethodDelete {
+		if !s.runtime.enableNotesWrite {
+			writeError(w, http.StatusMethodNotAllowed, "Notes write route is disabled")
+			return
+		}
+		s.deleteNote(w, noteID)
+		return
+	}
+	if !requireGET(w, r) {
 		return
 	}
 	row := s.db.QueryRow(`
@@ -1636,6 +2102,472 @@ func (s *server) handleNoteDetail(w http.ResponseWriter, r *http.Request) {
 		"updated_at": nullableString(updatedAt), "tags": tags, "urls": urls,
 		"parent_id": nullableIntOrNil(parentID), "parent_title": nullableStringOrNil(parentTitle),
 	}})
+}
+
+func (s *server) handleNoteAction(w http.ResponseWriter, r *http.Request, noteID int, parts []string) {
+	switch parts[0] {
+	case "pin":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		s.toggleNoteBool(w, r, noteID, "is_pinned", "pinned")
+	case "archive":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		s.toggleNoteBool(w, r, noteID, "is_archived", "archived")
+	case "duplicate":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		s.duplicateNote(w, r, noteID)
+	case "history":
+		if len(parts) != 1 {
+			http.NotFound(w, r)
+			return
+		}
+		if r.Method == http.MethodGet {
+			s.getNoteHistory(w, noteID)
+			return
+		}
+		if r.Method == http.MethodDelete {
+			s.deleteNoteHistory(w, noteID)
+			return
+		}
+		w.Header().Set("Allow", "GET, DELETE")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+	case "restore":
+		if r.Method != http.MethodPost || len(parts) != 2 {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		historyID, err := strconv.Atoi(parts[1])
+		if err != nil {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = io.Copy(io.Discard, r.Body)
+		s.restoreNoteVersion(w, noteID, historyID)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *server) toggleNoteBool(w http.ResponseWriter, r *http.Request, noteID int, column, payloadKey string) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var current int
+	if err := tx.QueryRow("SELECT COALESCE("+column+", 0) FROM Notes WHERE id = ?", noteID).Scan(&current); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	payload := map[string]any{}
+	_ = json.NewDecoder(r.Body).Decode(&payload)
+	next := 0
+	if raw, ok := payload[payloadKey]; ok {
+		if truthy, ok := raw.(bool); ok && truthy {
+			next = 1
+		}
+	} else if current == 0 {
+		next = 1
+	}
+	query := "UPDATE Notes SET " + column + " = ?"
+	if column == "is_archived" {
+		query += ", updated_at = CURRENT_TIMESTAMP"
+	}
+	query += " WHERE id = ?"
+	if _, err := tx.Exec(query, next, noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"id": noteID, column: next != 0}})
+}
+
+func (s *server) duplicateNote(w http.ResponseWriter, r *http.Request, noteID int) {
+	payload := map[string]any{}
+	_ = json.NewDecoder(r.Body).Decode(&payload)
+	asVariant, _ := payload["as_variant"].(bool)
+	titleSuffix := stringField(payload, "title_suffix")
+	if titleSuffix == "" {
+		if asVariant {
+			titleSuffix = " (Variant)"
+		} else {
+			titleSuffix = " (Copy)"
+		}
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var title, content, remarks, coverImage, coverPosition, editorLayout, promptParams sql.NullString
+	var categoryID sql.NullInt64
+	if err := tx.QueryRow(`
+		SELECT title, content, remarks, cover_image, cover_position, editor_layout, category_id, prompt_params
+		FROM Notes WHERE id = ?`, noteID).Scan(&title, &content, &remarks, &coverImage, &coverPosition, &editorLayout, &categoryID, &promptParams); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	var result sql.Result
+	if asVariant {
+		result, err = tx.Exec(`
+			INSERT INTO Notes (title, content, remarks, cover_image, cover_position, editor_layout, category_id, prompt_params, parent_id)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			nullableString(title)+titleSuffix, nullableString(content), nullableStringOrNil(remarks), nullableStringOrNil(coverImage),
+			nullableString(coverPosition), nullableString(editorLayout), nullableIntOrNil(categoryID), nullableStringOrNil(promptParams), noteID)
+	} else {
+		result, err = tx.Exec(`
+			INSERT INTO Notes (title, content, remarks, cover_image, cover_position, editor_layout, category_id, prompt_params)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			nullableString(title)+titleSuffix, nullableString(content), nullableStringOrNil(remarks), nullableStringOrNil(coverImage),
+			nullableString(coverPosition), nullableString(editorLayout), nullableIntOrNil(categoryID), nullableStringOrNil(promptParams))
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	newID, err := result.LastInsertId()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := tx.Exec("INSERT INTO Note_Tags (note_id, tag_id) SELECT ?, tag_id FROM Note_Tags WHERE note_id = ?", newID, noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := tx.Exec("INSERT INTO Source_Urls (note_id, url) SELECT ?, url FROM Source_Urls WHERE note_id = ?", newID, noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, response{"status": "success", "data": response{
+		"note_id": int(newID), "parent_id": nullableVariantParent(noteID, asVariant), "is_variant": asVariant,
+	}})
+}
+
+func (s *server) reorderNotes(w http.ResponseWriter, r *http.Request) {
+	payload, ok := decodeJSONObject(w, r, "note_ids is required")
+	if !ok {
+		return
+	}
+	noteIDs, ok := intArrayField(payload, "note_ids")
+	if !ok || len(noteIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "note_ids must be a non-empty array")
+		return
+	}
+	if len(noteIDs) > 500 {
+		writeError(w, http.StatusBadRequest, "Maximum 500 notes per reorder")
+		return
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	for index, id := range noteIDs {
+		if _, err := tx.Exec("UPDATE Notes SET sort_order = ? WHERE id = ?", index, id); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"reordered_count": len(noteIDs)}})
+}
+
+func (s *server) handleNoteBatch(w http.ResponseWriter, r *http.Request, action string) {
+	switch action {
+	case "type":
+		s.batchUpdateType(w, r)
+	case "tags":
+		s.batchUpdateTags(w, r)
+	case "delete":
+		s.batchDeleteNotes(w, r)
+	default:
+		http.NotFound(w, r)
+	}
+}
+
+func (s *server) batchUpdateType(w http.ResponseWriter, r *http.Request) {
+	payload, ok := decodeJSONObject(w, r, "note_ids and category_id are required")
+	if !ok {
+		return
+	}
+	noteIDs, valid := intArrayField(payload, "note_ids")
+	categoryID, hasCategory := intField(payload, "category_id")
+	if !valid || len(noteIDs) == 0 || !hasCategory {
+		writeError(w, http.StatusBadRequest, "note_ids and category_id are required")
+		return
+	}
+	if len(noteIDs) > 500 {
+		writeError(w, http.StatusBadRequest, "Maximum 500 notes per batch")
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	var existingCategory int
+	if err := tx.QueryRow("SELECT id FROM Categories WHERE id = ?", categoryID).Scan(&existingCategory); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("Category %d does not exist", categoryID))
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	result, err := tx.Exec("UPDATE Notes SET category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id IN ("+placeholders(len(noteIDs))+")", append([]any{categoryID}, intsToAny(noteIDs)...)...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	affected, _ := result.RowsAffected()
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"updated_count": int(affected)}})
+}
+
+func (s *server) batchUpdateTags(w http.ResponseWriter, r *http.Request) {
+	payload, ok := decodeJSONObject(w, r, "note_ids and tags are required")
+	if !ok {
+		return
+	}
+	noteIDs, valid := intArrayField(payload, "note_ids")
+	tags := stringArrayField(payload, "tags")
+	if !valid || len(noteIDs) == 0 || len(tags) == 0 {
+		writeError(w, http.StatusBadRequest, "note_ids and tags are required")
+		return
+	}
+	if len(noteIDs) > 500 {
+		writeError(w, http.StatusBadRequest, "Maximum 500 notes per batch")
+		return
+	}
+	mode := defaultStringField(payload, "mode", "append")
+	if mode != "append" && mode != "replace" {
+		writeError(w, http.StatusBadRequest, `mode must be "append" or "replace"`)
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	tagsAdded := 0
+	affectedNotes := 0
+	for _, noteID := range noteIDs {
+		var existing int
+		if err := tx.QueryRow("SELECT id FROM Notes WHERE id = ?", noteID).Scan(&existing); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				continue
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		affectedNotes++
+		if mode == "replace" {
+			if _, err := tx.Exec("DELETE FROM Note_Tags WHERE note_id = ?", noteID); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
+		added, err := appendNoteTags(tx, noteID, tags)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		tagsAdded += added
+		if _, err := tx.Exec("UPDATE Notes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", noteID); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
+		"affected_notes": affectedNotes, "tags_added": tagsAdded, "mode": mode,
+	}})
+}
+
+func (s *server) batchDeleteNotes(w http.ResponseWriter, r *http.Request) {
+	payload, ok := decodeJSONObject(w, r, "note_ids is required")
+	if !ok {
+		return
+	}
+	noteIDs, valid := intArrayField(payload, "note_ids")
+	if !valid || len(noteIDs) == 0 {
+		writeError(w, http.StatusBadRequest, "note_ids must be a non-empty array")
+		return
+	}
+	if len(noteIDs) > 500 {
+		writeError(w, http.StatusBadRequest, "Maximum 500 notes per batch")
+		return
+	}
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	deleted, err := deleteNotesByID(tx, noteIDs)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"deleted_count": deleted}})
+}
+
+func (s *server) getNoteHistory(w http.ResponseWriter, noteID int) {
+	var title string
+	if err := s.db.QueryRow("SELECT title FROM Notes WHERE id = ?", noteID).Scan(&title); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	rows, err := s.db.Query(`
+		SELECT id, content, diff_summary, created_at
+		FROM Note_History
+		WHERE note_id = ?
+		ORDER BY created_at DESC
+		LIMIT 50`, noteID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer rows.Close()
+	history := []response{}
+	for rows.Next() {
+		var id int
+		var content, diffSummary, createdAt sql.NullString
+		if err := rows.Scan(&id, &content, &diffSummary, &createdAt); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		history = append(history, response{
+			"id": id, "content": nullableString(content), "diff_summary": nullableString(diffSummary), "created_at": nullableString(createdAt),
+		})
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
+		"note_id": noteID, "note_title": title, "history": history, "total": len(history),
+	}})
+}
+
+func (s *server) restoreNoteVersion(w http.ResponseWriter, noteID, historyID int) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	var currentContent string
+	if err := tx.QueryRow("SELECT content FROM Notes WHERE id = ?", noteID).Scan(&currentContent); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var historyContent string
+	if err := tx.QueryRow("SELECT content FROM Note_History WHERE id = ? AND note_id = ?", historyID, noteID).Scan(&historyContent); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "History version not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := tx.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, ?, ?)", noteID, currentContent, "還原前自動備份"); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := tx.Exec("UPDATE Notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", historyContent, noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "message": "Note restored successfully"})
+}
+
+func (s *server) deleteNoteHistory(w http.ResponseWriter, noteID int) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	var existing int
+	if err := tx.QueryRow("SELECT id FROM Notes WHERE id = ?", noteID).Scan(&existing); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	result, err := tx.Exec("DELETE FROM Note_History WHERE note_id = ?", noteID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	deleted, _ := result.RowsAffected()
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "message": fmt.Sprintf("Deleted %d history records", deleted), "data": response{"deleted_count": int(deleted)}})
 }
 
 func nullableString(value sql.NullString) string {

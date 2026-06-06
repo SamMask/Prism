@@ -58,7 +58,8 @@ def test_phase23_2_go_search_merges_attachment_body_note_ids_without_write_metho
     assert "http.MethodGet" in main_go
     assert "enableTagWrite" in main_go
     assert "Thumbnail write route is disabled" in main_go
-    assert "http.MethodDelete" not in main_go
+    assert "enableNotesWrite" in main_go
+    assert "Notes write route is disabled" in main_go
 
 
 def test_phase23_2_python_vs_go_diff_fixture_covers_body_hits_and_safety_non_matches():

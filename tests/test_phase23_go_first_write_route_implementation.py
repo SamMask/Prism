@@ -158,7 +158,8 @@ def test_go_tag_write_is_flag_gated_and_default_runtime_stays_read_only():
     assert "PRAGMA query_only = ON" in main_go
     assert "http.MethodPut" in main_go
     assert "Thumbnail write route is disabled" in main_go
-    assert "http.MethodDelete" not in main_go
+    assert "enableNotesWrite" in main_go
+    assert "Notes write route is disabled" in main_go
     assert "http.MethodPatch" not in main_go
 
 

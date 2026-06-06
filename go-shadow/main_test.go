@@ -46,7 +46,10 @@ func createSpikeDB(t *testing.T) string {
 			editor_layout TEXT DEFAULT 'single',
 			is_pinned INTEGER DEFAULT 0,
 			is_archived INTEGER DEFAULT 0,
+			sort_order INTEGER DEFAULT 0,
 			category_id INTEGER,
+			prompt_params TEXT,
+			parent_id INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
@@ -66,6 +69,18 @@ func createSpikeDB(t *testing.T) string {
 			note_id INTEGER,
 			tag_id INTEGER,
 			PRIMARY KEY (note_id, tag_id)
+		);
+		CREATE TABLE Source_Urls (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			note_id INTEGER,
+			url TEXT
+		);
+		CREATE TABLE Note_History (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			note_id INTEGER,
+			content TEXT,
+			diff_summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 		CREATE TABLE Note_Attachments (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -96,7 +111,7 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	dataDir := filepath.Join(t.TempDir(), "data")
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, false, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,6 +126,9 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	}
 	if cfg.enableCategoryWrite {
 		t.Fatal("category write should be disabled by default")
+	}
+	if cfg.enableNotesWrite {
+		t.Fatal("notes write should be disabled by default")
 	}
 	if cfg.enableAttachmentTextRead {
 		t.Fatal("attachment text read should be disabled by default")
@@ -136,7 +154,7 @@ func TestRuntimeRefusesProductionNamedDB(t *testing.T) {
 	}
 	t.Setenv("PRISM_GO_ALLOW_PROD_DB", "")
 
-	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false)
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, false)
 	if err == nil {
 		t.Fatal("expected production-like database refusal")
 	}
@@ -170,7 +188,7 @@ func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 
 func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true, false, false, false, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), true, false, false, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,7 +212,7 @@ func TestTagWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T)
 
 func TestCategoryWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, true, false, false, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, true, false, false, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -216,10 +234,37 @@ func TestCategoryWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testi
 	}
 }
 
+func TestNotesWriteModeUsesWritableCopiedDBOnlyWhenExplicitlyEnabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, true, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.enableNotesWrite {
+		t.Fatal("notes write should be enabled by explicit flag")
+	}
+	if cfg.sqliteQueryOnly {
+		t.Fatal("notes write mode must report SQLite query_only disabled")
+	}
+	srv := &server{runtime: cfg}
+	if got := srv.apiSurface(); got != "get-read-only+local-notes-write" {
+		t.Fatalf("unexpected api surface: %s", got)
+	}
+
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("INSERT INTO Notes (title, content) VALUES ('writable', 'copied db')"); err != nil {
+		t.Fatalf("expected explicit notes write mode to allow copied-DB writes: %v", err)
+	}
+}
+
 func TestAttachmentTextReadKeepsQueryOnlyWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	dataDir := t.TempDir()
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, true, false, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, true, false, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -329,9 +374,65 @@ func TestCategoryWriteHandlerRejectsWhenFlagDisabled(t *testing.T) {
 	}
 }
 
+func TestNotesWriteHandlerRejectsWhenFlagDisabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
+	request := httptest.NewRequest(http.MethodPost, "/api/notes", strings.NewReader(`{"title":"blocked","content":"blocked"}`))
+	recorder := httptest.NewRecorder()
+	srv.handleNotes(recorder, request)
+
+	if recorder.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("expected disabled notes write to return 405, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "Notes write route is disabled") {
+		t.Fatalf("unexpected disabled response: %s", recorder.Body.String())
+	}
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Notes WHERE title = 'blocked'").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 0 {
+		t.Fatalf("disabled handler wrote notes: %d", count)
+	}
+}
+
+func TestNotesRestoreHandlerReturnsJSONWhenEnabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (1, 'previous content', 'seed')"); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true}}
+	request := httptest.NewRequest(http.MethodPost, "/api/notes/1/restore/1", strings.NewReader(`{}`))
+	recorder := httptest.NewRecorder()
+	srv.handleNoteDetail(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected restore to return 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected JSON response: %v", err)
+	}
+	if payload["message"] != "Note restored successfully" {
+		t.Fatalf("unexpected restore response: %#v", payload)
+	}
+}
+
 func TestThumbnailWriteKeepsDBQueryOnlyAndUpdatesSurfaceWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, true, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -355,7 +456,7 @@ func TestThumbnailWriteRefusesProductionUploadsUnlessExplicitlyAllowed(t *testin
 	t.Setenv("PRISM_GO_ALLOW_PROD_DB", "1")
 	t.Setenv("PRISM_GO_ALLOW_PROD_UPLOADS", "")
 
-	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, true, false)
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true, false)
 	if err == nil {
 		t.Fatal("expected thumbnail production upload refusal")
 	}
@@ -394,7 +495,7 @@ func TestThumbnailOnlyUploadWritesWebPThumbWithoutOriginal(t *testing.T) {
 	}
 	defer db.Close()
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, true, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -432,7 +533,7 @@ func TestStandardThumbnailUploadWritesOriginalAndThumb(t *testing.T) {
 	}
 	defer db.Close()
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, true, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -471,7 +572,7 @@ func TestThumbnailUploadRejectsInvalidContentWithoutWritingFiles(t *testing.T) {
 	}
 	defer db.Close()
 
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, true, false)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +594,7 @@ func TestThumbnailUploadRejectsInvalidContentWithoutWritingFiles(t *testing.T) {
 
 func TestUploadURLWriteKeepsDBQueryOnlyAndUpdatesSurfaceWhenExplicitlyEnabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -526,7 +627,7 @@ func TestUploadURLWriteRefusesProductionUploadsUnlessExplicitlyAllowed(t *testin
 	t.Setenv("PRISM_GO_ALLOW_PROD_DB", "1")
 	t.Setenv("PRISM_GO_ALLOW_PROD_UPLOADS", "")
 
-	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err == nil {
 		t.Fatal("expected upload-url production upload refusal")
 	}
@@ -598,7 +699,7 @@ func TestUploadURLRejectsInvalidTargetsWithoutWritingFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer db.Close()
-			cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+			cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -624,7 +725,7 @@ func TestUploadURLRejectsRedirectToPrivateHostWithoutWritingFiles(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer db.Close()
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -675,7 +776,7 @@ func TestUploadURLRejectsInvalidRemoteContentWithoutWritingFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 			defer db.Close()
-			cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+			cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -701,7 +802,7 @@ func TestUploadURLStandardWritesOriginalAndThumbWithExpectedHeaders(t *testing.T
 		t.Fatal(err)
 	}
 	defer db.Close()
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -752,7 +853,7 @@ func TestUploadURLThumbnailOnlyWritesWebPThumbWithoutOriginal(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -788,7 +889,7 @@ func TestUploadURLThumbnailFailureKeepsOriginalForThumbnailOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -836,7 +937,7 @@ func TestUploadURLHashFallbackFilenameIsDeterministic(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, true)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, true)
 	if err != nil {
 		t.Fatal(err)
 	}
