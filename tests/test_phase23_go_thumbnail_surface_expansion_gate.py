@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-thumbnail-surface-expansion-gate.json"
 UPLOAD_URL_IMPLEMENTATION_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-upload-url-local-candidate.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
@@ -97,3 +97,4 @@ def test_docs_record_23_8_thumb_5_completion_and_23_8_thumb_6_next_gate():
     assert "23.8-thumb.6** Go upload-url remote-fetch safety parity plan" in todo
     assert "Phase 23.8-thumb.5 Go thumbnail surface expansion gate is complete" in architecture
     assert "`23.8-thumb.5 Go thumbnail surface expansion or removal-readiness gate` is complete" in go_report
+

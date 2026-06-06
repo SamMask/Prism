@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-live-cutover-rollback-proof.json"
 C_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-packaged-runtime-release-candidate.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -72,3 +72,4 @@ def test_docs_record_d_closure_without_starting_e_or_d_next():
     assert "D did not promote a permanent full Go cutover" in architecture
     assert "`D. Live cutover and rollback proof` is complete as `completed_rollback_proof_no_permanent_cutover`" in go_report
     assert "No D-next is added" in go_report
+

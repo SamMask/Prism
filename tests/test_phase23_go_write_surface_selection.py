@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-write-surface-selection.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_ROADMAP_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 PHASE23_FILE_READ_IMPLEMENTATION_PATH = (
@@ -138,3 +138,4 @@ def test_docs_record_23_3_completion_and_23_4_pending_gate():
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_roadmap
     assert "`23.5-next.1 Second Go DB-only write implementation subgate is complete`" in go_roadmap
     assert "`23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete`" in go_roadmap
+

@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-webp-encoder-dependency-decision.json"
 SOURCE_PLAN_PATH = ROOT / "docs" / "contracts" / "phase23-go-local-packaging-thumbnail-plan.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 REQUIREMENTS_PATH = ROOT / "requirements.txt"
@@ -126,3 +126,4 @@ def test_docs_record_23_8_thumb_1_completion_and_23_8_thumb_2_next_gate():
     assert "23.8-thumb.2 Thumbnail parity fixtures" in architecture
     assert "`23.8-thumb.1 Go WebP encoder dependency decision` is complete as plan-only" in go_report
     assert "`23.8-thumb.2 Thumbnail parity fixtures`" in go_report
+

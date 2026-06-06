@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-python-runtime-ownership-closure.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -100,3 +100,4 @@ def test_docs_record_b_final_closure_without_active_next_detail():
     assert "no further B-next item is created automatically" in architecture
     assert "`B. Runtime ownership closure for Python removal` is complete as `completed_final_retained_python_closure`" in go_report
     assert "B-next.1 Notes write/actions/history/batch packaged-runtime ownership bundle" in go_report
+

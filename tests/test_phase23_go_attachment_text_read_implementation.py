@@ -17,7 +17,7 @@ GO_SHADOW_DIR = ROOT / "go-shadow"
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-attachment-text-read-implementation.json"
 SOURCE_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-file-attachment-ownership-gate.json"
 GO_MAIN_PATH = GO_SHADOW_DIR / "main.go"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -380,3 +380,4 @@ def test_docs_record_23_6_next_completion_and_23_7_next_gate():
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_report
     assert "`23.9 Pi deployment rollout` is complete" in go_report
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
+

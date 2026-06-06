@@ -7,7 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-local-smoke-artifact-r
 SOURCE_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-local-packaging-thumbnail-plan.json"
 SMOKE_SCRIPT_PATH = ROOT / "scripts" / "smoke_go_local_artifact.ps1"
 BUILD_SCRIPT_PATH = ROOT / "scripts" / "build_go_runtime.ps1"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -145,3 +145,4 @@ def test_docs_record_23_8_2_23_8_3_completion_and_next_gate():
     assert "`23.8.3 Release boundary` is complete" in go_report
     assert "`23.9 Pi deployment rollout` is complete" in go_report
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
+

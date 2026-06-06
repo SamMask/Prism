@@ -6,6 +6,7 @@
 |---|---|
 | `todo-completed-phases.md` | 已完成 phase、已決議事項與歷史工作清單。 |
 | `todo-changelog.md` | 原 `docs/TODO.md` 的完整 Changelog 長表。 |
+| `todo-archive-pre-go-primary-runtime-migration-20260606.md` | Go primary runtime migration active roadmap 前的完整 `docs/TODO.md` 原文歸檔。 |
 
 維護規則：
 - `docs/TODO.md` 只保留 active roadmap、backlog/icebox、近期更新摘要與歸檔索引。

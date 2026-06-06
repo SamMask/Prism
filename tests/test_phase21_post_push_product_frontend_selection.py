@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SELECTION_PATH = ROOT / "docs" / "contracts" / "phase21-post-push-product-frontend-selection.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
 def _selection():
@@ -93,3 +93,4 @@ def test_phase21_3_todo_records_branch_choice_and_phase22_gate():
     assert "docs/contracts/phase21-post-push-product-frontend-selection.json" in todo
     assert "Phase 22: Product Frontend Backlog Intake" in todo
     assert "22.0 Product Frontend Backlog Intake Gate" in todo
+

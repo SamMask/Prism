@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-pi-deployment-rollout.json"
 SOURCE_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-local-smoke-artifact-release-boundary.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -153,3 +153,4 @@ def test_docs_record_23_9_completion_and_next_planning_gate():
     assert "Phase 23 Go runtime reduction track is closed with retained-Python normal path" in architecture
     assert "`23.9 Pi deployment rollout` is complete" in go_report
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
+

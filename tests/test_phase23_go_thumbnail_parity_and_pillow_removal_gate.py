@@ -9,7 +9,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 PARITY_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-thumbnail-parity-fixtures.json"
 REMOVAL_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-pillow-removal-gate.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 REQUIREMENTS_PATH = ROOT / "requirements.txt"
@@ -322,3 +322,4 @@ def test_docs_record_thumbnail_fixture_completion_blocked_removal_and_next_gate(
     assert "Phase 23.8-thumb.3 Pillow removal gate is complete as blocked-removal" in architecture
     assert "`23.8-thumb.2 Thumbnail parity fixtures` is complete" in go_report
     assert "`23.8-thumb.3 Pillow removal gate` is complete as blocked-removal" in go_report
+

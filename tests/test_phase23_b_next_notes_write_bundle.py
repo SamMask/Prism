@@ -17,7 +17,7 @@ GO_SHADOW_DIR = ROOT / "go-shadow"
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-b-next-notes-write-bundle.json"
 RUNTIME_CLOSURE_PATH = ROOT / "docs" / "contracts" / "phase23-python-runtime-ownership-closure.json"
 GO_MAIN_PATH = GO_SHADOW_DIR / "main.go"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -365,3 +365,4 @@ def test_docs_record_b_next_1_completion_and_next_detail():
     assert "此項保留為證據，不再導向新的 B-next 細項" in todo
     assert "Phase 23 B-next.1 Notes write/actions/history/batch packaged-runtime ownership bundle is complete as a local/copied-DB candidate" in architecture
     assert "`B-next.1 Notes write/actions/history/batch packaged-runtime ownership bundle` is complete as a local/copied-DB candidate" in go_report
+

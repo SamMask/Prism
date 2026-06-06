@@ -17,7 +17,7 @@ GO_SHADOW_DIR = ROOT / "go-shadow"
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-first-write-route-implementation.json"
 SELECTION_PATH = ROOT / "docs" / "contracts" / "phase23-go-write-surface-selection.json"
 GO_MAIN_PATH = GO_SHADOW_DIR / "main.go"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -265,3 +265,4 @@ def test_docs_record_23_4_completion_and_23_5_pending_gate():
     assert "`23.9 Pi deployment rollout` is complete" in go_report
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
     assert "`23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete`" in go_report
+

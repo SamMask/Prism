@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 UPLOAD_URL_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-upload-url-local-candidate.json"
@@ -137,3 +137,4 @@ def test_23_10_retained_python_is_not_dependency_removed_or_pure_go_packaging():
     assert "不是 Python removal and not pure-Go packaging completion" not in todo
     assert "retained-Python stabilization is not Python removal and not pure-Go packaging completion" in architecture
     assert "retained-Python stabilization is not Python removal and not pure-Go packaging completion" in go_report
+

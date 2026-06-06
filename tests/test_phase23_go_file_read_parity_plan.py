@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLAN_PATH = ROOT / "docs" / "contracts" / "phase23-go-file-read-parity-plan.json"
 POLISH_PATH = ROOT / "docs" / "contracts" / "phase20-go-read-surface-polish.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -132,3 +132,4 @@ def test_phase23_1_docs_record_completion_and_23_2_next_gate():
     assert "23.2 Go file-read parity implementation gate" in architecture
     assert "23.1 Go file-read parity plan gate is complete" in go_report
     assert "23.2 Go file-read parity implementation gate" in go_report
+

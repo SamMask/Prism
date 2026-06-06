@@ -1,0 +1,101 @@
+{
+  "phase": "python-packaging-removal-E",
+  "title": "Python package deletion",
+  "status": "completed_no_deletion_retained_python_package",
+  "completed_on": "2026-06-06",
+  "explicit_user_approval": true,
+  "source_contract": "docs/contracts/phase23-go-live-cutover-rollback-proof.json",
+  "risk_level": "P0 safety-critical",
+  "no_auto_next_detail": true,
+  "no_e_next": true,
+  "decision": {
+    "delete_python_backend_package": false,
+    "delete_python_runtime_dependencies": false,
+    "delete_python_packaging_scripts": false,
+    "reason": "D completed as rollback proof without permanent Go cutover. The live normal runtime owner after D remains retained Python prism.service, and upload/delete/cleanup/import/export/server/migration-runner ownership remains Python. Removing Python package files, Flask dependencies, venv install docs, or Python launch scripts would break the verified runtime path."
+  },
+  "prerequisite_truth": {
+    "A_pillow_dependency_removed": true,
+    "B_python_removal_ready": false,
+    "C_go_packaged_runtime_candidate": true,
+    "D_permanent_cutover": false,
+    "D_normal_runtime_owner_after_D": "retained Python prism.service",
+    "E_delete_precondition_met": false
+  },
+  "retained_python_runtime_files": [
+    "app.py",
+    "config.py",
+    "db.py",
+    "routes/",
+    "migrations/",
+    "utils/",
+    "requirements.txt",
+    "requirements-pi.txt",
+    "scripts/start.bat",
+    "scripts/start_portable.bat",
+    "scripts/pack_portable.bat",
+    "scripts/build_release.py",
+    "DEPLOY-PI.md"
+  ],
+  "retained_python_dependency_manifest_truth": {
+    "requirements_txt_contains": [
+      "Flask==3.0.0",
+      "python-magic-bin==0.4.14",
+      "requests==2.31.0"
+    ],
+    "requirements_pi_txt_contains": [
+      "Flask==3.0.0",
+      "python-magic",
+      "requests==2.31.0"
+    ],
+    "pillow_present": false,
+    "ai_ml_dependencies_present": false
+  },
+  "retained_live_surfaces_requiring_python": [
+    "Python prism.service on Pi starts /home/mask070924/prism/linux-venv/bin/python app.py",
+    "Python Flask serves live upload and upload-url HTTP routes",
+    "Python Flask owns upload/delete and cleanup file deletion semantics",
+    "Python Flask owns import/export and long-content archive behavior",
+    "Python migrations own Schema_Meta writes and DB maintenance",
+    "Python server/system routes own local maintenance, version, backups, and service-facing API behavior",
+    "Python Flask remains the rollback owner for routes not permanently promoted to Go"
+  ],
+  "not_deleted_by_E": [
+    "Python backend source",
+    "Flask requirements",
+    "Pi linux-venv install path",
+    "PyInstaller/build_release path",
+    "Windows Python launcher scripts",
+    "Portable embedded-Python script path",
+    "DEPLOY-PI retained-Python systemd instructions"
+  ],
+  "not_started_by_E": [
+    "Implement missing Go upload/delete/cleanup/import/export/server/migration-runner surfaces",
+    "Promote Go to full primary service",
+    "Rewrite prism.service to Go",
+    "Change frontend default target",
+    "Mutate production DB/files",
+    "Reload Caddy or systemd",
+    "Create E-next automatically",
+    "Create any automatic next detail"
+  ],
+  "verification_contract": {
+    "targeted_pytest": [
+      "pytest tests/test_phase23_python_package_deletion_closure.py -v"
+    ],
+    "related_pytest": [
+      "pytest tests/test_phase23_go_live_cutover_rollback_proof.py -v",
+      "pytest tests/test_phase23_python_runtime_ownership_closure.py -v",
+      "pytest tests/test_phase23_go_packaged_runtime_release_candidate.py -v"
+    ],
+    "full_pytest": [
+      "pytest tests/ -v"
+    ],
+    "go_artifact_smoke": [
+      "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_local_artifact.ps1"
+    ],
+    "diff_check": [
+      "git diff --check"
+    ]
+  }
+}

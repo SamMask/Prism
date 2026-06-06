@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-db-only-write-expansion-selection.json"
 FIRST_WRITE_PATH = ROOT / "docs" / "contracts" / "phase23-go-first-write-route-implementation.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_ROADMAP_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -144,3 +144,4 @@ def test_docs_record_23_5_completion_and_next_subgate_details():
     assert "`23.7 Migration / DB ownership decision gate` is complete as plan-only" in go_roadmap
     assert "`23.9 Pi deployment rollout` is complete" in go_roadmap
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_roadmap
+

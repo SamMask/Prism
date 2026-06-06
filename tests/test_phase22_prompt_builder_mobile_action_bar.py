@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPT_BUILDER_PATH = ROOT / "frontend" / "src" / "pages" / "PromptBuilder.tsx"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
 def test_prompt_builder_has_mobile_first_action_bar_and_preserves_desktop_bar():
@@ -34,3 +34,4 @@ def test_todo_records_prompt_builder_mobile_action_bar_as_p1_completion():
     assert "這一步會真的改 Prompt Builder 手機版的操作動線" in todo
     assert "不新增 backend API、資料庫 schema、Pi/Caddy/service、Go runtime 或 public exposure" in todo
     assert "Prompt Builder mobile action bar polish — Risk level `P1 workflow-sensitive`" in todo
+

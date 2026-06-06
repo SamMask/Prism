@@ -9,7 +9,7 @@ GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
 GO_TEST_PATH = ROOT / "go-shadow" / "main_test.go"
 BUILD_SCRIPT_PATH = ROOT / "scripts" / "build_go_runtime.ps1"
 SMOKE_SCRIPT_PATH = ROOT / "scripts" / "smoke_go_local_artifact.ps1"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -108,3 +108,4 @@ def test_docs_record_c_closure_without_starting_d_or_e():
     assert "did not deploy Pi, edit Caddy/systemd" in architecture
     assert "`C. Go packaged runtime release candidate` is complete as `completed_release_candidate`" in go_report
     assert "did not deploy Pi, edit Caddy/systemd" in go_report
+

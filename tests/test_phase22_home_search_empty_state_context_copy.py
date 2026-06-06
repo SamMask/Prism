@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HOME_PATH = ROOT / "frontend" / "src" / "pages" / "HomePage.tsx"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
 def test_home_empty_state_has_search_specific_copy_and_preserves_default_copy():
@@ -25,3 +25,4 @@ def test_phase22_3_todo_records_p2_low_risk_completion_without_new_contract():
     assert "- [x] **22.3.1** Search no-result copy" in todo
     assert "不新增 22.3 contract" in todo
     assert "P2 不再開下一個儀式化 phase" in todo
+

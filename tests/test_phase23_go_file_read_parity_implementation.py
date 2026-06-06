@@ -7,7 +7,7 @@ IMPLEMENTATION_PATH = ROOT / "docs" / "contracts" / "phase23-go-file-read-parity
 PLAN_PATH = ROOT / "docs" / "contracts" / "phase23-go-file-read-parity-plan.json"
 GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
 GO_DIFF_TEST_PATH = ROOT / "tests" / "test_phase18_go_shadow_contract.py"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -132,3 +132,4 @@ def test_phase23_2_docs_record_completion_and_23_3_next_gate():
     assert "23.5 Go DB-only write expansion gate is complete" in go_report
     assert "23.5-next.1 Second Go DB-only write implementation subgate is complete" in go_report
     assert "23.5-next.2-4 Category update parity hardening, rollback lock, and boundary closure is complete" in go_report
+

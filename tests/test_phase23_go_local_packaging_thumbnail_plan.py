@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-local-packaging-thumbnail-plan.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 REQUIREMENTS_PATH = ROOT / "requirements.txt"
@@ -128,3 +128,4 @@ def test_pillow_and_go_webp_dependency_are_not_changed_by_plan_gate():
     assert "github.com/chai2010/webp" not in go_mod
     assert "github.com/kolesa-team/go-webp" not in go_mod
     assert "nativewebp" not in go_mod
+

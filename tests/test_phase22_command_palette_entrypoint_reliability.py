@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase22-command-palette-entrypoint-reliability.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 HEADER_PATH = ROOT / "frontend" / "src" / "components" / "Header.tsx"
 PALETTE_PATH = ROOT / "frontend" / "src" / "components" / "CommandPalette.tsx"
 STORE_PATH = ROOT / "frontend" / "src" / "stores" / "appStore.ts"
@@ -80,3 +80,4 @@ def test_phase22_1_forbids_runtime_and_scope_expansion():
     assert "Caddy route expansion or reload" in forbidden
     assert "Go write/file/migration implementation" in forbidden
     assert "Direct public internet exposure" in forbidden
+

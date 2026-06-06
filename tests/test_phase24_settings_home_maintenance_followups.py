@@ -11,7 +11,7 @@ SERVER_DASHBOARD_PATH = ROOT / "frontend" / "src" / "components" / "settings" / 
 SYSTEM_MAINTENANCE_PATH = ROOT / "frontend" / "src" / "components" / "SystemMaintenance.tsx"
 API_PATH = ROOT / "frontend" / "src" / "services" / "api.ts"
 SERVER_ROUTE_PATH = ROOT / "routes" / "server.py"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
 def test_settings_home_followups_are_recorded_in_ui_copy_and_layout():
@@ -68,3 +68,4 @@ def test_todo_records_phase24_settings_home_followup_scope():
     assert "specific backup delete" in todo
     assert "No Go/Pi runtime expansion" in todo
     assert "Category count column alignment follow-up" in todo
+

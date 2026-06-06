@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-b-next-notes-live-default-media-boundary.json"
 B_NEXT_1_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-b-next-notes-write-bundle.json"
 RUNTIME_CLOSURE_PATH = ROOT / "docs" / "contracts" / "phase23-python-runtime-ownership-closure.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 CRUD_PATH = ROOT / "routes" / "notes" / "crud.py"
@@ -93,3 +93,4 @@ def test_docs_record_reason_simple_explanation_and_no_auto_next_detail():
     assert "`B-next.2 Notes bundle live/default ownership decision" in go_report
     assert "No B-next.3 is added automatically" in go_report
     assert "not an active queue" in go_report
+

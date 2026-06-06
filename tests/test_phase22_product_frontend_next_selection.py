@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase22-product-frontend-next-selection.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 HOME_PATH = ROOT / "frontend" / "src" / "pages" / "HomePage.tsx"
 
 
@@ -85,3 +85,4 @@ def test_phase22_2_todo_records_selection_and_next_gate():
     assert "docs/contracts/phase22-product-frontend-next-selection.json" in todo
     assert "home_search_empty_state_context_copy" in todo
     assert "22.3 Home Search Empty State Context Copy" in todo
+

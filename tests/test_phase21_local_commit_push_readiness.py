@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 READINESS_PATH = ROOT / "docs" / "contracts" / "phase21-local-commit-push-readiness.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
 def _readiness():
@@ -97,3 +97,4 @@ def test_phase21_1_todo_records_readiness_gate_and_next_approval_gate():
     assert "docs/contracts/phase21-local-commit-push-readiness.json" in todo
     assert "21.2 Explicit Local Commit and Push Approval Gate" in todo
     assert "未做 git commit/push" in todo
+

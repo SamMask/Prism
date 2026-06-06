@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 INTAKE_PATH = ROOT / "docs" / "contracts" / "phase22-product-frontend-backlog-intake.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 HEADER_PATH = ROOT / "frontend" / "src" / "components" / "Header.tsx"
 PALETTE_PATH = ROOT / "frontend" / "src" / "components" / "CommandPalette.tsx"
 
@@ -104,3 +104,4 @@ def test_phase22_0_todo_records_audit_selection_and_next_gate():
     assert "docs/contracts/phase22-product-frontend-backlog-intake.json" in todo
     assert "command_palette_entrypoint_reliability" in todo
     assert "22.1 Command Palette Entrypoint Reliability" in todo
+

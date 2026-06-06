@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DECISION_PATH = ROOT / "docs" / "contracts" / "phase23-python-removal-decision.json"
 STABILIZATION_PATH = ROOT / "docs" / "contracts" / "phase23-final-stabilization.json"
 AUDIT_PATH = ROOT / "docs" / "contracts" / "phase23-go-ownership-closure-audit.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
 
@@ -152,3 +152,4 @@ def test_docs_record_23_10_2_23_10_3_completion_and_phase23_closure():
     assert "`23.10.2 Python removal decision` is complete" in go_report
     assert "`23.10.3 Final stabilization window` is complete" in go_report
     assert "Phase 23 closes with retained Python as the normal runtime path" in go_report
+

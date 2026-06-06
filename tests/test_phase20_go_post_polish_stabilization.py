@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STABILIZATION_PATH = ROOT / "docs" / "contracts" / "phase20-go-post-polish-stabilization.json"
 POLISH_PATH = ROOT / "docs" / "contracts" / "phase20-go-read-surface-polish.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 
 
@@ -92,3 +92,4 @@ def test_phase20_4_docs_record_closure_and_21_0_next_gate():
     assert "21.0 Delivery and Queue Selection Gate" in todo
     assert "Phase 20.4" in architecture
     assert "closed_stabilized" in architecture
+
