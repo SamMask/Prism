@@ -122,7 +122,7 @@ ssh PI5Mask24 "sudo systemctl start prism && sleep 3 && sudo systemctl status pr
 
 ### 6. 自動備份排程 (v2.4.7+)
 
-> 每週日 03:00 自動下載 DB 備份並輪替（保留最新 8 份 ≈ 2 個月歷史）。
+> 每週日 03:00 自動下載 DB 備份並輪替（保留最新 3 份，與 Settings UI 一致）。
 
 ```bash
 # 安裝備份腳本
@@ -133,7 +133,7 @@ set -e
 BACKUP_DIR=/home/mask070924/prism/backups
 TS=\$(date +%Y%m%d_%H%M%S)
 curl -sk --http1.1 --fail -o \"\$BACKUP_DIR/prism_backup_\$TS.db\" https://prism.local/api/server/backup/download
-curl -sk --http1.1 --fail -X POST -H 'Content-Type: application/json' -H 'Origin: https://prism.local' -d '{\"keep\":8}' https://prism.local/api/server/backup/rotate
+curl -sk --http1.1 --fail -X POST -H 'Content-Type: application/json' -H 'Origin: https://prism.local' -d '{\"keep_count\":3}' https://prism.local/api/server/backup/rotate
 SCRIPT
 sudo chmod +x /home/mask070924/prism/scripts/auto-backup.sh
 sudo chown mask070924:mask070924 /home/mask070924/prism/scripts/auto-backup.sh"

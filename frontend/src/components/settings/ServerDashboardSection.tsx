@@ -204,7 +204,8 @@ export function ServerDashboardSection() {
   const handleDownloadBackup = async () => {
     try {
       await api.downloadBackup();
-      toast.success('備份下載已開始');
+      toast.success('備份下載已開始，已套用 3 份保留');
+      await fetchBackups();
     } catch (error: any) {
       toast.error('備份下載失敗: ' + (error?.message || '未知錯誤'));
     }
@@ -471,7 +472,7 @@ export function ServerDashboardSection() {
         </div>
 
         <div className="flex items-center justify-between text-xs text-text-muted mb-2">
-          <span>輪換備份會保留最近 3 份；一鍵下載不會自動清理</span>
+          <span>一鍵下載與輪換備份都會保留最近 3 份</span>
           <button
             onClick={() => { setShowBackups(!showBackups); if (!showBackups) fetchBackups(); }}
             className="text-text-muted hover:text-text-secondary flex items-center gap-1"

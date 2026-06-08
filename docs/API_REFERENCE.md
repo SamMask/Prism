@@ -863,8 +863,9 @@ Response：
 - `GET /api/server/logs`
 - `POST /api/server/restart`
 - `GET /api/server/backup/list`
-- `GET /api/server/backup/download`
-- `POST /api/server/backup/rotate`
+- `GET /api/server/backup/download`（建立並下載 DB 備份；預設保留最近 3 份 server-side 備份）
+- `POST /api/server/backup/rotate`（body 可用 `{ "keep_count": 3 }`；相容 `{ "keep": 8 }`）
+- `DELETE /api/server/backup/<filename>`
 - `GET /api/server/version`
 
 限制：

@@ -53,7 +53,7 @@ def test_category_counts_and_backup_delete_controls_are_locked():
     assert "w-12 shrink-0 rounded bg-bg-elevated px-2 py-0.5 text-right text-xs tabular-nums" in data_manager
     assert 'data-testid="category-actions"' in data_manager
     assert "flex w-16 shrink-0 justify-end gap-1" in data_manager
-    assert "輪換備份會保留最近 3 份；一鍵下載不會自動清理" in server_dashboard
+    assert "一鍵下載與輪換備份都會保留最近 3 份" in server_dashboard
     assert "handleDeleteBackup" in server_dashboard
     assert "api.deleteBackup(backup.filename)" in server_dashboard
     assert "deleteBackup: async (filename: string)" in api

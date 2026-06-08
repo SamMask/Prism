@@ -24,6 +24,9 @@ from flask import Blueprint, jsonify, request, current_app, send_file, abort
 
 server_bp = Blueprint('server', __name__)
 
+DEFAULT_BACKUP_KEEP_COUNT = 3
+MAX_BACKUP_KEEP_COUNT = 10
+
 
 @server_bp.before_request
 def _require_localhost():
@@ -346,11 +349,94 @@ def _get_backup_dir():
     return backup_dir
 
 
+def _is_managed_backup_filename(filename):
+    return (
+        filename
+        and filename == os.path.basename(filename)
+        and filename.startswith('prism_backup_')
+        and filename.endswith('.db')
+    )
+
+
+def _parse_backup_keep_count(data, default=DEFAULT_BACKUP_KEEP_COUNT):
+    """Read backup retention count from keep_count or legacy keep."""
+    raw_keep = data.get('keep_count', data.get('keep', default))
+    try:
+        keep_count = int(raw_keep)
+    except (TypeError, ValueError):
+        keep_count = default
+    return max(1, min(keep_count, MAX_BACKUP_KEEP_COUNT))
+
+
+def _list_managed_backups(backup_dir):
+    backups = []
+    for filename in os.listdir(backup_dir):
+        if not _is_managed_backup_filename(filename):
+            continue
+        path = os.path.join(backup_dir, filename)
+        if not os.path.isfile(path):
+            continue
+        modified_at = os.path.getmtime(path)
+        backups.append({
+            'filename': filename,
+            'path': path,
+            'size_bytes': os.path.getsize(path),
+            'created_at': datetime.fromtimestamp(modified_at).isoformat(),
+            'modified_at': modified_at,
+        })
+
+    backups.sort(key=lambda item: (item['modified_at'], item['filename']), reverse=True)
+    return backups
+
+
+def _enforce_backup_retention(backup_dir, keep_count, protected_filename=None):
+    backups = _list_managed_backups(backup_dir)
+    protected = None
+    if protected_filename:
+        protected = next(
+            (backup for backup in backups if backup['filename'] == protected_filename),
+            None
+        )
+
+    if protected:
+        newest_without_protected = [
+            backup for backup in backups
+            if backup['filename'] != protected_filename
+        ]
+        kept = [protected] + newest_without_protected[:keep_count - 1]
+    else:
+        kept = backups[:keep_count]
+
+    kept_names = {backup['filename'] for backup in kept}
+    to_delete = [
+        backup for backup in backups
+        if backup['filename'] not in kept_names
+    ]
+
+    deleted_names = []
+    for backup in to_delete:
+        try:
+            os.remove(backup['path'])
+            deleted_names.append(backup['filename'])
+        except Exception as e:
+            print(f"[WARNING] Failed to delete backup {backup['filename']}: {e}")
+
+    total_size = sum(backup['size_bytes'] for backup in kept)
+    return kept, deleted_names, total_size
+
+
+def _backup_response_item(backup):
+    return {
+        'filename': backup['filename'],
+        'size_bytes': backup['size_bytes'],
+        'size_mb': round(backup['size_bytes'] / 1024 / 1024, 2),
+        'created_at': backup['created_at'],
+    }
+
+
 def _resolve_backup_path(filename):
     """Resolve a managed Prism backup filename inside the backup directory."""
-    if not filename or filename != os.path.basename(filename):
-        return None
-    if not filename.startswith('prism_backup_') or not filename.endswith('.db'):
+    if not _is_managed_backup_filename(filename):
         return None
 
     backup_dir = _get_backup_dir()
@@ -391,6 +477,11 @@ def download_backup():
         backup_path = os.path.join(backup_dir, backup_filename)
 
         shutil.copy2(db_path, backup_path)
+        _enforce_backup_retention(
+            backup_dir,
+            _parse_backup_keep_count(request.args, DEFAULT_BACKUP_KEEP_COUNT),
+            protected_filename=backup_filename,
+        )
 
         return send_file(
             backup_path,
@@ -420,7 +511,7 @@ def rotate_backups():
     """
     try:
         data = request.get_json(silent=True) or {}
-        keep_count = max(1, min(int(data.get('keep_count', 3)), 10))
+        keep_count = _parse_backup_keep_count(data)
 
         db_path = current_app.config['DATABASE']
         backup_dir = _get_backup_dir()
@@ -439,44 +530,18 @@ def rotate_backups():
         new_backup_path = os.path.join(backup_dir, new_backup_name)
         shutil.copy2(db_path, new_backup_path)
 
-        # List all backups and sort by modification time (newest first)
-        backups = []
-        for f in os.listdir(backup_dir):
-            if f.startswith('prism_backup_') and f.endswith('.db'):
-                fpath = os.path.join(backup_dir, f)
-                backups.append({
-                    'filename': f,
-                    'path': fpath,
-                    'size_bytes': os.path.getsize(fpath),
-                    'created_at': datetime.fromtimestamp(
-                        os.path.getmtime(fpath)
-                    ).isoformat(),
-                })
-
-        # Sort by created_at descending (newest first)
-        backups.sort(key=lambda x: x['created_at'], reverse=True)
-
-        # Keep only the latest N
-        kept = backups[:keep_count]
-        to_delete = backups[keep_count:]
-
-        deleted_names = []
-        for backup in to_delete:
-            try:
-                os.remove(backup['path'])
-                deleted_names.append(backup['filename'])
-            except Exception as e:
-                print(f"[WARNING] Failed to delete backup {backup['filename']}: {e}")
-
-        # Calculate total size of kept backups
-        total_size = sum(b['size_bytes'] for b in kept)
+        kept, deleted_names, total_size = _enforce_backup_retention(
+            backup_dir,
+            keep_count,
+            protected_filename=new_backup_name,
+        )
 
         return jsonify({
             'status': 'success',
             'data': {
                 'new_backup': new_backup_name,
                 'kept_backups': [
-                    {'filename': b['filename'], 'size_mb': round(b['size_bytes'] / 1024 / 1024, 2), 'created_at': b['created_at']}
+                    _backup_response_item(b)
                     for b in kept
                 ],
                 'deleted_backups': deleted_names,
@@ -496,27 +561,13 @@ def list_backups():
     """
     try:
         backup_dir = _get_backup_dir()
-
-        backups = []
-        for f in os.listdir(backup_dir):
-            if f.startswith('prism_backup_') and f.endswith('.db'):
-                fpath = os.path.join(backup_dir, f)
-                backups.append({
-                    'filename': f,
-                    'size_bytes': os.path.getsize(fpath),
-                    'size_mb': round(os.path.getsize(fpath) / 1024 / 1024, 2),
-                    'created_at': datetime.fromtimestamp(
-                        os.path.getmtime(fpath)
-                    ).isoformat(),
-                })
-
-        backups.sort(key=lambda x: x['created_at'], reverse=True)
+        backups = _list_managed_backups(backup_dir)
         total_size = sum(b['size_bytes'] for b in backups)
 
         return jsonify({
             'status': 'success',
             'data': {
-                'backups': backups,
+                'backups': [_backup_response_item(b) for b in backups],
                 'count': len(backups),
                 'total_size_mb': round(total_size / 1024 / 1024, 2),
             }
