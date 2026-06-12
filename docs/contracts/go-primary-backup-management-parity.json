@@ -1,0 +1,31 @@
+{
+  "task_id": "T033",
+  "title": "Go backup list/download/rotate/delete local parity candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-SERVER-SYSTEM",
+  "structural_basis": "ARCH-GO-PRIMARY-06 / DEPLOY-PI backup flow",
+  "runtime_flag": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM=1",
+  "production_runtime_owner": "python",
+  "go_candidate": "local copied-DB-and-data only",
+  "routes": [
+    "GET /api/server/backup/list",
+    "GET /api/server/backup/download",
+    "POST /api/server/backup/rotate",
+    "DELETE /api/server/backup/<filename>"
+  ],
+  "verified_by": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t032_t035_server_system.py::test_t033_backup_list_download_rotate_delete_and_path_safety -v"
+  ],
+  "evidence": {
+    "backup_download": "download creates a managed prism_backup_*.db file and returns a SQLite payload",
+    "retention": "default retention and explicit keep/keep_count rotation preserve bounded backup counts",
+    "path_safety": "delete accepts only managed backup filenames under PRISM_GO_DATA_DIR/backups and rejects arbitrary names"
+  },
+  "boundaries": [
+    "Does not promote production/default backup ownership.",
+    "Does not run against production knowledge.db or production backups.",
+    "Does not deploy Pi, edit Caddy or systemd, change frontend defaults, remove Python, or expand public exposure."
+  ]
+}

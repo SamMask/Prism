@@ -32,6 +32,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,6 +54,8 @@ const maxAttachmentScanDuration = 250 * time.Millisecond
 const maxUploadFileBytes int64 = 5 * 1024 * 1024
 const maxMarkdownImportBytes int64 = 2 * 1024 * 1024
 const maxExportImages = 100
+const defaultBackupKeepCount = 3
+const maxBackupKeepCount = 10
 const thumbnailMaxWidth = 500
 const thumbnailWebPQuality float32 = 80
 const uploadURLTimeout = 30 * time.Second
@@ -95,6 +98,7 @@ type runtimeConfig struct {
 	enableUploadDelete       bool
 	enableMediaCleanup       bool
 	enableImportExport       bool
+	enableServerSystem       bool
 	freshDBInitNeeded        bool
 	migrationsApplied        int
 	migrationBackupPath      string
@@ -138,6 +142,7 @@ func main() {
 	enableUploadDelete := flag.Bool("enable-upload-delete", envBool("PRISM_GO_ENABLE_UPLOAD_DELETE"), "enable local/copied-data POST /api/upload/delete parity candidate")
 	enableMediaCleanup := flag.Bool("enable-media-cleanup", envBool("PRISM_GO_ENABLE_MEDIA_CLEANUP"), "enable local/copied-DB-and-data media cleanup parity candidate")
 	enableImportExport := flag.Bool("enable-import-export", envBool("PRISM_GO_ENABLE_IMPORT_EXPORT"), "enable local/copied-DB-and-data import/export parity candidate")
+	enableServerSystem := flag.Bool("enable-server-system", envBool("PRISM_GO_ENABLE_SERVER_SYSTEM"), "enable local/copied-DB-and-data server/system/config parity candidate")
 	thumbnailInput := flag.String("thumbnail-input", "", "encode this local image file as a Prism WebP thumbnail and exit")
 	thumbnailOutput := flag.String("thumbnail-output", "", "thumbnail output path for --thumbnail-input")
 	flag.Parse()
@@ -149,7 +154,7 @@ func main() {
 		return
 	}
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableNotesWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite, *enableAttachmentWrite, *enableAttachmentRawRead, *enableUploadWrite, *enableUploadDelete, *enableMediaCleanup, *enableImportExport)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableNotesWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite, *enableAttachmentWrite, *enableAttachmentRawRead, *enableUploadWrite, *enableUploadDelete, *enableMediaCleanup, *enableImportExport, *enableServerSystem)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -179,6 +184,27 @@ func main() {
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.HandleFunc("/api/attachments/", srv.handleAttachmentDetail)
 	mux.HandleFunc("/api/system/migration-status", srv.handleMigrationStatus)
+	mux.HandleFunc("/api/system/stats", srv.handleSystemStats)
+	mux.HandleFunc("/api/system/vacuum", srv.handleSystemVacuum)
+	mux.HandleFunc("/api/system/clear-history", srv.handleSystemClearHistory)
+	mux.HandleFunc("/api/system/startup-preference", srv.handleStartupPreference)
+	mux.HandleFunc("/api/system/wal-checkpoint", srv.handleWALCheckpoint)
+	mux.HandleFunc("/api/system/check-consistency", srv.handleCheckConsistency)
+	mux.HandleFunc("/api/system/port-config", srv.handlePortConfig)
+	mux.HandleFunc("/api/server/hardware", srv.handleServerHardware)
+	mux.HandleFunc("/api/server/logs", srv.handleServerLogs)
+	mux.HandleFunc("/api/server/restart", srv.handleServerRestart)
+	mux.HandleFunc("/api/server/backup/download", srv.handleBackupDownload)
+	mux.HandleFunc("/api/server/backup/rotate", srv.handleBackupRotate)
+	mux.HandleFunc("/api/server/backup/list", srv.handleBackupList)
+	mux.HandleFunc("/api/server/backup/", srv.handleBackupDelete)
+	mux.HandleFunc("/api/server/version", srv.handleServerVersion)
+	mux.HandleFunc("/api/prompt-options", srv.handlePromptOptions)
+	mux.HandleFunc("/api/prompt-options/category/", srv.handlePromptOptionCategory)
+	mux.HandleFunc("/api/prompt-options/template", srv.handlePromptOptionTemplate)
+	mux.HandleFunc("/api/prompt-options/template/", srv.handlePromptOptionTemplateDelete)
+	mux.HandleFunc("/api/wizard-options", srv.handleWizardOptions)
+	mux.HandleFunc("/api/wizard-options/dimension/", srv.handleWizardOptionDimension)
 	mux.HandleFunc("/api/cleanup/orphan-images", srv.handleCleanupOrphanImages)
 	mux.HandleFunc("/api/cleanup/originals", srv.handleCleanupOriginals)
 	mux.HandleFunc("/api/cleanup/broken-images", srv.handleCleanupBrokenImages)
@@ -258,6 +284,7 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	enableUploadDelete := len(optionalAttachmentWrite) > 3 && optionalAttachmentWrite[3]
 	enableMediaCleanup := len(optionalAttachmentWrite) > 4 && optionalAttachmentWrite[4]
 	enableImportExport := len(optionalAttachmentWrite) > 5 && optionalAttachmentWrite[5]
+	enableServerSystem := len(optionalAttachmentWrite) > 6 && optionalAttachmentWrite[6]
 	absData, err := filepath.Abs(dataDir)
 	if err != nil {
 		return runtimeConfig{}, err
@@ -279,6 +306,9 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	}
 	if enableImportExport && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_IMPORT_EXPORT") != "1" {
 		return runtimeConfig{}, fmt.Errorf("refusing to enable import/export with production-like database %s; use copied data or set PRISM_GO_ALLOW_PROD_IMPORT_EXPORT=1", absDB)
+	}
+	if enableServerSystem && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_SERVER_SYSTEM") != "1" {
+		return runtimeConfig{}, fmt.Errorf("refusing to enable server/system routes with production-like database %s; use copied data or set PRISM_GO_ALLOW_PROD_SERVER_SYSTEM=1", absDB)
 	}
 	freshDBInitNeeded := false
 	if info, err := os.Stat(absDB); err != nil {
@@ -338,8 +368,9 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		enableUploadDelete:       enableUploadDelete,
 		enableMediaCleanup:       enableMediaCleanup,
 		enableImportExport:       enableImportExport,
+		enableServerSystem:       enableServerSystem,
 		freshDBInitNeeded:        freshDBInitNeeded,
-		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup || enableImportExport),
+		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup || enableImportExport || enableServerSystem),
 	}, nil
 }
 
@@ -381,7 +412,7 @@ func ensureDataSubdir(dataDir string, parts ...string) (string, error) {
 }
 
 func (cfg runtimeConfig) hasWriteCandidate() bool {
-	return cfg.enableTagWrite || cfg.enableCategoryWrite || cfg.enableNotesWrite || cfg.enableAttachmentWrite || cfg.enableMediaCleanup || cfg.enableImportExport
+	return cfg.enableTagWrite || cfg.enableCategoryWrite || cfg.enableNotesWrite || cfg.enableAttachmentWrite || cfg.enableMediaCleanup || cfg.enableImportExport || cfg.enableServerSystem
 }
 
 func openRuntimeSQLite(cfg *runtimeConfig) (*sqliteConnectionOwner, error) {
@@ -1377,7 +1408,1378 @@ func (s *server) apiSurface() string {
 	if s.runtime.enableImportExport {
 		parts = append(parts, "local-import-export")
 	}
+	if s.runtime.enableServerSystem {
+		parts = append(parts, "local-server-system")
+	}
 	return strings.Join(parts, "+")
+}
+
+func (s *server) requireServerSystem(w http.ResponseWriter, r *http.Request) bool {
+	if !s.runtime.enableServerSystem {
+		_, _ = io.Copy(io.Discard, r.Body)
+		writeError(w, http.StatusMethodNotAllowed, "Server/system route is disabled")
+		return false
+	}
+	return true
+}
+
+func requireMethod(w http.ResponseWriter, r *http.Request, method string) bool {
+	if r.Method == method {
+		return true
+	}
+	w.Header().Set("Allow", method)
+	writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	return false
+}
+
+func requireLocalhostRequest(w http.ResponseWriter, r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	if host == "127.0.0.1" || host == "::1" || host == "localhost" {
+		return true
+	}
+	writeError(w, http.StatusForbidden, "Server management API is accessible from localhost only")
+	return false
+}
+
+func (s *server) handleSystemStats(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	dbSize := fileSizeOrZero(s.runtime.dbPath)
+	notesCount, err := s.countRows("Notes", "")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	tagsCount, err := s.countRows("Tags", "")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	historyCount, err := s.countRows("Note_History", "")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	archivedCount, _ := s.countRows("Notes", "WHERE is_archived = 1")
+	uploadSize, err := directorySize(s.runtime.uploadsDir)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"database": response{
+				"size_bytes":     dbSize,
+				"size_mb":        roundMB(dbSize),
+				"notes_count":    notesCount,
+				"archived_count": archivedCount,
+				"tags_count":     tagsCount,
+				"history_count":  historyCount,
+			},
+			"uploads": response{
+				"size_bytes": uploadSize,
+				"size_mb":    roundMB(uploadSize),
+			},
+		},
+	})
+}
+
+func (s *server) handleSystemVacuum(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !s.requireServerSystem(w, r) {
+		return
+	}
+	sizeBefore := fileSizeOrZero(s.runtime.dbPath)
+	_, _ = s.db.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
+	_, _ = s.db.Exec("INSERT INTO Notes_FTS(Notes_FTS) VALUES('rebuild')")
+	if _, err := s.db.Exec("VACUUM"); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	sizeAfter := fileSizeOrZero(s.runtime.dbPath)
+	freed := sizeBefore - sizeAfter
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"size_before":    sizeBefore,
+			"size_after":     sizeAfter,
+			"freed_bytes":    freed,
+			"size_before_mb": roundMB(sizeBefore),
+			"size_after_mb":  roundMB(sizeAfter),
+			"freed_mb":       roundMB(freed),
+		},
+	})
+}
+
+func (s *server) handleSystemClearHistory(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !s.requireServerSystem(w, r) {
+		return
+	}
+	count, err := s.countRows("Note_History", "")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := s.db.Exec("DELETE FROM Note_History"); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data":   response{"deleted_count": count},
+	})
+}
+
+func (s *server) handleStartupPreference(w http.ResponseWriter, r *http.Request) {
+	if !s.requireServerSystem(w, r) {
+		return
+	}
+	yesFile := filepath.Join(s.runtime.dataDir, ".auto_open_yes")
+	noFile := filepath.Join(s.runtime.dataDir, ".auto_open_no")
+	switch r.Method {
+	case http.MethodGet:
+		var value any
+		if fileExists(yesFile) {
+			value = true
+		} else if fileExists(noFile) {
+			value = false
+		}
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"auto_open_browser": value}})
+	case http.MethodPost:
+		payload, ok := decodeJSONObject(w, r, "Request body is required")
+		if !ok {
+			return
+		}
+		raw, exists := payload["auto_open_browser"]
+		autoOpen, ok := raw.(bool)
+		if !exists || !ok {
+			writeError(w, http.StatusBadRequest, "auto_open_browser is required")
+			return
+		}
+		_ = os.Remove(yesFile)
+		_ = os.Remove(noFile)
+		target := noFile
+		content := []byte("0")
+		if autoOpen {
+			target = yesFile
+			content = []byte("1")
+		}
+		if err := os.WriteFile(target, content, 0644); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"auto_open_browser": autoOpen}})
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (s *server) handleWALCheckpoint(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !s.requireServerSystem(w, r) {
+		return
+	}
+	walPath := s.runtime.dbPath + "-wal"
+	walSizeBefore := fileSizeOrZero(walPath)
+	var blocked, pagesCheckpointed, pagesMoved int
+	if err := s.db.QueryRow("PRAGMA wal_checkpoint(TRUNCATE)").Scan(&blocked, &pagesCheckpointed, &pagesMoved); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"wal_size_before":    walSizeBefore,
+			"wal_size_before_kb": roundKB(walSizeBefore),
+			"wal_size_after":     fileSizeOrZero(walPath),
+			"pages_checkpointed": pagesCheckpointed,
+			"pages_moved":        pagesMoved,
+			"blocked":            blocked,
+			"message":            "WAL 日誌已合併至主資料庫",
+		},
+	})
+}
+
+func (s *server) handleCheckConsistency(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	orphanNoteTags, err := s.scalarInt(`
+		SELECT COUNT(*) FROM Note_Tags nt
+		LEFT JOIN Notes n ON nt.note_id = n.id
+		WHERE n.id IS NULL`)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	unusedTags, err := s.scalarInt(`
+		SELECT COUNT(*) FROM Tags t
+		LEFT JOIN Note_Tags nt ON t.id = nt.tag_id
+		WHERE nt.tag_id IS NULL`)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	nullCategoryID, err := s.scalarInt("SELECT COUNT(*) FROM Notes WHERE category_id IS NULL")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fkStatus, err := s.scalarInt("PRAGMA foreign_keys")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	health := "healthy"
+	if orphanNoteTags >= 5 {
+		health = "critical"
+	} else if orphanNoteTags > 0 {
+		health = "warning"
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"orphan_note_tags": orphanNoteTags,
+			"unused_tags":      unusedTags,
+			"null_category_id": nullCategoryID,
+			"fk_status":        fkStatus,
+			"fk_enabled":       fkStatus == 1,
+			"health":           health,
+		},
+	})
+}
+
+func (s *server) handlePortConfig(w http.ResponseWriter, r *http.Request) {
+	if !s.requireServerSystem(w, r) {
+		return
+	}
+	configPath := filepath.Join(s.runtime.dataDir, ".port_config")
+	config, err := loadPortConfig(configPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	switch r.Method {
+	case http.MethodGet:
+		config["current_port"] = currentRequestPort(r)
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": config})
+	case http.MethodPost:
+		payload, ok := decodeJSONObject(w, r, "Request body is required")
+		if !ok {
+			return
+		}
+		if raw, exists := payload["preferred_port"]; exists {
+			port, ok := intValue(raw)
+			if !ok || port < 1024 || port > 65535 {
+				writeError(w, http.StatusBadRequest, "端口必須在 1024-65535 之間")
+				return
+			}
+			config["preferred_port"] = port
+		}
+		if raw, exists := payload["fallback_enabled"]; exists {
+			config["fallback_enabled"] = boolValue(raw)
+		}
+		if raw, exists := payload["fallback_range"]; exists {
+			fallbackRange, ok := intValue(raw)
+			if !ok || fallbackRange < 1 || fallbackRange > 100 {
+				writeError(w, http.StatusBadRequest, "備用範圍必須在 1-100 之間")
+				return
+			}
+			config["fallback_range"] = fallbackRange
+		}
+		if err := writeIndentedJSON(configPath, config); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": config, "message": "端口設定已儲存，下次啟動時生效"})
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (s *server) handleServerHardware(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	hostname, _ := os.Hostname()
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"cpu_temp": nil,
+			"memory":   goMemoryInfo(),
+			"disk":     goDiskInfo(s.runtime.dataDir),
+			"database": response{
+				"size_mb":     roundMB(fileSizeOrZero(s.runtime.dbPath)),
+				"wal_size_mb": roundMB(fileSizeOrZero(s.runtime.dbPath + "-wal")),
+			},
+			"platform": response{
+				"system":         runtime.GOOS,
+				"machine":        runtime.GOARCH,
+				"hostname":       hostname,
+				"python_version": nil,
+				"go_version":     runtime.Version(),
+			},
+			"service_management": response{
+				"available": false,
+				"reason":    "Go local server-system candidate does not restart host services",
+			},
+			"uptime_seconds": nil,
+		},
+	})
+}
+
+func (s *server) handleServerLogs(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	linesCount := 100
+	if raw := strings.TrimSpace(r.URL.Query().Get("lines")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil {
+			linesCount = parsed
+		}
+	}
+	if linesCount < 1 {
+		linesCount = 1
+	}
+	if linesCount > 500 {
+		linesCount = 500
+	}
+	levelFilter := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("level")))
+	if levelFilter == "" {
+		levelFilter = "ALL"
+	}
+	logPath := s.serverLogPath()
+	if logPath == "" {
+		writeJSON(w, http.StatusOK, response{
+			"status": "success",
+			"data": response{
+				"lines":       []string{},
+				"total_lines": 0,
+				"log_file":    "app.log",
+				"message":     "日誌檔案尚未建立",
+			},
+		})
+		return
+	}
+	lines, err := readTextLines(logPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	filtered := lines
+	if levelFilter != "ALL" {
+		filtered = []string{}
+		token := "[" + levelFilter + "]"
+		for _, line := range lines {
+			if strings.Contains(line, token) {
+				filtered = append(filtered, line)
+			}
+		}
+	}
+	tail := filtered
+	if len(tail) > linesCount {
+		tail = tail[len(tail)-linesCount:]
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"lines":          tail,
+			"total_lines":    len(lines),
+			"filtered_lines": len(filtered),
+			"log_file":       filepath.Base(logPath),
+			"log_size_kb":    roundKB(fileSizeOrZero(logPath)),
+		},
+	})
+}
+
+func (s *server) handleServerRestart(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status":  "success",
+		"message": "Go local server-system candidate acknowledged restart request without restarting host services",
+		"data": response{
+			"service_management": response{
+				"available": false,
+				"reason":    "systemd restart is intentionally disabled in the local Go candidate",
+			},
+		},
+	})
+}
+
+func (s *server) handleBackupDownload(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	if !fileExists(s.runtime.dbPath) {
+		writeError(w, http.StatusNotFound, "資料庫檔案不存在")
+		return
+	}
+	backupName := managedBackupName()
+	backupPath := filepath.Join(s.runtime.backupsDir, backupName)
+	if !isSubpath(backupPath, s.runtime.backupsDir) {
+		writeError(w, http.StatusBadRequest, "無效的備份檔名")
+		return
+	}
+	if err := copyFileExclusive(s.runtime.dbPath, backupPath); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	keepCount := parseBackupKeepCountFromQuery(r, defaultBackupKeepCount)
+	if _, _, _, err := enforceBackupRetention(s.runtime.backupsDir, keepCount, backupName); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/x-sqlite3")
+	w.Header().Set("Content-Disposition", "attachment; filename="+backupName)
+	http.ServeFile(w, r, backupPath)
+}
+
+func (s *server) handleBackupRotate(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	payload, err := decodeOptionalJSONObject(r)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON body")
+		return
+	}
+	keepCount := parseBackupKeepCount(payload, defaultBackupKeepCount)
+	backupName := managedBackupName()
+	backupPath := filepath.Join(s.runtime.backupsDir, backupName)
+	if err := copyFileExclusive(s.runtime.dbPath, backupPath); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	kept, deleted, totalSize, err := enforceBackupRetention(s.runtime.backupsDir, keepCount, backupName)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"new_backup":      backupName,
+			"kept_backups":    backupResponseItems(kept),
+			"deleted_backups": deleted,
+			"total_size_mb":   roundMB(totalSize),
+		},
+	})
+}
+
+func (s *server) handleBackupList(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	backups, err := listManagedBackups(s.runtime.backupsDir)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	var totalSize int64
+	for _, backup := range backups {
+		totalSize += backup.SizeBytes
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"backups":       backupResponseItems(backups),
+			"count":         len(backups),
+			"total_size_mb": roundMB(totalSize),
+		},
+	})
+}
+
+func (s *server) handleBackupDelete(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodDelete) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	filename, err := url.PathUnescape(strings.TrimPrefix(r.URL.Path, "/api/server/backup/"))
+	if err != nil || !isManagedBackupFilename(filename) {
+		writeError(w, http.StatusBadRequest, "無效的備份檔名")
+		return
+	}
+	backupPath := filepath.Join(s.runtime.backupsDir, filename)
+	if !isSubpath(backupPath, s.runtime.backupsDir) {
+		writeError(w, http.StatusBadRequest, "無效的備份檔名")
+		return
+	}
+	if !fileExists(backupPath) {
+		writeError(w, http.StatusNotFound, "備份檔案不存在")
+		return
+	}
+	if err := os.Remove(backupPath); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"deleted": filename}})
+}
+
+func (s *server) handleServerVersion(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"version":   prismVersion(),
+			"changelog": []response{},
+			"is_frozen": false,
+			"v2_mode":   envBool("PRISM_V2"),
+			"platform":  runtime.GOOS,
+			"go_runtime": response{
+				"api_surface": s.apiSurface(),
+				"query_only":  s.runtime.sqliteQueryOnly,
+			},
+		},
+	})
+}
+
+func (s *server) handlePromptOptions(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	config, err := s.loadOptionConfig("prompt_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": config})
+}
+
+func (s *server) handlePromptOptionCategory(w http.ResponseWriter, r *http.Request) {
+	if !s.requireServerSystem(w, r) {
+		return
+	}
+	parts := routeParts(strings.TrimPrefix(r.URL.Path, "/api/prompt-options/category/"))
+	if len(parts) == 1 && r.Method == http.MethodPost {
+		s.addPromptOption(w, r, parts[0])
+		return
+	}
+	if len(parts) == 2 && r.Method == http.MethodPut {
+		s.updatePromptOption(w, r, parts[0], parts[1])
+		return
+	}
+	if len(parts) == 2 && r.Method == http.MethodDelete {
+		s.deletePromptOption(w, r, parts[0], parts[1])
+		return
+	}
+	writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+}
+
+func (s *server) handlePromptOptionTemplate(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !s.requireServerSystem(w, r) {
+		return
+	}
+	payload, ok := decodeJSONObject(w, r, "Request body is required")
+	if !ok {
+		return
+	}
+	name := strings.TrimSpace(stringField(payload, "name"))
+	if name == "" {
+		writeError(w, http.StatusBadRequest, "name is required")
+		return
+	}
+	config, err := s.loadOptionConfig("prompt_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	templateID := strings.TrimSpace(stringField(payload, "id"))
+	if templateID == "" {
+		templateID = strings.ReplaceAll(strings.ReplaceAll(strings.ToLower(name), " ", "-"), ":", "")
+	}
+	template := map[string]any{
+		"id":       templateID,
+		"name":     name,
+		"preset":   payload["preset"],
+		"isCustom": true,
+	}
+	if template["preset"] == nil {
+		template["preset"] = map[string]any{}
+	}
+	templates, _ := config["quickTemplates"].([]any)
+	action := "created"
+	index := len(templates)
+	for i, item := range templates {
+		if obj, ok := item.(map[string]any); ok && stringValue(obj["id"]) == templateID {
+			templates[i] = template
+			action = "updated"
+			index = i
+			break
+		}
+	}
+	if action == "created" {
+		templates = append(templates, template)
+	}
+	config["quickTemplates"] = templates
+	status := http.StatusCreated
+	if action == "updated" {
+		status = http.StatusOK
+	}
+	if err := s.saveOptionConfig("prompt_options.json", config); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, status, response{"status": "success", "data": response{"action": action, "template": template, "index": index}})
+}
+
+func (s *server) handlePromptOptionTemplateDelete(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodDelete) || !s.requireServerSystem(w, r) {
+		return
+	}
+	parts := routeParts(strings.TrimPrefix(r.URL.Path, "/api/prompt-options/template/"))
+	if len(parts) != 1 {
+		writeError(w, http.StatusNotFound, "Template not found")
+		return
+	}
+	templateID := parts[0]
+	config, err := s.loadOptionConfig("prompt_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	templates, _ := config["quickTemplates"].([]any)
+	for i, item := range templates {
+		if obj, ok := item.(map[string]any); ok && stringValue(obj["id"]) == templateID {
+			deleted := item
+			config["quickTemplates"] = append(templates[:i], templates[i+1:]...)
+			if err := s.saveOptionConfig("prompt_options.json", config); err != nil {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+			writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"deleted": deleted}})
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, fmt.Sprintf("Template %q not found", templateID))
+}
+
+func (s *server) handleWizardOptions(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	config, err := s.loadOptionConfig("wizard_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": config})
+}
+
+func (s *server) handleWizardOptionDimension(w http.ResponseWriter, r *http.Request) {
+	if !s.requireServerSystem(w, r) {
+		return
+	}
+	parts := routeParts(strings.TrimPrefix(r.URL.Path, "/api/wizard-options/dimension/"))
+	if len(parts) == 1 && r.Method == http.MethodPost {
+		s.addWizardOption(w, r, parts[0])
+		return
+	}
+	if len(parts) == 2 && r.Method == http.MethodDelete {
+		s.deleteWizardOption(w, r, parts[0], parts[1])
+		return
+	}
+	writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func fileSizeOrZero(path string) int64 {
+	info, err := os.Stat(path)
+	if err != nil || info.IsDir() {
+		return 0
+	}
+	return info.Size()
+}
+
+func roundMB(bytes int64) float64 {
+	return math.Round((float64(bytes)/1024/1024)*100) / 100
+}
+
+func roundKB(bytes int64) float64 {
+	return math.Round((float64(bytes)/1024)*10) / 10
+}
+
+func directorySize(root string) (int64, error) {
+	var total int64
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return 0, nil
+	}
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		total += info.Size()
+		return nil
+	})
+	return total, err
+}
+
+func (s *server) countRows(table, where string) (int, error) {
+	return s.scalarInt("SELECT COUNT(*) FROM " + table + " " + where)
+}
+
+func (s *server) scalarInt(query string, args ...any) (int, error) {
+	var value int
+	if err := s.db.QueryRow(query, args...).Scan(&value); err != nil {
+		return 0, err
+	}
+	return value, nil
+}
+
+func loadPortConfig(configPath string) (response, error) {
+	config := response{
+		"preferred_port":   5000,
+		"fallback_enabled": true,
+		"fallback_range":   20,
+	}
+	if !fileExists(configPath) {
+		return config, nil
+	}
+	file, err := os.Open(configPath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var saved map[string]any
+	if err := json.NewDecoder(file).Decode(&saved); err != nil {
+		return nil, err
+	}
+	for key, value := range saved {
+		config[key] = value
+	}
+	return config, nil
+}
+
+func currentRequestPort(r *http.Request) int {
+	host := r.Host
+	if _, port, err := net.SplitHostPort(host); err == nil {
+		if value, err := strconv.Atoi(port); err == nil {
+			return value
+		}
+	}
+	if idx := strings.LastIndex(host, ":"); idx >= 0 {
+		if value, err := strconv.Atoi(host[idx+1:]); err == nil {
+			return value
+		}
+	}
+	return 80
+}
+
+func boolValue(raw any) bool {
+	switch value := raw.(type) {
+	case bool:
+		return value
+	case string:
+		return strings.EqualFold(value, "true") || value == "1"
+	default:
+		if intValue, ok := intValue(raw); ok {
+			return intValue != 0
+		}
+	}
+	return false
+}
+
+func goMemoryInfo() response {
+	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
+	total := int64(stats.Sys)
+	used := int64(stats.Alloc)
+	percent := 0.0
+	if total > 0 {
+		percent = math.Round((float64(used)/float64(total))*1000) / 10
+	}
+	return response{
+		"total_mb":     roundMB(total),
+		"used_mb":      roundMB(used),
+		"available_mb": roundMB(total - used),
+		"percent":      percent,
+	}
+}
+
+func goDiskInfo(dataDir string) response {
+	used, _ := directorySize(dataDir)
+	return response{
+		"total_gb": 0,
+		"used_gb":  math.Round((float64(used)/1024/1024/1024)*100) / 100,
+		"free_gb":  0,
+		"percent":  0,
+	}
+}
+
+func (s *server) serverLogPath() string {
+	candidates := []string{
+		filepath.Join(s.runtime.dataDir, "app.log"),
+		filepath.Join(s.runtime.logsDir, "app.log"),
+	}
+	for _, candidate := range candidates {
+		if fileExists(candidate) {
+			return candidate
+		}
+	}
+	return ""
+}
+
+func readTextLines(path string) ([]string, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	text := strings.ReplaceAll(string(content), "\r\n", "\n")
+	text = strings.TrimRight(text, "\n\r")
+	if text == "" {
+		return []string{}, nil
+	}
+	return strings.Split(text, "\n"), nil
+}
+
+func decodeOptionalJSONObject(r *http.Request) (map[string]any, error) {
+	defer r.Body.Close()
+	content, err := io.ReadAll(io.LimitReader(r.Body, 1<<20))
+	if err != nil {
+		return nil, err
+	}
+	if strings.TrimSpace(string(content)) == "" {
+		return map[string]any{}, nil
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(content, &payload); err != nil {
+		return nil, err
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	return payload, nil
+}
+
+func parseBackupKeepCountFromQuery(r *http.Request, fallback int) int {
+	if raw := r.URL.Query().Get("keep_count"); raw != "" {
+		if value, err := strconv.Atoi(raw); err == nil {
+			return clampBackupKeepCount(value)
+		}
+	}
+	if raw := r.URL.Query().Get("keep"); raw != "" {
+		if value, err := strconv.Atoi(raw); err == nil {
+			return clampBackupKeepCount(value)
+		}
+	}
+	return clampBackupKeepCount(fallback)
+}
+
+func parseBackupKeepCount(payload map[string]any, fallback int) int {
+	if value, ok := intValue(payload["keep_count"]); ok {
+		return clampBackupKeepCount(value)
+	}
+	if value, ok := intValue(payload["keep"]); ok {
+		return clampBackupKeepCount(value)
+	}
+	return clampBackupKeepCount(fallback)
+}
+
+func clampBackupKeepCount(value int) int {
+	if value < 1 {
+		return 1
+	}
+	if value > maxBackupKeepCount {
+		return maxBackupKeepCount
+	}
+	return value
+}
+
+type backupInfo struct {
+	Filename   string
+	Path       string
+	SizeBytes  int64
+	CreatedAt  string
+	ModifiedAt int64
+}
+
+func managedBackupName() string {
+	now := time.Now()
+	return fmt.Sprintf("prism_backup_%s_%09d.db", now.Format("20060102_150405"), now.Nanosecond())
+}
+
+func isManagedBackupFilename(filename string) bool {
+	return filename != "" &&
+		filename == filepath.Base(filename) &&
+		!strings.ContainsAny(filename, `/\`) &&
+		strings.HasPrefix(filename, "prism_backup_") &&
+		strings.HasSuffix(filename, ".db")
+}
+
+func listManagedBackups(backupDir string) ([]backupInfo, error) {
+	entries, err := os.ReadDir(backupDir)
+	if err != nil {
+		return nil, err
+	}
+	backups := []backupInfo{}
+	for _, entry := range entries {
+		filename := entry.Name()
+		if entry.IsDir() || !isManagedBackupFilename(filename) {
+			continue
+		}
+		path := filepath.Join(backupDir, filename)
+		info, err := entry.Info()
+		if err != nil {
+			return nil, err
+		}
+		backups = append(backups, backupInfo{
+			Filename:   filename,
+			Path:       path,
+			SizeBytes:  info.Size(),
+			CreatedAt:  info.ModTime().Format(time.RFC3339),
+			ModifiedAt: info.ModTime().UnixNano(),
+		})
+	}
+	sort.Slice(backups, func(i, j int) bool {
+		if backups[i].ModifiedAt == backups[j].ModifiedAt {
+			return backups[i].Filename > backups[j].Filename
+		}
+		return backups[i].ModifiedAt > backups[j].ModifiedAt
+	})
+	return backups, nil
+}
+
+func enforceBackupRetention(backupDir string, keepCount int, protectedFilename string) ([]backupInfo, []string, int64, error) {
+	backups, err := listManagedBackups(backupDir)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	keepCount = clampBackupKeepCount(keepCount)
+	kept := []backupInfo{}
+	if protectedFilename != "" {
+		for _, backup := range backups {
+			if backup.Filename == protectedFilename {
+				kept = append(kept, backup)
+				break
+			}
+		}
+	}
+	for _, backup := range backups {
+		if len(kept) >= keepCount {
+			break
+		}
+		if backup.Filename == protectedFilename {
+			continue
+		}
+		kept = append(kept, backup)
+	}
+	keptNames := map[string]bool{}
+	var totalSize int64
+	for _, backup := range kept {
+		keptNames[backup.Filename] = true
+		totalSize += backup.SizeBytes
+	}
+	deleted := []string{}
+	for _, backup := range backups {
+		if keptNames[backup.Filename] {
+			continue
+		}
+		if err := os.Remove(backup.Path); err != nil {
+			return nil, nil, 0, err
+		}
+		deleted = append(deleted, backup.Filename)
+	}
+	return kept, deleted, totalSize, nil
+}
+
+func backupResponseItems(backups []backupInfo) []response {
+	items := []response{}
+	for _, backup := range backups {
+		items = append(items, response{
+			"filename":   backup.Filename,
+			"size_bytes": backup.SizeBytes,
+			"size_mb":    roundMB(backup.SizeBytes),
+			"created_at": backup.CreatedAt,
+		})
+	}
+	return items
+}
+
+func prismVersion() string {
+	if value := strings.TrimSpace(os.Getenv("PRISM_VERSION")); value != "" {
+		return value
+	}
+	pattern := regexp.MustCompile(`PRISM_VERSION\s*=\s*["']([^"']+)["']`)
+	candidates := []string{}
+	if cwd, err := os.Getwd(); err == nil {
+		candidates = append(candidates, filepath.Join(cwd, "config.py"))
+		candidates = append(candidates, filepath.Join(cwd, "..", "config.py"))
+	}
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		candidates = append(candidates, filepath.Join(exeDir, "config.py"))
+		candidates = append(candidates, filepath.Join(exeDir, "..", "config.py"))
+	}
+	for _, candidate := range candidates {
+		content, err := os.ReadFile(candidate)
+		if err != nil {
+			continue
+		}
+		if match := pattern.FindStringSubmatch(string(content)); len(match) == 2 {
+			return match[1]
+		}
+	}
+	return "2.4.9"
+}
+
+func routeParts(raw string) []string {
+	raw = strings.Trim(raw, "/")
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, "/")
+	out := []string{}
+	for _, part := range parts {
+		decoded, err := url.PathUnescape(part)
+		if err != nil || decoded == "" {
+			return nil
+		}
+		out = append(out, decoded)
+	}
+	return out
+}
+
+func (s *server) optionConfigPath(filename string) (string, error) {
+	if filename != "prompt_options.json" && filename != "wizard_options.json" {
+		return "", fmt.Errorf("unsupported config file %q", filename)
+	}
+	target := filepath.Join(s.runtime.configDir, filename)
+	if !isSubpath(target, s.runtime.configDir) {
+		return "", fmt.Errorf("config path escapes config dir: %s", filename)
+	}
+	return target, nil
+}
+
+func (s *server) loadOptionConfig(filename string) (map[string]any, error) {
+	target, err := s.optionConfigPath(filename)
+	if err != nil {
+		return nil, err
+	}
+	if !fileExists(target) {
+		if err := s.seedOptionConfig(filename, target); err != nil {
+			return nil, err
+		}
+	}
+	file, err := os.Open(target)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var config map[string]any
+	if err := json.NewDecoder(file).Decode(&config); err != nil {
+		return nil, err
+	}
+	if config == nil {
+		return nil, errors.New("configuration file is empty")
+	}
+	return config, nil
+}
+
+func (s *server) seedOptionConfig(filename, target string) error {
+	sourceCandidates := []string{filepath.Join(s.runtime.dataDir, "static", "config", filename)}
+	if cwd, err := os.Getwd(); err == nil {
+		sourceCandidates = append(sourceCandidates,
+			filepath.Join(cwd, "static", "config", filename),
+			filepath.Join(cwd, "..", "static", "config", filename),
+		)
+	}
+	for _, source := range sourceCandidates {
+		if !fileExists(source) {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+		return copyFileExclusive(source, target)
+	}
+	return fmt.Errorf("configuration file not found: %s", filename)
+}
+
+func (s *server) saveOptionConfig(filename string, config map[string]any) error {
+	target, err := s.optionConfigPath(filename)
+	if err != nil {
+		return err
+	}
+	config["lastUpdated"] = time.Now().Format("2006-01-02")
+	return writeIndentedJSON(target, config)
+}
+
+func writeIndentedJSON(target string, payload any) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+	content, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return err
+	}
+	content = append(content, '\n')
+	tmp := target + ".tmp"
+	if err := os.WriteFile(tmp, content, 0644); err != nil {
+		return err
+	}
+	_ = os.Remove(target)
+	return os.Rename(tmp, target)
+}
+
+func (s *server) promptCategory(config map[string]any, categoryKey string) (map[string]any, []any, error) {
+	categories, ok := config["categories"].(map[string]any)
+	if !ok {
+		return nil, nil, errors.New("categories not found")
+	}
+	category, ok := categories[categoryKey].(map[string]any)
+	if !ok {
+		return nil, nil, fmt.Errorf("Category %q not found", categoryKey)
+	}
+	options, _ := category["options"].([]any)
+	return category, options, nil
+}
+
+func (s *server) addPromptOption(w http.ResponseWriter, r *http.Request, categoryKey string) {
+	payload, ok := decodeJSONObject(w, r, "Request body is required")
+	if !ok {
+		return
+	}
+	config, err := s.loadOptionConfig("prompt_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	category, options, err := s.promptCategory(config, categoryKey)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	newOption, err := promptOptionFromPayload(payload, false)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if text, ok := newOption.(string); ok {
+		for _, option := range options {
+			if existing, ok := option.(string); ok && existing == text {
+				writeError(w, http.StatusBadRequest, "Option already exists")
+				return
+			}
+		}
+	}
+	options = append(options, newOption)
+	category["options"] = options
+	if err := s.saveOptionConfig("prompt_options.json", config); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, response{"status": "success", "data": response{"index": len(options) - 1, "option": newOption}})
+}
+
+func (s *server) updatePromptOption(w http.ResponseWriter, r *http.Request, categoryKey, indexText string) {
+	index, err := strconv.Atoi(indexText)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid index")
+		return
+	}
+	payload, ok := decodeJSONObject(w, r, "Request body is required")
+	if !ok {
+		return
+	}
+	config, err := s.loadOptionConfig("prompt_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	category, options, err := s.promptCategory(config, categoryKey)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if index < 0 || index >= len(options) {
+		writeError(w, http.StatusBadRequest, "Index out of range")
+		return
+	}
+	current := map[string]any{}
+	if existing, ok := options[index].(map[string]any); ok {
+		current = existing
+	}
+	newOption, err := promptOptionFromPayloadWithCurrent(payload, current)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	options[index] = newOption
+	category["options"] = options
+	if err := s.saveOptionConfig("prompt_options.json", config); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"option": newOption}})
+}
+
+func (s *server) deletePromptOption(w http.ResponseWriter, r *http.Request, categoryKey, indexText string) {
+	index, err := strconv.Atoi(indexText)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid index")
+		return
+	}
+	config, err := s.loadOptionConfig("prompt_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	category, options, err := s.promptCategory(config, categoryKey)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if index < 0 || index >= len(options) {
+		writeError(w, http.StatusBadRequest, "Index out of range")
+		return
+	}
+	deleted := options[index]
+	category["options"] = append(options[:index], options[index+1:]...)
+	if err := s.saveOptionConfig("prompt_options.json", config); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"deleted": deleted}})
+}
+
+func promptOptionFromPayload(payload map[string]any, allowPartial bool) (any, error) {
+	if raw, exists := payload["value"]; exists {
+		value := strings.TrimSpace(stringValue(raw))
+		if value == "" {
+			return nil, errors.New("Option value cannot be empty")
+		}
+		return value, nil
+	}
+	display := strings.TrimSpace(stringValue(payload["display"]))
+	output := strings.TrimSpace(stringValue(payload["output"]))
+	if display == "" || output == "" {
+		return nil, errors.New("Display and output are required")
+	}
+	key := strings.TrimSpace(stringValue(payload["key"]))
+	if key == "" {
+		key = strings.ReplaceAll(strings.ToLower(output), " ", "_")
+	}
+	return map[string]any{"key": key, "display": display, "output": output}, nil
+}
+
+func promptOptionFromPayloadWithCurrent(payload map[string]any, current map[string]any) (any, error) {
+	if _, exists := payload["value"]; exists {
+		return promptOptionFromPayload(payload, false)
+	}
+	if _, hasDisplay := payload["display"]; hasDisplay || payload["output"] != nil || payload["key"] != nil {
+		key := strings.TrimSpace(stringValue(payload["key"]))
+		if key == "" {
+			key = strings.TrimSpace(stringValue(current["key"]))
+		}
+		display := strings.TrimSpace(stringValue(payload["display"]))
+		if display == "" {
+			display = strings.TrimSpace(stringValue(current["display"]))
+		}
+		output := strings.TrimSpace(stringValue(payload["output"]))
+		if output == "" {
+			output = strings.TrimSpace(stringValue(current["output"]))
+		}
+		if display == "" || output == "" {
+			return nil, errors.New("Invalid format")
+		}
+		return map[string]any{"key": key, "display": display, "output": output}, nil
+	}
+	return nil, errors.New("Invalid format")
+}
+
+func (s *server) wizardDimension(config map[string]any, dimensionKey string) (map[string]any, []any, error) {
+	dimensions, ok := config["dimensions"].(map[string]any)
+	if !ok {
+		return nil, nil, errors.New("dimensions not found")
+	}
+	dimension, ok := dimensions[dimensionKey].(map[string]any)
+	if !ok {
+		return nil, nil, fmt.Errorf("Dimension %q not found", dimensionKey)
+	}
+	options, _ := dimension["options"].([]any)
+	return dimension, options, nil
+}
+
+func (s *server) addWizardOption(w http.ResponseWriter, r *http.Request, dimensionKey string) {
+	payload, ok := decodeJSONObject(w, r, "Request body is required")
+	if !ok {
+		return
+	}
+	value := strings.TrimSpace(stringField(payload, "value"))
+	if value == "" {
+		writeError(w, http.StatusBadRequest, "value is required")
+		return
+	}
+	config, err := s.loadOptionConfig("wizard_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	dimension, options, err := s.wizardDimension(config, dimensionKey)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	for _, option := range options {
+		if existing, ok := option.(string); ok && existing == value {
+			writeError(w, http.StatusBadRequest, "This option already exists")
+			return
+		}
+	}
+	options = append(options, value)
+	dimension["options"] = options
+	if err := s.saveOptionConfig("wizard_options.json", config); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusCreated, response{"status": "success", "data": response{"index": len(options) - 1, "option": value}})
+}
+
+func (s *server) deleteWizardOption(w http.ResponseWriter, r *http.Request, dimensionKey, indexText string) {
+	index, err := strconv.Atoi(indexText)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid index")
+		return
+	}
+	config, err := s.loadOptionConfig("wizard_options.json")
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	dimension, options, err := s.wizardDimension(config, dimensionKey)
+	if err != nil {
+		writeError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if index < 0 || index >= len(options) {
+		writeError(w, http.StatusBadRequest, "Index out of range")
+		return
+	}
+	deleted := options[index]
+	dimension["options"] = append(options[:index], options[index+1:]...)
+	if err := s.saveOptionConfig("wizard_options.json", config); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"deleted": deleted}})
 }
 
 func (s *server) handleExportJSON(w http.ResponseWriter, r *http.Request) {

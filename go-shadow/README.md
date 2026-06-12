@@ -40,12 +40,13 @@ Local/copied-DB candidate endpoints behind explicit flags:
 - `POST /api/upload` original upload candidate with `--enable-upload-write`
 - `POST /api/upload` `_thumb.webp` generation and `thumbnail_only` with `--enable-thumbnail-write`
 - `POST /api/upload/url` remote image fetch candidate with `--enable-upload-url-write`
+- server/system/config candidates with `--enable-server-system`
 
 Runtime-only endpoint:
 
 - `GET /healthz`
 
-Excluded endpoints remain Python-owned by default/live runtime: live/default notes writes, category/tag writes, files/uploads, upload delete, import/export, cleanup, maintenance, and `/api/server/*`.
+Excluded endpoints remain Python-owned by default/live runtime: live/default notes writes, category/tag writes, files/uploads, upload delete, import/export, cleanup, maintenance, and `/api/server/*` until their explicit local/copied gates are promoted by later cutover work.
 
 ## Promotion Gate
 
@@ -337,6 +338,18 @@ Markdown import supports H1 title extraction, simple frontmatter category/type/t
 
 These gates do not promote live/default import/export ownership and do not cover server/system backup management, full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 
+#### Server, System, And Options
+
+The active-roadmap T032-T035 gates close local/copied DB/data candidates for server/system/config surfaces:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-server-system
+```
+
+`--enable-server-system` intentionally disables SQLite `query_only` because the candidate includes copied-DB maintenance routes such as WAL checkpoint, VACUUM, and clear-history. It enables `GET /api/server/version`, `GET /api/system/stats`, `GET /api/server/hardware`, `GET /api/server/logs`, backup list/download/rotate/delete, `GET` / `POST /api/system/port-config`, `GET` / `POST /api/system/startup-preference`, safe `POST /api/server/restart` acknowledgement, prompt options CRUD, and wizard options CRUD. File mutations stay under `PRISM_GO_DATA_DIR/backups`, `PRISM_GO_DATA_DIR/config`, and data-root startup marker files.
+
+The Go local candidate does not execute host service restart. These gates do not promote live/default server/system ownership and do not cover full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+
 ## Build Proof
 
 ```powershell
@@ -379,3 +392,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t020_t023_files_uploads.py` locks the active-roadmap T020-T023 attachment raw serving, upload, thumbnail, upload-url safety fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t024_t027_media_cleanup.py` locks the active-roadmap T024-T027 upload delete, orphan images, originals cleanup, broken images cleanup fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t028_t031_import_export.py` locks the active-roadmap T028-T031 Markdown import, JSON import, JSON/Markdown export, DB/images export, batch export fixtures, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t032_t035_server_system.py` locks the active-roadmap T032-T035 server status, backup management, port/startup config, prompt/wizard options fixtures, docs status, and non-live-promotion boundary.

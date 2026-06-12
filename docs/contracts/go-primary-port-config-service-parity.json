@@ -1,0 +1,32 @@
+{
+  "task_id": "T034",
+  "title": "Go port/config/service availability local parity candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-SERVER-SYSTEM",
+  "structural_basis": "ARCH-GO-PRIMARY-06",
+  "runtime_flag": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM=1",
+  "production_runtime_owner": "python",
+  "go_candidate": "local copied-DB-and-data only",
+  "routes": [
+    "GET /api/system/port-config",
+    "POST /api/system/port-config",
+    "GET /api/system/startup-preference",
+    "POST /api/system/startup-preference",
+    "POST /api/server/restart"
+  ],
+  "verified_by": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t032_t035_server_system.py::test_t034_t035_port_startup_prompt_and_wizard_options -v"
+  ],
+  "evidence": {
+    "port_config": "preferred_port, fallback_enabled, fallback_range, and current_port are served and persisted to the copied data root .port_config",
+    "startup_preference": "auto_open_browser marker files are read/written under the copied data root",
+    "service_availability": "Go candidate returns a safe restart acknowledgement and explicitly reports service restart unavailable without calling systemctl"
+  },
+  "boundaries": [
+    "Does not actually restart host services.",
+    "Does not promote production/default server ops ownership.",
+    "Does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure."
+  ]
+}

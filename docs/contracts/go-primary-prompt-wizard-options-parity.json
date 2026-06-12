@@ -1,0 +1,38 @@
+{
+  "task_id": "T035",
+  "title": "Go prompt/wizard options local parity candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-SERVER-SYSTEM",
+  "structural_basis": "ARCH-GO-PRIMARY-06 / SCHEMA: App settings",
+  "runtime_flag": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM=1",
+  "production_runtime_owner": "python",
+  "go_candidate": "local copied-data only",
+  "routes": [
+    "GET /api/prompt-options",
+    "POST /api/prompt-options/category/<category_key>",
+    "PUT /api/prompt-options/category/<category_key>/<index>",
+    "DELETE /api/prompt-options/category/<category_key>/<index>",
+    "POST /api/prompt-options/template",
+    "DELETE /api/prompt-options/template/<template_id>",
+    "GET /api/wizard-options",
+    "POST /api/wizard-options/dimension/<dimension_key>",
+    "DELETE /api/wizard-options/dimension/<dimension_key>/<index>"
+  ],
+  "verified_by": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t032_t035_server_system.py::test_t034_t035_port_startup_prompt_and_wizard_options -v",
+    "pytest tests/test_go_primary_t032_t035_server_system.py::test_t032_t035_docs_and_contracts_are_updated -v"
+  ],
+  "evidence": {
+    "config_root": "Go reads and writes copied prompt_options.json and wizard_options.json under PRISM_GO_DATA_DIR/config",
+    "prompt_options": "category add/update/delete and template create/delete are exercised through HTTP",
+    "wizard_options": "dimension add/delete is exercised through HTTP",
+    "manifest": "route ownership manifest marks prompt/wizard/options routes with Go local copied-data candidates"
+  },
+  "boundaries": [
+    "Does not write static/config in the production repo or Pi data root.",
+    "Does not promote production/default prompt/wizard options ownership.",
+    "Does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure."
+  ]
+}

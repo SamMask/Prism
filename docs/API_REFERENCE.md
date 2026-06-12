@@ -842,6 +842,8 @@ Response：
 
 ## 13. Prompt / Wizard Config API
 
+> Go shadow note (T035): `go-shadow` 已有 `--enable-server-system` / `PRISM_GO_ENABLE_SERVER_SYSTEM=1` local/copied-data 候選實作；讀寫 `PRISM_GO_DATA_DIR/config/*.json`，production/default runtime owner 仍是 Python，未切 Pi / Caddy / frontend default。
+
 這組主要是 Prism 內建 Prompt Builder 用的設定檔 CRUD；如果 `murmur厭世貓` 不需要管理 UI 選項，可以跳過。
 
 ### GET `/api/prompt-options`
@@ -858,6 +860,8 @@ Response：
 ---
 
 ## 14. Server API
+
+> Go shadow note (T032-T034): `go-shadow` 已有 `--enable-server-system` / `PRISM_GO_ENABLE_SERVER_SYSTEM=1` local/copied-DB-and-data 候選實作，涵蓋 server status/hardware/logs、backup、port/startup config 與 safe restart acknowledgement；production/default runtime owner 仍是 Python，未切 Pi / Caddy / frontend default。Go local candidate 不實際重啟 host service。
 
 以下端點僅供本機 headless 維運，外部 Agent 通常不要接：
 

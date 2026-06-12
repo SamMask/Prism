@@ -1,0 +1,33 @@
+{
+  "task_id": "T032",
+  "title": "Go server version/status/hardware/logs local parity candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-SERVER-SYSTEM",
+  "structural_basis": "ARCH-GO-PRIMARY-06",
+  "runtime_flag": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM=1",
+  "production_runtime_owner": "python",
+  "go_candidate": "local copied-DB-and-data only",
+  "routes": [
+    "GET /api/server/version",
+    "GET /api/system/stats",
+    "GET /api/server/hardware",
+    "GET /api/server/logs",
+    "GET /api/system/check-consistency",
+    "POST /api/system/clear-history"
+  ],
+  "verified_by": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t032_t035_server_system.py::test_t032_server_status_gate_and_system_shapes -v"
+  ],
+  "evidence": {
+    "disabled_gate": "server/system routes return 405 until --enable-server-system is set",
+    "status_shape": "version, system stats, hardware, logs, consistency, and clear-history responses are exercised through HTTP against a copied DB/data dir",
+    "local_only": "server routes enforce localhost request origin in the Go candidate"
+  },
+  "boundaries": [
+    "Does not promote production/default server/system ownership.",
+    "Does not deploy Pi, edit Caddy or systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure.",
+    "Uses copied DB/data fixtures only."
+  ]
+}

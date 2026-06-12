@@ -605,6 +605,7 @@
       "python_handler": "routes/system.py:get_system_stats",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read upload directory stats"]
     },
@@ -615,6 +616,7 @@
       "python_handler": "routes/system.py:vacuum_database",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": ["VACUUM SQLite database"],
       "file_side_effects": ["rewrite SQLite database file"]
     },
@@ -625,6 +627,7 @@
       "python_handler": "routes/system.py:clear_history",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": ["delete Note_History rows"],
       "file_side_effects": []
     },
@@ -635,6 +638,7 @@
       "python_handler": "routes/system.py:get_startup_preference",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read local startup preference config"]
     },
@@ -645,6 +649,7 @@
       "python_handler": "routes/system.py:set_startup_preference",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write local startup preference config"]
     },
@@ -655,6 +660,7 @@
       "python_handler": "routes/system.py:wal_checkpoint",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": ["SQLite WAL checkpoint"],
       "file_side_effects": ["rewrite knowledge.db-wal and knowledge.db-shm state"]
     },
@@ -665,6 +671,7 @@
       "python_handler": "routes/system.py:check_consistency",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": []
     },
@@ -706,6 +713,7 @@
       "python_handler": "routes/system.py:get_port_config",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read .port_config"]
     },
@@ -716,6 +724,7 @@
       "python_handler": "routes/system.py:set_port_config",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write .port_config"]
     },
@@ -726,6 +735,7 @@
       "python_handler": "routes/server.py:get_hardware_status",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": []
     },
@@ -736,6 +746,7 @@
       "python_handler": "routes/server.py:get_server_logs",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read app.log or journal logs"]
     },
@@ -746,6 +757,7 @@
       "python_handler": "routes/server.py:restart_service",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data server/system safe acknowledgement only",
       "db_side_effects": [],
       "file_side_effects": [],
       "process_side_effects": ["restart local Prism service/process"]
@@ -757,6 +769,7 @@
       "python_handler": "routes/server.py:download_backup",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data backup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read SQLite database backup payload"]
     },
@@ -767,6 +780,7 @@
       "python_handler": "routes/server.py:rotate_backups",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data backup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["delete old backups under backups"]
     },
@@ -777,6 +791,7 @@
       "python_handler": "routes/server.py:list_backups",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data backup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["list backups directory"]
     },
@@ -787,6 +802,7 @@
       "python_handler": "routes/server.py:delete_backup",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data backup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["delete selected backup file"]
     },
@@ -797,6 +813,7 @@
       "python_handler": "routes/server.py:get_version",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": []
     },
@@ -807,6 +824,7 @@
       "python_handler": "routes/prompt_options.py:get_options",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read static/config/prompt_options.json"]
     },
@@ -817,6 +835,7 @@
       "python_handler": "routes/prompt_options.py:add_option",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/prompt_options.json"]
     },
@@ -827,6 +846,7 @@
       "python_handler": "routes/prompt_options.py:update_option",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/prompt_options.json"]
     },
@@ -837,6 +857,7 @@
       "python_handler": "routes/prompt_options.py:delete_option",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/prompt_options.json"]
     },
@@ -847,6 +868,7 @@
       "python_handler": "routes/prompt_options.py:save_template",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/prompt_options.json"]
     },
@@ -857,6 +879,7 @@
       "python_handler": "routes/prompt_options.py:delete_template",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/prompt_options.json"]
     },
@@ -867,6 +890,7 @@
       "python_handler": "routes/wizard_options.py:get_wizard_options",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read static/config/wizard_options.json"]
     },
@@ -877,6 +901,7 @@
       "python_handler": "routes/wizard_options.py:add_wizard_option",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/wizard_options.json"]
     },
@@ -887,6 +912,7 @@
       "python_handler": "routes/wizard_options.py:delete_wizard_option",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
       "file_side_effects": ["write static/config/wizard_options.json"]
     }
