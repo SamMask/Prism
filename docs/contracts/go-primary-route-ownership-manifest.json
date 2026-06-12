@@ -15,6 +15,7 @@
       "python_handler": "app.index",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local embedded SPA candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read templates/index.html"]
     },
@@ -25,6 +26,7 @@
       "python_handler": "app.serve_spa",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local embedded SPA candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read frontend/dist/index.html"]
     },
@@ -35,6 +37,7 @@
       "python_handler": "app.serve_spa",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local embedded SPA candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read frontend/dist asset or index.html"]
     },
@@ -75,6 +78,7 @@
       "python_handler": "flask.static",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local static/uploads candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read static files and static/uploads"]
     },

@@ -1,0 +1,46 @@
+{
+  "task_id": "T037",
+  "title": "Go security parity boundary",
+  "status": "completed_local_candidate",
+  "completed_date": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data security fixtures and runtime guards",
+  "security_controls": {
+    "public_bind": "Non-local listen addresses are refused unless PRISM_GO_ALLOW_PUBLIC_BIND=1 is explicitly set.",
+    "auth": "Go runtime declares no built-in auth/token layer in /healthz and docs.",
+    "exposure_policy": "Trusted LAN/VPN/proxy-auth only; do not expose Prism directly to the public internet.",
+    "path_traversal": "Attachment/upload/static file paths stay confined to PRISM_GO_DATA_DIR roots.",
+    "ssrf": "Upload URL rejects private, loopback, link-local, multicast, unspecified, reserved, and redirected unsafe targets.",
+    "mime_and_size": "Uploads validate extension, magic/MIME, image decode, and 5 MiB cap before writes."
+  },
+  "no_mutation_failures": [
+    "private/loopback upload-url requests leave static/uploads unchanged",
+    "bad MIME multipart upload requests leave static/uploads unchanged",
+    "static traversal requests do not read adjacent files",
+    "non-local bind failure exits before serving requests"
+  ],
+  "not_authorized_by_t037": [
+    "Adding built-in auth",
+    "Relaxing /api/server/* localhost-only behavior",
+    "Direct public internet exposure",
+    "Pi deploy",
+    "Caddy/systemd edits",
+    "Production DB/files access",
+    "Python removal"
+  ],
+  "verification": {
+    "tests": [
+      "tests/test_go_primary_t036_t038_static_security_workflow.py::test_t037_security_public_bind_and_dangerous_inputs_do_not_mutate_files",
+      "tests/test_go_primary_t036_t038_static_security_workflow.py::test_t036_t037_t038_contracts_docs_and_route_manifest_are_current"
+    ],
+    "evidence": [
+      "0.0.0.0 bind is rejected without PRISM_GO_ALLOW_PUBLIC_BIND=1",
+      "/healthz reports auth=none and public bind policy",
+      "SSRF and bad MIME fixtures return 400 without DB/file mutation"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T039",
+    "reason": "Security boundary is locked locally; package smoke should prove the same runtime contract from a fresh Windows artifact."
+  }
+}

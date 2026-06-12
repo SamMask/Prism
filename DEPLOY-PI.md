@@ -5,7 +5,7 @@
 > **Pi 路徑**: `/home/mask070924/prism/`
 > **存取網址**: `https://prism.local`
 
-> ⚠️ **安全邊界**: Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制。Pi + Caddy 部署預設是 `localhost` / trusted LAN / VPN 用途；不要將 Caddy 或 Flask 入口直接 port-forward 到 public internet / 公網。若需要遠端存取，請使用 VPN、SSH tunnel、受認證保護的 reverse proxy（例如 Caddy auth）或等效外部保護。`/api/server/*` 仍只允許 localhost。
+> ⚠️ **安全邊界**: Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制；Go runtime 也同樣宣告 no built-in auth/token layer。Pi + Caddy 部署預設是 `localhost` / trusted LAN / VPN 用途；不要將 Caddy、Flask 或 Go 入口直接 port-forward 到 public internet / 公網。若需要遠端存取，請使用 VPN、SSH tunnel、受認證保護的 reverse proxy（例如 Caddy auth）或等效外部保護。`/api/server/*` 仍只允許 localhost。
 
 ---
 

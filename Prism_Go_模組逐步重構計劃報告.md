@@ -38,7 +38,8 @@
 - Active roadmap T024-T027 now gives Go local/copied-DB-and-data upload delete and media cleanup parity. Upload delete remains explicit `--enable-upload-delete` and keeps SQLite `query_only=true`; orphan/originals/broken cleanup remains explicit `--enable-media-cleanup` and may update copied `Notes.content` / `Notes.cover_image`.
 - Active roadmap T028-T031 now gives Go local/copied-DB-and-data import/export parity. Markdown/JSON import and JSON/Markdown/DB/images/batch export remain explicit `--enable-import-export`; this write-mode candidate may update copied Notes/Tags/Source_Urls/Note_Attachments and copied uploads/attachments files.
 - Active roadmap T032-T035 now gives Go local/copied-DB-and-data server/system/config parity. Server status/hardware/logs, backup management, port/startup config, safe restart acknowledgement, prompt options, and wizard options remain explicit `--enable-server-system`; this candidate may maintain copied DBs and write copied backups/config files under `PRISM_GO_DATA_DIR`.
-- This does not mean live/default notes, taxonomy, files, uploads, cleanup, import/export, or server/system ownership has changed. This update did not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, execute host service restart, or claim live migration runner / full Go-primary ownership.
+- Active roadmap T036/T037/T038 now gives Go local/copied-DB-and-data embedded SPA/static uploads serving, security boundary, and full workflow proof. Go can serve `/`, client routes, and `/static/uploads/<file>` from `PRISM_GO_DATA_DIR`, keeps unknown `/api/*` as JSON 404, refuses public bind by default, reports no built-in auth/token layer, and passes a Python-vs-Go full workflow invariant fixture covering create/upload/search/export/import/delete/cleanup/backup/migration.
+- This does not mean live/default notes, taxonomy, files, uploads, cleanup, import/export, server/system, static serving, security boundary, or full Go-primary ownership has changed. This update did not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, execute host service restart, or claim live migration runner / full Go-primary ownership.
 
 ### Roadmap Big Items
 
@@ -55,6 +56,8 @@
 | 9 | Python reduction/removal | P0 | Only after every owned surface has a Go or explicit retained-Python decision | No orphan Python-owned runtime surfaces; rollback and release plan complete |
 
 ### Active Next Gate
+
+`2026-06-13 active roadmap update`: T036/T037/T038 close the local/copied static/security/full-workflow proof. Go now explicitly splits embedded SPA, static uploads, and API fallback; locks no-auth/public-bind/SSRF/MIME no-mutation boundaries; and runs a full workflow E2E against both Python and Go local/copied runtimes. This update still does not switch live/default ownership, deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure. The next active queue item is T039 Windows package smoke.
 
 `23.1 Go file-read parity plan gate is complete`.
 

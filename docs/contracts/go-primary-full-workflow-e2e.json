@@ -1,0 +1,70 @@
+{
+  "task_id": "T038",
+  "title": "Go primary full workflow E2E parity",
+  "status": "completed_local_candidate",
+  "completed_date": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data full workflow smoke only",
+  "workflow": [
+    "create note",
+    "upload image",
+    "serve uploaded image",
+    "update note with upload reference",
+    "search note",
+    "export JSON",
+    "import JSON",
+    "delete note",
+    "scan/delete orphan image",
+    "download backup",
+    "check migration status"
+  ],
+  "comparison_policy": {
+    "targets": ["Python Flask test client", "Go local/copied-data runtime"],
+    "compared_invariants": [
+      "each workflow step succeeds on both runtimes",
+      "deleted workflow note is gone on both runtimes",
+      "imported note exists on both runtimes",
+      "explicit orphan file is deleted on both runtimes",
+      "backup download begins with SQLite format 3",
+      "migration status has no pending migrations"
+    ],
+    "not_compared_as_exact": [
+      "timestamps",
+      "generated upload filenames",
+      "Go export metadata extension fields"
+    ]
+  },
+  "go_flags_used": [
+    "--enable-notes-write",
+    "--enable-upload-write",
+    "--enable-thumbnail-write",
+    "--enable-upload-url-write",
+    "--enable-upload-delete",
+    "--enable-media-cleanup",
+    "--enable-import-export",
+    "--enable-server-system"
+  ],
+  "not_authorized_by_t038": [
+    "Pi staging",
+    "Live Caddy/systemd cutover",
+    "Production DB/files mutation",
+    "Python service stop/removal",
+    "Go primary live/default ownership claim"
+  ],
+  "verification": {
+    "tests": [
+      "tests/test_go_primary_t036_t038_static_security_workflow.py::test_t038_full_workflow_python_and_go_core_invariants_match",
+      "tests/test_go_primary_t036_t038_static_security_workflow.py::test_t036_t037_t038_contracts_docs_and_route_manifest_are_current"
+    ],
+    "evidence": [
+      "Python and Go both end with workflow_notes=0",
+      "Python and Go both end with imported_notes=1",
+      "Python and Go both delete the explicit orphan image",
+      "Go serves the just-uploaded image before delete"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T039",
+    "reason": "Full workflow proof is closed locally; package smoke is the next precondition before linux/arm64 and Pi staging."
+  }
+}

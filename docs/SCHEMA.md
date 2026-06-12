@@ -2,7 +2,7 @@
 
 > **用途**: 共享資料綱要 — 所有資料表的現行定義，開發時的唯一真實來源。
 > **版本**: Migration v16 (Headless KMS)
-> **最後更新**: 2026-06-12
+> **最後更新**: 2026-06-13
 > **改 DB 前必讀**: 新增欄位請在 `migrations/__init__.py` 追加 Migration，並更新本文件。
 
 ---
@@ -209,6 +209,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T024-T027 已在 local/copied DB/data fixtures 證明 upload delete reference check、orphan images scan/delete、originals cleanup rewrite/delete、broken images scan/fix；Go T024-T027 不新增資料表或欄位，SQLite 仍維持 v16，live/default uploads/media cleanup owner 仍未切換，import/export、server/system 與 production/Pi cutover 仍是後續 gate。
 > Go T028-T031 已在 local/copied DB/data fixtures 證明 Markdown/JSON import、JSON/Markdown export、DB download、images bundle 與 batch markdown/assets zip；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16，live/default import/export owner 仍未切換，server/system、backup management、full workflow E2E 與 production/Pi cutover 仍是後續 gate。
 > Go T032-T035 已在 local/copied DB/data fixtures 證明 server status/hardware/logs、backup list/download/rotate/delete、port/startup config、prompt options 與 wizard options runtime surface；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。`--enable-server-system` 可對 copied DB 執行 WAL checkpoint / VACUUM / clear-history 類維護，所以不是 default query-only 模式；live/default server/system owner、實際 host service restart、production/Pi cutover 仍未切換。
+> Go T036/T037/T038 已在 local/copied DB/data fixtures 證明 embedded SPA/static uploads serving、安全邊界與 full workflow E2E；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Full workflow 只驗證既有 Notes / Tags / Source_Urls / Note_History / uploads / backups / Schema_Meta 行為，live/default Go primary ownership、production/Pi cutover 與 Python removal 仍未切換。
 
 ---
 

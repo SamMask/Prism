@@ -216,7 +216,7 @@ func main() {
 	mux.HandleFunc("/api/upload/delete", srv.handleUploadDelete)
 	mux.HandleFunc("/api/upload/url", srv.handleUploadURL)
 	mux.HandleFunc("/api/upload", srv.handleUpload)
-	mux.Handle("/", staticHandler())
+	mux.Handle("/", srv.staticHandler())
 
 	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
 	if err := http.ListenAndServe(cfg.addr, logRequests(mux)); err != nil {
@@ -277,6 +277,9 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	}
 	if strings.TrimSpace(dataDir) == "" {
 		return runtimeConfig{}, errors.New("data directory is required; pass --data-dir or PRISM_GO_DATA_DIR")
+	}
+	if err := validateListenAddress(addr); err != nil {
+		return runtimeConfig{}, err
 	}
 	enableAttachmentWrite := len(optionalAttachmentWrite) > 0 && optionalAttachmentWrite[0]
 	enableAttachmentRawRead := len(optionalAttachmentWrite) > 1 && optionalAttachmentWrite[1]
@@ -372,6 +375,36 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		freshDBInitNeeded:        freshDBInitNeeded,
 		sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup || enableImportExport || enableServerSystem),
 	}, nil
+}
+
+func validateListenAddress(addr string) error {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return errors.New("listen address is required")
+	}
+	host, _, err := net.SplitHostPort(addr)
+	if err != nil {
+		return fmt.Errorf("invalid listen address %q: %w", addr, err)
+	}
+	if isLocalListenHost(host) {
+		return nil
+	}
+	if os.Getenv("PRISM_GO_ALLOW_PUBLIC_BIND") == "1" {
+		return nil
+	}
+	return fmt.Errorf("refusing non-local Go bind %q; Prism has no built-in auth/token layer, so use 127.0.0.1 or set PRISM_GO_ALLOW_PUBLIC_BIND=1 only behind trusted LAN/VPN/proxy auth", addr)
+}
+
+func isLocalListenHost(host string) bool {
+	host = strings.Trim(strings.TrimSpace(host), "[]")
+	if host == "" {
+		return false
+	}
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func resolveDataRootPath(dataDir, candidate string) (string, error) {
@@ -1230,7 +1263,7 @@ var migrationDefinitions = []migrationDefinition{
 	}},
 }
 
-func staticHandler() http.Handler {
+func (s *server) staticHandler() http.Handler {
 	sub, err := fs.Sub(embeddedDist, "web/dist")
 	if err != nil {
 		return http.NotFoundHandler()
@@ -1238,6 +1271,18 @@ func staticHandler() http.Handler {
 	files := http.FS(sub)
 	fileServer := http.FileServer(files)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			writeError(w, http.StatusNotFound, "API route not found")
+			return
+		}
+		if r.URL.Path == "/static/uploads" {
+			writeError(w, http.StatusNotFound, "File not found")
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/static/uploads/") {
+			s.serveStaticUpload(w, r)
+			return
+		}
 		if r.URL.Path == "/" {
 			serveIndex(w, r, files)
 			return
@@ -1253,6 +1298,64 @@ func staticHandler() http.Handler {
 		}
 		serveIndex(w, r, files)
 	})
+}
+
+func (s *server) serveStaticUpload(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		return
+	}
+	escapedName := strings.TrimPrefix(r.URL.EscapedPath(), "/static/uploads/")
+	if strings.TrimSpace(escapedName) == "" {
+		writeError(w, http.StatusNotFound, "File not found")
+		return
+	}
+	name, err := url.PathUnescape(escapedName)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "File not found")
+		return
+	}
+	absPath, ok := s.resolveUploadFile(name)
+	if !ok || staticUploadEscapesRoot(absPath, s.runtime.uploadsDir) {
+		writeError(w, http.StatusNotFound, "File not found")
+		return
+	}
+	file, err := os.Open(absPath)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "File not found")
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		writeError(w, http.StatusNotFound, "File not found")
+		return
+	}
+	if contentType := mime.TypeByExtension(filepath.Ext(absPath)); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	http.ServeContent(w, r, filepath.Base(absPath), info.ModTime(), file)
+}
+
+func staticUploadEscapesRoot(absPath, uploadsDir string) bool {
+	root, err := filepath.Abs(uploadsDir)
+	if err != nil {
+		return true
+	}
+	target, err := filepath.Abs(absPath)
+	if err != nil || !isSubpath(target, root) {
+		return true
+	}
+	evaluatedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return true
+	}
+	evaluatedTarget, err := filepath.EvalSymlinks(target)
+	if err != nil {
+		return true
+	}
+	return !isSubpath(evaluatedTarget, evaluatedRoot)
 }
 
 func serveIndex(w http.ResponseWriter, r *http.Request, files http.FileSystem) {
@@ -1338,6 +1441,12 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 			"migrations_applied":      s.runtime.migrationsApplied,
 			"migration_backup_path":   s.runtime.migrationBackupPath,
 			"api_surface":             s.apiSurface(),
+			"security": response{
+				"auth":                "none",
+				"public_bind_default": "blocked",
+				"public_bind_env":     "PRISM_GO_ALLOW_PUBLIC_BIND=1",
+				"exposure_policy":     "trusted LAN/VPN/proxy-auth only; do not expose Prism directly to the public internet",
+			},
 		},
 	})
 }

@@ -1,0 +1,50 @@
+{
+  "task_id": "T036",
+  "title": "Go embedded SPA and static/uploads serving boundary",
+  "status": "completed_local_candidate",
+  "completed_date": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data static serving candidate only",
+  "implementation": {
+    "embedded_spa": "Go serves the bundled go-shadow/web/dist artifact for / and client-side routes.",
+    "uploads": "Go serves /static/uploads/<file> from PRISM_GO_DATA_DIR/static/uploads only.",
+    "api_fallback": "Unmatched /api/* paths return JSON 404 and never fall through to the SPA index.",
+    "directory_listing": false
+  },
+  "path_safety": [
+    "uses the existing upload filename resolver for clean slash-separated paths",
+    "rejects parent traversal, empty paths, absolute paths, volume paths, and unsafe path parts",
+    "rejects symlink escape outside PRISM_GO_DATA_DIR/static/uploads",
+    "serves regular files only"
+  ],
+  "covered_routes": [
+    "GET /",
+    "GET /<path:path>",
+    "GET /static/uploads/<filename>",
+    "GET /api/<unknown>"
+  ],
+  "not_authorized_by_t036": [
+    "Pi deploy",
+    "Caddy or systemd edit/reload",
+    "frontend default API target change",
+    "production DB/files access",
+    "Python removal",
+    "live/default static route ownership promotion"
+  ],
+  "verification": {
+    "tests": [
+      "tests/test_go_primary_t036_t038_static_security_workflow.py::test_t036_static_uploads_spa_and_api_fallback_boundaries",
+      "tests/test_go_primary_t036_t038_static_security_workflow.py::test_t036_t037_t038_contracts_docs_and_route_manifest_are_current"
+    ],
+    "evidence": [
+      "fresh embedded SPA returns index.html for / and client routes",
+      "/static/uploads/t036.png returns exact fixture bytes with image/png",
+      "/api/not-real returns JSON API route not found",
+      "encoded traversal and upload directory requests do not expose adjacent files"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T039",
+    "reason": "Static/security/full workflow proof is closed; the next smallest local-only gate is Windows package smoke before any Pi staging work."
+  }
+}

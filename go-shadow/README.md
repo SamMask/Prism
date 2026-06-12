@@ -41,6 +41,7 @@ Local/copied-DB candidate endpoints behind explicit flags:
 - `POST /api/upload` `_thumb.webp` generation and `thumbnail_only` with `--enable-thumbnail-write`
 - `POST /api/upload/url` remote image fetch candidate with `--enable-upload-url-write`
 - server/system/config candidates with `--enable-server-system`
+- embedded SPA and `/static/uploads/<file>` serving from the explicit data dir, with unknown `/api/*` returning JSON 404 instead of SPA fallback
 
 Runtime-only endpoint:
 
@@ -350,6 +351,20 @@ go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-
 
 The Go local candidate does not execute host service restart. These gates do not promote live/default server/system ownership and do not cover full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 
+#### Static Serving, Security, Full Workflow
+
+The active-roadmap T036-T038 gates close the local/copied static serving, security, and full workflow proof:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-notes-write --enable-upload-write --enable-thumbnail-write --enable-upload-url-write --enable-upload-delete --enable-media-cleanup --enable-import-export --enable-server-system
+```
+
+The root handler now serves the embedded SPA for `/` and client-side routes, serves `/static/uploads/<file>` only from `PRISM_GO_DATA_DIR/static/uploads`, and returns JSON 404 for unknown `/api/*` routes instead of falling through to `index.html`. Upload static serving rejects traversal, empty paths, directories, and symlink escape outside the uploads root.
+
+The Go runtime has no built-in auth/token layer. It refuses non-local listen addresses by default; `PRISM_GO_ALLOW_PUBLIC_BIND=1` is an explicit escape hatch only for deployments already protected by trusted LAN/VPN/proxy auth. `/healthz` reports this exposure policy, and the T037 fixtures prove private-IP upload-url and bad-MIME upload failures leave copied uploads unchanged.
+
+The T038 full workflow fixture runs create, upload, static serve, search, export, import, delete, cleanup, backup, and migration status against both Python and Go local/copied runtimes. It compares durable invariants rather than generated timestamps or upload filenames. This does not promote live/default Go primary ownership, deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure.
+
 ## Build Proof
 
 ```powershell
@@ -393,3 +408,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t024_t027_media_cleanup.py` locks the active-roadmap T024-T027 upload delete, orphan images, originals cleanup, broken images cleanup fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t028_t031_import_export.py` locks the active-roadmap T028-T031 Markdown import, JSON import, JSON/Markdown export, DB/images export, batch export fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t032_t035_server_system.py` locks the active-roadmap T032-T035 server status, backup management, port/startup config, prompt/wizard options fixtures, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t036_t038_static_security_workflow.py` locks the active-roadmap T036-T038 embedded SPA/static uploads serving, security no-mutation/public-bind boundary, full workflow E2E invariants, docs status, and non-live-promotion boundary.
