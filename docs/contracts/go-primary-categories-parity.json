@@ -1,0 +1,88 @@
+{
+  "task_id": "T017",
+  "contract": "CONTRACT-GO-PRIMARY-TAXONOMY",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB categories create/update/delete/default/sort parity only",
+  "depends_on": [
+    "docs/contracts/go-primary-sqlite-connection-owner.json",
+    "docs/contracts/go-primary-notes-history-parity.json"
+  ],
+  "enable_flag": "--enable-category-write",
+  "enable_env": "PRISM_GO_ENABLE_CATEGORY_WRITE=1",
+  "covered_routes": [
+    "POST /api/categories",
+    "PUT /api/categories/<id>",
+    "DELETE /api/categories/<id>"
+  ],
+  "read_route_already_covered": "GET /api/categories remains part of the retained read-only Go surface; T017 adds only explicit local/copied-DB write candidate coverage.",
+  "not_covered_here": [
+    "tags create/update/delete/merge parity closure",
+    "notes batch type/tags already covered by T015",
+    "prompt-options category routes",
+    "live/default taxonomy write ownership",
+    "Pi/Caddy/systemd/frontend cutover"
+  ],
+  "parity_scope": [
+    "category create success, duplicate, and missing-name validation",
+    "category update name/icon/sort_order success",
+    "category update duplicate and empty-name validation",
+    "default category delete protection",
+    "in-use category delete requires target_category_id",
+    "in-use category migration to target category",
+    "empty category delete migrated_notes_count parity",
+    "missing category 404 parity",
+    "default Go runtime keeps category writes disabled without explicit category-write flag"
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "handlers": [
+      "createCategory",
+      "updateCategory",
+      "deleteCategory"
+    ],
+    "transaction_boundary": "single SQLite transaction per category write request",
+    "sqlite_pragmas": [
+      "foreign_keys(1)",
+      "journal_mode(WAL)",
+      "busy_timeout(5000)",
+      "query_only(0) only when explicit DB-write candidate flag is enabled"
+    ]
+  },
+  "runtime_boundary": {
+    "default_runtime_stays_read_only": true,
+    "live_execution_authorized": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "production_file_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t017": [
+    "Live/default taxonomy write ownership",
+    "Production knowledge.db write",
+    "Production file mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Tags write/merge ownership promotion",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t016_t017_history_categories.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v",
+    "diff_check": "git diff --check"
+  },
+  "allowed_next_step": {
+    "id": "T018",
+    "reason": "Categories taxonomy parity is closed; tags create/update/delete/merge is the next active taxonomy surface."
+  }
+}

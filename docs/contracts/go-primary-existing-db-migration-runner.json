@@ -1,0 +1,78 @@
+{
+  "task_id": "T009",
+  "title": "Go existing DB migration runner",
+  "status": "completed",
+  "completed_at": "2026-06-12",
+  "contract": "CONTRACT-GO-PRIMARY-MIGRATIONS",
+  "depends_on": "docs/contracts/go-primary-fresh-db-init.json",
+  "allowed_scope": {
+    "existing_db_upgrade": true,
+    "copied_or_local_db_only": true,
+    "latest_schema_version": 16,
+    "ordered_python_migration_parity": true,
+    "schema_meta_updates": true,
+    "idempotent_duplicate_column_skip": true,
+    "idempotent_missing_column_skip": true,
+    "pending_empty_after_success": true,
+    "returns_to_query_only_after_migration": true
+  },
+  "runtime_guards": {
+    "data_dir_required": true,
+    "production_named_knowledge_db_still_rejected_by_default": true,
+    "backup_required_before_pending_migrations": true,
+    "no_backup_when_no_pending_migrations": true,
+    "no_pi_deploy": true,
+    "no_caddy_or_systemd_change": true,
+    "python_remains_normal_runtime": true
+  },
+  "implementation": {
+    "migration_entrypoint": "openRuntimeSQLite",
+    "runner": "runExistingDBMigrations",
+    "status_reader": "migrationStatus",
+    "definitions": "migrationDefinitions",
+    "version_table": "Schema_Meta key=schema_version",
+    "ordered_versions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  "not_in_scope": [
+    "Production knowledge.db migration without explicit env override",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python migration removal",
+    "Python backend removal",
+    "Schema version beyond v16",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "go_tests": [
+      "TestOpenRuntimeSQLiteMigratesLegacyDBCreatesBackupAndReturnsReadOnlyOwner",
+      "TestRunExistingDBMigrationsSkipsDuplicateAndMissingColumns"
+    ],
+    "python_tests": [
+      "tests/test_go_primary_t009_t010_migrations.py"
+    ]
+  },
+  "next_task": {
+    "id": "T010",
+    "status": "completed_in_same_slice",
+    "reason": "Backup-before-migrate and rollback are the required safety closure for the migration runner."
+  }
+}

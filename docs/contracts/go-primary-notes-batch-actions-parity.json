@@ -1,0 +1,88 @@
+{
+  "task_id": "T015",
+  "contract": "CONTRACT-GO-PRIMARY-NOTES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB notes batch type/tags parity for the current Python route surface",
+  "depends_on": [
+    "docs/contracts/go-primary-notes-delete-parity.json",
+    "docs/contracts/go-primary-notes-actions-parity.json"
+  ],
+  "enable_flag": "--enable-notes-write",
+  "enable_env": "PRISM_GO_ENABLE_NOTES_WRITE=1",
+  "covered_routes": [
+    "POST /api/notes/batch/type",
+    "POST /api/notes/batch/tags"
+  ],
+  "current_python_batch_archive_route": false,
+  "current_python_batch_archive_route_evidence": "routes/notes/batch.py and the current route manifest expose batch/type, batch/tags, and batch/delete only; /api/notes/batch/archive remains 404 on Python and Go.",
+  "already_covered_elsewhere": [
+    "POST /api/notes/batch/delete by T013"
+  ],
+  "not_covered_here": [
+    "POST /api/notes/batch/archive because it is not a current Python API route",
+    "notes history list/restore/delete parity closure",
+    "upload delete ownership",
+    "orphan/originals/broken image cleanup ownership",
+    "attachment file delete ownership"
+  ],
+  "parity_scope": [
+    "batch category update with existing and nonexistent note IDs",
+    "invalid category rollback with no partial write",
+    "batch tags append response and DB state parity",
+    "batch tags replace response and DB state parity",
+    "invalid mode and invalid note_ids validation parity",
+    "batch/archive absence remains a Python-and-Go 404 boundary"
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "handlers": [
+      "batchUpdateType",
+      "batchUpdateTags"
+    ],
+    "transaction_boundary": "single SQLite transaction per batch request",
+    "sqlite_pragmas": [
+      "foreign_keys(1)",
+      "journal_mode(WAL)",
+      "busy_timeout(5000)",
+      "query_only(0) only when explicit DB-write candidate flag is enabled"
+    ]
+  },
+  "runtime_boundary": {
+    "default_runtime_stays_read_only": true,
+    "live_execution_authorized": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "production_file_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t015": [
+    "Live/default notes write ownership",
+    "Production knowledge.db write",
+    "Production file mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Notes history ownership promotion",
+    "Upload/delete/cleanup ownership promotion",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t014_t015_notes_actions_batch.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v",
+    "diff_check": "git diff --check"
+  },
+  "allowed_next_step": {
+    "id": "T016",
+    "reason": "Current notes actions and batch type/tags parity are closed; notes history list/restore/delete remains the next active notes surface."
+  }
+}

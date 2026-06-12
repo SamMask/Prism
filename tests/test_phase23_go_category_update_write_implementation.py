@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.go_primary_parity_harness import build_go_shadow_exe
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
@@ -86,10 +88,9 @@ def _snapshot(db_path):
 
 
 def _start_go_candidate(go_bin, db_path, port, tmp_path, *, enable_category_write=True):
+    exe_path = build_go_shadow_exe(go_bin, tmp_path)
     args = [
-        go_bin,
-        "run",
-        ".",
+        str(exe_path),
         "--db",
         db_path,
         "--addr",
@@ -104,7 +105,6 @@ def _start_go_candidate(go_bin, db_path, port, tmp_path, *, enable_category_writ
         env["PRISM_GO_ENABLE_CATEGORY_WRITE"] = "1"
     proc = subprocess.Popen(
         args,
-        cwd=GO_SHADOW_DIR,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -1,0 +1,68 @@
+{
+  "task_id": "T011",
+  "contract": "CONTRACT-GO-PRIMARY-NOTES",
+  "status": "completed",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB read-only parity for GET /api/notes",
+  "depends_on": [
+    "docs/contracts/go-primary-sqlite-connection-owner.json",
+    "docs/contracts/go-primary-parity-fixture-harness.json",
+    "docs/contracts/go-primary-runtime-config-data-dir.json"
+  ],
+  "covered_route": "GET /api/notes",
+  "parity_scope": [
+    "empty/default list query",
+    "tokenized FTS title/content search",
+    "remarks token search",
+    "tag token search",
+    "attachment metadata token search",
+    "text attachment body search",
+    "category/tag filters",
+    "pagination"
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "search_builder": "buildNotesSearchClause",
+    "fts_sanitizer": "sanitizeFTSQuery",
+    "tokenizer": "searchTokens",
+    "attachment_body_scanner": "attachmentContentNoteIDs",
+    "sqlite_mode": "query_only by default for read-only runtime"
+  },
+  "python_contract_sources": [
+    "routes/notes/crud.py:get_notes",
+    "utils/query_builder.py:NoteQueryBuilder.search_card_fields",
+    "utils/search.py:find_attachment_content_note_ids"
+  ],
+  "runtime_boundary": {
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t011": [
+    "Go notes write promotion to live/default owner",
+    "Caddy route expansion or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Production knowledge.db access or write",
+    "Pi deployment",
+    "Python backend removal",
+    "Direct public internet exposure",
+    "Notes delete/action/batch/history ownership claims"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t011_t012_notes.py -v",
+    "legacy_read_diff": "pytest tests/test_phase18_go_shadow_contract.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v"
+  },
+  "allowed_next_step": {
+    "id": "T012",
+    "status": "completed in same gate",
+    "reason": "T012 is the adjacent create/update-only notes candidate and remains local/copied-DB flag gated."
+  }
+}

@@ -156,14 +156,21 @@ def batch_update_tags():
                         continue
 
                     tag_name = tag_name.strip()
-                    db.execute('INSERT OR IGNORE INTO Tags (name) VALUES (?)', (tag_name,))
-                    tag_row = db.execute('SELECT id FROM Tags WHERE name = ?', (tag_name,)).fetchone()
+                    tag_row = db.execute(
+                        'SELECT id FROM Tags WHERE name = ? COLLATE NOCASE',
+                        (tag_name,)
+                    ).fetchone()
                     if tag_row:
-                        cursor = db.execute('''
-                            INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)
-                        ''', (nid, tag_row[0]))
-                        if cursor.rowcount > 0:
-                            tags_added += 1
+                        tag_id = tag_row[0]
+                    else:
+                        cursor = db.execute('INSERT INTO Tags (name) VALUES (?)', (tag_name,))
+                        tag_id = cursor.lastrowid
+
+                    cursor = db.execute('''
+                        INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)
+                    ''', (nid, tag_id))
+                    if cursor.rowcount > 0:
+                        tags_added += 1
 
                 db.execute('UPDATE Notes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?', (nid,))
 
@@ -237,6 +244,12 @@ def batch_delete_notes():
             for note in notes:
                 _cleanup_note_images(note['content'], note['cover_image'], note['id'])
             
+            # Keep legacy DBs without FK cascades clean before deleting note rows.
+            for table in ('Note_Tags', 'Source_Urls', 'Note_History', 'Note_Attachments'):
+                db.execute(f'''
+                    DELETE FROM {table} WHERE note_id IN ({placeholders})
+                ''', note_ids)
+
             # 刪除資料庫記錄
             cursor = db.execute(f'''
                 DELETE FROM Notes WHERE id IN ({placeholders})

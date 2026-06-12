@@ -61,9 +61,10 @@ def test_go_runtime_adds_read_only_migration_status_for_c_smoke():
     assert 'mux.HandleFunc("/api/system/migration-status", srv.handleMigrationStatus)' in main_go
     assert "func (s *server) handleMigrationStatus" in main_go
     assert "migrationDefinitions" in main_go
-    assert '{16, "normalize_editor_layout"}' in main_go
-    assert '"current_version": current' in main_go
-    assert '"latest_version":  latest' in main_go
+    assert '{16, "normalize_editor_layout", []string{' in main_go
+    assert "UPDATE Notes SET editor_layout = 'single'" in main_go
+    assert '"current_version": status.CurrentVersion' in main_go
+    assert '"latest_version":  status.LatestVersion' in main_go
     assert '"pending":         pending' in main_go
     assert "TestMigrationStatusHandlerMatchesPythonShapeAndKeepsQueryOnly" in main_test
     assert "migration status must keep DB writes blocked" in main_test

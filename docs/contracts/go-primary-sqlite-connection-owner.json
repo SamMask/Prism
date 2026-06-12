@@ -1,0 +1,53 @@
+{
+  "task_id": "T007",
+  "title": "Go SQLite connection owner",
+  "status": "completed",
+  "completed_date": "2026-06-12",
+  "source_manifest": "docs/contracts/go-primary-runtime-config-data-dir.json",
+  "scope": "Go runtime now opens copied/local SQLite databases through a connection owner that configures WAL, busy timeout, read-only query_only mode, explicit write mode, and a transaction helper. This is local/copied-DB runtime plumbing only; it does not initialize a fresh database, run migrations, promote live Go route ownership, or change Pi/Caddy/systemd/frontend defaults.",
+  "sqlite_owner": {
+    "source": "go-shadow/main.go:openSQLiteOwner",
+    "driver": "modernc.org/sqlite",
+    "dsn_pragmas_apply_to_each_connection": true,
+    "connection_pool_policy": "database/sql default pool; connection-level PRAGMAs are supplied through modernc.org/sqlite _pragma DSN values",
+    "journal_mode": "WAL",
+    "busy_timeout_ms": 5000,
+    "read_only_mode": "PRAGMA query_only = ON",
+    "write_mode": "PRAGMA query_only = OFF only when DB-write candidate flags are enabled"
+  },
+  "write_mode_switch": {
+    "source": "runtimeConfig.hasWriteCandidate()",
+    "default_query_only": true,
+    "db_write_flags": [
+      "--enable-tag-write",
+      "--enable-category-write",
+      "--enable-notes-write"
+    ],
+    "file_write_flags_keep_db_read_only": [
+      "--enable-thumbnail-write",
+      "--enable-upload-url-write"
+    ]
+  },
+  "transaction_helper": {
+    "source": "go-shadow/main.go:(*sqliteConnectionOwner).withTransaction",
+    "read_only_rejection": "SQLite write transaction requires write mode",
+    "commit_and_rollback_tested": true,
+    "partial_write_blocked_on_error": true
+  },
+  "runtime_evidence": [
+    "Go unit tests verify WAL and busy_timeout are configured on the owner connection and separate sql.Conn handles.",
+    "Go unit tests verify read-only owner rejects transactions and direct DB writes through query_only.",
+    "Go unit tests verify write-mode transaction commit persists one tag and rollback leaves no partial tag."
+  ],
+  "boundaries": [
+    "Does not implement Go fresh DB init.",
+    "Does not implement Go migration runner or Schema_Meta writes.",
+    "Does not promote Go writes/files to live/default ownership.",
+    "Does not deploy to Pi, edit Caddy, change systemd, change frontend default routing, or remove Python.",
+    "Does not touch production DB/files."
+  ],
+  "validated_by": [
+    "go test ./...",
+    "tests/test_go_primary_t007_sqlite_owner.py"
+  ]
+}

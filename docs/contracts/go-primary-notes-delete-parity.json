@@ -1,0 +1,100 @@
+{
+  "task_id": "T013",
+  "contract": "CONTRACT-GO-PRIMARY-NOTES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data notes delete parity only",
+  "depends_on": [
+    "docs/contracts/go-primary-notes-create-update-parity.json",
+    "docs/contracts/go-primary-runtime-config-data-dir.json"
+  ],
+  "enable_flag": "--enable-notes-write",
+  "enable_env": "PRISM_GO_ENABLE_NOTES_WRITE=1",
+  "covered_routes": [
+    "DELETE /api/notes/<id>",
+    "POST /api/notes/batch/delete"
+  ],
+  "not_covered_here": [
+    "notes pin/archive/duplicate/reorder parity closure",
+    "notes batch type/tags/archive parity closure",
+    "notes history restore/delete parity closure",
+    "upload delete ownership",
+    "orphan/originals/broken image cleanup ownership",
+    "attachment file delete ownership"
+  ],
+  "parity_scope": [
+    "single note delete success and not-found response parity",
+    "batch delete success, empty-list validation, and nonexistent-id deleted_count parity",
+    "Notes_FTS delete trigger result parity",
+    "Note_Tags, Source_Urls, Note_History, and Note_Attachments removal",
+    "content and cover_image static/uploads extraction",
+    "reference-count protected image preservation",
+    "original image plus _thumb.webp companion deletion",
+    "_thumb.webp reference plus original candidate deletion"
+  ],
+  "cleanup_decision": {
+    "extract_static_uploads_from": [
+      "Notes.content",
+      "Notes.cover_image"
+    ],
+    "delete_only_when_no_other_note_references_path": true,
+    "delete_original_companion": "_thumb.webp",
+    "delete_thumb_companion_candidates": [
+      ".jpg",
+      ".png",
+      ".gif",
+      ".webp"
+    ],
+    "path_scope": "PRISM_GO_DATA_DIR/static/uploads only"
+  },
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "single_delete_handler": "deleteNote",
+    "batch_delete_handler": "batchDeleteNotes",
+    "cleanup_helper": "cleanupNoteImages",
+    "transaction_boundary": "single SQLite transaction per delete request; file cleanup is best-effort and mirrors Python non-fatal cleanup behavior",
+    "sqlite_pragmas": [
+      "foreign_keys(1)",
+      "journal_mode(WAL)",
+      "busy_timeout(5000)",
+      "query_only(0) only when explicit DB-write candidate flag is enabled"
+    ]
+  },
+  "runtime_boundary": {
+    "default_runtime_stays_read_only": true,
+    "live_execution_authorized": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "production_file_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t013": [
+    "Live/default notes write ownership",
+    "Production knowledge.db write",
+    "Production uploads or attachments mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Notes action/history ownership promotion",
+    "General upload/delete/cleanup ownership promotion",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t013_notes_delete.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v",
+    "diff_check": "git diff --check"
+  },
+  "allowed_next_step": {
+    "id": "T014",
+    "reason": "Delete and media cleanup parity is closed; the next smallest notes surface is pin/archive/duplicate/reorder actions."
+  }
+}

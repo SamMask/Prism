@@ -1,0 +1,57 @@
+{
+  "task_id": "T010",
+  "title": "Go migration backup and failed migration rollback",
+  "status": "completed",
+  "completed_at": "2026-06-12",
+  "contract": "CONTRACT-GO-PRIMARY-MIGRATIONS",
+  "depends_on": "docs/contracts/go-primary-existing-db-migration-runner.json",
+  "allowed_scope": {
+    "backup_before_migrate": true,
+    "backup_location": "PRISM_GO_DATA_DIR/backups",
+    "backup_prefix": "prism_go_pre_migrate_",
+    "wal_and_shm_sidecar_copy_attempted": true,
+    "failed_migration_rollback": true,
+    "schema_meta_not_advanced_on_failure": true,
+    "partial_ddl_rolled_back_on_failure": true,
+    "startup_aborts_on_migration_failure": true
+  },
+  "runtime_guards": {
+    "backup_path_must_stay_under_backups_dir": true,
+    "backup_created_before_write_connection_migration": true,
+    "production_named_knowledge_db_still_rejected_by_default": true,
+    "no_pi_deploy": true,
+    "no_caddy_or_systemd_change": true,
+    "python_remains_normal_runtime": true
+  },
+  "implementation": {
+    "backup_function": "backupSQLiteBeforeMigration",
+    "rollback_boundary": "sqliteConnectionOwner.withTransaction",
+    "failure_test_injection": "temporary migrationDefinitions override in Go tests",
+    "healthz_evidence_fields": [
+      "runtime.migrations_applied",
+      "runtime.migration_backup_path"
+    ]
+  },
+  "not_in_scope": [
+    "Automatic restore from backup",
+    "Production DB migration drill",
+    "Pi backup command execution",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python migration removal",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "go_tests": [
+      "TestOpenRuntimeSQLiteFailedMigrationRollsBackAndKeepsBackup"
+    ],
+    "python_tests": [
+      "tests/test_go_primary_t009_t010_migrations.py"
+    ]
+  },
+  "next_task": {
+    "id": "T011",
+    "reason": "Schema lifecycle safety is closed through fresh init, existing upgrade, backup, and rollback; the next active runtime surface is notes read/search parity."
+  }
+}

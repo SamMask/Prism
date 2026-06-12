@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.go_primary_parity_harness import build_go_shadow_exe
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
@@ -50,11 +52,10 @@ def _copy_db(src, dst):
 
 
 def _start_go_candidate(go_bin, db_path, port, tmp_path):
+    exe_path = build_go_shadow_exe(go_bin, tmp_path)
     proc = subprocess.Popen(
         [
-            go_bin,
-            "run",
-            ".",
+            str(exe_path),
             "--db",
             db_path,
             "--addr",
@@ -63,7 +64,6 @@ def _start_go_candidate(go_bin, db_path, port, tmp_path):
             str(tmp_path),
             "--enable-notes-write",
         ],
-        cwd=GO_SHADOW_DIR,
         env={**os.environ, "PRISM_GO_ENABLE_NOTES_WRITE": "1"},
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

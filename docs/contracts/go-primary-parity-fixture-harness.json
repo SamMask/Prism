@@ -1,0 +1,41 @@
+{
+  "task_id": "T005",
+  "title": "Python-vs-Go route parity fixture harness",
+  "status": "completed",
+  "completed_date": "2026-06-12",
+  "harness_path": "tests/go_primary_parity_harness.py",
+  "source_manifest": "docs/contracts/go-primary-route-ownership-manifest.json",
+  "scope": "Reusable fixture harness for future Go-primary route promotion gates. The harness can run a declared route against Flask and a Go HTTP target, then compare status, JSON shape, DB mutation, and file mutation in a fixed diff format.",
+  "fixture_contract": {
+    "declares": [
+      "method",
+      "path",
+      "json_body",
+      "headers",
+      "db_tables",
+      "file_roots",
+      "normalize_json_keys"
+    ],
+    "target_requirements": [
+      "Python target uses Flask test_client",
+      "Go target uses HTTP base URL",
+      "DB snapshots are table-scoped",
+      "File snapshots are root-scoped under the target data dir"
+    ]
+  },
+  "diff_format": {
+    "status_code": "present when HTTP status differs",
+    "json_body": "present when normalized JSON/body differs",
+    "db_mutation": "present when table before/after deltas differ",
+    "file_mutation": "present when file tree before/after deltas differ"
+  },
+  "boundaries": [
+    "This harness does not authorize any live route promotion.",
+    "Mutation fixtures must use copied DB/data dirs unless a later live gate explicitly approves production data.",
+    "Volatile timestamp fields are normalized only when fixture normalize_json_keys declares them."
+  ],
+  "validated_by": [
+    "tests/test_go_primary_t004_t006_foundation.py::test_t005_parity_harness_contract_exposes_status_json_db_and_file_diffs",
+    "tests/test_go_primary_t004_t006_foundation.py::test_t005_harness_runs_declared_fixture_against_python_and_go"
+  ]
+}

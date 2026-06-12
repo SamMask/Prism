@@ -12,6 +12,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.go_primary_parity_harness import build_go_shadow_exe
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
@@ -262,11 +264,10 @@ def test_go_shadow_python_response_diff(client, app, temp_db, monkeypatch):
     env = os.environ.copy()
     env["PRISM_GO_DB"] = temp_db
     env["PRISM_GO_ADDR"] = f"127.0.0.1:{port}"
+    exe_path = build_go_shadow_exe(go_bin, Path(data_dir))
     proc = subprocess.Popen(
         [
-            go_bin,
-            "run",
-            ".",
+            str(exe_path),
             "--db",
             temp_db,
             "--addr",
@@ -274,7 +275,6 @@ def test_go_shadow_python_response_diff(client, app, temp_db, monkeypatch):
             "--data-dir",
             data_dir,
         ],
-        cwd=GO_SHADOW_DIR,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

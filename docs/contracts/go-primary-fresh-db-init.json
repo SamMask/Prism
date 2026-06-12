@@ -1,0 +1,68 @@
+{
+  "task_id": "T008",
+  "title": "Go fresh DB init",
+  "status": "completed",
+  "completed_at": "2026-06-12",
+  "contract": "CONTRACT-GO-PRIMARY-MIGRATIONS",
+  "source_schema": [
+    "docs/SCHEMA.md",
+    "app.py:init_db()",
+    "migrations/__init__.py latest version"
+  ],
+  "allowed_scope": {
+    "fresh_db_only": true,
+    "triggered_when": "The requested DB path is missing and resolves inside the explicit --data-dir / PRISM_GO_DATA_DIR root.",
+    "schema_version": 16,
+    "creates_current_schema": true,
+    "creates_required_indexes": true,
+    "creates_fts5_table_and_triggers": true,
+    "seeds_default_categories": true,
+    "seeds_welcome_note": true,
+    "returns_to_query_only_after_init": true
+  },
+  "runtime_guards": {
+    "data_dir_required": true,
+    "relative_db_paths_stay_under_data_dir": true,
+    "missing_absolute_db_outside_data_dir_rejected": true,
+    "production_named_knowledge_db_still_rejected_by_default": true,
+    "existing_db_not_reinitialized": true,
+    "default_runtime_query_only": true
+  },
+  "not_in_scope": [
+    "Existing DB migration runner",
+    "ALTER TABLE migration execution",
+    "DROP TABLE migration execution",
+    "Failed migration rollback",
+    "Backup-before-migrate",
+    "Production knowledge.db writes",
+    "Pi deployment",
+    "Caddy or systemd change",
+    "Frontend default API target change",
+    "Python migration removal"
+  ],
+  "implementation": {
+    "go_runtime_config_flag": "freshDBInitNeeded",
+    "open_path": "openRuntimeSQLite",
+    "fresh_init_function": "initializeFreshDatabase",
+    "schema_statements": "freshSchemaStatements",
+    "seed_functions": [
+      "seedDefaultCategories",
+      "seedWelcomeNote"
+    ],
+    "healthz_evidence_field": "runtime.fresh_db_initialized"
+  },
+  "verification": {
+    "go_tests": [
+      "TestRuntimeConfigMarksMissingRelativeDBForFreshInit",
+      "TestRuntimeConfigRejectsMissingAbsoluteDBOutsideDataDir",
+      "TestOpenRuntimeSQLiteInitializesFreshDBAndReturnsReadOnlyOwner"
+    ],
+    "python_tests": [
+      "tests/test_go_primary_t008_fresh_db_init.py"
+    ]
+  },
+  "next_task": {
+    "id": "T009",
+    "reason": "T009 is the next migration contract slice after fresh DB init: existing DB upgrade with Python migration order, idempotent skips, and Schema_Meta update parity."
+  }
+}

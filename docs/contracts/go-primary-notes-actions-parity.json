@@ -1,0 +1,87 @@
+{
+  "task_id": "T014",
+  "contract": "CONTRACT-GO-PRIMARY-NOTES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB notes pin/archive/duplicate/reorder parity only",
+  "depends_on": [
+    "docs/contracts/go-primary-notes-create-update-parity.json",
+    "docs/contracts/go-primary-sqlite-connection-owner.json"
+  ],
+  "enable_flag": "--enable-notes-write",
+  "enable_env": "PRISM_GO_ENABLE_NOTES_WRITE=1",
+  "covered_routes": [
+    "POST /api/notes/<id>/pin",
+    "POST /api/notes/<id>/archive",
+    "POST /api/notes/<id>/duplicate",
+    "PUT /api/notes/reorder"
+  ],
+  "not_covered_here": [
+    "notes history list/restore/delete parity closure",
+    "batch type/tags parity closure covered by T015",
+    "batch delete covered by T013",
+    "batch archive because it is not a current Python API route",
+    "upload delete ownership",
+    "orphan/originals/broken image cleanup ownership",
+    "attachment file delete ownership"
+  ],
+  "parity_scope": [
+    "pin explicit value and toggle response parity",
+    "archive explicit value and updated_at mutation boundary",
+    "duplicate note response, variant parent linkage, Note_Tags, and Source_Urls parity",
+    "reorder sort_order response and DB state parity",
+    "missing note and invalid note_ids validation parity"
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "handlers": [
+      "toggleNoteBool",
+      "duplicateNote",
+      "reorderNotes"
+    ],
+    "transaction_boundary": "single SQLite transaction per action request",
+    "sqlite_pragmas": [
+      "foreign_keys(1)",
+      "journal_mode(WAL)",
+      "busy_timeout(5000)",
+      "query_only(0) only when explicit DB-write candidate flag is enabled"
+    ]
+  },
+  "runtime_boundary": {
+    "default_runtime_stays_read_only": true,
+    "live_execution_authorized": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "production_file_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t014": [
+    "Live/default notes write ownership",
+    "Production knowledge.db write",
+    "Production file mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Notes batch/history ownership promotion",
+    "Upload/delete/cleanup ownership promotion",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t014_t015_notes_actions_batch.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v",
+    "diff_check": "git diff --check"
+  },
+  "allowed_next_step": {
+    "id": "T015",
+    "reason": "Notes actions parity is closed; the next smallest current notes surface is batch type/tags."
+  }
+}

@@ -50,7 +50,8 @@ def test_phase23_2_go_scanner_uses_contract_limits_and_path_safety():
 def test_phase23_2_go_search_merges_attachment_body_note_ids_without_write_methods():
     main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
 
-    assert "attachmentContentNoteIDs(q)" in main_go
+    assert "buildNotesSearchClause(q)" in main_go
+    assert "attachmentContentNoteIDs(keyword)" in main_go
     assert "n.id IN (" in main_go
     assert "SELECT note_id, file_path, file_type" in main_go
     assert "os.ReadFile(resolved)" in main_go

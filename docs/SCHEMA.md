@@ -2,7 +2,7 @@
 
 > **用途**: 共享資料綱要 — 所有資料表的現行定義，開發時的唯一真實來源。
 > **版本**: Migration v16 (Headless KMS)
-> **最後更新**: 2026-05-26
+> **最後更新**: 2026-06-12
 > **改 DB 前必讀**: 新增欄位請在 `migrations/__init__.py` 追加 Migration，並更新本文件。
 
 ---
@@ -177,7 +177,7 @@ CREATE TABLE Schema_Meta (
 -- key='schema_version', value='16'
 ```
 
-> 由 `migrations/__init__.py` 的 `run_migrations()` 管理，啟動時自動執行待處理遷移。
+> Existing/live DB 仍由 Python `migrations/__init__.py` 的 `run_migrations()` 管理。Go T008 已具備 local/copied DB fresh init；Go T009/T010 已具備 local/copied DB existing upgrade、`Schema_Meta` 更新、backup-before-migrate 與 failed rollback proof；這不等於 production/live migration owner 已切換。
 
 ---
 
@@ -199,6 +199,12 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 
 > FTS5 純關鍵字全文檢索，無 AI / 向量搜尋。
 > `Notes_FTS` 僅索引 `Notes.title` / `Notes.content`。`GET /api/notes?q=...` 的使用者搜尋範圍另由 API 層擴充到 `Notes.remarks`、`Tags.name`、`Note_Attachments.title` / `file_path` 與文字附件檔案內容；此行為不需要新增 DB 欄位或 migration。
+> Go T011/T012 已在 local/copied DB 證明 notes read/search/create/update parity，包含 `Notes_FTS` trigger 更新與 failed update rollback；這不等於 live/default notes write owner 已切換，notes delete/actions/batch/history restore/delete/media cleanup 仍是後續 gate。
+> Go T013 已在 local/copied DB-and-data 證明 notes single delete 與 batch delete parity，包含 `Notes_FTS` delete trigger、Note_Tags / Source_Urls / Note_History / Note_Attachments 清理、referenced image preserve，以及 `static/uploads` original / `_thumb.webp` companion cleanup；這仍不等於 live/default notes write owner 或 general media cleanup owner 已切換。
+> Go T014/T015 已在 local/copied DB 證明 notes pin/archive/duplicate/reorder 與現行 batch type/tags parity，涵蓋 `Notes.is_pinned`、`Notes.is_archived`、`Notes.sort_order`、variant `parent_id`、Note_Tags / Source_Urls 複製、batch category/tag 更新與 rollback/no partial write；沒有新增 schema 或 migration。`POST /api/notes/batch/archive` 目前不是 Python API route，因此不被寫成 Go-owned surface。
+> Go T016/T017 已在 local/copied DB 證明 notes history list/restore/delete-history 與 categories create/update/delete/default-delete guard/sort_order parity，涵蓋 `Note_History` 備份/刪除、`Notes.content` restore、`Categories.name` / `icon` / `sort_order`、default category 保護，以及 in-use category 對 `Notes.category_id` 的 target migration；沒有新增 schema 或 migration，live/default notes/taxonomy owner 仍未切換。
+> Go T018 已在 local/copied DB 證明 tags rename/delete/merge parity，涵蓋 `Tags.name` route-level `COLLATE NOCASE` lookup、`Note_Tags` delete-time cleanup、merge transfer `INSERT OR IGNORE`、source tag deletion、missing target rollback/no mutation，以及 notes tag assignment path 的 NOCASE auto-create guard；沒有新增 schema 或 migration，live/default taxonomy owner 仍未切換。
+> Go T019 已在 local/copied DB-and-files 證明 attachments metadata list/upload/delete parity，涵蓋 `Note_Attachments` row create/delete、`docs/attachments` copied file write/delete、missing-file delete still removes DB row、missing-note validation order，以及 unsupported extension validation；沒有新增 schema 或 migration，live/default files owner 仍未切換，raw/binary serving 與 long-content separate/restore 仍是後續 gate。
 
 ---
 

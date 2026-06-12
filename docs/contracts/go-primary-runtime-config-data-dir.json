@@ -1,0 +1,51 @@
+{
+  "task_id": "T006",
+  "title": "Go runtime config and external data-dir parity",
+  "status": "completed",
+  "completed_date": "2026-06-12",
+  "source_manifest": "docs/contracts/go-primary-parity-fixture-harness.json",
+  "scope": "Go runtime now requires an explicit external data dir and centralizes Prism data roots for DB, uploads, attachments, logs, backups, and config. This is local/copied-data runtime plumbing only; it does not change Pi, Caddy, frontend default routing, production DB ownership, or Python runtime ownership.",
+  "data_dir": {
+    "required": true,
+    "configured_by": [
+      "--data-dir",
+      "PRISM_GO_DATA_DIR"
+    ],
+    "rejects_unspecified": true,
+    "created_if_missing": true
+  },
+  "db_path": {
+    "configured_by": [
+      "--db",
+      "PRISM_GO_DB"
+    ],
+    "required": true,
+    "relative_paths_resolve_under_data_dir": true,
+    "relative_traversal_rejected": true,
+    "absolute_copied_db_paths_remain_supported": true,
+    "production_named_db_refusal_remains": true
+  },
+  "resolved_roots": {
+    "db": "explicit --db / PRISM_GO_DB; relative paths resolve under data_dir",
+    "uploads": "static/uploads",
+    "attachments": "docs/attachments",
+    "logs": "logs",
+    "backups": "backups",
+    "config": "config"
+  },
+  "runtime_evidence": [
+    "GET /healthz reports data_dir, db_path, uploads_dir, attachments_dir, logs_dir, backups_dir, and config_dir",
+    "Go unit tests reject missing data-dir",
+    "Go unit tests resolve relative DB paths under data-dir and reject traversal"
+  ],
+  "boundaries": [
+    "Does not implement Go fresh DB init.",
+    "Does not implement Go migration runner.",
+    "Does not promote Go writes/files to live/default ownership.",
+    "Does not deploy to Pi, edit Caddy, change systemd, or remove Python."
+  ],
+  "validated_by": [
+    "go test ./...",
+    "tests/test_go_primary_t004_t006_foundation.py::test_t006_runtime_config_contract_and_go_source_lock_external_data_dir"
+  ]
+}

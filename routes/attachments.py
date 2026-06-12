@@ -126,7 +126,7 @@ def upload_attachment(note_id):
         if not allowed_file(file.filename):
             return jsonify({
                 'status': 'error', 
-                'message': f'File type not allowed. Allowed types: {", ".join(ALLOWED_EXTENSIONS)}'
+                'message': f'File type not allowed. Allowed types: {", ".join(sorted(ALLOWED_EXTENSIONS))}'
             }), 400
         
         # Generate unique filename

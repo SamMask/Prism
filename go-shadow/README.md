@@ -29,11 +29,17 @@ Included endpoints:
 - `GET /api/notes`
 - `GET /api/notes/{id}`
 
+Local/copied-DB candidate endpoints behind explicit flags:
+
+- `POST /api/notes` and `PUT /api/notes/{id}` with `--enable-notes-write`
+- `DELETE /api/notes/{id}`, `POST /api/notes/batch/delete`, notes pin/archive/duplicate/reorder, and current batch type/tags with `--enable-notes-write`
+- `POST /api/categories`, `PUT /api/categories/{id}`, and `DELETE /api/categories/{id}` with `--enable-category-write`
+
 Runtime-only endpoint:
 
 - `GET /healthz`
 
-Excluded endpoints remain Python-owned: every write path, file upload/delete, import/export, cleanup, maintenance, and `/api/server/*`.
+Excluded endpoints remain Python-owned by default/live runtime: notes delete/actions/batch/history restore/delete, category/tag writes, file upload/delete, import/export, cleanup, maintenance, and `/api/server/*`.
 
 ## Promotion Gate
 
@@ -205,13 +211,80 @@ Phase 20.1 still does not authorize Go write/file/migration implementation, Cadd
 
 ## Runtime Safety
 
-The server requires an explicit DB path and keeps user data outside the binary:
+The server requires an explicit DB path plus an explicit external data dir and keeps user data outside the binary:
 
 ```powershell
 go run . --db C:\path\to\knowledge_test.db --data-dir C:\Users\you\AppData\Local\Prism --addr 127.0.0.1:5001
 ```
 
-By default it refuses to open a file named `knowledge.db`. Use only copied test/dev databases during Phase 19.0 unless `PRISM_GO_ALLOW_PROD_DB=1` is explicitly set for a controlled local smoke test. The SQLite connection also enables and verifies `PRAGMA query_only = ON`, then checks `Schema_Meta.schema_version >= 16`.
+`--data-dir` / `PRISM_GO_DATA_DIR` is mandatory. Relative `--db` paths resolve under that data dir and `..` traversal is rejected; absolute copied DB paths remain supported for legacy parity harnesses. Runtime config centralizes `static/uploads`, `docs/attachments`, `logs`, `backups`, and `config` below the data dir, and `/healthz` reports those resolved roots for evidence.
+
+By default it refuses to open a file named `knowledge.db`. Use only copied test/dev databases unless `PRISM_GO_ALLOW_PROD_DB=1` is explicitly set for a controlled local smoke test. The SQLite connection owner uses modernc `_pragma` DSN values so each `database/sql` connection enables WAL, sets `PRAGMA busy_timeout = 5000`, keeps `PRAGMA query_only = ON` by default, and switches query-only off only for explicit DB-write candidate flags. Write-mode transactions go through the owner helper and are covered by commit/rollback tests before any future route promotion.
+
+### Fresh DB Init
+
+For local/package smoke only, a missing DB path inside the explicit data dir can be initialized from Go:
+
+```powershell
+go run . --db fresh/prism_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001
+```
+
+This creates the current Prism v16 schema, indexes, `Notes_FTS` triggers, default categories, welcome note, and `Schema_Meta schema_version=16`, then returns to default SQLite `query_only = ON` unless an explicit local DB-write candidate flag is enabled. Existing DB migrations remain outside this gate: T008 does not run `ALTER TABLE`, update an existing `Schema_Meta`, perform backup-before-migrate, deploy Pi, or touch production `knowledge.db`.
+
+### Existing DB Migrations
+
+For local/copied DBs, startup now checks `Schema_Meta` and applies pending migrations through the ordered Python-compatible v1-v16 list:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001
+```
+
+If pending migrations exist, Go first writes a backup under `PRISM_GO_DATA_DIR/backups/prism_go_pre_migrate_*.db`, then runs the migration transaction with duplicate-column and no-such-column skips matching the Python idempotency rules. On success, `/api/system/migration-status` reports `pending: []` and the runtime returns to `query_only = ON` unless an explicit local DB-write flag is enabled. On failure, startup aborts, `Schema_Meta` is not advanced, partial DDL is rolled back, and the pre-migrate backup remains available.
+
+This is still a local/copied-DB proof. Normal/live production migrations remain retained-Python until a separate cutover gate; this does not deploy Pi, edit Caddy/systemd, change frontend defaults, remove Python, or authorize production `knowledge.db` mutation.
+
+### Notes Read/Search/Create/Update/Delete
+
+The active-roadmap T011/T012/T013 gates close local/copied-DB notes read/search/create/update/delete parity:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-notes-write
+```
+
+Default mode keeps `GET /api/notes` read-only and matches Python tokenized `Notes_FTS` title/content search, remarks/tag/attachment metadata search, bounded text attachment body search, category/tag filters, type compatibility, and pagination. The explicit `--enable-notes-write` mode opens only local/copied DB create/update parity for `POST /api/notes` and `PUT /api/notes/{id}`: default category fallback, tags, source URLs, prompt params, `Notes_FTS` trigger updates, content history insertion, SQLite `foreign_keys(1)`, and failed update rollback.
+
+The same explicit flag now covers local/copied DB-and-data delete parity for `DELETE /api/notes/{id}` and `POST /api/notes/batch/delete`: not-found and empty-list validation, `Notes_FTS` delete trigger results, Note_Tags / Source_Urls / Note_History / Note_Attachments cleanup, referenced image preservation, original + `_thumb.webp` companion deletion, and `_thumb.webp` reference cleanup of original image candidates. File cleanup is scoped to `PRISM_GO_DATA_DIR/static/uploads`.
+
+#### Notes Actions And Batch Type/Tags
+
+The active-roadmap T014/T015 gates extend the same explicit local/copied-DB candidate mode to `POST /api/notes/{id}/pin`, `POST /api/notes/{id}/archive`, `POST /api/notes/{id}/duplicate`, `PUT /api/notes/reorder`, `POST /api/notes/batch/type`, and `POST /api/notes/batch/tags`. These routes stay behind `--enable-notes-write` / `PRISM_GO_ENABLE_NOTES_WRITE=1` and match Python response shape plus DB state for pin/archive toggles, duplicate variant parent linkage, Note_Tags / Source_Urls duplication, sort_order mutation, batch category/tag updates, invalid category rollback, invalid mode validation, and invalid note_ids handling.
+
+`POST /api/notes/batch/archive` is not a current Python API route, so it remains absent on Go as well. This does not promote live/default notes write ownership and does not cover history restore/delete closure, upload delete, general media cleanup ownership, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+
+#### Notes History And Categories
+
+The active-roadmap T016/T017 gates close local/copied-DB notes history and category write parity. `GET /api/notes/{id}/history`, `POST /api/notes/{id}/restore/{history_id}`, and `DELETE /api/notes/{id}/history` stay behind `--enable-notes-write` / `PRISM_GO_ENABLE_NOTES_WRITE=1` and match Python response shape plus DB state for history list ordering, restore backup insertion, `Notes.content` restoration, missing history validation, and delete-history counts.
+
+Category writes stay behind `--enable-category-write` / `PRISM_GO_ENABLE_CATEGORY_WRITE=1`. The Go candidate now matches Python `POST /api/categories`, `PUT /api/categories/{id}`, and `DELETE /api/categories/{id}` behavior for create duplicate/missing-name validation, update duplicate/empty-name validation, `sort_order` persistence, default category delete protection, in-use category `target_category_id` migration, empty category delete, and missing category 404s.
+
+This does not promote live/default notes or taxonomy write ownership and does not cover tags write/merge, attachments, uploads, import/export, server/system, cleanup ownership, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+
+#### Tags Write And Merge
+
+The active-roadmap T018 gate closes local/copied-DB tags write and merge parity. `PUT /api/tags/{id}`, `DELETE /api/tags/{id}`, and `POST /api/tags/merge` stay behind `--enable-tag-write` / `PRISM_GO_ENABLE_TAG_WRITE=1` and match Python response shape plus Tags / Note_Tags DB state for rename trim and duplicate NOCASE validation, in-use tag delete association cleanup, merge target validation, missing-source skip, source tag deletion, and target Note_Tags transfer with `INSERT OR IGNORE`.
+
+`POST /api/tags` is not a current Python API route, so Go does not add a separate tag create endpoint. Tag creation remains through the existing notes create/update/batch tag assignment paths; those paths now use route-level `COLLATE NOCASE` lookup to avoid case-variant duplicate Tags rows on copied legacy DBs.
+
+This does not promote live/default taxonomy write ownership and does not cover attachments, uploads, import/export, server/system, cleanup ownership, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+
+#### Attachments Metadata Upload/Delete
+
+The active-roadmap T019 gate closes local/copied-DB-and-files attachment metadata parity. `GET /api/notes/{id}/attachments`, `POST /api/notes/{id}/attachments`, and `DELETE /api/attachments/{id}` stay behind `--enable-attachment-write` / `PRISM_GO_ENABLE_ATTACHMENT_WRITE=1` and match Python response shape plus Note_Attachments DB state for list ordering, missing-note validation order, multipart file-required validation, supported `md` / `txt` / `markdown` extensions, copied `docs/attachments` file creation, DB row creation, file delete, and missing-file delete behavior.
+
+`PUT` / `PATCH` attachment metadata update routes are not current Python API routes, so Go does not add a Go-only update endpoint. `GET /api/attachments/{id}` text JSON remains the separate `--enable-attachment-text-read` candidate, while `raw=true` / send_file and broader raw/binary serving stay deferred to T020.
+
+This does not promote live/default files ownership and does not cover raw/binary attachment serving, long-content separate/restore, uploads, import/export, server/system, cleanup ownership, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 
 ## Build Proof
 
@@ -243,3 +316,12 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_phase19_go_post_matcher_hardening_stabilization.py` locks the Phase 19.15 post-hardening stabilization evidence, read-only promotion closure, and 20.0 plan-only gate.
 `tests/test_phase20_go_post_readonly_scope_assessment.py` locks the Phase 20.0 plan-only scope assessment and 20.1 inventory gate.
 `tests/test_phase20_go_write_surface_contract_inventory.py` locks the Phase 20.1 plan-only inventory, Python-owned route classes, side-effect coverage, and 20.2 approval gate.
+`tests/test_go_primary_t007_sqlite_owner.py` locks the active-roadmap T007 SQLite owner contract, WAL/busy-timeout/write-mode source shape, docs status, and non-promotion boundary.
+`tests/test_go_primary_t008_fresh_db_init.py` locks the active-roadmap T008 fresh DB init contract, empty data-dir runtime smoke, v16 schema/seed evidence, docs status, and existing-migration-runner boundary.
+`tests/test_go_primary_t009_t010_migrations.py` locks the active-roadmap T009/T010 existing DB migration runner, backup-before-migrate, failed rollback, docs status, and non-production boundary.
+`tests/test_go_primary_t011_t012_notes.py` locks the active-roadmap T011/T012 notes read/search/create/update parity, FTS/default-category/history/rollback evidence, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t013_notes_delete.py` locks the active-roadmap T013 notes delete/batch-delete parity, DB/FTS association cleanup, static/uploads original + `_thumb.webp` cleanup, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t014_t015_notes_actions_batch.py` locks the active-roadmap T014/T015 notes actions and batch type/tags parity, batch/archive absence boundary, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t016_t017_history_categories.py` locks the active-roadmap T016/T017 notes history and categories parity, default-disabled write boundary, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t018_tags.py` locks the active-roadmap T018 tags write/merge parity, NOCASE tag lookup boundary, `POST /api/tags` absence boundary, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t019_attachments_metadata.py` locks the active-roadmap T019 attachments metadata upload/delete parity, update-route absence boundary, docs status, and non-live-promotion boundary.

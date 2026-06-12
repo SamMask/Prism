@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/png"
@@ -47,7 +48,7 @@ func createSpikeDB(t *testing.T) string {
 			is_pinned INTEGER DEFAULT 0,
 			is_archived INTEGER DEFAULT 0,
 			sort_order INTEGER DEFAULT 0,
-			category_id INTEGER,
+			category_id INTEGER REFERENCES Categories(id),
 			prompt_params TEXT,
 			parent_id INTEGER,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -97,9 +98,150 @@ func createSpikeDB(t *testing.T) string {
 			content='Notes',
 			content_rowid='id'
 		);
+		CREATE TRIGGER notes_ai AFTER INSERT ON Notes BEGIN
+			INSERT INTO Notes_FTS(rowid, title, content) VALUES (new.id, new.title, new.content);
+		END;
+		CREATE TRIGGER notes_ad AFTER DELETE ON Notes BEGIN
+			INSERT INTO Notes_FTS(Notes_FTS, rowid, title, content) VALUES('delete', old.id, old.title, old.content);
+		END;
+		CREATE TRIGGER notes_au AFTER UPDATE ON Notes BEGIN
+			INSERT INTO Notes_FTS(Notes_FTS, rowid, title, content) VALUES('delete', old.id, old.title, old.content);
+			INSERT INTO Notes_FTS(rowid, title, content) VALUES (new.id, new.title, new.content);
+		END;
 		INSERT INTO Categories (name, is_default) VALUES ('note', 1);
 		INSERT INTO Notes (title, content, category_id) VALUES ('Welcome Note', 'Welcome to Prism', 1);
-		INSERT INTO Notes_FTS(rowid, title, content) VALUES (1, 'Welcome Note', 'Welcome to Prism');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dbPath
+}
+
+func createLegacyMigrationDB(t *testing.T, dataDir string) string {
+	t.Helper()
+	dbPath := filepath.Join(dataDir, "legacy_runtime_dev.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`
+		CREATE TABLE Categories (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL,
+			icon TEXT DEFAULT '📝',
+			sort_order INTEGER DEFAULT 0,
+			is_default INTEGER DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE Notes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT,
+			content TEXT,
+			type TEXT DEFAULT '筆記',
+			remarks TEXT,
+			cover_image TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE Tags (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE TABLE Note_Tags (
+			note_id INTEGER,
+			tag_id INTEGER,
+			PRIMARY KEY (note_id, tag_id)
+		);
+		CREATE TABLE Source_Urls (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			note_id INTEGER,
+			url TEXT
+		);
+		CREATE TABLE Note_History (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			note_id INTEGER,
+			content TEXT,
+			diff_summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		CREATE VIRTUAL TABLE Notes_FTS USING fts5(
+			title, content,
+			content='Notes',
+			content_rowid='id'
+		);
+		INSERT INTO Categories (name, icon, is_default) VALUES ('筆記', '📝', 1);
+		INSERT INTO Notes (title, content, type) VALUES ('Legacy Note', 'legacy body', '筆記');
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dbPath
+}
+
+func createIdempotentMigrationDB(t *testing.T, dataDir string) string {
+	t.Helper()
+	dbPath := filepath.Join(dataDir, "idempotent_runtime_dev.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`
+		CREATE TABLE Schema_Meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+		INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '13');
+		CREATE TABLE Categories (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT UNIQUE NOT NULL,
+			icon TEXT DEFAULT '📝',
+			sort_order INTEGER DEFAULT 0,
+			is_default INTEGER DEFAULT 0
+		);
+		CREATE TABLE Notes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT,
+			content TEXT,
+			remarks TEXT,
+			cover_image TEXT,
+			cover_position TEXT DEFAULT 'top',
+			editor_layout TEXT DEFAULT 'single',
+			is_pinned INTEGER DEFAULT 0,
+			is_archived INTEGER DEFAULT 0,
+			sort_order INTEGER DEFAULT 0,
+			category_id INTEGER,
+			parent_id INTEGER,
+			prompt_params TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
+		INSERT INTO Categories (name, is_default) VALUES ('筆記', 1);
+		INSERT INTO Notes (title, content, editor_layout, category_id) VALUES ('Needs Normalize', 'body', 'full', 1);
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dbPath
+}
+
+func createVersion15MigrationDB(t *testing.T, dataDir string) string {
+	t.Helper()
+	dbPath := filepath.Join(dataDir, "version15_runtime_dev.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	_, err = db.Exec(`
+		CREATE TABLE Schema_Meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+		INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '15');
+		CREATE TABLE Notes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			title TEXT,
+			content TEXT,
+			editor_layout TEXT DEFAULT 'single'
+		);
+		INSERT INTO Notes (title, content, editor_layout) VALUES ('Rollback Probe', 'body', 'full');
 	`)
 	if err != nil {
 		t.Fatal(err)
@@ -133,6 +275,9 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	if cfg.enableAttachmentTextRead {
 		t.Fatal("attachment text read should be disabled by default")
 	}
+	if cfg.enableAttachmentWrite {
+		t.Fatal("attachment write should be disabled by default")
+	}
 	if cfg.enableThumbnailWrite {
 		t.Fatal("thumbnail write should be disabled by default")
 	}
@@ -142,8 +287,103 @@ func TestRuntimeConfigUsesExternalDataDirAndExplicitDB(t *testing.T) {
 	if !cfg.sqliteQueryOnly {
 		t.Fatal("default runtime must keep SQLite query_only enabled")
 	}
-	if _, err := os.Stat(dataDir); err != nil {
-		t.Fatalf("data dir was not created: %v", err)
+	expectedDirs := map[string]string{
+		"data":        dataDir,
+		"uploads":     filepath.Join(dataDir, "static", "uploads"),
+		"attachments": filepath.Join(dataDir, "docs", "attachments"),
+		"logs":        filepath.Join(dataDir, "logs"),
+		"backups":     filepath.Join(dataDir, "backups"),
+		"config":      filepath.Join(dataDir, "config"),
+	}
+	gotDirs := map[string]string{
+		"data":        cfg.dataDir,
+		"uploads":     cfg.uploadsDir,
+		"attachments": cfg.attachmentsDir,
+		"logs":        cfg.logsDir,
+		"backups":     cfg.backupsDir,
+		"config":      cfg.configDir,
+	}
+	for name, expected := range expectedDirs {
+		if gotDirs[name] != expected {
+			t.Fatalf("%s dir mismatch: got %s want %s", name, gotDirs[name], expected)
+		}
+		if _, err := os.Stat(expected); err != nil {
+			t.Fatalf("%s dir was not created: %v", name, err)
+		}
+	}
+}
+
+func TestRuntimeConfigRequiresExplicitDataDir(t *testing.T) {
+	dbPath := createSpikeDB(t)
+
+	_, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, "", false, false, false, false, false, false)
+	if err == nil {
+		t.Fatal("expected missing data directory refusal")
+	}
+	if !strings.Contains(err.Error(), "data directory is required") {
+		t.Fatalf("unexpected data-dir error: %v", err)
+	}
+}
+
+func TestRuntimeConfigResolvesRelativeDBInsideDataDirAndRejectsTraversal(t *testing.T) {
+	dataDir := t.TempDir()
+	dbPath := createSpikeDB(t)
+	copiedDB := filepath.Join(dataDir, "runtime_dev.db")
+	content, err := os.ReadFile(dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(copiedDB, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", "runtime_dev.db", dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.dbPath != copiedDB {
+		t.Fatalf("relative db path resolved outside data dir: got %s want %s", cfg.dbPath, copiedDB)
+	}
+
+	_, err = resolveRuntimeConfig("127.0.0.1:0", ".."+string(filepath.Separator)+"escape_dev.db", dataDir, false, false, false, false, false, false)
+	if err == nil {
+		t.Fatal("expected relative database traversal refusal")
+	}
+}
+
+func TestRuntimeConfigMarksMissingRelativeDBForFreshInit(t *testing.T) {
+	dataDir := t.TempDir()
+	relativeDB := filepath.Join("fresh", "prism_runtime_dev.db")
+	expectedDB := filepath.Join(dataDir, relativeDB)
+
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", relativeDB, dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.dbPath != expectedDB {
+		t.Fatalf("fresh db path mismatch: got %s want %s", cfg.dbPath, expectedDB)
+	}
+	if !cfg.freshDBInitNeeded {
+		t.Fatal("missing relative DB under data dir should require fresh init")
+	}
+	if _, err := os.Stat(expectedDB); !os.IsNotExist(err) {
+		t.Fatalf("resolveRuntimeConfig should not create the DB file before SQLite opens it, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Dir(expectedDB)); err != nil {
+		t.Fatalf("fresh DB parent dir was not created: %v", err)
+	}
+}
+
+func TestRuntimeConfigRejectsMissingAbsoluteDBOutsideDataDir(t *testing.T) {
+	dataDir := t.TempDir()
+	outsideDB := filepath.Join(t.TempDir(), "fresh_dev.db")
+
+	_, err := resolveRuntimeConfig("127.0.0.1:0", outsideDB, dataDir, false, false, false, false, false, false)
+	if err == nil {
+		t.Fatal("expected missing absolute DB outside data-dir to be rejected")
+	}
+	if !strings.Contains(err.Error(), "missing database path must be inside data directory") {
+		t.Fatalf("unexpected missing absolute DB error: %v", err)
 	}
 }
 
@@ -184,6 +424,564 @@ func TestPureGoSQLiteDriverSupportsSchemaFTSAndQueryOnly(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected query_only mode to block writes")
 	}
+}
+
+func TestOpenRuntimeSQLiteInitializesFreshDBAndReturnsReadOnlyOwner(t *testing.T) {
+	dataDir := t.TempDir()
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", "fresh/prism_runtime_dev.db", dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.freshDBInitNeeded {
+		t.Fatal("test setup should require fresh init")
+	}
+	owner, err := openRuntimeSQLite(&cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	if !cfg.sqliteQueryOnly {
+		t.Fatal("fresh init should update runtime config back to query_only mode")
+	}
+	if owner.writeEnabled {
+		t.Fatal("fresh init without write candidates must return to read-only mode")
+	}
+	assertSQLiteOwnerSettings(t, owner, true)
+	if err := verifySchemaVersion(owner.db, expectedSchemaVersion); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.db.Exec("INSERT INTO Tags (name) VALUES ('blocked-after-fresh-init')"); err == nil {
+		t.Fatal("expected query_only mode to block writes after fresh init")
+	}
+
+	assertSQLiteTableExists(t, owner.db, "Notes")
+	assertSQLiteTableExists(t, owner.db, "Categories")
+	assertSQLiteTableExists(t, owner.db, "Tags")
+	assertSQLiteTableExists(t, owner.db, "Note_Tags")
+	assertSQLiteTableExists(t, owner.db, "Source_Urls")
+	assertSQLiteTableExists(t, owner.db, "Note_History")
+	assertSQLiteTableExists(t, owner.db, "Note_Attachments")
+	assertSQLiteTableExists(t, owner.db, "Schema_Meta")
+	assertSQLiteTableExists(t, owner.db, "Notes_FTS")
+
+	assertSQLiteColumnExists(t, owner.db, "Notes", "editor_layout")
+	assertSQLiteColumnExists(t, owner.db, "Notes", "parent_id")
+	assertSQLiteColumnExists(t, owner.db, "Notes", "prompt_params")
+	assertSQLiteColumnDefault(t, owner.db, "Notes", "editor_layout", "'single'")
+	assertSQLiteIndexExists(t, owner.db, "idx_notes_updated_at")
+	assertSQLiteIndexExists(t, owner.db, "idx_notes_category_id")
+	assertSQLiteIndexExists(t, owner.db, "idx_notes_sort_order")
+	assertSQLiteIndexExists(t, owner.db, "idx_notes_is_archived")
+	assertSQLiteIndexExists(t, owner.db, "idx_notes_parent_id")
+	assertSQLiteIndexExists(t, owner.db, "idx_tags_name")
+	assertSQLiteIndexExists(t, owner.db, "idx_source_urls_note_id")
+	assertSQLiteIndexExists(t, owner.db, "idx_note_history_note_id")
+	assertSQLiteIndexExists(t, owner.db, "idx_attachments_note_id")
+	assertSQLiteTriggerExists(t, owner.db, "notes_ai")
+	assertSQLiteTriggerExists(t, owner.db, "notes_ad")
+	assertSQLiteTriggerExists(t, owner.db, "notes_au")
+
+	assertSeededCategory(t, owner.db, "提示詞 | Prompt", "🎨", 1, 0)
+	assertSeededCategory(t, owner.db, "筆記 | Note", "📝", 2, 1)
+	assertSeededCategory(t, owner.db, "教學 | Tutorial", "📚", 3, 0)
+	assertSeededCategory(t, owner.db, "資料 | Data", "💾", 4, 0)
+	assertSeededCategory(t, owner.db, "靈感 | Inspiration", "💡", 5, 0)
+	assertTagCount(t, owner.db, "Welcome", 1)
+
+	var welcomeNotes int
+	if err := owner.db.QueryRow("SELECT COUNT(*) FROM Notes WHERE title = ? AND remarks = ?", welcomeNoteTitle, "系統自動生成").Scan(&welcomeNotes); err != nil {
+		t.Fatal(err)
+	}
+	if welcomeNotes != 1 {
+		t.Fatalf("expected one seeded welcome note, got %d", welcomeNotes)
+	}
+	var linkedWelcomeTags int
+	if err := owner.db.QueryRow(`
+		SELECT COUNT(*)
+		FROM Note_Tags nt
+		JOIN Notes n ON n.id = nt.note_id
+		JOIN Tags t ON t.id = nt.tag_id
+		WHERE n.title = ? AND t.name = 'Welcome'`, welcomeNoteTitle).Scan(&linkedWelcomeTags); err != nil {
+		t.Fatal(err)
+	}
+	if linkedWelcomeTags != 1 {
+		t.Fatalf("expected welcome note tag link, got %d", linkedWelcomeTags)
+	}
+	var ftsHits int
+	if err := owner.db.QueryRow("SELECT COUNT(*) FROM Notes_FTS WHERE Notes_FTS MATCH ?", "Prism").Scan(&ftsHits); err != nil {
+		t.Fatalf("FTS query failed after fresh init: %v", err)
+	}
+	if ftsHits != 1 {
+		t.Fatalf("expected fresh welcome note to be indexed in FTS, got %d hits", ftsHits)
+	}
+}
+
+func TestOpenRuntimeSQLiteMigratesLegacyDBCreatesBackupAndReturnsReadOnlyOwner(t *testing.T) {
+	dataDir := t.TempDir()
+	dbPath := createLegacyMigrationDB(t, dataDir)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	owner, err := openRuntimeSQLite(&cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	if owner.writeEnabled {
+		t.Fatal("migration without write candidates must return to read-only mode")
+	}
+	if !cfg.sqliteQueryOnly {
+		t.Fatal("runtime config should return to query_only after migrations")
+	}
+	if cfg.migrationsApplied == 0 {
+		t.Fatal("expected legacy DB migration to apply pending versions")
+	}
+	if cfg.migrationBackupPath == "" {
+		t.Fatal("expected pre-migration backup path")
+	}
+	if _, err := os.Stat(cfg.migrationBackupPath); err != nil {
+		t.Fatalf("expected migration backup to exist: %v", err)
+	}
+	if !isSubpath(cfg.migrationBackupPath, cfg.backupsDir) {
+		t.Fatalf("backup escaped backups dir: %s not under %s", cfg.migrationBackupPath, cfg.backupsDir)
+	}
+	assertSQLiteOwnerSettings(t, owner, true)
+	if err := verifySchemaVersion(owner.db, expectedSchemaVersion); err != nil {
+		t.Fatal(err)
+	}
+	assertSQLiteColumnAbsent(t, owner.db, "Notes", "type")
+	assertSQLiteColumnExists(t, owner.db, "Notes", "prompt_params")
+	assertSQLiteColumnExists(t, owner.db, "Notes", "parent_id")
+	assertSQLiteColumnExists(t, owner.db, "Notes", "category_id")
+	assertSQLiteColumnAbsent(t, owner.db, "Notes", "text_embedding")
+	assertSQLiteColumnAbsent(t, owner.db, "Notes", "embedding_updated_at")
+	assertSQLiteTableExists(t, owner.db, "Note_Attachments")
+	assertSQLiteIndexExists(t, owner.db, "idx_attachments_note_id")
+
+	status, err := migrationStatus(owner.db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status.CurrentVersion != expectedSchemaVersion || len(status.Pending) != 0 {
+		t.Fatalf("unexpected migration status: current=%d pending=%d", status.CurrentVersion, len(status.Pending))
+	}
+
+	backupDB, err := sql.Open("sqlite", cfg.migrationBackupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backupDB.Close()
+	assertSQLiteColumnExists(t, backupDB, "Notes", "type")
+
+	backupCountBefore := countBackupDBFiles(t, cfg.backupsDir)
+	cfgSecond, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ownerSecond, err := openRuntimeSQLite(&cfgSecond)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ownerSecond.close()
+	if cfgSecond.migrationsApplied != 0 {
+		t.Fatalf("expected idempotent rerun to apply zero migrations, got %d", cfgSecond.migrationsApplied)
+	}
+	if cfgSecond.migrationBackupPath != "" {
+		t.Fatalf("expected no new backup when no migrations are pending, got %s", cfgSecond.migrationBackupPath)
+	}
+	if got := countBackupDBFiles(t, cfg.backupsDir); got != backupCountBefore {
+		t.Fatalf("expected backup count to stay %d on idempotent rerun, got %d", backupCountBefore, got)
+	}
+}
+
+func TestRunExistingDBMigrationsSkipsDuplicateAndMissingColumns(t *testing.T) {
+	dataDir := t.TempDir()
+	dbPath := createIdempotentMigrationDB(t, dataDir)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	owner, err := openRuntimeSQLite(&cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	if cfg.migrationsApplied != 3 {
+		t.Fatalf("expected migrations 14-16 to be considered applied, got %d", cfg.migrationsApplied)
+	}
+	if err := verifySchemaVersion(owner.db, expectedSchemaVersion); err != nil {
+		t.Fatal(err)
+	}
+	assertSQLiteColumnExists(t, owner.db, "Notes", "prompt_params")
+	assertSQLiteColumnAbsent(t, owner.db, "Notes", "text_embedding")
+	var layout string
+	if err := owner.db.QueryRow("SELECT editor_layout FROM Notes WHERE title = 'Needs Normalize'").Scan(&layout); err != nil {
+		t.Fatal(err)
+	}
+	if layout != "single" {
+		t.Fatalf("expected migration 16 to normalize editor_layout, got %q", layout)
+	}
+}
+
+func TestOpenRuntimeSQLiteFailedMigrationRollsBackAndKeepsBackup(t *testing.T) {
+	dataDir := t.TempDir()
+	dbPath := createVersion15MigrationDB(t, dataDir)
+	originalDefinitions := migrationDefinitions
+	originalNow := migrationBackupNow
+	migrationDefinitions = []migrationDefinition{
+		{16, "failing_test_migration", []string{
+			"ALTER TABLE Notes ADD COLUMN rollback_marker TEXT",
+			"SELECT * FROM table_that_does_not_exist",
+		}},
+	}
+	migrationBackupNow = func() time.Time {
+		return time.Date(2026, 6, 12, 9, 30, 0, 0, time.UTC)
+	}
+	t.Cleanup(func() {
+		migrationDefinitions = originalDefinitions
+		migrationBackupNow = originalNow
+	})
+
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	owner, err := openRuntimeSQLite(&cfg)
+	if err == nil {
+		_ = owner.close()
+		t.Fatal("expected failing migration to abort startup")
+	}
+	if !strings.Contains(err.Error(), "migration failed after backup") {
+		t.Fatalf("unexpected migration failure: %v", err)
+	}
+	if cfg.migrationBackupPath == "" {
+		t.Fatal("expected backup path to be recorded before migration failure")
+	}
+	if _, err := os.Stat(cfg.migrationBackupPath); err != nil {
+		t.Fatalf("expected migration backup to exist after failure: %v", err)
+	}
+
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	version, err := schemaVersion(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if version != 15 {
+		t.Fatalf("expected failed migration rollback to keep schema_version 15, got %d", version)
+	}
+	assertSQLiteColumnAbsent(t, db, "Notes", "rollback_marker")
+
+	backupDB, err := sql.Open("sqlite", cfg.migrationBackupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backupDB.Close()
+	backupVersion, err := schemaVersion(backupDB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if backupVersion != 15 {
+		t.Fatalf("expected backup schema_version 15, got %d", backupVersion)
+	}
+	assertSQLiteColumnAbsent(t, backupDB, "Notes", "rollback_marker")
+}
+
+func assertSQLiteOwnerSettings(t *testing.T, owner *sqliteConnectionOwner, wantQueryOnly bool) {
+	t.Helper()
+	if owner.journalMode != "wal" {
+		t.Fatalf("expected owner to record WAL mode, got %q", owner.journalMode)
+	}
+	if owner.busyTimeoutMS != sqliteBusyTimeoutMS {
+		t.Fatalf("expected owner busy timeout %d, got %d", sqliteBusyTimeoutMS, owner.busyTimeoutMS)
+	}
+	if owner.queryOnly != wantQueryOnly {
+		t.Fatalf("owner query_only mismatch: got %v want %v", owner.queryOnly, wantQueryOnly)
+	}
+
+	var journalMode string
+	if err := owner.db.QueryRow("PRAGMA journal_mode").Scan(&journalMode); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.EqualFold(journalMode, "wal") {
+		t.Fatalf("expected SQLite WAL mode, got %q", journalMode)
+	}
+	var busyTimeout int
+	if err := owner.db.QueryRow("PRAGMA busy_timeout").Scan(&busyTimeout); err != nil {
+		t.Fatal(err)
+	}
+	if busyTimeout != sqliteBusyTimeoutMS {
+		t.Fatalf("expected SQLite busy timeout %d, got %d", sqliteBusyTimeoutMS, busyTimeout)
+	}
+	var queryOnly int
+	if err := owner.db.QueryRow("PRAGMA query_only").Scan(&queryOnly); err != nil {
+		t.Fatal(err)
+	}
+	expectedQueryOnly := 0
+	if wantQueryOnly {
+		expectedQueryOnly = 1
+	}
+	if queryOnly != expectedQueryOnly {
+		t.Fatalf("expected SQLite query_only %d, got %d", expectedQueryOnly, queryOnly)
+	}
+}
+
+func assertSQLiteConnSettings(t *testing.T, conn *sql.Conn, wantQueryOnly bool) {
+	t.Helper()
+	ctx := context.Background()
+	var journalMode string
+	if err := conn.QueryRowContext(ctx, "PRAGMA journal_mode").Scan(&journalMode); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.EqualFold(journalMode, "wal") {
+		t.Fatalf("expected SQLite WAL mode, got %q", journalMode)
+	}
+	var busyTimeout int
+	if err := conn.QueryRowContext(ctx, "PRAGMA busy_timeout").Scan(&busyTimeout); err != nil {
+		t.Fatal(err)
+	}
+	if busyTimeout != sqliteBusyTimeoutMS {
+		t.Fatalf("expected SQLite busy timeout %d, got %d", sqliteBusyTimeoutMS, busyTimeout)
+	}
+	var queryOnly int
+	if err := conn.QueryRowContext(ctx, "PRAGMA query_only").Scan(&queryOnly); err != nil {
+		t.Fatal(err)
+	}
+	expectedQueryOnly := 0
+	if wantQueryOnly {
+		expectedQueryOnly = 1
+	}
+	if queryOnly != expectedQueryOnly {
+		t.Fatalf("expected SQLite query_only %d, got %d", expectedQueryOnly, queryOnly)
+	}
+}
+
+func assertTagCount(t *testing.T, db *sql.DB, name string, want int) {
+	t.Helper()
+	var got int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Tags WHERE name = ?", name).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("tag %q count mismatch: got %d want %d", name, got, want)
+	}
+}
+
+func assertSQLiteTableExists(t *testing.T, db *sql.DB, name string) {
+	t.Helper()
+	var got string
+	if err := db.QueryRow("SELECT name FROM sqlite_master WHERE name = ?", name).Scan(&got); err != nil {
+		t.Fatalf("expected SQLite object %q to exist: %v", name, err)
+	}
+}
+
+func assertSQLiteIndexExists(t *testing.T, db *sql.DB, name string) {
+	t.Helper()
+	var got string
+	if err := db.QueryRow("SELECT name FROM sqlite_master WHERE type = 'index' AND name = ?", name).Scan(&got); err != nil {
+		t.Fatalf("expected SQLite index %q to exist: %v", name, err)
+	}
+}
+
+func assertSQLiteTriggerExists(t *testing.T, db *sql.DB, name string) {
+	t.Helper()
+	var got string
+	if err := db.QueryRow("SELECT name FROM sqlite_master WHERE type = 'trigger' AND name = ?", name).Scan(&got); err != nil {
+		t.Fatalf("expected SQLite trigger %q to exist: %v", name, err)
+	}
+}
+
+func assertSQLiteColumnExists(t *testing.T, db *sql.DB, table, column string) {
+	t.Helper()
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			t.Fatal(err)
+		}
+		if name == column {
+			return
+		}
+	}
+	t.Fatalf("expected %s.%s to exist", table, column)
+}
+
+func assertSQLiteColumnAbsent(t *testing.T, db *sql.DB, table, column string) {
+	t.Helper()
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			t.Fatal(err)
+		}
+		if name == column {
+			t.Fatalf("expected %s.%s to be absent", table, column)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func assertSQLiteColumnDefault(t *testing.T, db *sql.DB, table, column, want string) {
+	t.Helper()
+	rows, err := db.Query("PRAGMA table_info(" + table + ")")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, columnType string
+		var notNull int
+		var defaultValue sql.NullString
+		var pk int
+		if err := rows.Scan(&cid, &name, &columnType, &notNull, &defaultValue, &pk); err != nil {
+			t.Fatal(err)
+		}
+		if name == column {
+			if !defaultValue.Valid || defaultValue.String != want {
+				t.Fatalf("default mismatch for %s.%s: got %q valid=%v want %q", table, column, defaultValue.String, defaultValue.Valid, want)
+			}
+			return
+		}
+	}
+	t.Fatalf("expected %s.%s to exist", table, column)
+}
+
+func assertSeededCategory(t *testing.T, db *sql.DB, name, icon string, sortOrder, isDefault int) {
+	t.Helper()
+	var gotIcon string
+	var gotSortOrder int
+	var gotDefault int
+	if err := db.QueryRow("SELECT icon, sort_order, is_default FROM Categories WHERE name = ?", name).Scan(&gotIcon, &gotSortOrder, &gotDefault); err != nil {
+		t.Fatalf("expected seeded category %q: %v", name, err)
+	}
+	if gotIcon != icon || gotSortOrder != sortOrder || gotDefault != isDefault {
+		t.Fatalf("category %q mismatch: got icon=%q sort=%d default=%d", name, gotIcon, gotSortOrder, gotDefault)
+	}
+}
+
+func countBackupDBFiles(t *testing.T, backupsDir string) int {
+	t.Helper()
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := 0
+	for _, entry := range entries {
+		if !entry.IsDir() && strings.HasPrefix(entry.Name(), "prism_go_pre_migrate_") && strings.HasSuffix(entry.Name(), ".db") {
+			count++
+		}
+	}
+	return count
+}
+
+func TestSQLiteOwnerDSNConfiguresPragmasForEachConnection(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	owner, err := openSQLiteOwner(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	ctx := context.Background()
+	conn1, err := owner.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn1.Close()
+	conn2, err := owner.db.Conn(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn2.Close()
+
+	assertSQLiteConnSettings(t, conn1, true)
+	assertSQLiteConnSettings(t, conn2, true)
+}
+
+func TestSQLiteOwnerConfiguresWALBusyTimeoutAndReadOnlyMode(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	owner, err := openSQLiteOwner(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	if owner.writeEnabled {
+		t.Fatal("read-only owner must not report write mode")
+	}
+	assertSQLiteOwnerSettings(t, owner, true)
+
+	if err := owner.withTransaction(func(tx *sql.Tx) error {
+		_, err := tx.Exec("INSERT INTO Tags (name) VALUES ('blocked-by-owner')")
+		return err
+	}); err == nil || !strings.Contains(err.Error(), "requires write mode") {
+		t.Fatalf("expected read-only transaction refusal, got %v", err)
+	}
+	if _, err := owner.db.Exec("INSERT INTO Tags (name) VALUES ('blocked-by-query-only')"); err == nil {
+		t.Fatal("expected query_only mode to block direct DB writes")
+	}
+}
+
+func TestSQLiteOwnerWriteModeTransactionCommitAndRollback(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	owner, err := openSQLiteOwner(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	if !owner.writeEnabled {
+		t.Fatal("write owner must report write mode")
+	}
+	assertSQLiteOwnerSettings(t, owner, false)
+
+	if err := owner.withTransaction(func(tx *sql.Tx) error {
+		_, err := tx.Exec("INSERT INTO Tags (name) VALUES ('committed')")
+		return err
+	}); err != nil {
+		t.Fatalf("expected transaction commit to succeed: %v", err)
+	}
+	assertTagCount(t, owner.db, "committed", 1)
+
+	rollbackErr := errors.New("force rollback")
+	err = owner.withTransaction(func(tx *sql.Tx) error {
+		if _, err := tx.Exec("INSERT INTO Tags (name) VALUES ('rolled_back')"); err != nil {
+			return err
+		}
+		return rollbackErr
+	})
+	if !errors.Is(err, rollbackErr) {
+		t.Fatalf("expected rollback error to propagate, got %v", err)
+	}
+	assertTagCount(t, owner.db, "rolled_back", 0)
 }
 
 func TestMigrationStatusHandlerMatchesPythonShapeAndKeepsQueryOnly(t *testing.T) {
@@ -370,6 +1168,23 @@ func TestAttachmentTextReadKeepsQueryOnlyWhenExplicitlyEnabled(t *testing.T) {
 	}
 }
 
+func TestAttachmentWriteDisablesQueryOnlyWhenExplicitlyEnabled(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", dbPath, t.TempDir(), false, false, false, false, false, false, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.enableAttachmentWrite {
+		t.Fatal("attachment write should be enabled by explicit flag")
+	}
+	if cfg.sqliteQueryOnly {
+		t.Fatal("attachment metadata writes must disable SQLite query_only")
+	}
+	if got := (&server{runtime: cfg}).apiSurface(); got != "get-read-only+local-attachment-write" {
+		t.Fatalf("api surface mismatch: %s", got)
+	}
+}
+
 func TestAttachmentTextReadRejectsWhenFlagDisabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	db, err := openDB(dbPath, false)
@@ -449,6 +1264,324 @@ func TestNotesWriteHandlerRejectsWhenFlagDisabled(t *testing.T) {
 	if count != 0 {
 		t.Fatalf("disabled handler wrote notes: %d", count)
 	}
+}
+
+func TestNotesSearchUsesTokenizedFTSAndCardFields(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(dataDir, "docs", "attachments"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	ftsID := insertSearchNote(t, db, "FTS fixture", "ftsa appears before ftsb", "", 1)
+	remarksID := insertSearchNote(t, db, "Remarks fixture", "plain body", "remarkaa appears before remarkbb", 1)
+	tagsID := insertSearchNote(t, db, "Tags fixture", "plain body", "", 1)
+	metaID := insertSearchNote(t, db, "Metadata fixture", "plain body", "", 1)
+	bodyID := insertSearchNote(t, db, "Body fixture", "plain body", "", 1)
+
+	if _, err := db.Exec("INSERT INTO Tags (name) VALUES ('tagaa'), ('tagbb')"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Tags (note_id, tag_id) SELECT ?, id FROM Tags WHERE name IN ('tagaa', 'tagbb')", tagsID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes) VALUES (?, 'docs/attachments/meta-fixture.md', 'md', 'metaaa appears before metabb', 10)", metaID); err != nil {
+		t.Fatal(err)
+	}
+	bodyPath := filepath.Join(dataDir, "docs", "attachments", "body-fixture.md")
+	if err := os.WriteFile(bodyPath, []byte("bodyaa appears before bodybb"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes) VALUES (?, 'docs/attachments/body-fixture.md', 'md', 'body fixture', ?)", bodyID, int64(len("bodyaa appears before bodybb"))); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: dataDir, sqliteQueryOnly: false}}
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=ftsa%20ftsb&per_page=100", ftsID)
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=remarkaa%20remarkbb&per_page=100", remarksID)
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=tagaa%20tagbb&per_page=100", tagsID)
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=metaaa%20metabb&per_page=100", metaID)
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=bodyaa%20bodybb&per_page=100", bodyID)
+
+	recorder := httptest.NewRecorder()
+	srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, "/api/notes?type=not-a-category&per_page=100", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected unknown type compatibility query to succeed, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	pagination := payload["pagination"].(map[string]any)
+	if int(pagination["total"].(float64)) < 6 {
+		t.Fatalf("unknown type should not add an empty filter, payload=%#v", payload)
+	}
+}
+
+func TestNotesCreateAndUpdateDefaultCategoryFTSAndRollback(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true}}
+	createBody := `{"content":"defaultcategorytoken content","title":"","tags":["created-tag"],"urls":["https://created.example"]}`
+	createRecorder := httptest.NewRecorder()
+	srv.handleNotes(createRecorder, httptest.NewRequest(http.MethodPost, "/api/notes", strings.NewReader(createBody)))
+	if createRecorder.Code != http.StatusCreated {
+		t.Fatalf("expected create 201, got %d body=%s", createRecorder.Code, createRecorder.Body.String())
+	}
+	noteID := noteIDFromResponse(t, createRecorder.Body.Bytes())
+	var categoryID int
+	if err := db.QueryRow("SELECT category_id FROM Notes WHERE id = ?", noteID).Scan(&categoryID); err != nil {
+		t.Fatal(err)
+	}
+	if categoryID != 1 {
+		t.Fatalf("create without category_id should use default category 1, got %d", categoryID)
+	}
+	assertFTSCount(t, db, "defaultcategorytoken", 1)
+
+	updateBody := `{"title":"Updated note","content":"updatedftstoken content","category_id":1,"remarks":"updated remarks","tags":["updated-tag"],"urls":["https://updated.example"]}`
+	updateRecorder := httptest.NewRecorder()
+	srv.handleNoteDetail(updateRecorder, httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/notes/%d", noteID), strings.NewReader(updateBody)))
+	if updateRecorder.Code != http.StatusOK {
+		t.Fatalf("expected update 200, got %d body=%s", updateRecorder.Code, updateRecorder.Body.String())
+	}
+	assertFTSCount(t, db, "updatedftstoken", 1)
+	assertFTSCount(t, db, "defaultcategorytoken", 0)
+	var historyCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Note_History WHERE note_id = ?", noteID).Scan(&historyCount); err != nil {
+		t.Fatal(err)
+	}
+	if historyCount != 1 {
+		t.Fatalf("expected one history row after content update, got %d", historyCount)
+	}
+
+	before := noteSnapshot(t, db, noteID)
+	badBody := `{"title":"Broken update","content":"broken rollback content","category_id":999999}`
+	badRecorder := httptest.NewRecorder()
+	srv.handleNoteDetail(badRecorder, httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/notes/%d", noteID), strings.NewReader(badBody)))
+	if badRecorder.Code != http.StatusInternalServerError {
+		t.Fatalf("expected FK failure to return 500, got %d body=%s", badRecorder.Code, badRecorder.Body.String())
+	}
+	after := noteSnapshot(t, db, noteID)
+	if before != after {
+		t.Fatalf("failed update should roll back note row\nbefore=%s\nafter=%s", before, after)
+	}
+	if err := db.QueryRow("SELECT COUNT(*) FROM Note_History WHERE note_id = ?", noteID).Scan(&historyCount); err != nil {
+		t.Fatal(err)
+	}
+	if historyCount != 1 {
+		t.Fatalf("failed update should roll back inserted history, got %d rows", historyCount)
+	}
+}
+
+func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	uploadsDir := filepath.Join(dataDir, "static", "uploads")
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"delete.jpg", "delete_thumb.webp", "cover.jpg", "cover_thumb.webp",
+		"shared.jpg", "shared_thumb.webp", "batch-a.jpg", "batch-a_thumb.webp",
+		"batch-thumb_thumb.webp", "batch-thumb.jpg",
+	} {
+		if err := os.WriteFile(filepath.Join(uploadsDir, name), []byte(name), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	deleteID := insertSearchNote(t, db, "Delete Fixture", "deleteftstoken ![](/static/uploads/delete.jpg)", "", 1)
+	sharedDeleteID := insertSearchNote(t, db, "Shared Delete", "sharedtoken ![](/static/uploads/shared.jpg)", "", 1)
+	sharedKeepID := insertSearchNote(t, db, "Shared Keep", "sharedtoken ![](/static/uploads/shared.jpg)", "", 1)
+	batchAID := insertSearchNote(t, db, "Batch A", "batchatoken ![](/static/uploads/batch-a.jpg)", "", 1)
+	batchBID := insertSearchNote(t, db, "Batch B", "batchbtoken", "", 1)
+	if _, err := db.Exec("UPDATE Notes SET cover_image = '/static/uploads/cover.jpg' WHERE id = ?", deleteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("UPDATE Notes SET cover_image = '/static/uploads/batch-thumb_thumb.webp' WHERE id = ?", batchBID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Tags (name) VALUES ('delete-tag')"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Tags (note_id, tag_id) SELECT ?, id FROM Tags WHERE name = 'delete-tag'", deleteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Source_Urls (note_id, url) VALUES (?, 'https://delete.example')", deleteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, 'old delete content', 'delete history')", deleteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title) VALUES (?, 'docs/attachments/delete.md', 'md', 'delete attachment')", deleteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, 'batch old content', 'batch history')", batchAID); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true, uploadsDir: uploadsDir}}
+	deleteRecorder := httptest.NewRecorder()
+	srv.handleNoteDetail(deleteRecorder, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/notes/%d", deleteID), nil))
+	if deleteRecorder.Code != http.StatusOK {
+		t.Fatalf("expected delete 200, got %d body=%s", deleteRecorder.Code, deleteRecorder.Body.String())
+	}
+	for _, name := range []string{"delete.jpg", "delete_thumb.webp", "cover.jpg", "cover_thumb.webp"} {
+		if _, err := os.Stat(filepath.Join(uploadsDir, name)); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be deleted, stat err=%v", name, err)
+		}
+	}
+	assertTableCount(t, db, "Notes", deleteID, 0)
+	assertTableCount(t, db, "Note_Tags", deleteID, 0)
+	assertTableCount(t, db, "Source_Urls", deleteID, 0)
+	assertTableCount(t, db, "Note_History", deleteID, 0)
+	assertTableCount(t, db, "Note_Attachments", deleteID, 0)
+	assertFTSCount(t, db, "deleteftstoken", 0)
+
+	sharedRecorder := httptest.NewRecorder()
+	srv.handleNoteDetail(sharedRecorder, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/notes/%d", sharedDeleteID), nil))
+	if sharedRecorder.Code != http.StatusOK {
+		t.Fatalf("expected shared delete 200, got %d body=%s", sharedRecorder.Code, sharedRecorder.Body.String())
+	}
+	for _, name := range []string{"shared.jpg", "shared_thumb.webp"} {
+		if _, err := os.Stat(filepath.Join(uploadsDir, name)); err != nil {
+			t.Fatalf("expected shared file %s to remain, err=%v", name, err)
+		}
+	}
+	assertTableCount(t, db, "Notes", sharedKeepID, 1)
+
+	batchRecorder := httptest.NewRecorder()
+	batchBody := fmt.Sprintf(`{"note_ids":[%d,%d,999999]}`, batchAID, batchBID)
+	srv.handleNoteDetail(batchRecorder, httptest.NewRequest(http.MethodPost, "/api/notes/batch/delete", strings.NewReader(batchBody)))
+	if batchRecorder.Code != http.StatusOK {
+		t.Fatalf("expected batch delete 200, got %d body=%s", batchRecorder.Code, batchRecorder.Body.String())
+	}
+	var payload struct {
+		Data struct {
+			DeletedCount int `json:"deleted_count"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(batchRecorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Data.DeletedCount != 2 {
+		t.Fatalf("expected batch deleted_count 2, got %d", payload.Data.DeletedCount)
+	}
+	for _, name := range []string{"batch-a.jpg", "batch-a_thumb.webp", "batch-thumb_thumb.webp", "batch-thumb.jpg"} {
+		if _, err := os.Stat(filepath.Join(uploadsDir, name)); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be deleted by batch cleanup, stat err=%v", name, err)
+		}
+	}
+	assertTableCount(t, db, "Notes", batchAID, 0)
+	assertTableCount(t, db, "Note_History", batchAID, 0)
+	assertFTSCount(t, db, "batchatoken", 0)
+	assertFTSCount(t, db, "batchbtoken", 0)
+}
+
+func insertSearchNote(t *testing.T, db *sql.DB, title, content, remarks string, categoryID int) int {
+	t.Helper()
+	result, err := db.Exec(
+		"INSERT INTO Notes (title, content, remarks, category_id, sort_order) VALUES (?, ?, ?, ?, ?)",
+		title, content, remarks, categoryID, 100,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return int(id)
+}
+
+func assertNotesSearchIncludes(t *testing.T, srv *server, path string, wantID int) {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("%s returned %d body=%s", path, recorder.Code, recorder.Body.String())
+	}
+	var payload struct {
+		Data []map[string]any `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	for _, note := range payload.Data {
+		if int(note["id"].(float64)) == wantID {
+			return
+		}
+	}
+	t.Fatalf("%s did not include note id %d; payload=%s", path, wantID, recorder.Body.String())
+}
+
+func noteIDFromResponse(t *testing.T, body []byte) int {
+	t.Helper()
+	var payload struct {
+		Data struct {
+			NoteID int `json:"note_id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Data.NoteID == 0 {
+		t.Fatalf("missing note_id in response: %s", string(body))
+	}
+	return payload.Data.NoteID
+}
+
+func assertFTSCount(t *testing.T, db *sql.DB, query string, want int) {
+	t.Helper()
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Notes_FTS WHERE Notes_FTS MATCH ?", query).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != want {
+		t.Fatalf("FTS query %q got %d hits, want %d", query, count, want)
+	}
+}
+
+func assertTableCount(t *testing.T, db *sql.DB, table string, noteID int, want int) {
+	t.Helper()
+	column := "note_id"
+	if table == "Notes" {
+		column = "id"
+	}
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM "+table+" WHERE "+column+" = ?", noteID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != want {
+		t.Fatalf("%s rows for note %d got %d, want %d", table, noteID, count, want)
+	}
+}
+
+func noteSnapshot(t *testing.T, db *sql.DB, noteID int) string {
+	t.Helper()
+	var title, content string
+	var categoryID sql.NullInt64
+	if err := db.QueryRow("SELECT title, content, category_id FROM Notes WHERE id = ?", noteID).Scan(&title, &content, &categoryID); err != nil {
+		t.Fatal(err)
+	}
+	return fmt.Sprintf("%s|%s|%v", title, content, nullableIntOrNil(categoryID))
 }
 
 func TestNotesRestoreHandlerReturnsJSONWhenEnabled(t *testing.T) {

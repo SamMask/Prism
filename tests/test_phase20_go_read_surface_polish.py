@@ -33,8 +33,8 @@ def test_phase20_3_go_search_includes_attachment_metadata_without_write_methods(
     main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
 
     assert "FROM Note_Attachments a" in main_go
-    assert "a.title LIKE ?" in main_go
-    assert "a.file_path LIKE ?" in main_go
+    assert "LOWER(COALESCE(a.title, '')) LIKE ?" in main_go
+    assert "LOWER(COALESCE(a.file_path, '')) LIKE ?" in main_go
     assert "PRAGMA query_only = ON" in main_go
     assert "http.MethodGet" in main_go
     assert "enableTagWrite" in main_go

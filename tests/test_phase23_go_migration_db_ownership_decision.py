@@ -5,6 +5,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-migration-db-ownership-decision.json"
 SOURCE_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-attachment-text-read-implementation.json"
+FRESH_INIT_CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-fresh-db-init.json"
+EXISTING_MIGRATION_CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-existing-db-migration-runner.json"
+MIGRATION_BACKUP_CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-migration-backup-rollback.json"
 MIGRATIONS_PATH = ROOT / "migrations" / "__init__.py"
 GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
 SYSTEM_ROUTE_PATH = ROOT / "routes" / "system.py"
@@ -97,20 +100,34 @@ def test_current_python_migration_runtime_has_required_status_and_idempotency_an
     assert "get_migration_status(db)" in system_route
 
 
-def test_go_runtime_remains_schema_status_reader_not_migration_runner():
+def test_go_runtime_allows_active_t008_t010_migration_gates_without_live_scope_promotion():
     main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
+    fresh_init = json.loads(FRESH_INIT_CONTRACT_PATH.read_text(encoding="utf-8"))
+    existing_migration = json.loads(EXISTING_MIGRATION_CONTRACT_PATH.read_text(encoding="utf-8"))
+    migration_backup = json.loads(MIGRATION_BACKUP_CONTRACT_PATH.read_text(encoding="utf-8"))
 
+    assert fresh_init["task_id"] == "T008"
+    assert fresh_init["allowed_scope"]["fresh_db_only"] is True
+    assert existing_migration["task_id"] == "T009"
+    assert existing_migration["allowed_scope"]["existing_db_upgrade"] is True
+    assert migration_backup["task_id"] == "T010"
+    assert migration_backup["allowed_scope"]["backup_before_migrate"] is True
     assert "func verifySchemaVersion" in main_go
     assert "func schemaVersion" in main_go
+    assert "func initializeFreshDatabase" in main_go
+    assert "freshDBInitNeeded" in main_go
+    assert "func runExistingDBMigrations" in main_go
+    assert "func backupSQLiteBeforeMigration" in main_go
     assert "SELECT value FROM Schema_Meta WHERE key = 'schema_version'" in main_go
     assert '"schema_version":' in main_go
     assert '"expected_schema_version":' in main_go
     assert "PRAGMA query_only = ON" in main_go
-    assert "CREATE TABLE Schema_Meta" not in main_go
-    assert "UPDATE Schema_Meta" not in main_go
-    assert "ALTER TABLE" not in main_go
-    assert "DROP TABLE" not in main_go
-    assert "runMigrations" not in main_go
+    assert "CREATE TABLE Schema_Meta" in main_go
+    assert "INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '16')" in main_go
+    assert "UPDATE Schema_Meta SET value = ?" in main_go
+    assert "ALTER TABLE Notes ADD COLUMN is_pinned" in main_go
+    assert "DROP TABLE IF EXISTS AI_Tasks" in main_go
+    assert "PRISM_GO_ALLOW_PROD_DB" in main_go
 
 
 def test_phase23_7_does_not_authorize_runtime_schema_live_or_python_removal_scope():

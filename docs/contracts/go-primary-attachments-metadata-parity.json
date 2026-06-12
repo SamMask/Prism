@@ -1,0 +1,73 @@
+{
+  "task_id": "T019",
+  "contract": "CONTRACT-GO-PRIMARY-FILES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-files attachments metadata list/upload/delete parity candidate only",
+  "enable_flag": "--enable-attachment-write",
+  "enable_env": "PRISM_GO_ENABLE_ATTACHMENT_WRITE=1",
+  "depends_on": [
+    "T007",
+    "T019 source truth from routes/attachments.py"
+  ],
+  "covered_routes": [
+    "GET /api/notes/<id>/attachments",
+    "POST /api/notes/<id>/attachments",
+    "DELETE /api/attachments/<id>"
+  ],
+  "update_route_boundary": {
+    "PUT /api/attachments/<id>": "not a current Python API route",
+    "PATCH /api/attachments/<id>": "not a current Python API route",
+    "decision": "do not add a Go-only attachment metadata update route during T019"
+  },
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "list attachments for an existing note ordered by created_at DESC",
+    "missing note returns Python-compatible 404 before multipart file validation",
+    "multipart upload requires a file field and a non-empty filename",
+    "allowed attachment extensions stay md, txt, and markdown",
+    "unsupported extension returns a deterministic Python-compatible validation message",
+    "successful upload writes docs/attachments, stores file_path, file_type, title, size_bytes, is_auto_extracted=0, and returns Python-compatible JSON shape",
+    "delete removes the DB row and deletes the copied attachment file when present",
+    "delete succeeds and removes the DB row when the copied attachment file is already missing",
+    "missing attachment delete returns Python-compatible 404",
+    "default Go runtime keeps attachment metadata writes disabled"
+  ],
+  "retained_python_scope": [
+    "GET /api/attachments/<id>?raw=true raw/send_file branch",
+    "PUT/PATCH attachment metadata update because no current Python route exists",
+    "notes long-content check_separation/separate/restore routes",
+    "POST /api/upload and POST /api/upload/url",
+    "upload delete and media cleanup",
+    "import/export",
+    "server/system routes"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t019_attachments_metadata.py"
+    ],
+    "adjacent_tests": [
+      "tests/test_phase23_go_attachment_text_read_implementation.py",
+      "tests/test_phase23_go_file_read_parity_implementation.py",
+      "tests/test_upload_security.py"
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "go test ./...",
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T020",
+    "reason": "Attachment metadata upload/delete is closed as a local/copied-DB-and-files candidate; the next file surface is raw/text/binary serving behavior, including raw branch and MIME/download boundaries."
+  }
+}

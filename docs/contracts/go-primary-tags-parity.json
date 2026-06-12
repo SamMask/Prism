@@ -1,0 +1,72 @@
+{
+  "task_id": "T018",
+  "contract": "CONTRACT-GO-PRIMARY-TAXONOMY",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB tags update/delete/merge parity candidate only",
+  "enable_flag": "--enable-tag-write",
+  "enable_env": "PRISM_GO_ENABLE_TAG_WRITE=1",
+  "depends_on": [
+    "T017",
+    "T015"
+  ],
+  "covered_routes": [
+    "PUT /api/tags/<id>",
+    "DELETE /api/tags/<id>",
+    "POST /api/tags/merge"
+  ],
+  "create_route_boundary": {
+    "POST /api/tags": "not a current Python API route",
+    "tag_creation": "covered through existing notes create/update/batch tag assignment routes instead of adding a Go-only tag create route"
+  },
+  "runtime_boundary": {
+    "production_db_write": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "tag rename success and missing-tag errors",
+    "tag rename duplicate detection uses route-level COLLATE NOCASE",
+    "tag delete removes Note_Tags links before deleting the tag for legacy schemas without tag FK cascade",
+    "tag merge validates required fields, empty source list, target-in-source, and missing target rollback/no-mutation cases",
+    "tag merge transfers Note_Tags to the target with INSERT OR IGNORE, deletes source tags, and skips missing source ids",
+    "tag auto-create through notes tag assignment uses route-level COLLATE NOCASE to avoid case-variant duplicate Tags rows on copied legacy DBs",
+    "default Go runtime keeps tag write routes disabled"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t018_tags.py"
+    ],
+    "adjacent_tests": [
+      "tests/test_go_primary_t016_t017_history_categories.py",
+      "tests/test_tags.py",
+      "tests/test_tags_merge.py",
+      "tests/test_phase23_go_first_write_route_implementation.py"
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "go test ./...",
+      "git diff --check"
+    ]
+  },
+  "explicit_non_scope": [
+    "live/default taxonomy write ownership",
+    "POST /api/tags create route introduction",
+    "attachments metadata ownership",
+    "upload/raw attachment serving",
+    "imports/exports",
+    "media cleanup",
+    "server/system routes",
+    "production DB or uploads mutation",
+    "Pi deploy or Caddy/systemd/frontend route changes",
+    "Python backend removal"
+  ],
+  "allowed_next_step": {
+    "id": "T019",
+    "reason": "Tags parity is closed as a local/copied-DB candidate; the next smallest roadmap item is attachments metadata DB ownership before raw/binary attachment serving."
+  }
+}

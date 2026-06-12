@@ -192,7 +192,10 @@ def import_markdown():
                     continue
                 
                 # 查找或建立標籤
-                tag = db.execute('SELECT id FROM Tags WHERE name = ?', (tag_name,)).fetchone()
+                tag = db.execute(
+                    'SELECT id FROM Tags WHERE name = ? COLLATE NOCASE',
+                    (tag_name,)
+                ).fetchone()
                 if tag:
                     tag_id = tag['id']
                 else:
@@ -200,7 +203,10 @@ def import_markdown():
                     tag_id = cursor.lastrowid
                 
                 # 關聯標籤
-                db.execute('INSERT INTO Note_Tags (note_id, tag_id) VALUES (?, ?)', (note_id, tag_id))
+                db.execute(
+                    'INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)',
+                    (note_id, tag_id)
+                )
         
         db.commit()
         

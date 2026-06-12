@@ -1,0 +1,86 @@
+{
+  "task_id": "T016",
+  "contract": "CONTRACT-GO-PRIMARY-NOTES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB notes history list/restore/delete-history parity only",
+  "depends_on": [
+    "docs/contracts/go-primary-notes-create-update-parity.json",
+    "docs/contracts/go-primary-notes-actions-parity.json"
+  ],
+  "enable_flag": "--enable-notes-write",
+  "enable_env": "PRISM_GO_ENABLE_NOTES_WRITE=1",
+  "covered_routes": [
+    "GET /api/notes/<id>/history",
+    "POST /api/notes/<id>/restore/<history_id>",
+    "DELETE /api/notes/<id>/history"
+  ],
+  "not_covered_here": [
+    "categories taxonomy write parity closure covered by T017",
+    "tags taxonomy write/merge parity closure",
+    "upload delete ownership",
+    "orphan/originals/broken image cleanup ownership",
+    "attachment file delete ownership"
+  ],
+  "parity_scope": [
+    "history list response ordering",
+    "missing note history 404 response parity",
+    "restore selected history content to Notes.content",
+    "restore inserts current-content backup with Python diff_summary",
+    "missing history version 404 response with no DB mutation",
+    "delete-history response, deleted_count, and DB state parity",
+    "default Go runtime keeps nested notes history route disabled without explicit notes-write flag"
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "handlers": [
+      "getNoteHistory",
+      "restoreNoteVersion",
+      "deleteNoteHistory"
+    ],
+    "transaction_boundary": "single SQLite transaction per restore/delete-history request",
+    "sqlite_pragmas": [
+      "foreign_keys(1)",
+      "journal_mode(WAL)",
+      "busy_timeout(5000)",
+      "query_only(0) only when explicit DB-write candidate flag is enabled"
+    ]
+  },
+  "runtime_boundary": {
+    "default_runtime_stays_read_only": true,
+    "live_execution_authorized": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "production_file_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t016": [
+    "Live/default notes write ownership",
+    "Production knowledge.db write",
+    "Production file mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Taxonomy/category/tag ownership promotion",
+    "Upload/delete/cleanup ownership promotion",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t016_t017_history_categories.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v",
+    "diff_check": "git diff --check"
+  },
+  "allowed_next_step": {
+    "id": "T017",
+    "reason": "Notes history parity is closed; the next smallest active surface is categories create/update/delete/default/sort parity."
+  }
+}

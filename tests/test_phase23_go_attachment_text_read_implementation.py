@@ -11,6 +11,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.go_primary_parity_harness import build_go_shadow_exe
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
@@ -112,10 +114,9 @@ def _tree_bytes(root):
 
 
 def _start_go_candidate(go_bin, db_path, port, data_root, *, enable_attachment_text_read=True):
+    exe_path = build_go_shadow_exe(go_bin, data_root)
     args = [
-        go_bin,
-        "run",
-        ".",
+        str(exe_path),
         "--db",
         db_path,
         "--addr",
@@ -130,7 +131,6 @@ def _start_go_candidate(go_bin, db_path, port, data_root, *, enable_attachment_t
         env["PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ"] = "1"
     proc = subprocess.Popen(
         args,
-        cwd=GO_SHADOW_DIR,
         env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,

@@ -74,7 +74,10 @@ def rename_tag(tag_id):
                 'message': 'Tag not found'
             }), 404
 
-        duplicate = db.execute('SELECT id FROM Tags WHERE name = ? AND id != ?', (new_name, tag_id)).fetchone()
+        duplicate = db.execute(
+            'SELECT id FROM Tags WHERE name = ? COLLATE NOCASE AND id != ?',
+            (new_name, tag_id)
+        ).fetchone()
         if duplicate:
             return jsonify({
                 'status': 'error',
@@ -106,6 +109,7 @@ def delete_tag(tag_id):
                 'message': 'Tag not found'
             }), 404
 
+        db.execute('DELETE FROM Note_Tags WHERE tag_id = ?', (tag_id,))
         db.execute('DELETE FROM Tags WHERE id = ?', (tag_id,))
         db.commit()
 

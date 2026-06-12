@@ -1,0 +1,81 @@
+{
+  "task_id": "T012",
+  "contract": "CONTRACT-GO-PRIMARY-NOTES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-12",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB notes create/update parity only",
+  "depends_on": [
+    "docs/contracts/go-primary-notes-read-search-parity.json",
+    "docs/contracts/go-primary-sqlite-connection-owner.json"
+  ],
+  "enable_flag": "--enable-notes-write",
+  "enable_env": "PRISM_GO_ENABLE_NOTES_WRITE=1",
+  "covered_routes": [
+    "POST /api/notes",
+    "PUT /api/notes/<id>"
+  ],
+  "not_covered_here": [
+    "DELETE /api/notes/<id>",
+    "notes actions",
+    "notes batch actions",
+    "notes history restore/delete",
+    "media cleanup side effects"
+  ],
+  "parity_scope": [
+    "create note with default category fallback",
+    "create note with tags, source_urls, prompt_params, remarks, pinned flag",
+    "missing content validation",
+    "update note with category, tags, source_urls, prompt_params, layout, archive flag",
+    "content update creates Note_History",
+    "Notes_FTS insert and update triggers remain current",
+    "failed update rolls back note row, tags, source_urls, and history"
+  ],
+  "implementation": {
+    "go_file": "go-shadow/main.go",
+    "create_handler": "createNote",
+    "update_handler": "updateNote",
+    "transaction_boundary": "single SQLite transaction per write request",
+    "sqlite_pragmas": [
+      "foreign_keys(1)",
+      "journal_mode(WAL)",
+      "busy_timeout(5000)",
+      "query_only(0) only when explicit DB-write candidate flag is enabled"
+    ]
+  },
+  "runtime_boundary": {
+    "default_runtime_stays_read_only": true,
+    "live_execution_authorized": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_change": false,
+    "production_db_access": false,
+    "production_db_write": false,
+    "python_removal": false,
+    "public_exposure_change": false
+  },
+  "not_authorized_by_t012": [
+    "Live/default notes write ownership",
+    "Production knowledge.db write",
+    "Production file mutation",
+    "Pi deployment",
+    "Caddy route edit or reload",
+    "systemd service change",
+    "Frontend default API target change",
+    "Python route removal",
+    "Python backend removal",
+    "Notes delete/action/batch/history promotion",
+    "Media file cleanup ownership claim",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "targeted_pytest": "pytest tests/test_go_primary_t011_t012_notes.py -v",
+    "go_tests": "cd go-shadow && go test ./...",
+    "full_pytest": "pytest tests/ -v",
+    "diff_check": "git diff --check"
+  },
+  "allowed_next_step": {
+    "id": "T013",
+    "reason": "Create/update parity is closed; the next smallest notes surface is delete with explicit media cleanup decision."
+  }
+}

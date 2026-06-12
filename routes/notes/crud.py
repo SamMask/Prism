@@ -20,6 +20,18 @@ from ..helpers import parse_tags_json, parse_urls_json
 from db import get_db
 
 
+def _get_or_create_tag_id(db, tag_name):
+    tag_row = db.execute(
+        'SELECT id FROM Tags WHERE name = ? COLLATE NOCASE',
+        (tag_name,)
+    ).fetchone()
+    if tag_row:
+        return tag_row[0]
+
+    cursor = db.execute('INSERT INTO Tags (name) VALUES (?)', (tag_name,))
+    return cursor.lastrowid
+
+
 
 
 
@@ -357,10 +369,11 @@ def create_note():
             if tags:
                 for tag_name in tags:
                     if tag_name.strip():
-                        db.execute('INSERT OR IGNORE INTO Tags (name) VALUES (?)', (tag_name.strip(),))
-                        tag_row = db.execute('SELECT id FROM Tags WHERE name = ?', (tag_name.strip(),)).fetchone()
-                        tag_id = tag_row[0]
-                        db.execute('INSERT INTO Note_Tags (note_id, tag_id) VALUES (?, ?)', (note_id, tag_id))
+                        tag_id = _get_or_create_tag_id(db, tag_name.strip())
+                        db.execute(
+                            'INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)',
+                            (note_id, tag_id)
+                        )
 
             # 處理網址
             urls = data.get('urls', [])
@@ -468,10 +481,11 @@ def update_note(note_id):
             if tags:
                 for tag_name in tags:
                     if tag_name.strip():
-                        db.execute('INSERT OR IGNORE INTO Tags (name) VALUES (?)', (tag_name.strip(),))
-                        tag_row = db.execute('SELECT id FROM Tags WHERE name = ?', (tag_name.strip(),)).fetchone()
-                        tag_id = tag_row[0]
-                        db.execute('INSERT INTO Note_Tags (note_id, tag_id) VALUES (?, ?)', (note_id, tag_id))
+                        tag_id = _get_or_create_tag_id(db, tag_name.strip())
+                        db.execute(
+                            'INSERT OR IGNORE INTO Note_Tags (note_id, tag_id) VALUES (?, ?)',
+                            (note_id, tag_id)
+                        )
 
             # 重新處理網址
             db.execute('DELETE FROM Source_Urls WHERE note_id = ?', (note_id,))
@@ -512,7 +526,11 @@ def delete_note(note_id):
         # v1.2: 刪除關聯的圖片檔案 (含引用計數檢查)
         _cleanup_note_images(existing['content'], existing['cover_image'], note_id)
 
-        # ON DELETE CASCADE handles Note_History / Note_Tags / Source_Urls
+        # Keep legacy DBs without FK cascades clean before deleting the note row.
+        db.execute('DELETE FROM Note_Tags WHERE note_id = ?', (note_id,))
+        db.execute('DELETE FROM Source_Urls WHERE note_id = ?', (note_id,))
+        db.execute('DELETE FROM Note_History WHERE note_id = ?', (note_id,))
+        db.execute('DELETE FROM Note_Attachments WHERE note_id = ?', (note_id,))
         db.execute('DELETE FROM Notes WHERE id = ?', (note_id,))
         db.commit()
 
