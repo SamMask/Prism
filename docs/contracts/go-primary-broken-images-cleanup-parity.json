@@ -1,0 +1,59 @@
+{
+  "task_id": "T027",
+  "contract": "CONTRACT-GO-PRIMARY-MEDIA-CLEANUP",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data broken images cleanup candidate only",
+  "enable_flag": "--enable-media-cleanup",
+  "enable_env": "PRISM_GO_ENABLE_MEDIA_CLEANUP=1",
+  "depends_on": [
+    "T026",
+    "routes/cleanup.py get_broken_images",
+    "routes/cleanup.py fix_broken_images"
+  ],
+  "covered_routes": [
+    "GET /api/cleanup/broken-images",
+    "POST /api/cleanup/broken-images"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "GET scans Notes.content and Notes.cover_image for /static/uploads references",
+    "GET reports missing originals with thumbnail_path and can_fix when a companion thumbnail exists",
+    "GET reports missing thumbnail references as thumbnail_missing and not fixable",
+    "POST rewrites fixable content references from missing original URL to thumbnail URL",
+    "POST rewrites fixable cover_image references from missing original URL to thumbnail URL",
+    "POST leaves non-fixable missing paths untouched",
+    "media cleanup flag disables SQLite query_only because this route updates Notes rows"
+  ],
+  "retained_python_scope": [
+    "live/default broken images cleanup route ownership",
+    "production DB/files mutation",
+    "Pi/Caddy/systemd route expansion",
+    "Python removal"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t024_t027_media_cleanup.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T028",
+    "reason": "Upload delete and media cleanup local/copied candidates are closed; the next active queue item is Markdown import."
+  }
+}

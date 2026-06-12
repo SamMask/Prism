@@ -1,0 +1,59 @@
+{
+  "task_id": "T025",
+  "contract": "CONTRACT-GO-PRIMARY-MEDIA-CLEANUP",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data orphan images cleanup candidate only",
+  "enable_flag": "--enable-media-cleanup",
+  "enable_env": "PRISM_GO_ENABLE_MEDIA_CLEANUP=1",
+  "depends_on": [
+    "T024",
+    "routes/cleanup.py get_orphan_images",
+    "routes/cleanup.py delete_orphan_images"
+  ],
+  "covered_routes": [
+    "GET /api/cleanup/orphan-images",
+    "DELETE /api/cleanup/orphan-images"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "GET scans PRISM_GO_DATA_DIR/static/uploads image files and reports orphan_images, total_count, total_size_bytes, and total_size_mb",
+    "referenced originals protect matching same-extension and _thumb.webp thumbnail companions",
+    "references include Notes.content, Notes.cover_image, direct static/uploads attachments, and text attachment embedded images",
+    "DELETE requires filenames and rechecks that each target is still orphan before file mutation",
+    "DELETE removes true orphan original plus true orphan thumbnail companions",
+    "referenced files are reported as not orphan and are not deleted",
+    "media cleanup flag is explicit and does not authorize production files"
+  ],
+  "retained_python_scope": [
+    "live/default cleanup route ownership",
+    "production uploads mutation",
+    "Caddy/systemd/frontend route expansion",
+    "Python removal"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t024_t027_media_cleanup.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T026",
+    "reason": "Orphan image scan/delete cleanup is closed; the next active queue item is originals cleanup."
+  }
+}

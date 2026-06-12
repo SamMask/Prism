@@ -1,0 +1,59 @@
+{
+  "task_id": "T026",
+  "contract": "CONTRACT-GO-PRIMARY-MEDIA-CLEANUP",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-data originals cleanup candidate only",
+  "enable_flag": "--enable-media-cleanup",
+  "enable_env": "PRISM_GO_ENABLE_MEDIA_CLEANUP=1",
+  "depends_on": [
+    "T025",
+    "routes/cleanup.py get_original_images",
+    "routes/cleanup.py delete_all_originals"
+  ],
+  "covered_routes": [
+    "GET /api/cleanup/originals",
+    "DELETE /api/cleanup/originals"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "GET counts non-thumbnail image originals only when a same-extension or _thumb.webp thumbnail exists",
+    "GET counts thumbnail-only files as thumbnails without making them deletion targets",
+    "DELETE rewrites Notes.content references from original URL to thumbnail URL",
+    "DELETE rewrites matching Notes.cover_image references to thumbnail URL",
+    "DELETE commits DB reference rewrites before deleting original files, mirroring Python cleanup behavior",
+    "DELETE removes original files and preserves thumbnail files under PRISM_GO_DATA_DIR/static/uploads",
+    "media cleanup flag disables SQLite query_only because this route updates Notes rows"
+  ],
+  "retained_python_scope": [
+    "live/default originals cleanup route ownership",
+    "production DB/files mutation",
+    "Pi/Caddy/systemd route expansion",
+    "Python removal"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t024_t027_media_cleanup.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T027",
+    "reason": "Originals cleanup is closed; the next active queue item is broken images scan/fix cleanup."
+  }
+}

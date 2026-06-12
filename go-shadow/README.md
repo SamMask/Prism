@@ -310,6 +310,19 @@ go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-
 
 These gates do not promote live/default files/uploads ownership and do not cover upload delete, cleanup, import/export, server/system, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 
+#### Upload Delete And Media Cleanup
+
+The active-roadmap T024-T027 gates close local/copied DB/data candidates for upload delete and media cleanup:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-upload-delete
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-media-cleanup
+```
+
+`--enable-upload-delete` keeps SQLite `query_only=true` and enables `POST /api/upload/delete` only for copied data. It deletes unreferenced originals plus `_thumb.webp` / same-extension thumbnail companions under `PRISM_GO_DATA_DIR/static/uploads`, while DB/reference scans protect images referenced by `Notes.content`, `Notes.cover_image`, direct static/uploads attachments, and text attachment content.
+
+`--enable-media-cleanup` intentionally disables SQLite `query_only` because originals cleanup and broken image fixes update `Notes.content` / `Notes.cover_image`. It enables `GET` / `DELETE /api/cleanup/orphan-images`, `GET` / `DELETE /api/cleanup/originals`, and `GET` / `POST /api/cleanup/broken-images` for copied DB/data only. File mutation remains confined to `PRISM_GO_DATA_DIR/static/uploads`; production files, Pi/Caddy/systemd routing, frontend defaults, and live/default cleanup ownership remain retained Python.
+
 ## Build Proof
 
 ```powershell
@@ -350,3 +363,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t018_tags.py` locks the active-roadmap T018 tags write/merge parity, NOCASE tag lookup boundary, `POST /api/tags` absence boundary, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t019_attachments_metadata.py` locks the active-roadmap T019 attachments metadata upload/delete parity, update-route absence boundary, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t020_t023_files_uploads.py` locks the active-roadmap T020-T023 attachment raw serving, upload, thumbnail, upload-url safety fixtures, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t024_t027_media_cleanup.py` locks the active-roadmap T024-T027 upload delete, orphan images, originals cleanup, broken images cleanup fixtures, docs status, and non-live-promotion boundary.

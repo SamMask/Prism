@@ -450,6 +450,7 @@
       "python_handler": "routes/upload.py:delete_image",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-data upload delete candidate only",
       "db_side_effects": [],
       "file_side_effects": ["delete static/uploads file and thumbnail companion"]
     },
@@ -481,6 +482,7 @@
       "python_handler": "routes/cleanup.py:get_orphan_images",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["scan static/uploads files"]
     },
@@ -491,6 +493,7 @@
       "python_handler": "routes/cleanup.py:delete_orphan_images",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["delete orphan static/uploads files"]
     },
@@ -501,6 +504,7 @@
       "python_handler": "routes/cleanup.py:get_original_images",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["scan static/uploads originals"]
     },
@@ -511,8 +515,9 @@
       "python_handler": "routes/cleanup.py:delete_all_originals",
       "production_owner": "python",
       "go_primary_owner": null,
-      "db_side_effects": [],
-      "file_side_effects": ["delete unreferenced static/uploads originals"]
+      "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
+      "db_side_effects": ["update Notes.content or cover_image references"],
+      "file_side_effects": ["delete static/uploads originals after thumbnail rewrite"]
     },
     {
       "rule": "/api/cleanup/broken-images",
@@ -521,6 +526,7 @@
       "python_handler": "routes/cleanup.py:get_broken_images",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
       "file_side_effects": ["scan static/uploads references"]
     },
@@ -531,6 +537,7 @@
       "python_handler": "routes/cleanup.py:fix_broken_images",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": ["update Notes.content or cover_image references"],
       "file_side_effects": []
     },

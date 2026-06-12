@@ -40,6 +40,10 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/attachments/")
     registered.discard("/api/upload")
     registered.discard("/api/upload/url")
+    registered.discard("/api/upload/delete")
+    registered.discard("/api/cleanup/orphan-images")
+    registered.discard("/api/cleanup/originals")
+    registered.discard("/api/cleanup/broken-images")
     registered.discard("/api/system/migration-status")
     registered.add("/api/notes/<id>")
 

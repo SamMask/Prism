@@ -1,0 +1,59 @@
+{
+  "task_id": "T024",
+  "contract": "CONTRACT-GO-PRIMARY-UPLOADS",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-data POST /api/upload/delete candidate only",
+  "enable_flag": "--enable-upload-delete",
+  "enable_env": "PRISM_GO_ENABLE_UPLOAD_DELETE=1",
+  "depends_on": [
+    "T023",
+    "routes/upload.py delete_image",
+    "routes/cleanup.py get_all_referenced_images"
+  ],
+  "covered_routes": [
+    "POST /api/upload/delete"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "url is required and reduced to a safe upload basename",
+    "delete is disabled by default and enabled only by explicit flag",
+    "referenced uploads are discovered from Notes.content, Notes.cover_image, direct Note_Attachments static/uploads paths, and text attachment content",
+    "referenced originals protect their thumbnail companions",
+    "unreferenced original deletes original plus _thumb.webp or same-extension thumbnail companion",
+    "file mutations are confined to PRISM_GO_DATA_DIR/static/uploads",
+    "SQLite remains query_only because upload delete only reads DB references"
+  ],
+  "retained_python_scope": [
+    "live/default upload delete route ownership",
+    "production uploads mutation",
+    "media cleanup route ownership",
+    "import/export workflows",
+    "Pi/Caddy/systemd route expansion"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t024_t027_media_cleanup.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T025",
+    "reason": "Upload delete reference-safe local/copied-data candidate is closed; the next active queue item is orphan image scan/delete cleanup."
+  }
+}
