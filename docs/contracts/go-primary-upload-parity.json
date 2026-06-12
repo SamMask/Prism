@@ -1,0 +1,58 @@
+{
+  "task_id": "T021",
+  "contract": "CONTRACT-GO-PRIMARY-UPLOADS",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-data POST /api/upload candidate only",
+  "enable_flag": "--enable-upload-write",
+  "enable_env": "PRISM_GO_ENABLE_UPLOAD_WRITE=1",
+  "depends_on": [
+    "T020",
+    "routes/upload.py upload_file"
+  ],
+  "covered_routes": [
+    "POST /api/upload"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "multipart file field and non-empty filename validation",
+    "jpg, jpeg, png, gif, and webp filename extension acceptance",
+    "content magic validation for jpeg, png, gif, and webp",
+    "5 MiB plus one byte stream cap before file writes",
+    "path traversal filenames are reduced to a safe basename under static/uploads",
+    "standard upload writes the original file under PRISM_GO_DATA_DIR/static/uploads",
+    "validation failures leave PRISM_GO_DATA_DIR/static/uploads unchanged"
+  ],
+  "retained_python_scope": [
+    "live/default upload route ownership",
+    "upload delete",
+    "import/export workflows",
+    "production DB/files",
+    "Pi/Caddy/systemd route expansion"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t020_t023_files_uploads.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T022",
+    "reason": "Multipart original upload is closed as a local/copied-data candidate; the next boundary is thumbnail generation behavior."
+  }
+}

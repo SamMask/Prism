@@ -81,7 +81,9 @@ type runtimeConfig struct {
 	enableCategoryWrite      bool
 	enableNotesWrite         bool
 	enableAttachmentTextRead bool
+	enableAttachmentRawRead  bool
 	enableAttachmentWrite    bool
+	enableUploadWrite        bool
 	enableThumbnailWrite     bool
 	enableUploadURLWrite     bool
 	freshDBInitNeeded        bool
@@ -119,7 +121,9 @@ func main() {
 	enableCategoryWrite := flag.Bool("enable-category-write", envBool("PRISM_GO_ENABLE_CATEGORY_WRITE"), "enable local/copied-DB categories create/update/delete parity candidate")
 	enableNotesWrite := flag.Bool("enable-notes-write", envBool("PRISM_GO_ENABLE_NOTES_WRITE"), "enable local/copied-DB notes write/actions/history/batch parity candidate")
 	enableAttachmentTextRead := flag.Bool("enable-attachment-text-read", envBool("PRISM_GO_ENABLE_ATTACHMENT_TEXT_READ"), "enable local/copied-DB GET /api/attachments/<id> text JSON parity candidate")
+	enableAttachmentRawRead := flag.Bool("enable-attachment-raw-read", envBool("PRISM_GO_ENABLE_ATTACHMENT_RAW_READ"), "enable local/copied-files GET /api/attachments/<id>?raw=true raw/binary serving parity candidate")
 	enableAttachmentWrite := flag.Bool("enable-attachment-write", envBool("PRISM_GO_ENABLE_ATTACHMENT_WRITE"), "enable local/copied-DB-and-files attachment metadata upload/delete parity candidate")
+	enableUploadWrite := flag.Bool("enable-upload-write", envBool("PRISM_GO_ENABLE_UPLOAD_WRITE"), "enable local/copied-data POST /api/upload parity candidate")
 	enableThumbnailWrite := flag.Bool("enable-thumbnail-write", envBool("PRISM_GO_ENABLE_THUMBNAIL_WRITE"), "enable local/copied-data POST /api/upload thumbnail parity candidate")
 	enableUploadURLWrite := flag.Bool("enable-upload-url-write", envBool("PRISM_GO_ENABLE_UPLOAD_URL_WRITE"), "enable local/copied-data POST /api/upload/url parity candidate")
 	thumbnailInput := flag.String("thumbnail-input", "", "encode this local image file as a Prism WebP thumbnail and exit")
@@ -133,7 +137,7 @@ func main() {
 		return
 	}
 
-	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableNotesWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite, *enableAttachmentWrite)
+	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableNotesWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite, *enableAttachmentWrite, *enableAttachmentRawRead, *enableUploadWrite)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -228,6 +232,8 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		return runtimeConfig{}, errors.New("data directory is required; pass --data-dir or PRISM_GO_DATA_DIR")
 	}
 	enableAttachmentWrite := len(optionalAttachmentWrite) > 0 && optionalAttachmentWrite[0]
+	enableAttachmentRawRead := len(optionalAttachmentWrite) > 1 && optionalAttachmentWrite[1]
+	enableUploadWrite := len(optionalAttachmentWrite) > 2 && optionalAttachmentWrite[2]
 	absData, err := filepath.Abs(dataDir)
 	if err != nil {
 		return runtimeConfig{}, err
@@ -244,7 +250,7 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	if filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_DB") != "1" {
 		return runtimeConfig{}, fmt.Errorf("refusing to open production-like database %s; use a copied *_test.db or *_dev.db", absDB)
 	}
-	if (enableThumbnailWrite || enableUploadURLWrite) && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_UPLOADS") != "1" {
+	if (enableUploadWrite || enableThumbnailWrite || enableUploadURLWrite) && filepath.Base(absDB) == "knowledge.db" && os.Getenv("PRISM_GO_ALLOW_PROD_UPLOADS") != "1" {
 		return runtimeConfig{}, fmt.Errorf("refusing to enable upload writes with production-like database %s; use copied data or set PRISM_GO_ALLOW_PROD_UPLOADS=1", absDB)
 	}
 	freshDBInitNeeded := false
@@ -297,7 +303,9 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		enableCategoryWrite:      enableCategoryWrite,
 		enableNotesWrite:         enableNotesWrite,
 		enableAttachmentTextRead: enableAttachmentTextRead,
+		enableAttachmentRawRead:  enableAttachmentRawRead,
 		enableAttachmentWrite:    enableAttachmentWrite,
+		enableUploadWrite:        enableUploadWrite,
 		enableThumbnailWrite:     enableThumbnailWrite,
 		enableUploadURLWrite:     enableUploadURLWrite,
 		freshDBInitNeeded:        freshDBInitNeeded,
@@ -1318,6 +1326,12 @@ func (s *server) apiSurface() string {
 	if s.runtime.enableAttachmentTextRead {
 		parts = append(parts, "local-attachment-text-read")
 	}
+	if s.runtime.enableAttachmentRawRead {
+		parts = append(parts, "local-attachment-raw-read")
+	}
+	if s.runtime.enableUploadWrite {
+		parts = append(parts, "local-upload-write")
+	}
 	if s.runtime.enableThumbnailWrite {
 		parts = append(parts, "local-thumbnail-write")
 	}
@@ -1333,7 +1347,7 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.runtime.enableThumbnailWrite {
+	if !s.runtime.enableUploadWrite && !s.runtime.enableThumbnailWrite {
 		writeError(w, http.StatusMethodNotAllowed, "Thumbnail write route is disabled")
 		return
 	}
@@ -1368,8 +1382,9 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "File too large. Maximum size: 5MB")
 		return
 	}
-	if !allowedUploadMIME(http.DetectContentType(content)) {
-		writeError(w, http.StatusBadRequest, "File content validation failed")
+	detectedMIME := detectUploadImageMIME(content)
+	if !allowedUploadMIME(detectedMIME) {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("File content validation failed. Detected MIME: %s", detectedMIME))
 		return
 	}
 
@@ -1766,7 +1781,7 @@ func allowedUploadExtension(filename string) bool {
 
 func allowedUploadMIME(mime string) bool {
 	switch mime {
-	case "image/jpeg", "image/png", "image/gif", "image/webp", "application/octet-stream":
+	case "image/jpeg", "image/png", "image/gif", "image/webp":
 		return true
 	default:
 		return false
@@ -2375,15 +2390,63 @@ func (s *server) handleAttachmentDetail(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	if !s.runtime.enableAttachmentTextRead {
+	if boolString(r, "raw") {
+		if !s.runtime.enableAttachmentRawRead {
+			if s.runtime.enableAttachmentTextRead {
+				writeError(w, http.StatusMethodNotAllowed, "Raw attachment responses remain Python-owned")
+				return
+			}
+			writeError(w, http.StatusMethodNotAllowed, "Attachment raw read route is disabled")
+			return
+		}
+		s.serveAttachmentRaw(w, r, attachmentID)
+		return
+	}
+	if !s.runtime.enableAttachmentTextRead && !s.runtime.enableAttachmentRawRead {
 		writeError(w, http.StatusMethodNotAllowed, "Attachment text read route is disabled")
 		return
 	}
-	if boolString(r, "raw") {
-		writeError(w, http.StatusMethodNotAllowed, "Raw attachment responses remain Python-owned")
+	s.readAttachmentText(w, attachmentID)
+}
+
+func (s *server) serveAttachmentRaw(w http.ResponseWriter, r *http.Request, attachmentID int) {
+	row := s.db.QueryRow(`
+		SELECT id, file_path, file_type, title
+		FROM Note_Attachments
+		WHERE id = ?`, attachmentID)
+
+	var id int
+	var filePath, fileType, title sql.NullString
+	if err := row.Scan(&id, &filePath, &fileType, &title); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Attachment not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	s.readAttachmentText(w, attachmentID)
+
+	resolved, _, ok := resolveAttachmentRawFile(s.runtime.dataDir, nullableString(filePath), nullableString(fileType))
+	if !ok {
+		writeError(w, http.StatusNotFound, "File not found on disk")
+		return
+	}
+	file, err := os.Open(resolved)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "File not found on disk")
+		return
+	}
+	defer file.Close()
+	info, err := file.Stat()
+	if err != nil || !info.Mode().IsRegular() {
+		writeError(w, http.StatusNotFound, "File not found on disk")
+		return
+	}
+
+	if contentType := attachmentRawContentType(resolved); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	http.ServeContent(w, r, safeAttachmentDownloadName(nullableString(title), resolved), info.ModTime(), file)
 }
 
 func (s *server) readAttachmentText(w http.ResponseWriter, attachmentID int) {
@@ -3108,6 +3171,30 @@ func resolveAttachmentFile(dataDir, relativePath, fileType string) (string, int6
 	return resolved, info.Size(), true
 }
 
+func resolveAttachmentRawFile(dataDir, relativePath, fileType string) (string, int64, bool) {
+	if !isAllowedRawAttachmentPath(relativePath, fileType) {
+		return "", 0, false
+	}
+	root, err := filepath.Abs(dataDir)
+	if err != nil {
+		return "", 0, false
+	}
+	candidate := filepath.Join(root, filepath.FromSlash(strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))))
+	absCandidate, err := filepath.Abs(candidate)
+	if err != nil || !isSubpath(absCandidate, root) {
+		return "", 0, false
+	}
+	info, err := os.Lstat(absCandidate)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxUploadFileBytes {
+		return "", 0, false
+	}
+	resolved, err := filepath.EvalSymlinks(absCandidate)
+	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+		return "", 0, false
+	}
+	return resolved, info.Size(), true
+}
+
 func isAllowedAttachmentPath(relativePath, fileType string) bool {
 	relativePath = strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))
 	fileType = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(fileType)), ".")
@@ -3126,6 +3213,53 @@ func isAllowedAttachmentPath(relativePath, fileType string) bool {
 	}
 	ext := strings.TrimPrefix(strings.ToLower(path.Ext(cleaned)), ".")
 	return ext == fileType && (ext == "md" || ext == "markdown" || ext == "txt")
+}
+
+func isAllowedRawAttachmentPath(relativePath, fileType string) bool {
+	relativePath = strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))
+	fileType = strings.TrimPrefix(strings.ToLower(strings.TrimSpace(fileType)), ".")
+	if relativePath == "" || filepath.IsAbs(relativePath) || filepath.VolumeName(relativePath) != "" || strings.Contains(relativePath, ":") {
+		return false
+	}
+	for _, part := range strings.Split(relativePath, "/") {
+		if part == ".." {
+			return false
+		}
+	}
+	cleaned := path.Clean(relativePath)
+	if cleaned == "." || strings.HasPrefix(cleaned, "../") || cleaned == ".." || !strings.HasPrefix(cleaned, "docs/attachments/") {
+		return false
+	}
+	ext := strings.TrimPrefix(strings.ToLower(path.Ext(cleaned)), ".")
+	if ext != fileType {
+		return false
+	}
+	switch ext {
+	case "md", "markdown", "txt", "jpg", "jpeg", "png", "gif", "webp", "pdf":
+		return true
+	default:
+		return false
+	}
+}
+
+func attachmentRawContentType(filename string) string {
+	switch strings.ToLower(filepath.Ext(filename)) {
+	case ".md", ".markdown":
+		return "text/markdown; charset=utf-8"
+	case ".txt":
+		return "text/plain; charset=utf-8"
+	}
+	if contentType := mime.TypeByExtension(filepath.Ext(filename)); contentType != "" {
+		return contentType
+	}
+	return "application/octet-stream"
+}
+
+func safeAttachmentDownloadName(title, filename string) string {
+	if cleaned := safeUploadFilename(title); cleaned != "" {
+		return cleaned
+	}
+	return filepath.Base(filename)
 }
 
 func isSubpath(candidate, root string) bool {

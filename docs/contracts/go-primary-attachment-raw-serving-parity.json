@@ -1,0 +1,60 @@
+{
+  "task_id": "T020",
+  "contract": "CONTRACT-GO-PRIMARY-FILES",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-DB-and-files attachment text JSON plus raw/binary serving candidate only",
+  "enable_flag": "--enable-attachment-raw-read",
+  "enable_env": "PRISM_GO_ENABLE_ATTACHMENT_RAW_READ=1",
+  "depends_on": [
+    "T019",
+    "routes/attachments.py GET /api/attachments/<id>"
+  ],
+  "covered_routes": [
+    "GET /api/attachments/<id>",
+    "GET /api/attachments/<id>?raw=true"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "text JSON response remains available for text attachments",
+    "raw=true streams text attachments with explicit text MIME",
+    "raw=true streams binary image attachments with detected extension MIME",
+    "Range requests are delegated to http.ServeContent and return partial bytes",
+    "missing attachment id returns Python-compatible 404 JSON",
+    "missing file on disk returns File not found on disk",
+    "unsafe paths, symlink escapes, unsupported extensions, and oversized files are fail-closed as File not found on disk",
+    "default Go runtime keeps raw attachment serving disabled"
+  ],
+  "retained_python_scope": [
+    "live/default attachment route ownership",
+    "long-content check_separation/separate/restore routes",
+    "upload delete and broader cleanup",
+    "production DB/files",
+    "Pi/Caddy/systemd route expansion"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t020_t023_files_uploads.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T021",
+    "reason": "Raw attachment serving is closed as a local/copied-files candidate; the next Go-primary files surface is multipart image upload."
+  }
+}

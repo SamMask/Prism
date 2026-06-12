@@ -319,7 +319,7 @@ def test_t013_docs_mark_done_and_keep_runtime_boundaries():
     assert t017_row.endswith("| Done |")
     assert t018_row.endswith("| Done |")
     assert t019_row.endswith("| Done |")
-    assert t020_row.endswith("| Todo |")
+    assert t020_row.endswith("| Done |")
     assert "go-primary-notes-delete-parity.json" in todo
     assert "T013 Go notes delete parity gate is complete" in architecture
     assert "Go T013" in schema

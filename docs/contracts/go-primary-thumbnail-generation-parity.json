@@ -1,0 +1,59 @@
+{
+  "task_id": "T022",
+  "contract": "CONTRACT-GO-PRIMARY-UPLOADS",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-data thumbnail generation candidate for upload surfaces only",
+  "enable_flag": "--enable-thumbnail-write",
+  "enable_env": "PRISM_GO_ENABLE_THUMBNAIL_WRITE=1",
+  "depends_on": [
+    "T021",
+    "utils/image_tools.py generate_webp_thumbnail"
+  ],
+  "covered_routes": [
+    "POST /api/upload thumbnail generation",
+    "POST /api/upload thumbnail_only=true"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "_thumb.webp is generated from valid upload images",
+    "thumbnail width is bounded to 500px",
+    "thumbnail quality uses the existing Prism Go WebP helper default",
+    "standard upload keeps original plus companion thumbnail",
+    "thumbnail_only=true writes only the _thumb.webp response file when thumbnail generation succeeds",
+    "thumbnail generation failures roll back partial original writes for direct upload",
+    "Python upload/import live routes still delegate thumbnail helper execution to Go until route ownership is promoted"
+  ],
+  "retained_python_scope": [
+    "live/default upload route ownership",
+    "Markdown import image helper ownership",
+    "upload delete and media cleanup",
+    "production DB/files",
+    "Pi/Caddy/systemd route expansion"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t020_t023_files_uploads.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T023",
+    "reason": "Direct-upload thumbnail generation is closed as a local/copied-data candidate; the next upload boundary is remote upload-url."
+  }
+}

@@ -412,7 +412,7 @@ def test_t018_docs_mark_done_and_keep_runtime_boundaries():
     t020_row = next(line for line in todo.splitlines() if line.startswith("| T020 "))
     assert t018_row.endswith("| Done |")
     assert t019_row.endswith("| Done |")
-    assert t020_row.endswith("| Todo |")
+    assert t020_row.endswith("| Done |")
     assert "go-primary-tags-parity.json" in todo
     assert "T018 Go tags parity gate is complete" in architecture
     assert "Go T018" in schema

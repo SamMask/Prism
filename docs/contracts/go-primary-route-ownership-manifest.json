@@ -365,6 +365,7 @@
       "python_handler": "routes/attachments.py:get_note_attachments",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB candidate only",
       "db_side_effects": [],
       "file_side_effects": []
     },
@@ -375,6 +376,7 @@
       "python_handler": "routes/attachments.py:upload_attachment",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-files candidate only",
       "db_side_effects": ["insert Note_Attachments"],
       "file_side_effects": ["write docs/attachments file"]
     },
@@ -385,7 +387,7 @@
       "python_handler": "routes/attachments.py:get_attachment_content",
       "production_owner": "python",
       "go_primary_owner": null,
-      "go_candidate": "implemented text JSON local candidate only",
+      "go_candidate": "implemented text JSON and raw/binary local copied-files candidates only",
       "db_side_effects": [],
       "file_side_effects": ["read docs/attachments file"]
     },
@@ -396,6 +398,7 @@
       "python_handler": "routes/attachments.py:delete_attachment",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-files candidate only",
       "db_side_effects": ["delete Note_Attachments"],
       "file_side_effects": ["delete docs/attachments file"]
     },
@@ -436,7 +439,7 @@
       "python_handler": "routes/upload.py:upload_file",
       "production_owner": "python",
       "go_primary_owner": null,
-      "go_candidate": "implemented local copied-data thumbnail candidate only",
+      "go_candidate": "implemented local copied-data upload and thumbnail candidates only",
       "db_side_effects": [],
       "file_side_effects": ["write static/uploads original and thumbnail files"]
     },

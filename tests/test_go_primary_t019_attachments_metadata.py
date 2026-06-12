@@ -488,7 +488,7 @@ def test_t019_docs_mark_done_and_keep_runtime_boundaries():
     t019_row = next(line for line in todo.splitlines() if line.startswith("| T019 "))
     t020_row = next(line for line in todo.splitlines() if line.startswith("| T020 "))
     assert t019_row.endswith("| Done |")
-    assert t020_row.endswith("| Todo |")
+    assert t020_row.endswith("| Done |")
     assert "go-primary-attachments-metadata-parity.json" in todo
     assert "T019 Go attachments metadata gate is complete" in architecture
     assert "Go T019" in schema

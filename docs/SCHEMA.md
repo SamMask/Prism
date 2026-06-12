@@ -205,6 +205,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T016/T017 已在 local/copied DB 證明 notes history list/restore/delete-history 與 categories create/update/delete/default-delete guard/sort_order parity，涵蓋 `Note_History` 備份/刪除、`Notes.content` restore、`Categories.name` / `icon` / `sort_order`、default category 保護，以及 in-use category 對 `Notes.category_id` 的 target migration；沒有新增 schema 或 migration，live/default notes/taxonomy owner 仍未切換。
 > Go T018 已在 local/copied DB 證明 tags rename/delete/merge parity，涵蓋 `Tags.name` route-level `COLLATE NOCASE` lookup、`Note_Tags` delete-time cleanup、merge transfer `INSERT OR IGNORE`、source tag deletion、missing target rollback/no mutation，以及 notes tag assignment path 的 NOCASE auto-create guard；沒有新增 schema 或 migration，live/default taxonomy owner 仍未切換。
 > Go T019 已在 local/copied DB-and-files 證明 attachments metadata list/upload/delete parity，涵蓋 `Note_Attachments` row create/delete、`docs/attachments` copied file write/delete、missing-file delete still removes DB row、missing-note validation order，以及 unsupported extension validation；沒有新增 schema 或 migration，live/default files owner 仍未切換，raw/binary serving 與 long-content separate/restore 仍是後續 gate。
+> Go T020-T023 已在 local/copied DB/data fixtures 證明 attachment raw/text/binary serving、`POST /api/upload`、thumbnail `_thumb.webp` generation、`thumbnail_only`、以及 `POST /api/upload/url` remote fetch safety；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16，live/default files/uploads owner 仍未切換，upload delete、cleanup、import/export、server/system 仍是後續 gate。
 
 ---
 

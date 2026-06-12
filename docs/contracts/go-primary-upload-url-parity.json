@@ -1,0 +1,61 @@
+{
+  "task_id": "T023",
+  "contract": "CONTRACT-GO-PRIMARY-UPLOADS",
+  "status": "completed_local_candidate",
+  "completed_on": "2026-06-13",
+  "production_runtime_owner": "python",
+  "go_runtime_scope": "local/copied-data POST /api/upload/url candidate only",
+  "enable_flag": "--enable-upload-url-write",
+  "enable_env": "PRISM_GO_ENABLE_UPLOAD_URL_WRITE=1",
+  "depends_on": [
+    "T022",
+    "routes/upload.py download_from_url"
+  ],
+  "covered_routes": [
+    "POST /api/upload/url"
+  ],
+  "runtime_boundary": {
+    "production_db_write": false,
+    "production_filesystem_mutation": false,
+    "go_default_write_owner": false,
+    "pi_deploy": false,
+    "caddy_or_systemd_change": false,
+    "frontend_default_route_change": false,
+    "python_removal": false
+  },
+  "parity_scope": [
+    "url is required and scheme must be http or https",
+    "hostnames resolve through SSRF guard before request and on redirect",
+    "loopback, private, link-local, reserved, multicast, unspecified, and unresolvable targets fail before file writes",
+    "download uses 30s timeout, browser-like user agent, referer, and stream cap of MAX_CONTENT_LENGTH plus one byte",
+    "Content-Type must start with image/",
+    "magic validation accepts jpeg, png, gif, and webp only",
+    "filename uses sanitized URL basename or deterministic md5 hash fallback with MIME extension",
+    "standard mode writes original plus _thumb.webp",
+    "thumbnail_only=true writes only _thumb.webp when thumbnail succeeds and falls back to original when thumbnail generation fails",
+    "all validation failures leave PRISM_GO_DATA_DIR/static/uploads unchanged"
+  ],
+  "retained_python_scope": [
+    "live/default upload-url route ownership",
+    "Markdown import remote image helper ownership",
+    "upload delete and media cleanup",
+    "production DB/files",
+    "Pi/Caddy/systemd route expansion"
+  ],
+  "validation": {
+    "targeted_tests": [
+      "tests/test_go_primary_t020_t023_files_uploads.py"
+    ],
+    "go_tests": [
+      "go test ./..."
+    ],
+    "full_suite_required": "pytest tests/ -v",
+    "static_checks": [
+      "git diff --check"
+    ]
+  },
+  "allowed_next_step": {
+    "id": "T024",
+    "reason": "Upload-url local/copied-data candidate is closed; the next active queue item is Go upload delete with original/thumbnail/reference checks."
+  }
+}

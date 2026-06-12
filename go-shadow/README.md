@@ -34,12 +34,18 @@ Local/copied-DB candidate endpoints behind explicit flags:
 - `POST /api/notes` and `PUT /api/notes/{id}` with `--enable-notes-write`
 - `DELETE /api/notes/{id}`, `POST /api/notes/batch/delete`, notes pin/archive/duplicate/reorder, and current batch type/tags with `--enable-notes-write`
 - `POST /api/categories`, `PUT /api/categories/{id}`, and `DELETE /api/categories/{id}` with `--enable-category-write`
+- `GET /api/attachments/{id}` text JSON with `--enable-attachment-text-read`
+- `GET /api/attachments/{id}?raw=true` raw/text/binary serving with `--enable-attachment-raw-read`
+- `GET /api/notes/{id}/attachments`, `POST /api/notes/{id}/attachments`, and `DELETE /api/attachments/{id}` metadata/file mutation with `--enable-attachment-write`
+- `POST /api/upload` original upload candidate with `--enable-upload-write`
+- `POST /api/upload` `_thumb.webp` generation and `thumbnail_only` with `--enable-thumbnail-write`
+- `POST /api/upload/url` remote image fetch candidate with `--enable-upload-url-write`
 
 Runtime-only endpoint:
 
 - `GET /healthz`
 
-Excluded endpoints remain Python-owned by default/live runtime: notes delete/actions/batch/history restore/delete, category/tag writes, file upload/delete, import/export, cleanup, maintenance, and `/api/server/*`.
+Excluded endpoints remain Python-owned by default/live runtime: live/default notes writes, category/tag writes, files/uploads, upload delete, import/export, cleanup, maintenance, and `/api/server/*`.
 
 ## Promotion Gate
 
@@ -286,6 +292,24 @@ The active-roadmap T019 gate closes local/copied-DB-and-files attachment metadat
 
 This does not promote live/default files ownership and does not cover raw/binary attachment serving, long-content separate/restore, uploads, import/export, server/system, cleanup ownership, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 
+#### Attachments Raw Serving And Uploads
+
+The active-roadmap T020-T023 gates close local/copied-data candidates for the next files/uploads surfaces:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-attachment-raw-read
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-upload-write --enable-thumbnail-write
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-upload-url-write
+```
+
+`--enable-attachment-raw-read` keeps SQLite `query_only=true` and allows `GET /api/attachments/{id}` plus `raw=true` serving from `PRISM_GO_DATA_DIR/docs/attachments`, including text MIME, binary image MIME, Range requests, missing-file 404s, path traversal rejection, symlink escape rejection, unsupported-extension rejection, and file-size caps.
+
+`--enable-upload-write` and `--enable-thumbnail-write` keep SQLite `query_only=true` and write only under `PRISM_GO_DATA_DIR/static/uploads`. The direct upload candidate validates multipart file presence, safe filename basename, allowed image extension, magic bytes, 5 MiB cap, original write, `_thumb.webp` companion generation, max-width 500 thumbnails, and `thumbnail_only` success behavior.
+
+`--enable-upload-url-write` keeps SQLite `query_only=true` and writes only under `PRISM_GO_DATA_DIR/static/uploads`. It validates http/https scheme, literal-IP/DNS SSRF boundaries, redirect targets, timeout/header policy, image Content-Type, magic bytes, stream cap, sanitized URL basename or md5 hash fallback filename, `_thumb.webp`, and `thumbnail_only` fallback behavior.
+
+These gates do not promote live/default files/uploads ownership and do not cover upload delete, cleanup, import/export, server/system, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+
 ## Build Proof
 
 ```powershell
@@ -325,3 +349,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t016_t017_history_categories.py` locks the active-roadmap T016/T017 notes history and categories parity, default-disabled write boundary, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t018_tags.py` locks the active-roadmap T018 tags write/merge parity, NOCASE tag lookup boundary, `POST /api/tags` absence boundary, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t019_attachments_metadata.py` locks the active-roadmap T019 attachments metadata upload/delete parity, update-route absence boundary, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t020_t023_files_uploads.py` locks the active-roadmap T020-T023 attachment raw serving, upload, thumbnail, upload-url safety fixtures, docs status, and non-live-promotion boundary.
