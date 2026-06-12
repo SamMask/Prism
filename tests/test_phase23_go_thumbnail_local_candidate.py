@@ -55,7 +55,7 @@ def test_go_thumbnail_candidate_source_is_flag_gated_and_query_only_safe():
     assert 'mux.HandleFunc("/api/upload", srv.handleUpload)' in main_go
     assert "Thumbnail write route is disabled" in main_go
     assert "PRISM_GO_ALLOW_PROD_UPLOADS" in main_go
-    assert "sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup)" in main_go
+    assert "sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup || enableImportExport)" in main_go
     assert "webp.Options{Lossy: true, Quality: thumbnailWebPQuality}" in main_go
     assert "thumbnailMaxWidth = 500" in main_go
 

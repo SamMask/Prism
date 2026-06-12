@@ -44,6 +44,11 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/cleanup/orphan-images")
     registered.discard("/api/cleanup/originals")
     registered.discard("/api/cleanup/broken-images")
+    registered.discard("/api/export/json")
+    registered.discard("/api/export/markdown")
+    registered.discard("/api/export/db")
+    registered.discard("/api/export/images")
+    registered.discard("/api/import/json")
     registered.discard("/api/system/migration-status")
     registered.add("/api/notes/<id>")
 

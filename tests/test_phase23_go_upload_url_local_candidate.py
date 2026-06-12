@@ -55,7 +55,7 @@ def test_go_upload_url_candidate_source_is_flag_gated_and_safety_checked():
     assert 'mux.HandleFunc("/api/upload/url", srv.handleUploadURL)' in main_go
     assert "Upload-url write route is disabled" in main_go
     assert "PRISM_GO_ALLOW_PROD_UPLOADS" in main_go
-    assert "sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup)" in main_go
+    assert "sqliteQueryOnly:          !(enableTagWrite || enableCategoryWrite || enableNotesWrite || enableAttachmentWrite || enableMediaCleanup || enableImportExport)" in main_go
     assert "validateUploadURLTarget" in main_go
     assert "uploadURLResolveHost" in main_go
     assert "CheckRedirect" in main_go

@@ -323,6 +323,20 @@ go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-
 
 `--enable-media-cleanup` intentionally disables SQLite `query_only` because originals cleanup and broken image fixes update `Notes.content` / `Notes.cover_image`. It enables `GET` / `DELETE /api/cleanup/orphan-images`, `GET` / `DELETE /api/cleanup/originals`, and `GET` / `POST /api/cleanup/broken-images` for copied DB/data only. File mutation remains confined to `PRISM_GO_DATA_DIR/static/uploads`; production files, Pi/Caddy/systemd routing, frontend defaults, and live/default cleanup ownership remain retained Python.
 
+#### Import And Export
+
+The active-roadmap T028-T031 gates close local/copied DB/data candidates for import/export:
+
+```powershell
+go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-import-export
+```
+
+`--enable-import-export` intentionally disables SQLite `query_only` because import routes write copied DB rows and may restore files under `PRISM_GO_DATA_DIR/static/uploads` or `PRISM_GO_DATA_DIR/docs/attachments`. It enables `POST /api/notes/import/md`, `POST /api/import/json`, `GET /api/export/json`, `GET /api/export/markdown`, `GET /api/export/db`, `POST /api/export/images`, and `POST /api/notes/export/batch` for copied DB/data only.
+
+Markdown import supports H1 title extraction, simple frontmatter category/type/tags/source_urls mapping, existing `/static/uploads` references, multipart local image bundling, and safe remote image import through the same SSRF-guarded downloader used by upload-url. JSON import supports skip/duplicate semantics, category/tag/url mapping, optional base64 attachment/upload restore, and no-partial-write rollback. Export routes produce JSON metadata, Markdown zip plus bundled images, DB download, images zip, and selected-note markdown/assets zip.
+
+These gates do not promote live/default import/export ownership and do not cover server/system backup management, full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+
 ## Build Proof
 
 ```powershell
@@ -364,3 +378,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t019_attachments_metadata.py` locks the active-roadmap T019 attachments metadata upload/delete parity, update-route absence boundary, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t020_t023_files_uploads.py` locks the active-roadmap T020-T023 attachment raw serving, upload, thumbnail, upload-url safety fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t024_t027_media_cleanup.py` locks the active-roadmap T024-T027 upload delete, orphan images, originals cleanup, broken images cleanup fixtures, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t028_t031_import_export.py` locks the active-roadmap T028-T031 Markdown import, JSON import, JSON/Markdown export, DB/images export, batch export fixtures, docs status, and non-live-promotion boundary.

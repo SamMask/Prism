@@ -770,6 +770,8 @@ Response：
 
 ## 12. Export / Import API
 
+> Go shadow note (T028-T031): `go-shadow` 已有 `--enable-import-export` / `PRISM_GO_ENABLE_IMPORT_EXPORT=1` local/copied-DB-and-data 候選實作；production/default runtime owner 仍是 Python，未切 Pi / Caddy / frontend default。
+
 ### GET `/api/export/json`
 
 下載整包 JSON。

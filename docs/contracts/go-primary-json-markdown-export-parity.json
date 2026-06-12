@@ -1,0 +1,24 @@
+{
+  "task_id": "T030",
+  "title": "Go JSON and Markdown export local candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-IMPORT-EXPORT",
+  "routes": ["GET /api/export/json", "GET /api/export/markdown", "POST /api/notes/export/batch"],
+  "go_flag": "--enable-import-export",
+  "env_flag": "PRISM_GO_ENABLE_IMPORT_EXPORT",
+  "scope": "Local/copied-DB-and-data export candidate for JSON and Markdown note bundles.",
+  "implemented_behavior": [
+    "JSON export includes export_info, notes, categories, tags, attachment metadata, and referenced upload metadata.",
+    "Markdown export returns a zip with one frontmatter markdown file per note, _manifest.json, and bundled local upload images rewritten to images/* paths.",
+    "Batch note export returns notes/*.md plus assets/* for selected note ids.",
+    "All file reads are resolved under PRISM_GO_DATA_DIR/static/uploads and unsafe upload paths are skipped."
+  ],
+  "verification": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t028_t031_import_export.py -v",
+    "pytest tests/ -v"
+  ],
+  "production_boundary": "Production owner remains Python. This local copied candidate does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or promote live/default JSON/Markdown export ownership.",
+  "next_dependency": "T031"
+}

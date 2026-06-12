@@ -1,0 +1,24 @@
+{
+  "task_id": "T031",
+  "title": "Go DB and images export local candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-IMPORT-EXPORT",
+  "routes": ["GET /api/export/db", "POST /api/export/images"],
+  "go_flag": "--enable-import-export",
+  "env_flag": "PRISM_GO_ENABLE_IMPORT_EXPORT",
+  "scope": "Local/copied-DB-and-data DB download and images zip export candidate.",
+  "implemented_behavior": [
+    "DB export serves the copied SQLite DB file with the Python-compatible backup filename pattern.",
+    "Images export accepts images plus note_title, caps requests at 100 images, resolves static/uploads references safely under PRISM_GO_DATA_DIR/static/uploads, and returns a zip bundle.",
+    "Unsafe, missing, or non-regular image paths are skipped without escaping the data directory.",
+    "The export surface is grouped under the import/export flag because later production promotion must validate data movement and backup semantics together."
+  ],
+  "verification": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t028_t031_import_export.py -v",
+    "pytest tests/ -v"
+  ],
+  "production_boundary": "Production owner remains Python. This local copied candidate does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or promote live/default DB/images export ownership.",
+  "next_dependency": "T032"
+}

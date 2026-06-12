@@ -207,6 +207,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T019 已在 local/copied DB-and-files 證明 attachments metadata list/upload/delete parity，涵蓋 `Note_Attachments` row create/delete、`docs/attachments` copied file write/delete、missing-file delete still removes DB row、missing-note validation order，以及 unsupported extension validation；沒有新增 schema 或 migration，live/default files owner 仍未切換，raw/binary serving 與 long-content separate/restore 仍是後續 gate。
 > Go T020-T023 已在 local/copied DB/data fixtures 證明 attachment raw/text/binary serving、`POST /api/upload`、thumbnail `_thumb.webp` generation、`thumbnail_only`、以及 `POST /api/upload/url` remote fetch safety；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16，live/default files/uploads owner 仍未切換，upload delete、cleanup、import/export、server/system 仍是後續 gate。
 > Go T024-T027 已在 local/copied DB/data fixtures 證明 upload delete reference check、orphan images scan/delete、originals cleanup rewrite/delete、broken images scan/fix；Go T024-T027 不新增資料表或欄位，SQLite 仍維持 v16，live/default uploads/media cleanup owner 仍未切換，import/export、server/system 與 production/Pi cutover 仍是後續 gate。
+> Go T028-T031 已在 local/copied DB/data fixtures 證明 Markdown/JSON import、JSON/Markdown export、DB download、images bundle 與 batch markdown/assets zip；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16，live/default import/export owner 仍未切換，server/system、backup management、full workflow E2E 與 production/Pi cutover 仍是後續 gate。
 
 ---
 

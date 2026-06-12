@@ -1,0 +1,25 @@
+{
+  "task_id": "T028",
+  "title": "Go Markdown import local candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-IMPORT-EXPORT",
+  "routes": ["POST /api/notes/import/md"],
+  "go_flag": "--enable-import-export",
+  "env_flag": "PRISM_GO_ENABLE_IMPORT_EXPORT",
+  "scope": "Local/copied-DB-and-data Markdown import candidate for Prism notes.",
+  "implemented_behavior": [
+    "Disabled by default; disabled POST drains request body and returns JSON 405.",
+    "Imports multipart .md file into Notes with first H1 title extraction, frontmatter category/type, tags, and source_urls/urls mapping.",
+    "Preserves existing /static/uploads references, bundles multipart local image parts into PRISM_GO_DATA_DIR/static/uploads, and attempts safe http/https remote image import through the existing SSRF-guarded upload-url downloader.",
+    "Removes unresolved local/remote image links to alt text instead of preserving broken external references.",
+    "Uses a single DB transaction and removes newly written upload files if DB commit fails."
+  ],
+  "verification": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t028_t031_import_export.py -v",
+    "pytest tests/ -v"
+  ],
+  "production_boundary": "Production owner remains Python. This local copied candidate does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or promote live/default import ownership.",
+  "next_dependency": "T029"
+}

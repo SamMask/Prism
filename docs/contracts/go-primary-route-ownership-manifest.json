@@ -345,6 +345,7 @@
       "python_handler": "routes/notes/import_.py:import_markdown",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": ["insert Notes", "insert Tags", "insert Note_Tags", "insert Source_Urls"],
       "file_side_effects": ["may copy local images into static/uploads", "may download remote images"]
     },
@@ -355,6 +356,7 @@
       "python_handler": "routes/notes/export.py:export_batch",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read referenced static/uploads files"]
     },
@@ -548,6 +550,7 @@
       "python_handler": "routes/export.py:export_json",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
       "file_side_effects": []
     },
@@ -558,6 +561,7 @@
       "python_handler": "routes/export.py:import_json",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": ["insert/update imported Notes, Tags, Categories, relations"],
       "file_side_effects": ["may restore uploaded files from import payload"]
     },
@@ -568,6 +572,7 @@
       "python_handler": "routes/export.py:export_markdown",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read referenced static/uploads files"]
     },
@@ -578,6 +583,7 @@
       "python_handler": "routes/export.py:export_db",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read SQLite database file"]
     },
@@ -588,6 +594,7 @@
       "python_handler": "routes/export.py:export_images",
       "production_owner": "python",
       "go_primary_owner": null,
+      "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
       "file_side_effects": ["read static/uploads files"]
     },

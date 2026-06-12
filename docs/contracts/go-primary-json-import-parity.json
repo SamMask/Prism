@@ -1,0 +1,25 @@
+{
+  "task_id": "T029",
+  "title": "Go JSON import local candidate",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "contract": "CONTRACT-GO-PRIMARY-IMPORT-EXPORT",
+  "routes": ["POST /api/import/json"],
+  "go_flag": "--enable-import-export",
+  "env_flag": "PRISM_GO_ENABLE_IMPORT_EXPORT",
+  "scope": "Local/copied-DB-and-data JSON import candidate for Prism exported note data.",
+  "implemented_behavior": [
+    "Imports JSON payloads with data.notes and mode skip/duplicate semantics.",
+    "Maps category/type names to existing Categories, falls back to default category, and imports tags plus urls/source_urls.",
+    "Tracks old note id to new note id mappings for optional attachment restore entries.",
+    "Optionally restores attachments/uploads when payload entries provide safe paths plus base64 content.",
+    "Runs note import plus optional file restore inside a transaction and removes newly written files on validation or commit failure."
+  ],
+  "verification": [
+    "go test ./...",
+    "pytest tests/test_go_primary_t028_t031_import_export.py -v",
+    "pytest tests/ -v"
+  ],
+  "production_boundary": "Production owner remains Python. This local copied candidate does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or promote live/default JSON import ownership.",
+  "next_dependency": "T030"
+}
