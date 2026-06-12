@@ -1,0 +1,64 @@
+{
+  "task_id": "T040",
+  "title": "Go primary linux/arm64 package smoke",
+  "status": "completed_pi_staging_candidate",
+  "completed_date": "2026-06-13",
+  "production_runtime_owner": "python",
+  "script": "scripts/stage_go_primary_pi.ps1",
+  "evidence_file": "build/go-primary-staging/pi/evidence.json",
+  "artifact": "build/go-runtime/prism-go-runtime-linux-arm64",
+  "execution_target": {
+    "host_alias": "PI5Mask24",
+    "remote_stage": "/home/mask070924/prism/go-primary-staging",
+    "service": "prism-go-primary-staging.service",
+    "addr": "127.0.0.1:5003"
+  },
+  "runtime_dependency_boundary": {
+    "python_venv_required_by_artifact": false,
+    "flask_required_by_artifact": false,
+    "pyinstaller_required_by_artifact": false,
+    "remote_smoke_harness": "python3 stdlib HTTP harness only; no Prism Flask imports"
+  },
+  "data_rule": {
+    "db_source": "copied production DB to staging data dir as knowledge_t041_staging.db",
+    "data_source": "copied production static/uploads and docs/attachments into staging data dir",
+    "production_db_mutated": false,
+    "caddy_changed": false,
+    "live_default_changed": false
+  },
+  "full_workflow_smoke": {
+    "harness": "scripts/go_primary_full_workflow_smoke.py",
+    "steps": [
+      "healthz",
+      "create note",
+      "upload image",
+      "serve uploaded image",
+      "update note with upload reference",
+      "search updated note",
+      "export JSON",
+      "import JSON",
+      "delete workflow note",
+      "upload orphan image",
+      "scan/delete orphan image",
+      "download backup",
+      "check migration status"
+    ]
+  },
+  "not_authorized_by_t040": [
+    "Live Caddy/systemd cutover",
+    "Production DB/files mutation",
+    "Python service stop/removal",
+    "Go primary live/default ownership claim",
+    "Public exposure expansion"
+  ],
+  "verification": {
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File scripts/stage_go_primary_pi.ps1",
+      "pytest tests/test_go_primary_t039_t041_package_staging.py -v"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T041",
+    "reason": "linux/arm64 proof is tied to the Pi staging service evidence and must keep live Caddy/default ownership unchanged."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "task_id": "T039",
+  "title": "Go primary Windows package smoke",
+  "status": "completed_package_candidate",
+  "completed_date": "2026-06-13",
+  "production_runtime_owner": "python",
+  "script": "scripts/smoke_go_primary_package.ps1",
+  "evidence_file": "build/go-primary-package-smoke/windows/evidence.json",
+  "artifacts": {
+    "windows": "build/go-runtime/prism-go-runtime.exe",
+    "linux_arm64_presence_check": "build/go-runtime/prism-go-runtime-linux-arm64"
+  },
+  "runtime_dependency_boundary": {
+    "python_venv_required_by_artifact": false,
+    "flask_required_by_artifact": false,
+    "pyinstaller_required_by_artifact": false,
+    "smoke_harness": "scripts/go_primary_full_workflow_smoke.py uses stdlib HTTP only and never imports Flask app code",
+    "runtime_env_removed": ["VIRTUAL_ENV", "PYTHONHOME", "PYTHONPATH", "FLASK_APP"]
+  },
+  "data_rule": {
+    "db_source": "fresh Go-created DB under build/go-primary-package-smoke/windows/data",
+    "production_db_read": false,
+    "production_db_mutated": false,
+    "smoke_cleanup_scope": "repo build/ only"
+  },
+  "full_workflow_smoke": {
+    "base_url": "local 127.0.0.1 random port",
+    "go_flags_used": [
+      "--enable-notes-write",
+      "--enable-upload-write",
+      "--enable-thumbnail-write",
+      "--enable-upload-url-write",
+      "--enable-upload-delete",
+      "--enable-media-cleanup",
+      "--enable-import-export",
+      "--enable-server-system"
+    ],
+    "steps": [
+      "healthz",
+      "create note",
+      "upload image",
+      "serve uploaded image",
+      "update note with upload reference",
+      "search updated note",
+      "export JSON",
+      "import JSON",
+      "delete workflow note",
+      "upload orphan image",
+      "scan/delete orphan image",
+      "download backup",
+      "check migration status"
+    ]
+  },
+  "not_authorized_by_t039": [
+    "Pi staging",
+    "Live Caddy/systemd cutover",
+    "Production DB/files access",
+    "Python service stop/removal",
+    "Go primary live/default ownership claim"
+  ],
+  "verification": {
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File scripts/smoke_go_primary_package.ps1",
+      "pytest tests/test_go_primary_t039_t041_package_staging.py -v"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T040",
+    "reason": "Windows package smoke is closed; linux/arm64 execution on Pi staging is the next package proof."
+  }
+}

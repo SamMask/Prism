@@ -164,6 +164,7 @@ npm run build
 > **安全邊界**: `prism.local` / Caddy 部署預設是 trusted LAN 用途；不要將 443 / 5000 直接 port-forward 到公網，除非外層已有 VPN、SSH tunnel 或受認證保護的 reverse proxy。
 >
 > **詳細操作步驟（含日常更新）請見根目錄 [`DEPLOY-PI.md`](../DEPLOY-PI.md)**。
+> Go primary package/staging 驗證（T039-T041）也以 `DEPLOY-PI.md` 為唯一 runbook；staging service 不代表 live Caddy/default owner 已切換。
 
 ### Pi 一鍵安裝（首次）
 

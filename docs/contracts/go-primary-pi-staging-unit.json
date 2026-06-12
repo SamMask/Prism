@@ -1,0 +1,60 @@
+{
+  "task_id": "T041",
+  "title": "Pi staging Go primary unit on copied production DB/data",
+  "status": "completed_staging_candidate",
+  "completed_date": "2026-06-13",
+  "production_runtime_owner": "python",
+  "script": "scripts/stage_go_primary_pi.ps1",
+  "evidence_file": "build/go-primary-staging/pi/evidence.json",
+  "staging_unit": {
+    "host_alias": "PI5Mask24",
+    "remote_stage": "/home/mask070924/prism/go-primary-staging",
+    "service": "prism-go-primary-staging.service",
+    "addr": "127.0.0.1:5003",
+    "db": "/home/mask070924/prism/go-primary-staging/data/knowledge_t041_staging.db",
+    "binary": "/home/mask070924/prism/go-primary-staging/bin/prism-go-runtime-linux-arm64"
+  },
+  "live_safety_guards": {
+    "live_db_sha256_before_after_required": true,
+    "caddyfile_sha256_before_after_required": true,
+    "caddy_reload": false,
+    "live_caddy_default_changed": false,
+    "python_prism_service_stopped": false,
+    "public_bind": false
+  },
+  "copied_data_scope": {
+    "copy_db": "/home/mask070924/prism/knowledge.db",
+    "copy_static_uploads": "/home/mask070924/prism/static/uploads",
+    "copy_docs_attachments": "/home/mask070924/prism/docs/attachments",
+    "write_scope": "/home/mask070924/prism/go-primary-staging/data"
+  },
+  "full_workflow_smoke": {
+    "harness": "scripts/go_primary_full_workflow_smoke.py",
+    "expected_result": "service active; full workflow passed; live DB SHA256 unchanged"
+  },
+  "not_authorized_by_t041": [
+    "Caddy route switch",
+    "Go primary live cutover",
+    "Python service disable/stop",
+    "Production DB/files writes",
+    "Rollback drill",
+    "Soak window",
+    "Python runtime deletion"
+  ],
+  "verification": {
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File scripts/stage_go_primary_pi.ps1",
+      "pytest tests/test_go_primary_t039_t041_package_staging.py -v"
+    ],
+    "evidence": [
+      "build/go-primary-staging/pi/preflight.json",
+      "build/go-primary-staging/pi/full-workflow.json",
+      "build/go-primary-staging/pi/staging-summary.json",
+      "build/go-primary-staging/pi/evidence.json"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T042",
+    "reason": "Staging proves the linux/arm64 Go primary package on copied production data; the next smallest gate is an attended live cutover with backup and rollback preparation."
+  }
+}

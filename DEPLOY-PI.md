@@ -185,6 +185,37 @@ sudo systemctl start prism
 
 ---
 
+## Go primary staging（T041，不切 live default）
+
+T041 只用來驗證 linux/arm64 Go package 能在 Pi 上以 copied production DB/data 跑 full workflow；它不改 Caddy route、不停止現有 Python `prism.service`、不寫 live `knowledge.db`。
+
+```powershell
+# 在 Windows repo root 執行
+powershell -ExecutionPolicy Bypass -File scripts/stage_go_primary_pi.ps1
+```
+
+腳本會：
+
+- 建置 `build/go-runtime/prism-go-runtime-linux-arm64`
+- 複製到 `PI5Mask24:/home/mask070924/prism/go-primary-staging/bin/`
+- 建立/重啟 `prism-go-primary-staging.service`
+- 只監聽 `127.0.0.1:5003`
+- 將 `/home/mask070924/prism/knowledge.db` 複製成 staging DB：`go-primary-staging/data/knowledge_t041_staging.db`
+- 複製 `static/uploads` 與 `docs/attachments` 到 staging data dir
+- 執行 `scripts/go_primary_full_workflow_smoke.py`，覆蓋 create/upload/static/search/export/import/delete/cleanup/backup/migration
+- 比對 live `knowledge.db` SHA256 與 `/etc/caddy/Caddyfile` SHA256 前後不變
+
+證據會回收到本機 `build/go-primary-staging/pi/evidence.json`。若要查看 staging service：
+
+```bash
+ssh PI5Mask24 "sudo systemctl status prism-go-primary-staging.service --no-pager"
+ssh PI5Mask24 "curl -fsS http://127.0.0.1:5003/healthz | python3 -m json.tool | head -40"
+```
+
+T041 通過後仍不得把 Go 寫成 live/default owner；正式切換必須走 T042，並先做 backup、Caddy/systemd switch 驗證與 rollback 準備。
+
+---
+
 ## 驗證
 
 ```bash

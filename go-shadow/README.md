@@ -365,6 +365,19 @@ The Go runtime has no built-in auth/token layer. It refuses non-local listen add
 
 The T038 full workflow fixture runs create, upload, static serve, search, export, import, delete, cleanup, backup, and migration status against both Python and Go local/copied runtimes. It compares durable invariants rather than generated timestamps or upload filenames. This does not promote live/default Go primary ownership, deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure.
 
+#### Windows Package and Pi Staging
+
+The active-roadmap T039-T041 gates close package and staging proof without changing the live owner:
+
+```powershell
+.\scripts\smoke_go_primary_package.ps1
+.\scripts\stage_go_primary_pi.ps1
+```
+
+`scripts/smoke_go_primary_package.ps1` builds the Windows and linux/arm64 artifacts, starts `build/go-runtime/prism-go-runtime.exe` from a fresh Go-created DB under `build/go-primary-package-smoke/windows/data/`, removes Python/Flask-related runtime env keys from the child process, and runs `scripts/go_primary_full_workflow_smoke.py` over HTTP. The harness uses Python stdlib only and does not import Flask app code; Python is a test driver, not a package runtime dependency.
+
+`scripts/stage_go_primary_pi.ps1` copies `build/go-runtime/prism-go-runtime-linux-arm64` to `PI5Mask24:/home/mask070924/prism/go-primary-staging/`, installs/restarts only `prism-go-primary-staging.service`, binds it to `127.0.0.1:5003`, copies production `knowledge.db`, `static/uploads`, and `docs/attachments` into the staging data dir, runs the same full workflow smoke, and verifies live DB plus Caddyfile SHA256 remain unchanged. This is not a Caddy/default cutover, rollback drill, soak window, Python service stop, or Python removal.
+
 ## Build Proof
 
 ```powershell
@@ -409,3 +422,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t028_t031_import_export.py` locks the active-roadmap T028-T031 Markdown import, JSON import, JSON/Markdown export, DB/images export, batch export fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t032_t035_server_system.py` locks the active-roadmap T032-T035 server status, backup management, port/startup config, prompt/wizard options fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t036_t038_static_security_workflow.py` locks the active-roadmap T036-T038 embedded SPA/static uploads serving, security no-mutation/public-bind boundary, full workflow E2E invariants, docs status, and non-live-promotion boundary.
+`tests/test_go_primary_t039_t041_package_staging.py` locks the active-roadmap T039-T041 Windows package smoke, linux/arm64 Pi staging smoke, staging unit/live-hash guard scripts, docs status, and non-live-cutover boundary.
