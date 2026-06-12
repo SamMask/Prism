@@ -17,7 +17,7 @@
 
 | 文件 | 內容 |
 |---|---|
-| `Prism_Go_模組逐步重構計劃報告.md` | Python → Go 漸進替換盤點；只作為 shadow backend / API contract / response diff 路線參考，不代表立即改寫產品 |
+| `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` | 已封存的 Python → Go 漸進替換盤點；只供早期 shadow backend / response diff 決策追溯，current truth 以 `docs/TODO.md` 為準 |
 | `docs/FRONTEND-REDESIGN-PLAN.md` | 新 UI 參考檔與 Go 重構路線的整合規劃；採納 UX 工作流，明確暫緩 collections schema、AI、協作與大規模 scope creep |
 | `docs/contracts/phase19-go-runtime-packaging.md` | Go runtime / packaging proof；single binary、external data dir、SQLite driver spike、Windows/Pi build plan |
 | `docs/New_UI/Prism Redesign - standalone.html` | UI 原型參考；只採工作流與視覺方向，不直接搬 prototype-only code / sample data / tweak panel |
@@ -36,7 +36,7 @@
 
 ```
 工作目錄：  D:/AI/Prism
-Runtime：   scripts/start_go_primary.ps1（Go primary；Python 只保留 legacy/dev/test 到 T046）
+Runtime：   scripts/start_go_primary.ps1（Go primary；Python 只保留 legacy/dev/test 到 T053）
 前端：      cd frontend && npm run dev
 建置：      scripts/build_go_runtime.ps1
 測試：      pytest tests/ -v
@@ -48,7 +48,7 @@ Runtime：   scripts/start_go_primary.ps1（Go primary；Python 只保留 legacy
 
 | 層 | 技術 |
 |---|---|
-| Backend | Go primary runtime / SQLite (FTS5)；Python Flask source 僅 legacy/dev/test until T046 |
+| Backend | Go primary runtime / SQLite (FTS5)；Python Flask source 僅 legacy/dev/test until T053 |
 | Frontend | React 18 / TypeScript / Vite / Zustand / Tailwind CSS |
 | Search | SQLite FTS5 + 關聯欄位 / 文字附件搜尋（純關鍵字，無 AI） |
 | Deploy | Go primary artifact / Raspberry Pi (`prism-go-primary.service` + Caddy) |
@@ -61,8 +61,8 @@ Runtime：   scripts/start_go_primary.ps1（Go primary；Python 只保留 legacy
 ```
 
 - **前後端分離**: Go primary 為 JSON API Server，React SPA 由 Vite 建置並嵌入 artifact
-- **Legacy Python**: Python Flask source 保留到 T046 作 source/deletion gate；不得再作產品啟動主路徑
-- **資料庫遷移**: Go runtime 已具備 v16 fresh/existing migration runner；Python migrations 僅保留 source parity context 到 T046
+- **Legacy Python**: Python Flask source 保留到 T053 作 source/deletion gate；不得再作產品啟動主路徑
+- **資料庫遷移**: Go runtime 已具備 v16 fresh/existing migration runner；Python migrations 僅保留 source parity context 到 T053
 
 ## 開發哲學
 

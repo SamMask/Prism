@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-write-surface-selection.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
-GO_ROADMAP_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_ROADMAP_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 PHASE23_FILE_READ_IMPLEMENTATION_PATH = (
     ROOT / "docs" / "contracts" / "phase23-go-file-read-parity-implementation.json"
 )

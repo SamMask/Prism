@@ -2,7 +2,7 @@
 
 > 🔒 **本地優先** | 📴 **離線可用** | 🧠 **Headless KMS**
 > 📦 **目前推薦**：Go primary runtime artifact（Node.js / Go 用於建置）
-> 🧪 **Python source/dev/test only**：Python backend source 保留到 T046 作 legacy/deletion gate
+> 🧪 **Python source/dev/test only**：Python backend source 保留到 T053 作 legacy/deletion gate
 
 ![Version](https://img.shields.io/badge/version-2.4.9-blue)
 ![Go](https://img.shields.io/badge/runtime-Go%20primary-green)
@@ -78,7 +78,7 @@ npm run dev                      # -> http://localhost:5173
 scripts\pack.bat
 ```
 
-PyInstaller / embedded Python portable path 已在 T045 移除；Python source 只保留 legacy/dev/test 到 T046。Python runtime 不依賴 Pillow；thumbnail generation 已由 Go helper / Go primary 路徑承接。
+PyInstaller / embedded Python portable path 已在 T045 移除；Python source 只保留 legacy/dev/test 到 T053。Python runtime 不依賴 Pillow；thumbnail generation 已由 Go helper / Go primary 路徑承接。
 
 ---
 
@@ -123,10 +123,10 @@ curl http://127.0.0.1:5004/api/system/check-consistency
 Prism/
 ├── go-shadow/                # Go primary runtime source
 ├── scripts/start_go_primary.ps1 # 本機 Go primary 啟動入口
-├── app.py                    # Legacy Python source until T046
+├── app.py                    # Legacy Python source until T053
 ├── config.py                 # Legacy Python source context
 ├── db.py                     # Legacy Python DB source context
-├── routes/                   # Legacy Flask route source until T046
+├── routes/                   # Legacy Flask route source until T053
 │   ├── notes/                # CRUD / actions / history / batch / import / export
 │   ├── attachments.py        # Phase 3.4 附件系統
 │   ├── upload.py             # 圖片上傳 + URL 下載 + AI metadata 提取

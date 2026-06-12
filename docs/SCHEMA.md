@@ -177,7 +177,7 @@ CREATE TABLE Schema_Meta (
 -- key='schema_version', value='16'
 ```
 
-> T042-T044 後，live/default DB migration owner 已是 Go primary runtime。Python `migrations/__init__.py` source 保留到 T046 作 legacy parity/context，不再是產品啟動必要條件。
+> T042-T044 後，live/default DB migration owner 已是 Go primary runtime。Python `migrations/__init__.py` source 保留到 T053 作 legacy parity/context，不再是產品啟動必要條件。
 
 ---
 
@@ -213,7 +213,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T036/T037/T038 已在 local/copied DB/data fixtures 證明 embedded SPA/static uploads serving、安全邊界與 full workflow E2E；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Full workflow 只驗證既有 Notes / Tags / Source_Urls / Note_History / uploads / backups / Schema_Meta 行為，live/default Go primary ownership、production/Pi cutover 與 Python removal 仍未切換。
 > Go T039/T040/T041 已在 package/Pi staging 證明 Windows artifact fresh DB smoke、linux/arm64 artifact copied production DB/data staging smoke、以及 staging service active；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Pi staging 使用 `knowledge_t041_staging.db` 與 copied uploads/attachments，live `knowledge.db` SHA256 必須不變；live/default Caddy/systemd ownership、rollback、soak 與 Python removal 仍未切換。
 > Go T042/T043/T044 已在 Pi live/default 完成 Go primary cutover、rollback drill 與 bounded soak；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。T042/T044 使用 live `knowledge.db` 與 external data dir `/home/mask070924/prism`，T043 以 SQLite online backup artifact 與 uploads/attachments tar restore 作 rollback 證據；final state 是 Go primary active、Python `prism.service` inactive。
-> Go T045 已移除 Python packaged runtime 與產品啟動路徑；這同樣不新增資料表或欄位，SQLite 仍維持 v16。Python backend source / `requirements*.txt` 只保留為 legacy source/dev/test context，最終刪除或封存留給 T046。
+> Go T045 已移除 Python packaged runtime 與產品啟動路徑；這同樣不新增資料表或欄位，SQLite 仍維持 v16。Python backend source / `requirements*.txt` 只保留為 legacy source/dev/test context，最終刪除或封存留給 T053。
 
 ---
 

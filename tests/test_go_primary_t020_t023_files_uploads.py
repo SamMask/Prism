@@ -25,7 +25,7 @@ TODO_PATH = ROOT / "docs" / "TODO.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 GO_README_PATH = GO_SHADOW_DIR / "README.md"
-GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 CONTRACTS = {
     "T020": ROOT / "docs" / "contracts" / "go-primary-attachment-raw-serving-parity.json",
     "T021": ROOT / "docs" / "contracts" / "go-primary-upload-parity.json",

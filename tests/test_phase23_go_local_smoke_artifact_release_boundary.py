@@ -9,7 +9,7 @@ SMOKE_SCRIPT_PATH = ROOT / "scripts" / "smoke_go_local_artifact.ps1"
 BUILD_SCRIPT_PATH = ROOT / "scripts" / "build_go_runtime.ps1"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
-GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
 def _contract():

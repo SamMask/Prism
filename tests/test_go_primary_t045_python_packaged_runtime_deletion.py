@@ -13,7 +13,7 @@ DOCS_README_PATH = ROOT / "docs" / "README.md"
 DEPLOYMENT_PATH = ROOT / "docs" / "DEPLOYMENT.md"
 CONTRIBUTING_PATH = ROOT / "docs" / "CONTRIBUTING.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
-GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 AGENTS_PATH = ROOT / "AGENTS.md"
 CLAUDE_PATH = ROOT / "CLAUDE.md"
 REQ_PATH = ROOT / "requirements.txt"
@@ -65,7 +65,7 @@ def test_embedded_python_and_legacy_packaged_runtime_files_are_removed():
         REQ_PATH,
         REQ_PI_PATH,
     ]:
-        assert retained.exists(), f"T045 should retain Python source/dev path until T046: {retained}"
+        assert retained.exists(), f"T045 should retain Python source/dev path until T053: {retained}"
 
 
 def test_product_entrypoints_start_go_primary_without_python_packaged_dependencies():
@@ -145,11 +145,13 @@ def test_t045_docs_mark_go_primary_product_startup_and_t046_source_followup():
     assert "Python source/dev/test only" in readme
     assert "Go primary" in docs_readme
     assert "Go primary deployment" in deployment
-    assert "Python backend source remains legacy until T046" in contributing
+    assert "Python backend source remains legacy until T053" in contributing
     assert "Python Packaged Runtime Deletion" in go_readme
     assert "T045 removes the Python packaged runtime/startup path" in go_report
 
     t045_row = next(line for line in todo.splitlines() if line.startswith("| T045 "))
     t046_row = next(line for line in todo.splitlines() if line.startswith("| T046 "))
+    t053_row = next(line for line in todo.splitlines() if line.startswith("| T053 "))
     assert t045_row.endswith("| Done |")
     assert t046_row.endswith("| Todo |")
+    assert t053_row.endswith("| Todo |")

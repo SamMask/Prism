@@ -1,6 +1,6 @@
 # Prism Frontend Redesign Plan
 
-> **用途**: 把 `docs/New_UI/Prism Redesign - standalone.html` 的 UI 原型與 `Prism_Go_模組逐步重構計劃報告.md` 的 Go shadow backend 路線整合成可執行的前端改版規劃。
+> **用途**: 把 `docs/New_UI/Prism Redesign - standalone.html` 的 UI 原型與 `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` 的 Go shadow backend 歷史路線整合成可執行的前端改版規劃。
 > **最後更新**: 2026-05-27
 > **狀態**: 規劃中；本文件不是已完成清單。
 
@@ -13,7 +13,7 @@
 - `docs/New_UI/Prism Redesign - standalone.html`
   - 可採納: shell / sidebar / topbar / command palette / filter strip / card density / reading view / editor modal / settings tabs 的互動方向。
   - 不直接採納: 原型內 sample data、`collections` 資料模型、tweak panel 作為正式產品功能、prototype-only inline code。
-- `Prism_Go_模組逐步重構計劃報告.md`
+- `docs/development-history/Prism_Go_模組逐步重構計劃報告.md`
   - 可採納: 先固定 API contract、做 Python vs Go response diff、Go read-only shadow backend、React dist embed、前端替換不阻塞 Go Phase 0。
   - 不直接採納: 任何會提前碰正式 `knowledge.db`、POST/PUT/DELETE、檔案系統操作或新產品型態的擴 scope。
 

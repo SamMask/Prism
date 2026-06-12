@@ -8,7 +8,7 @@ STABILIZATION_PATH = ROOT / "docs" / "contracts" / "phase23-final-stabilization.
 AUDIT_PATH = ROOT / "docs" / "contracts" / "phase23-go-ownership-closure-audit.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
-GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
 def _decision():

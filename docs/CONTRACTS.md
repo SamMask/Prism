@@ -23,4 +23,4 @@
 | CONTRACT-GO-PRIMARY-PACKAGING | Windows 與 linux/arm64 package smoke 必須證明產品啟動不需要 Python/venv/Flask/PyInstaller runtime。 |
 | CONTRACT-GO-PRIMARY-DEPLOY-CUTOVER | live cutover 必須包含 backup、systemd primary switch、Caddy route switch、frontend default API 驗證與 full workflow smoke。 |
 | CONTRACT-GO-PRIMARY-ROLLBACK | rollback 必須能從 Go primary 還原 Python runtime、Caddy、systemd、DB/files，並有 live smoke 證據。 |
-| CONTRACT-GO-PRIMARY-PYTHON-DELETION | Go primary cutover、rollback、soak、package smoke 全部通過後，才允許刪除 Python packaged runtime；Python backend source 的最終封存/刪除必須另由 T046 完成。 |
+| CONTRACT-GO-PRIMARY-PYTHON-DELETION | Go primary cutover、rollback、soak、package smoke 全部通過後，才允許刪除 Python packaged runtime；Python backend source 的最終封存/刪除必須另由 T053 完成。 |

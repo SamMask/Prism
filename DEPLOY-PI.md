@@ -54,7 +54,7 @@ ssh PI5Mask24 "cd /home/mask070924/prism && bash deploy/raspberry_pi/setup.sh"
 - 安裝 / 設定 `avahi-daemon`
 - 安裝 / 設定 Caddy，將 `https://prism.local` proxy 到 `127.0.0.1:5004`
 - 建立並啟用 `prism-go-primary.service`
-- 停用 legacy `prism.service`，只保留為 T046 前的 rollback/source context
+- 停用 legacy `prism.service`，只保留為 T053 前的 rollback/source context
 
 ---
 
@@ -90,10 +90,10 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 目前 final live state：
 
 - `prism-go-primary.service`: active/enabled，監聽 `127.0.0.1:5004`
-- `prism.service`: inactive，僅為 T046 前的 rollback/source context
+- `prism.service`: inactive，僅為 T053 前的 rollback/source context
 - Caddy `https://prism.local`: proxy 到 Go primary，回應帶 `X-Prism-Go-Primary: hit`
 - `PRISM_GO_ALLOW_PUBLIC_BIND` 未啟用；仍只適合 trusted LAN/VPN/proxy-auth 邊界
-- Python packaged runtime 與 product startup path 已由 T045 移除；Python backend source 是否刪除/封存留給 T046
+- Python packaged runtime 與 product startup path 已由 T045 移除；Python backend source 是否刪除/封存留給 T053
 
 證據會回收到本機：
 

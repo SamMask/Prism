@@ -58,7 +58,7 @@ Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制。
 - Go toolchain（建置 `go-shadow` runtime）
 - Node.js 18+（建置 React SPA 並嵌入 artifact）
 - SQLite（runtime 透過 Go SQLite driver 管理）
-- Python 只作 legacy source/dev/test tooling until T046
+- Python 只作 legacy source/dev/test tooling until T053
 
 ---
 
@@ -104,7 +104,7 @@ T045 移除的是 Python packaged runtime dependency 與 product startup path：
 - removed: PyInstaller builder
 - replaced: product start/deploy/package scripts now point to Go primary
 
-Retained until T046:
+Retained until T053:
 
 - `app.py`
 - `routes/`
@@ -115,4 +115,4 @@ Retained until T046:
 - `requirements.txt`
 - `requirements-pi.txt`
 
-T046 會決定 Python backend source 的最終刪除或封存，並做 API/deploy/release wording cleanup。
+T053 會決定 Python backend source 的最終刪除或封存，並做 API/deploy/release wording cleanup。

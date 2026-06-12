@@ -17,7 +17,7 @@ ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
-GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
 def _contract(task_id):

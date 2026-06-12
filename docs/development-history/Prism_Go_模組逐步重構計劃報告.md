@@ -1,5 +1,7 @@
 # Prism Go 模組逐步重構盤點報告
 
+> 🗄️ **歷史封存**：本檔已於 2026-06-13 從 repo root 移入 `docs/development-history/`。它保留早期 Python → Go 漸進替換、Phase 19/23 retained-Python 決策與 response diff 規劃脈絡；current active roadmap、下一步 task ID 與 live/default runtime truth 以 `docs/TODO.md`、`docs/ARCHITECTURE.md`、`DEPLOY-PI.md` 為準。本文內「T046 是最終 source deletion」等敘述是移檔前歷史狀態，已被 2026-06-13 Go 收尾審查後的 T046-T053 queue 取代。
+
 > 掃描日期: 2026-05-17 | 策略: 漸進替換，Python 保持可用
 
 ---

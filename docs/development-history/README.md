@@ -7,6 +7,7 @@
 | `todo-completed-phases.md` | 已完成 phase、已決議事項與歷史工作清單。 |
 | `todo-changelog.md` | 原 `docs/TODO.md` 的完整 Changelog 長表。 |
 | `todo-archive-pre-go-primary-runtime-migration-20260606.md` | Go primary runtime migration active roadmap 前的完整 `docs/TODO.md` 原文歸檔。 |
+| `Prism_Go_模組逐步重構計劃報告.md` | 早期 Python → Go 漸進替換盤點與 Phase 19/23 決策脈絡；已由 active `docs/TODO.md` 取代 current roadmap 角色。 |
 
 維護規則：
 - `docs/TODO.md` 只保留 active roadmap、backlog/icebox、近期更新摘要與歸檔索引。

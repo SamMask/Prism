@@ -39,7 +39,7 @@
       "requirements.txt",
       "requirements-pi.txt"
     ],
-    "reason": "Python source and dependency manifests remain only for legacy source inspection, rollback source context, and pytest/dev tooling until T046 decides final source deletion or archival."
+    "reason": "Python source and dependency manifests remain only for legacy source inspection, rollback source context, and pytest/dev tooling until T053 decides final source deletion or archival."
   },
   "runtime_dependency_boundary": {
     "product_startup_requires_python": false,
@@ -57,7 +57,11 @@
   ],
   "next_recommended_task": {
     "id": "T046",
-    "reason": "Only source archival/deletion and final wording/API cleanup remain after packaged runtime and startup paths were removed."
+    "reason": "After the 2026-06-13 Go primary closure review, frontend-to-Go route coverage and confirmed missing API/static surfaces must be closed before final Python source deletion."
+  },
+  "final_source_deletion_task": {
+    "id": "T053",
+    "reason": "Final Python backend source archival/deletion remains the last cleanup gate after missing Go primary request-time surfaces, route ownership manifest, API docs, and stale packaging artifacts are resolved."
   },
   "verification": {
     "targeted_pytest": "tests/test_go_primary_t045_python_packaged_runtime_deletion.py",

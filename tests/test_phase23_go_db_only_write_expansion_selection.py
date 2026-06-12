@@ -7,7 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-db-only-write-expansio
 FIRST_WRITE_PATH = ROOT / "docs" / "contracts" / "phase23-go-first-write-route-implementation.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
-GO_ROADMAP_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_ROADMAP_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
 def _contract():

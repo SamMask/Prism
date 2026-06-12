@@ -2,7 +2,7 @@
 
 > **版本**: v2.4.9 / Go primary runtime
 > **更新日期**: 2026-06-13
-> **狀態**: Go primary live owner；Python source/dev/test only until T046
+> **狀態**: Go primary live owner；Python source/dev/test only until T053
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。
 
@@ -42,7 +42,7 @@ npm run dev
 pytest tests/ -v
 ```
 
-Python backend source 與 `requirements*.txt` 只保留為 legacy source / dev / test context；T045 後不再是產品啟動必要條件。T046 會決定 source 最終刪除或封存。
+Python backend source 與 `requirements*.txt` 只保留為 legacy source / dev / test context；T045 後不再是產品啟動必要條件。T053 會決定 source 最終刪除或封存。
 
 ---
 

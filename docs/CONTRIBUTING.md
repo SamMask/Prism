@@ -8,7 +8,7 @@
 |------|------|------|
 | Go | current stable | Go primary runtime |
 | Node.js | 18+ | 前端建置工具 (Vite) |
-| Python | 3.10+ | Legacy source/dev/test only until T046 |
+| Python | 3.10+ | Legacy source/dev/test only until T053 |
 | SQLite | 內建 | 無需額外安裝 |
 
 ### 安裝依賴
@@ -32,7 +32,7 @@ npm run dev
 # → http://127.0.0.1:5173
 ```
 
-> **Runtime 說明**: React SPA 由 Go primary artifact 嵌入與服務。Python backend source remains legacy until T046；不得再作產品啟動主路徑。
+> **Runtime 說明**: React SPA 由 Go primary artifact 嵌入與服務。Python backend source remains legacy until T053；不得再作產品啟動主路徑。
 
 ---
 
@@ -42,11 +42,11 @@ npm run dev
 D:/AI/Prism/
 ├── go-shadow/              # Go primary runtime source
 ├── scripts/start_go_primary.ps1 # Product startup entrypoint
-├── app.py                  # Legacy Python source until T046
+├── app.py                  # Legacy Python source until T053
 ├── config.py               # Legacy Python source context
 ├── db.py                   # Legacy Python DB source context
 ├── migrations/             # Legacy Python migration source; Go owns runtime migration path
-├── routes/                 # Legacy Flask Blueprints until T046
+├── routes/                 # Legacy Flask Blueprints until T053
 │   ├── notes/              # 筆記子模組
 │   │   ├── crud.py         # GET/POST/PUT/DELETE /api/notes
 │   │   ├── actions.py      # pin / archive / duplicate / reorder
@@ -100,7 +100,7 @@ D:/AI/Prism/
 
 ### 資料庫遷移
 
-- Go runtime 已具備 v16 fresh/existing migration path；Python migration source 保留 parity context 到 T046
+- Go runtime 已具備 v16 fresh/existing migration path；Python migration source 保留 parity context 到 T053
 - 每個 Migration 必須**冪等**（重複執行結果相同）
 - 修改 Schema 前必讀 `docs/SCHEMA.md`
 

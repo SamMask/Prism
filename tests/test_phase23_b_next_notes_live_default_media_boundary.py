@@ -8,7 +8,7 @@ B_NEXT_1_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-b-next-notes-wri
 RUNTIME_CLOSURE_PATH = ROOT / "docs" / "contracts" / "phase23-python-runtime-ownership-closure.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
-GO_REPORT_PATH = ROOT / "Prism_Go_模組逐步重構計劃報告.md"
+GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 CRUD_PATH = ROOT / "routes" / "notes" / "crud.py"
 BATCH_PATH = ROOT / "routes" / "notes" / "batch.py"
 
