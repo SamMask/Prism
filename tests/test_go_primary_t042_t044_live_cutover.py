@@ -86,7 +86,7 @@ def test_live_ops_scripts_keep_backup_restore_and_no_public_bind_boundaries():
         assert "/api/server/backup/" in smoke
 
 
-def test_t042_t043_t044_docs_are_current_and_keep_t045_as_next_gate():
+def test_t042_t043_t044_docs_are_current_and_hand_off_to_t045_t046():
     todo = TODO_PATH.read_text(encoding="utf-8")
     architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
@@ -100,11 +100,13 @@ def test_t042_t043_t044_docs_are_current_and_keep_t045_as_next_gate():
         assert contract_path.name in todo
 
     t045_row = next(line for line in todo.splitlines() if line.startswith("| T045 "))
-    assert t045_row.endswith("| Todo |")
+    t046_row = next(line for line in todo.splitlines() if line.startswith("| T046 "))
+    assert t045_row.endswith("| Done |")
+    assert t046_row.endswith("| Todo |")
 
     assert "T042-T044 Go primary live cutover, rollback, and soak gates are complete" in architecture
     assert "Go T042/T043/T044" in schema
     assert "go_primary_pi_live_ops.ps1" in deploy_pi
     assert "Live Go Primary Cutover, Rollback, and Soak" in readme
     assert "T042/T043/T044 now move Pi live/default ownership to Go primary" in go_report
-    assert "Python packaged runtime deletion remains T045" in go_report
+    assert "T045 removes the Python packaged runtime/startup path" in go_report

@@ -177,7 +177,7 @@ CREATE TABLE Schema_Meta (
 -- key='schema_version', value='16'
 ```
 
-> Existing/live DB 仍由 Python `migrations/__init__.py` 的 `run_migrations()` 管理。Go T008 已具備 local/copied DB fresh init；Go T009/T010 已具備 local/copied DB existing upgrade、`Schema_Meta` 更新、backup-before-migrate 與 failed rollback proof；這不等於 production/live migration owner 已切換。
+> T042-T044 後，live/default DB migration owner 已是 Go primary runtime。Python `migrations/__init__.py` source 保留到 T046 作 legacy parity/context，不再是產品啟動必要條件。
 
 ---
 
@@ -199,6 +199,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 
 > FTS5 純關鍵字全文檢索，無 AI / 向量搜尋。
 > `Notes_FTS` 僅索引 `Notes.title` / `Notes.content`。`GET /api/notes?q=...` 的使用者搜尋範圍另由 API 層擴充到 `Notes.remarks`、`Tags.name`、`Note_Attachments.title` / `file_path` 與文字附件檔案內容；此行為不需要新增 DB 欄位或 migration。
+> Go T009/T010 已在 local/copied DB 證明 existing DB migration runner、backup-before-migrate 與 rollback safety；這不新增資料表或欄位，且 does not touch production `knowledge.db`。
 > Go T011/T012 已在 local/copied DB 證明 notes read/search/create/update parity，包含 `Notes_FTS` trigger 更新與 failed update rollback；這不等於 live/default notes write owner 已切換，notes delete/actions/batch/history restore/delete/media cleanup 仍是後續 gate。
 > Go T013 已在 local/copied DB-and-data 證明 notes single delete 與 batch delete parity，包含 `Notes_FTS` delete trigger、Note_Tags / Source_Urls / Note_History / Note_Attachments 清理、referenced image preserve，以及 `static/uploads` original / `_thumb.webp` companion cleanup；這仍不等於 live/default notes write owner 或 general media cleanup owner 已切換。
 > Go T014/T015 已在 local/copied DB 證明 notes pin/archive/duplicate/reorder 與現行 batch type/tags parity，涵蓋 `Notes.is_pinned`、`Notes.is_archived`、`Notes.sort_order`、variant `parent_id`、Note_Tags / Source_Urls 複製、batch category/tag 更新與 rollback/no partial write；沒有新增 schema 或 migration。`POST /api/notes/batch/archive` 目前不是 Python API route，因此不被寫成 Go-owned surface。
@@ -211,7 +212,8 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T032-T035 已在 local/copied DB/data fixtures 證明 server status/hardware/logs、backup list/download/rotate/delete、port/startup config、prompt options 與 wizard options runtime surface；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。`--enable-server-system` 可對 copied DB 執行 WAL checkpoint / VACUUM / clear-history 類維護，所以不是 default query-only 模式；live/default server/system owner、實際 host service restart、production/Pi cutover 仍未切換。
 > Go T036/T037/T038 已在 local/copied DB/data fixtures 證明 embedded SPA/static uploads serving、安全邊界與 full workflow E2E；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Full workflow 只驗證既有 Notes / Tags / Source_Urls / Note_History / uploads / backups / Schema_Meta 行為，live/default Go primary ownership、production/Pi cutover 與 Python removal 仍未切換。
 > Go T039/T040/T041 已在 package/Pi staging 證明 Windows artifact fresh DB smoke、linux/arm64 artifact copied production DB/data staging smoke、以及 staging service active；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Pi staging 使用 `knowledge_t041_staging.db` 與 copied uploads/attachments，live `knowledge.db` SHA256 必須不變；live/default Caddy/systemd ownership、rollback、soak 與 Python removal 仍未切換。
-> Go T042/T043/T044 已在 Pi live/default 完成 Go primary cutover、rollback drill 與 bounded soak；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。T042/T044 使用 live `knowledge.db` 與 external data dir `/home/mask070924/prism`，T043 以 SQLite online backup artifact 與 uploads/attachments tar restore 作 rollback 證據；final state 是 Go primary active、Python `prism.service` inactive。Python packaged runtime/source deletion 仍是 T045/T046。
+> Go T042/T043/T044 已在 Pi live/default 完成 Go primary cutover、rollback drill 與 bounded soak；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。T042/T044 使用 live `knowledge.db` 與 external data dir `/home/mask070924/prism`，T043 以 SQLite online backup artifact 與 uploads/attachments tar restore 作 rollback 證據；final state 是 Go primary active、Python `prism.service` inactive。
+> Go T045 已移除 Python packaged runtime 與產品啟動路徑；這同樣不新增資料表或欄位，SQLite 仍維持 v16。Python backend source / `requirements*.txt` 只保留為 legacy source/dev/test context，最終刪除或封存留給 T046。
 
 ---
 

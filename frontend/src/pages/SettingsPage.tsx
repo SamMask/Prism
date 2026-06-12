@@ -188,7 +188,7 @@ export function SettingsPage() {
                 <p>前端: Vite + React + TypeScript + Tailwind CSS</p>
                 <p>後端: Flask + SQLite (FTS5)</p>
                 <p className="text-text-muted text-sm pt-2">
-                  本地優先的知識管理系統；目前穩定使用路徑是 Source / Dev mode 與 Raspberry Pi 部署。
+                  本地優先的知識管理系統；目前穩定使用路徑是 Go primary runtime 與 Raspberry Pi `prism-go-primary.service` 部署。
                 </p>
                 <p className="text-text-muted text-sm">
                   使用者資料保存在 `knowledge.db`、`static/uploads` 與 `docs/attachments`；本機更新程式時不應覆蓋這些資料目錄。

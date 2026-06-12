@@ -20,7 +20,7 @@ def test_settings_home_followups_are_recorded_in_ui_copy_and_layout():
     maintenance = SYSTEM_MAINTENANCE_PATH.read_text(encoding="utf-8")
 
     assert "資料庫維護（進階）" in settings
-    assert "目前穩定使用路徑是 Source / Dev mode 與 Raspberry Pi 部署" in settings
+    assert "目前穩定使用路徑是 Go primary runtime 與 Raspberry Pi `prism-go-primary.service` 部署" in settings
     assert "本機更新程式時不應覆蓋這些資料目錄" in settings
     assert "進階維護與疑難排解工具" in maintenance
     assert "flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1" in home

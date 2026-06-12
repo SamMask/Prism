@@ -1,25 +1,28 @@
 #!/bin/bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "========================================"
-echo "  Prism - Installation Script"
+echo "  Prism - Go Primary Build"
 echo "========================================"
 echo
 
-echo "[1/2] Installing Python dependencies..."
-pip3 install -r requirements.txt
+cd "$ROOT_DIR/frontend"
+npm install
+npm run build
 
-if [ $? -ne 0 ]; then
-    echo
-    echo "[ERROR] Failed to install dependencies."
-    echo "Please make sure Python 3 and pip are installed."
-    exit 1
-fi
+cd "$ROOT_DIR"
+rm -rf go-shadow/web/dist
+mkdir -p go-shadow/web/dist build/go-runtime
+cp -R frontend/dist/. go-shadow/web/dist/
+
+cd go-shadow
+go test ./...
+go build -o ../build/go-runtime/prism-go-runtime .
+GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o ../build/go-runtime/prism-go-runtime-linux-arm64 .
 
 echo
-echo "[2/2] Starting server..."
-echo
-echo "Server will start at: http://127.0.0.1:5000"
-echo "Press Ctrl+C to stop the server."
-echo
-
-python3 app.py
+echo "Build complete:"
+echo "  build/go-runtime/prism-go-runtime"
+echo "  build/go-runtime/prism-go-runtime-linux-arm64"

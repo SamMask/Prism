@@ -1,0 +1,67 @@
+{
+  "task_id": "T045",
+  "contract": "CONTRACT-GO-PRIMARY-PYTHON-DELETION",
+  "status": "completed_packaged_runtime_startup_deletion",
+  "date": "2026-06-13",
+  "prerequisites": {
+    "live_cutover": "docs/contracts/go-primary-live-cutover.json",
+    "rollback_drill": "docs/contracts/go-primary-rollback-drill.json",
+    "soak_window": "docs/contracts/go-primary-soak-window.json",
+    "package_smoke": "docs/contracts/go-primary-windows-package-smoke.json"
+  },
+  "removed_product_runtime_paths": {
+    "embedded_python_runtime_dir": "python/",
+    "portable_python_launcher": "scripts/start_portable.bat",
+    "portable_python_packager": "scripts/pack_portable.bat",
+    "pyinstaller_builder": "scripts/build_release.py",
+    "legacy_program_files_deployer": "deploy_v150.bat",
+    "legacy_daily_use_packager": "v2-\u6253\u5305\u5230Prism_\u65e5\u5e38\u4f7f\u7528\u7248.bat"
+  },
+  "go_primary_product_entrypoints": {
+    "local_powershell": "scripts/start_go_primary.ps1",
+    "local_batch": "scripts/start.bat",
+    "root_batch": "start_v2.bat",
+    "windows_package": "scripts/pack.bat",
+    "pi_deploy": "deploy_to_pi.bat",
+    "pi_setup": "deploy/raspberry_pi/setup.sh",
+    "pi_service": "prism-go-primary.service"
+  },
+  "retained_python_scope": {
+    "backend_source": [
+      "app.py",
+      "routes/",
+      "services/",
+      "utils/",
+      "workers/",
+      "migrations/"
+    ],
+    "dependency_manifests": [
+      "requirements.txt",
+      "requirements-pi.txt"
+    ],
+    "reason": "Python source and dependency manifests remain only for legacy source inspection, rollback source context, and pytest/dev tooling until T046 decides final source deletion or archival."
+  },
+  "runtime_dependency_boundary": {
+    "product_startup_requires_python": false,
+    "product_startup_requires_venv": false,
+    "product_startup_requires_flask": false,
+    "product_startup_requires_pyinstaller": false,
+    "pi_live_owner": "prism-go-primary.service",
+    "python_prism_service_final_state_after_t044": "inactive"
+  },
+  "not_done_by_t045": [
+    "Delete Python backend source",
+    "Remove Python pytest/dev dependency manifests",
+    "Rewrite historical archived Phase 19/23 records",
+    "Commit or push changes"
+  ],
+  "next_recommended_task": {
+    "id": "T046",
+    "reason": "Only source archival/deletion and final wording/API cleanup remain after packaged runtime and startup paths were removed."
+  },
+  "verification": {
+    "targeted_pytest": "tests/test_go_primary_t045_python_packaged_runtime_deletion.py",
+    "package_smoke_required": "scripts/smoke_go_primary_package.ps1",
+    "full_tests_required": "pytest tests/ -v"
+  }
+}

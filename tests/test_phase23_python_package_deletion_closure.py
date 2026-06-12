@@ -38,7 +38,6 @@ def test_e_retains_python_package_files_and_dependency_manifests_truthfully():
     contract = _contract()
     requirements = REQ_PATH.read_text(encoding="utf-8")
     requirements_pi = REQ_PI_PATH.read_text(encoding="utf-8")
-    deploy_pi = DEPLOY_PI_PATH.read_text(encoding="utf-8")
 
     assert contract["decision"]["delete_python_backend_package"] is False
     assert contract["decision"]["delete_python_runtime_dependencies"] is False
@@ -50,10 +49,12 @@ def test_e_retains_python_package_files_and_dependency_manifests_truthfully():
     assert "python-magic" in requirements_pi
     assert "Pillow" not in requirements
     assert "Pillow" not in requirements_pi
-    assert "ExecStart=/home/mask070924/prism/linux-venv/bin/python app.py" in deploy_pi
     assert "app.py" in contract["retained_python_runtime_files"]
     assert "routes/" in contract["retained_python_runtime_files"]
     assert "migrations/" in contract["retained_python_runtime_files"]
+    current_deploy_pi = DEPLOY_PI_PATH.read_text(encoding="utf-8")
+    assert "prism-go-primary.service" in current_deploy_pi
+    assert "ExecStart=/home/mask070924/prism/linux-venv/bin/python app.py" not in current_deploy_pi
 
 
 def test_e_blocks_package_deletion_and_runtime_mutation_scope():

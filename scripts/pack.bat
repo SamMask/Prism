@@ -1,60 +1,42 @@
 @echo off
 chcp 65001 >nul
-REM Prism - 打包腳本
-REM 確保腳本在根目錄 context 執行
 cd /d "%~dp0.."
 
-set VERSION=v1.4.1
-
-REM 取得日期時間 (格式: YYYYMMDD_HHMM)
+set VERSION=v2.4.9-go-primary
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
 set DATETIME=%datetime:~0,8%_%datetime:~8,4%
 set ARCHIVE_NAME=Prism_%VERSION%_%DATETIME%
 
 echo ================================================
-echo  Prism - 打包壓縮腳本
-echo  版本: %VERSION%
+echo  Prism - Go Primary Package
 echo ================================================
 echo.
 
-REM 建立臨時資料夾 (保留舊版 zip)
-echo [1/3] 準備打包...
+echo [1/4] Building Go primary runtime...
+powershell -NoProfile -ExecutionPolicy Bypass -File "scripts\build_go_runtime.ps1"
+if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+
+echo [2/4] Preparing package...
 if not exist "dist" mkdir "dist"
 if exist "dist\%ARCHIVE_NAME%" rd /s /q "dist\%ARCHIVE_NAME%"
 mkdir "dist\%ARCHIVE_NAME%"
+mkdir "dist\%ARCHIVE_NAME%\build\go-runtime"
+mkdir "dist\%ARCHIVE_NAME%\scripts"
 
-REM 複製資料夾
-echo [2/3] 複製檔案...
-xcopy /E /I /Y "routes" "dist\%ARCHIVE_NAME%\routes" >nul
-xcopy /E /I /Y "static" "dist\%ARCHIVE_NAME%\static" >nul
-xcopy /E /I /Y "templates" "dist\%ARCHIVE_NAME%\templates" >nul
-xcopy /E /I /Y "docs" "dist\%ARCHIVE_NAME%\docs" >nul
-xcopy /E /I /Y "migrations" "dist\%ARCHIVE_NAME%\migrations" >nul
-xcopy /E /I /Y "scripts" "dist\%ARCHIVE_NAME%\scripts" >nul
-xcopy /E /I /Y "resources\wheels" "dist\%ARCHIVE_NAME%\wheels" >nul
-
-REM 複製根目錄檔案
-copy "app.py" "dist\%ARCHIVE_NAME%\" >nul
-copy "config.py" "dist\%ARCHIVE_NAME%\" >nul
-copy "db.py" "dist\%ARCHIVE_NAME%\" >nul
-copy "requirements.txt" "dist\%ARCHIVE_NAME%\" >nul
+echo [3/4] Copying Go artifacts and docs...
+copy "build\go-runtime\prism-go-runtime.exe" "dist\%ARCHIVE_NAME%\build\go-runtime\" >nul
+copy "build\go-runtime\prism-go-runtime-linux-arm64" "dist\%ARCHIVE_NAME%\build\go-runtime\" >nul
+copy "scripts\start_go_primary.ps1" "dist\%ARCHIVE_NAME%\scripts\" >nul
+copy "scripts\start.bat" "dist\%ARCHIVE_NAME%\scripts\" >nul
+copy "start_v2.bat" "dist\%ARCHIVE_NAME%\" >nul
 copy "README.md" "dist\%ARCHIVE_NAME%\" >nul
-copy "install.bat" "dist\%ARCHIVE_NAME%\" >nul
-copy "install.sh" "dist\%ARCHIVE_NAME%\" >nul
-copy "start.bat" "dist\%ARCHIVE_NAME%\" >nul
+xcopy /E /I /Y "docs" "dist\%ARCHIVE_NAME%\docs" >nul
 
-REM 使用 PowerShell 壓縮
-echo [3/3] 壓縮中...
-powershell -Command "Compress-Archive -Path 'dist\%ARCHIVE_NAME%' -DestinationPath 'dist\%ARCHIVE_NAME%.zip' -Force"
+echo [4/4] Compressing...
+powershell -NoProfile -Command "Compress-Archive -Path 'dist\%ARCHIVE_NAME%' -DestinationPath 'dist\%ARCHIVE_NAME%.zip' -Force"
 
 echo.
-echo ================================================
-echo  打包完成！
-echo  檔案: dist\%ARCHIVE_NAME%.zip
-echo ================================================
+echo Package complete: dist\%ARCHIVE_NAME%.zip
 echo.
-
-REM 清理臨時資料夾
 rd /s /q "dist\%ARCHIVE_NAME%"
-
 pause

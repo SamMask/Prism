@@ -6,17 +6,14 @@
 
 | 軟體 | 版本 | 說明 |
 |------|------|------|
-| Python | 3.10+ | 後端運行環境 |
+| Go | current stable | Go primary runtime |
 | Node.js | 18+ | 前端建置工具 (Vite) |
+| Python | 3.10+ | Legacy source/dev/test only until T046 |
 | SQLite | 內建 | 無需額外安裝 |
 
 ### 安裝依賴
 
 ```bash
-# 後端
-pip install -r requirements.txt
-
-# 前端
 cd frontend
 npm install
 ```
@@ -24,9 +21,10 @@ npm install
 ### 啟動開發伺服器
 
 ```bash
-# 後端 (Flask API Server)
-python app.py
-# → http://127.0.0.1:5000
+# Go primary API Server
+.\scripts\build_go_runtime.ps1
+.\scripts\start_go_primary.ps1
+# → http://127.0.0.1:5004
 
 # 前端 (Vite HMR，另開終端機)
 cd frontend
@@ -34,8 +32,7 @@ npm run dev
 # → http://127.0.0.1:5173
 ```
 
-> **V2 模式說明**: 環境變數 `PRISM_V2=true` 讓 Flask 以 React SPA 模式服務。
-> 開發時前後端分別啟動；生產部署先 `npm run build`，再 `python app.py`。
+> **Runtime 說明**: React SPA 由 Go primary artifact 嵌入與服務。Python backend source remains legacy until T046；不得再作產品啟動主路徑。
 
 ---
 
@@ -43,11 +40,13 @@ npm run dev
 
 ```
 D:/AI/Prism/
-├── app.py                  # Flask 應用程式入口 (create_app)
-├── config.py               # 設定常數 (PRISM_VERSION, port)
-├── db.py                   # 資料庫連線 (get_db / close_db)
-├── migrations/             # 版本化 DB 遷移 (v1–v15，啟動時自動執行)
-├── routes/                 # Flask Blueprints
+├── go-shadow/              # Go primary runtime source
+├── scripts/start_go_primary.ps1 # Product startup entrypoint
+├── app.py                  # Legacy Python source until T046
+├── config.py               # Legacy Python source context
+├── db.py                   # Legacy Python DB source context
+├── migrations/             # Legacy Python migration source; Go owns runtime migration path
+├── routes/                 # Legacy Flask Blueprints until T046
 │   ├── notes/              # 筆記子模組
 │   │   ├── crud.py         # GET/POST/PUT/DELETE /api/notes
 │   │   ├── actions.py      # pin / archive / duplicate / reorder
@@ -71,7 +70,7 @@ D:/AI/Prism/
 │   │   ├── pages/          # 路由頁面
 │   │   ├── services/api.ts # axios API 客戶端
 │   │   └── stores/         # Zustand 狀態 (appStore / toastStore)
-│   ├── dist/               # 建置產出 (Flask 靜態服務)
+│   ├── dist/               # 建置產出（嵌入 Go artifact）
 │   └── package.json
 ├── tests/                  # pytest 測試套件
 ├── knowledge.db            # SQLite 資料庫 (WAL mode)
@@ -86,7 +85,8 @@ D:/AI/Prism/
 
 | 層 | 規範 |
 |----|------|
-| **Python** | PEP 8，`snake_case`，縮排 ≤ 3 層 |
+| **Go** | 小函式、明確錯誤處理、維持 data-dir / path safety |
+| **Python** | Legacy source/test 修改仍用 PEP 8，`snake_case`，縮排 ≤ 3 層 |
 | **TypeScript / React** | `camelCase` 變數，`PascalCase` 組件，Composition 優先 |
 | **CSS** | Tailwind Utility Class 為主；CSS 變數 `--color-*` 定義於 `index.css` |
 
@@ -100,7 +100,7 @@ D:/AI/Prism/
 
 ### 資料庫遷移
 
-- 遷移腳本位於 `migrations/__init__.py`，依版本號順序執行
+- Go runtime 已具備 v16 fresh/existing migration path；Python migration source 保留 parity context 到 T046
 - 每個 Migration 必須**冪等**（重複執行結果相同）
 - 修改 Schema 前必讀 `docs/SCHEMA.md`
 
@@ -143,7 +143,7 @@ npx tsc --noEmit
 
 ## 打包發布 (Packaging)
 
-> **狀態說明**: v2.4.9 的穩定主線是 Source / Dev mode 與既有 Raspberry Pi 部署。PyInstaller / Portable 目前僅保留為實驗性或內部打包流程；正式「零依賴、解壓即用、一鍵啟動」發佈要等 UI 改版與 Go 模組基底重構後再重新定義。
+> **狀態說明**: v2.4.9+ 的穩定主線是 Go primary runtime artifact 與 Raspberry Pi `prism-go-primary.service` 部署。PyInstaller / embedded Python portable path 已由 T045 移除。
 
 ### 版本號 (Single Source of Truth)
 
@@ -162,14 +162,13 @@ PRISM_VERSION = "2.4.5"
 cd frontend
 npm run build
 
-# 2. 實驗性 / 內部打包 EXE (PyInstaller)
-python build_release.py
+# 2. 建置 Go primary package
+scripts\pack.bat
 ```
 
 | 產出 | 說明 |
 |------|------|
-| `Prism_v*_*.zip` | 內部打包目標，需安裝 Python；不是目前推薦使用方式 |
-| `Prism_v*_Portable_*.zip` | 實驗性 Portable 目標；只有正式 release artifacts 存在時才可視為可交付版本 |
+| `Prism_v2.4.9-go-primary_*.zip` | Go primary artifact package；不包含 embedded Python runtime |
 
 ### Release Checklist（每次發版前必確認）
 

@@ -20,13 +20,14 @@
 
 - **Local packaged run**: Prism should eventually have a clear local packaging path for Windows/dev machines: bundled React `dist`, Go runtime artifact, explicit config, external data dir, and repeatable local startup.
 - **Pi deployment updated**: Daily/real usage remains Raspberry Pi deployment with systemd, Caddy, existing data dir, SQLite WAL mode, and the established backup/rollback discipline; after T042-T044 the live/default service is `prism-go-primary.service`.
-- **Gradual ownership transfer**: Go takes ownership one surface at a time. Python remains the owner for every route class not explicitly promoted and verified.
+- **Gradual ownership transfer**: Go now owns the Pi live/default runtime after T042-T044. Python source remains only as legacy/deletion context after T045, until T046 removes or archives it.
 - **No implicit cutover**: A passing local build, single curl, or docs update never means Go owns a production surface.
 
 ### Current Runtime Truth
 
 - T042/T043/T044 now move Pi live/default ownership to Go primary. `PI5Mask24` runs `prism-go-primary.service` on `127.0.0.1:5004`; Caddy `https://prism.local` proxies to Go primary with `X-Prism-Go-Primary: hit`; Python `prism.service` is inactive and no longer receives Caddy traffic.
-- Python packaged runtime and backend source are still present as rollback/deletion targets. Python packaged runtime deletion remains T045; source/docs final removal or archival remains T046.
+- T045 removes the Python packaged runtime/startup path. The tracked embedded `python/` runtime, portable Python launcher/packager, PyInstaller builder, and legacy Python package/deploy scripts are removed; product startup now goes through `scripts/start_go_primary.ps1`, `scripts/start.bat`, `start_v2.bat`, Go artifact packaging, `deploy_to_pi.bat`, and `prism-go-primary.service`.
+- Python backend source and `requirements*.txt` remain only as legacy source/dev/test context. Source/docs final removal or archival remains T046.
 - The T008-T041 entries below are provenance for the gates that made T042-T044 safe. Their old "local/copied candidate" or "not live owner" caveats were true at those gates; for Pi live/default ownership they are superseded by the T042-T044 evidence above.
 - Active roadmap T008-T010 now gives Go a local/copied-DB schema lifecycle proof: fresh init, existing DB migration v1-v16, `Schema_Meta` updates, backup-before-migrate, and failed rollback. Normal/live production migrations still remain Python-owned until a separate cutover gate.
 - Active roadmap T011/T012 now gives Go local/copied-DB notes read/search/create/update parity. `GET /api/notes?q=...` matches Python tokenized `Notes_FTS`, remarks, tags, attachment metadata, bounded text attachment body search, filters, and pagination; `POST /api/notes` / `PUT /api/notes/{id}` remain explicit `--enable-notes-write` local candidates only.
@@ -41,7 +42,8 @@
 - Active roadmap T032-T035 now gives Go local/copied-DB-and-data server/system/config parity. Server status/hardware/logs, backup management, port/startup config, safe restart acknowledgement, prompt options, and wizard options remain explicit `--enable-server-system`; this candidate may maintain copied DBs and write copied backups/config files under `PRISM_GO_DATA_DIR`.
 - Active roadmap T036/T037/T038 now gives Go local/copied-DB-and-data embedded SPA/static uploads serving, security boundary, and full workflow proof. Go can serve `/`, client routes, and `/static/uploads/<file>` from `PRISM_GO_DATA_DIR`, keeps unknown `/api/*` as JSON 404, refuses public bind by default, reports no built-in auth/token layer, and passes a Python-vs-Go full workflow invariant fixture covering create/upload/search/export/import/delete/cleanup/backup/migration.
 - Active roadmap T039/T040/T041 gives Go package and Pi staging proof. Windows package smoke runs the built Go artifact against a fresh Go-created DB with no Python/venv/Flask/PyInstaller runtime dependency, and linux/arm64 package smoke runs on `PI5Mask24` as `prism-go-primary-staging.service` against copied production DB/uploads/attachments on `127.0.0.1:5003`.
-- Active roadmap T042/T043/T044 gives live cutover, rollback, and soak proof. T042 created DB/files/Caddy/systemd backups, switched Caddy to Go primary, and ran live full workflow smoke. T043 restored DB/files from backup and proved Python rollback route. T044 cut back to Go primary, restored smoke mutations from backup, and ran 5 soak samples with no Go/Caddy error logs and Go max RSS below the retained-Python baseline. This does not delete Python packaged runtime/source or expand public exposure.
+- Active roadmap T042/T043/T044 gives live cutover, rollback, and soak proof. T042 created DB/files/Caddy/systemd backups, switched Caddy to Go primary, and ran live full workflow smoke. T043 restored DB/files from backup and proved Python rollback route. T044 cut back to Go primary, restored smoke mutations from backup, and ran 5 soak samples with no Go/Caddy error logs and Go max RSS below the retained-Python baseline.
+- Active roadmap T045 removes the Python packaged runtime/startup path. Product start/deploy/package paths are Go primary; Python backend source is still present only for the T046 final archive/delete decision and legacy test context.
 
 ### Roadmap Big Items
 
@@ -59,7 +61,7 @@
 
 ### Active Next Gate
 
-`2026-06-13 active roadmap update`: T042/T043/T044 close live Go primary cutover, rollback, and soak. Go package smoke still uses the shared HTTP-only full workflow harness; live Pi now runs `prism-go-primary.service` behind Caddy, rollback to Python was proven from the T042 backup set, and final state is Go primary active/enabled with Python `prism.service` inactive. This update still does not delete Python packaged runtime/source or expand public exposure. The next active queue item is T045 Python packaged runtime dependency and startup-path deletion.
+`2026-06-13 active roadmap update`: T045 removes the Python packaged runtime/startup path after T042/T043/T044 closed live Go primary cutover, rollback, and soak. Live Pi runs `prism-go-primary.service` behind Caddy; local product startup uses `scripts/start_go_primary.ps1`; embedded `python/`, portable Python scripts, and PyInstaller builder are gone. This update still does not delete Python backend source or expand public exposure. The next active queue item is T046 final Python backend source deletion/archive and docs/API/release wording cleanup.
 
 `23.1 Go file-read parity plan gate is complete`.
 

@@ -1,11 +1,11 @@
 # Prism
 
 > 🔒 **本地優先** | 📴 **離線可用** | 🧠 **Headless KMS**
-> 📦 **目前推薦**：Source / Dev mode（Python 3.10+ / Node.js 18+）
-> 🚧 **Portable / 一鍵啟動**：後續發佈目標；目前僅保留實驗性 / 內部打包流程
+> 📦 **目前推薦**：Go primary runtime artifact（Node.js / Go 用於建置）
+> 🧪 **Python source/dev/test only**：Python backend source 保留到 T046 作 legacy/deletion gate
 
 ![Version](https://img.shields.io/badge/version-2.4.9-blue)
-![Python](https://img.shields.io/badge/python-3.10+-green)
+![Go](https://img.shields.io/badge/runtime-Go%20primary-green)
 ![Frontend](https://img.shields.io/badge/react-18-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
@@ -49,52 +49,36 @@
 
 ## 🚀 快速開始
 
-### Source / Dev mode（目前推薦）
+### Go primary runtime（目前推薦）
 
-```bash
-# 後端
+```powershell
 cd D:/AI/Prism
-python -m venv venv
-venv\Scripts\activate            # Windows
-pip install -r requirements.txt
-python app.py                    # 會自動跑 migration 並啟動
-
-# 前端 (另開終端機)
-cd frontend
-npm install
-npm run dev                      # → http://localhost:5173
-# 或 npm run build → 產出 dist/，後端設 PRISM_V2=true 即可整合
+.\scripts\build_go_runtime.ps1
+.\scripts\start_go_primary.ps1    # -> http://127.0.0.1:5004
 ```
 
-### Portable / PyInstaller / 一鍵啟動（後續發佈目標）
+熟悉的批次入口也會啟動 Go primary：
 
-目前 repo 保留 PyInstaller 相關程式碼與內部打包腳本，但 v2.4.9 的穩定主線不是正式 Portable release。正式「零依賴、解壓即用、一鍵啟動」發佈會等 UI 改版與 Go 模組基底重構後再重新定義；除非 GitHub Releases 已提供對應 artifacts，請不要把 Portable 視為目前推薦安裝方式。
+```cmd
+start_v2.bat
+scripts\start.bat
+```
 
-### 本機整合模式（已建置前端）
+### 開發前端
 
 ```bash
-# 先建置前端
 cd frontend
 npm install
-npm run build
-
-# 回到專案根目錄
-cd ..
-set PRISM_V2=true                # Windows
-export PRISM_V2=true             # Linux/Mac
-pip install -r requirements.txt
-python app.py                    # → http://127.0.0.1:5000
+npm run dev                      # -> http://localhost:5173
 ```
 
-### 啟用 V2 React SPA 模式
+### Package
 
-```bash
-set PRISM_V2=true                # Windows
-export PRISM_V2=true             # Linux/Mac
-python app.py
+```cmd
+scripts\pack.bat
 ```
 
-PyInstaller 打包路徑目前視為實驗性 / 內部發佈流程，不是 v2.4.9 的穩定使用入口。
+PyInstaller / embedded Python portable path 已在 T045 移除；Python source 只保留 legacy/dev/test 到 T046。Python runtime 不依賴 Pillow；thumbnail generation 已由 Go helper / Go primary 路徑承接。
 
 ---
 
@@ -111,7 +95,7 @@ pytest tests/test_notes_crud.py -v
 cd frontend && npm run build
 
 # 資料庫一致性檢查（API）
-curl http://127.0.0.1:5000/api/system/check-consistency
+curl http://127.0.0.1:5004/api/system/check-consistency
 ```
 
 > ⚠️ **注意**：目前 (v2.4.1) 測試 fixture 仍走手寫 schema 而非真實 migration，
@@ -124,12 +108,12 @@ curl http://127.0.0.1:5000/api/system/check-consistency
 
 | 層 | 技術 |
 |---|---|
-| Backend | Python 3.10+ / Flask 3.0 / SQLite (FTS5, WAL) |
+| Backend | Go primary runtime / SQLite (FTS5, WAL) |
 | Frontend | React 18 / TypeScript / Vite 5 / Zustand / Tailwind CSS |
 | Search | SQLite FTS5（純關鍵字，無向量） |
-| Image | Go WebP thumbnail helper（Python runtime 不依賴 Pillow） |
-| Deploy | Source / Dev mode、Raspberry Pi (systemd + Caddy + avahi)；PyInstaller 為實驗性內部打包流程 |
-| Test | pytest（後端）/ Playwright（前端 E2E） |
+| Image | Go WebP thumbnail generation |
+| Deploy | Go primary artifact / Raspberry Pi (`prism-go-primary.service` + Caddy + avahi) |
+| Test | pytest（legacy Python/source regression + Go migration/static gates）/ Playwright（前端 E2E） |
 
 ---
 
@@ -137,10 +121,12 @@ curl http://127.0.0.1:5000/api/system/check-consistency
 
 ```
 Prism/
-├── app.py                    # Flask 入口、init_db、port 偵測、PyWebView
-├── config.py                 # 配置（DB 路徑、上傳限制、V2_MODE 切換）
-├── db.py                     # 統一資料庫連線層 (FK 強制驗證 + WAL)
-├── routes/                   # Blueprint 路由模組
+├── go-shadow/                # Go primary runtime source
+├── scripts/start_go_primary.ps1 # 本機 Go primary 啟動入口
+├── app.py                    # Legacy Python source until T046
+├── config.py                 # Legacy Python source context
+├── db.py                     # Legacy Python DB source context
+├── routes/                   # Legacy Flask route source until T046
 │   ├── notes/                # CRUD / actions / history / batch / import / export
 │   ├── attachments.py        # Phase 3.4 附件系統
 │   ├── upload.py             # 圖片上傳 + URL 下載 + AI metadata 提取
@@ -148,7 +134,7 @@ Prism/
 │   ├── server.py             # Phase 8.2 樹莓派 Server Dashboard
 │   ├── categories.py / tags.py / cleanup.py / export.py
 │   └── prompt_options.py / wizard_options.py
-├── migrations/               # 版本化遷移系統 (v1 → v15)
+├── migrations/               # Legacy Python migration source; Go owns runtime migration path
 ├── utils/
 │   └── query_builder.py      # NoteQueryBuilder + sanitize_fts_query
 ├── tests/                    # pytest 測試套件（執行 pytest --collect-only 列出，全綠以 test_run.log 為準）
@@ -158,7 +144,7 @@ Prism/
 │       ├── pages/            # HomePage / SettingsPage / PromptBuilder
 │       ├── stores/           # Zustand state
 │       └── services/api.ts   # 統一 API client + axios interceptor
-├── deploy/                   # 樹莓派一鍵部署腳本
+├── deploy/                   # 樹莓派 Go primary setup templates
 ├── docs/                     # 完整文件（含 docs/過期/：歷史審計報告 + 舊 demo UI）
 ├── garbage-can/              # 個人歸檔（V1 設計筆記、雜物） — 非開發必讀
 └── knowledge.db              # 你的所有資料 (SQLite, WAL)
@@ -168,7 +154,7 @@ Prism/
 
 ## 🔐 安全與隱私
 
-> ⚠️ **API 暴露邊界**：Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制。預設使用場景是 `localhost`、trusted LAN、VPN，或 SSH tunnel / 受認證保護的 reverse proxy（例如 Caddy auth）。不要把 Flask 或 Caddy 入口直接暴露到 public internet / 公網。
+> ⚠️ **API 暴露邊界**：Prism API / Go runtime 目前沒有內建 API Token / Bearer Token / 使用者認證機制。預設使用場景是 `localhost`、trusted LAN、VPN，或 SSH tunnel / 受認證保護的 reverse proxy（例如 Caddy auth）。不要把 Go runtime 或 Caddy 入口直接暴露到 public internet / 公網。
 
 - ✅ **CSRF 防護**：驗證 Origin / Referer
 - ✅ **路徑穿越防護**：圖片 API 三層防禦 (basename + `..` 過濾 + abspath prefix)

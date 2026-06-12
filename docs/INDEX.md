@@ -1,8 +1,8 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.4.9
-> **更新日期**: 2026-06-04
-> **專案狀態**: 🟢 穩定運行 — Headless KMS (AI 功能已於 v2.3.0 拔除)
+> **更新日期**: 2026-06-13
+> **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
 
@@ -45,7 +45,8 @@
 | [contracts/phase20-go-post-readonly-scope-assessment.json](./contracts/phase20-go-post-readonly-scope-assessment.json) | Phase 20.0 post-readonly Go scope assessment；plan-only 評估 read-only 之外候選、blockers、20.1 write surface inventory gate | ✅ 已建立 |
 | [contracts/phase20-go-write-surface-contract-inventory.json](./contracts/phase20-go-write-surface-contract-inventory.json) | Phase 20.1 write surface contract inventory；plan-only 盤點 Python-owned mutation/file/system/import/export/cleanup/config route classes、side effects、rollback 與 fixture requirements | ✅ 已建立 |
 | [../go-shadow/README.md](../go-shadow/README.md) | Phase 18.4 Go read-only shadow backend scaffold；啟動方式、scope、runtime safety 與 diff harness | ✅ 已建立 |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | 環境變數設定、Source / Dev mode、Raspberry Pi 部署流程；PyInstaller 僅作內部打包參考 | ✅ 仍適用 |
+| [contracts/go-primary-python-packaged-runtime-deletion.json](./contracts/go-primary-python-packaged-runtime-deletion.json) | T045 Python packaged runtime deletion；記錄 embedded Python/runtime scripts removal 與 T046 source boundary | ✅ 已建立 |
+| [DEPLOYMENT.md](./DEPLOYMENT.md) | Go primary runtime、本機 artifact、Raspberry Pi `prism-go-primary.service` 與 Caddy 部署流程 | ✅ 仍適用 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 本地開發環境建置、依賴安裝、PR 規範 | ✅ 仍適用 |
 
 ---
@@ -97,6 +98,6 @@
 | 規劃新功能 / 查進度 | `TODO.md` |
 | 前端改版 / UI rewrite | `FRONTEND-REDESIGN-PLAN.md` + `docs/New_UI/Prism Redesign - standalone.html` |
 | Go shadow backend / API contract lock | `contracts/phase18-readiness.md` + `contracts/api-readonly-manifest.json` + `Prism_Go_模組逐步重構計劃報告.md` + `API_REFERENCE.md` + `SCHEMA.md` |
-| Go runtime / packaging proof | `contracts/phase19-go-runtime-packaging.md` + `contracts/phase19-go-readonly-promotion-gate.json` + `contracts/phase19-go-read-routing-proof.json` + `contracts/phase19-go-cutover-readiness-audit.json` + `contracts/phase19-go-readonly-service-cutover-plan.json` + `contracts/phase19-go-readonly-soak-execution.json` + `contracts/phase19-go-readonly-long-soak-decision.json` + `contracts/phase19-go-reverse-proxy-service-cutover-plan.json` + `contracts/phase19-go-caddy-readonly-routing-drill.json` + `contracts/phase19-go-caddy-extended-readonly-soak.json` + `contracts/phase19-go-caddy-cutover-candidate-decision.json` + `contracts/phase19-go-permanent-caddy-readonly-cutover.json` + `contracts/phase19-go-post-permanent-caddy-stabilization.json` + `contracts/phase19-go-caddy-matcher-runbook-hardening.json` + `contracts/phase19-go-post-matcher-hardening-stabilization.json` + `contracts/phase20-go-post-readonly-scope-assessment.json` + `contracts/phase20-go-write-surface-contract-inventory.json` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |
+| Go runtime / packaging proof | `contracts/phase19-go-runtime-packaging.md` + `contracts/phase19-go-readonly-promotion-gate.json` + `contracts/phase19-go-read-routing-proof.json` + `contracts/phase19-go-cutover-readiness-audit.json` + `contracts/phase19-go-readonly-service-cutover-plan.json` + `contracts/phase19-go-readonly-soak-execution.json` + `contracts/phase19-go-readonly-long-soak-decision.json` + `contracts/phase19-go-reverse-proxy-service-cutover-plan.json` + `contracts/phase19-go-caddy-readonly-routing-drill.json` + `contracts/phase19-go-caddy-extended-readonly-soak.json` + `contracts/phase19-go-caddy-cutover-candidate-decision.json` + `contracts/phase19-go-permanent-caddy-readonly-cutover.json` + `contracts/phase19-go-post-permanent-caddy-stabilization.json` + `contracts/phase19-go-caddy-matcher-runbook-hardening.json` + `contracts/phase19-go-post-matcher-hardening-stabilization.json` + `contracts/phase20-go-post-readonly-scope-assessment.json` + `contracts/phase20-go-write-surface-contract-inventory.json` + `contracts/go-primary-python-packaged-runtime-deletion.json` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |
 | 首次部署 / 環境設定 | `DEPLOYMENT.md` + `CONTRIBUTING.md` |
 | 理解整體方向 | `Prism.md` |

@@ -1,3 +1,5 @@
+# Legacy Python source/dev/test only.
+# Go primary Pi live startup uses prism-go-primary.service and does not install this file.
 Flask==3.0.0
 python-magic
 requests==2.31.0

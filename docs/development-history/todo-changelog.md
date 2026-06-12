@@ -6,6 +6,7 @@
 
 | 版本 | 日期 | 內容 |
 |------|------|------|
+| **go-primary-t045** | 2026-06-13 | T045 Python packaged runtime deletion gate — 移除 tracked embedded `python/` runtime、portable/PyInstaller/startup scripts 與舊 Python deploy/package entrypoints；本機 start、Windows package、Pi setup/cutover 與 Vite dev proxy 改走 Go primary runtime / `prism-go-primary.service`。Python backend source 與 `requirements*.txt` 僅保留 legacy source/dev/test context，最終刪除或封存留給 T046。**收尾驗證**：`pytest tests/test_go_primary_t045_python_packaged_runtime_deletion.py -v` 5 passed；受影響回歸 16 passed；`powershell -ExecutionPolicy Bypass -File scripts/smoke_go_primary_package.ps1` passed；`pytest tests/ -v` 512 passed。 |
 | **frontend-ui** | 2026-05-29 | Appearance settings 簡化 — 移除 `Linear` / `Editorial` / `Studio` 美學方向 UI，舊 `prism.aestheticMode` 僅讀取相容並正規化為 Editorial baseline；新增 `背景色調`（`prism.backgroundScheme` + `data-bg`）五組 semantic background palette，每組支援深色/淺色；`data-accent` 僅控制 primary/accent/focus/tag/active 類狀態，中文摘要維持 normal font-style。**收尾驗證**：`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build` passed；Playwright fallback 驗證 Settings 不再出現美學方向/Linear/Editorial/Studio，切換背景色調與強調色後背景 tokens 不被 accent 覆蓋，mobile 無水平溢出。 |
 | **pi-deploy** | 2026-05-28 | 部署 Appearance controls follow-up 到 Raspberry Pi：同步 `frontend/dist` 與 `docs/TODO.md`，重啟 `prism.service` 後 live 驗證 `active`；`/api/test` status ok、`/api/server/version` v2.4.9 + V2 mode true、migration current/latest 15 且無 pending；首頁 HTML 指向 `assets/index-CKp_FqWr.css` / `assets/index-HYEMKfiU.js`，Pi dist CSS 內含 `data-accent`、`--prism-sidebar-width`、`--prism-corner-radius`。 |
 | **frontend-ui** | 2026-05-28 | Appearance controls fidelity follow-up — `Linear` / `Editorial` / `Studio` 保留各自 dark/light 整體 palette，`主色` 改為 `data-accent` 強調色覆蓋，避免美學方向吃掉主題色彩；補入 prototype 的邊角圓潤度與側邊欄寬度 slider，使用 `localStorage` + CSS variables 套用到卡片、按鈕、輸入框與桌面 sidebar。**收尾驗證**：`cd frontend && npx tsc --noEmit`、`cd frontend && npm run build`、`pytest tests/ -v` → 87 passed；Playwright 驗證 Studio/light 背景維持 `#ebe6d8`、主色切夕陽橙後 `--color-primary=#f97316`、圓角 `18px`、sidebar `288px` 實際生效且無 console error。 |
@@ -43,5 +44,5 @@
 | **v2.1.0** | 2026-03-15 | Phase 7.1/7.3 — check-update API + UpdateSection + init_db 移入 create_app |
 | **v1.5.1** | 2026-02-27 | Unsaved Changes Guard — 未儲存變更偵測與關閉攔截 |
 | **v1.5.0** | 2026-02-27 | 圖片管理增強 + 端口自選 — 批次操作、封面設定、WinError 10013 處理 |
-| **v0.5** | 2024-12-31 | Phase 0.5 — 拆分 NoteEditor/SettingsPage、Schema 淨化 |
-| **v0.1** | 2024-12-30 | Phase 0 — 架構淨化 (Kill Notes.type、AI_Tasks、QueryBuilder、V1 移植) |
+| **v0.5** | 2025-12-31 | Phase 0.5 — 拆分 NoteEditor/SettingsPage、Schema 淨化 |
+| **v0.1** | 2025-12-30 | Phase 0 — 架構淨化 (Kill Notes.type、AI_Tasks、QueryBuilder、V1 移植) |

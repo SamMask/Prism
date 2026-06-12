@@ -388,7 +388,18 @@ The active-roadmap T042-T044 gates moved Pi live/default ownership to Go primary
 
 The live ops script deploys `prism-go-primary.service` on `PI5Mask24`, binds it to `127.0.0.1:5004`, switches Caddy `https://prism.local` to the Go primary target with `X-Prism-Go-Primary: hit`, and runs the HTTP-only full workflow smoke over Caddy. The same script proves rollback to Python `prism.service` with `X-Prism-Python-Rollback: hit`, restores DB/files from the T042 backup set, then cuts back to Go primary and runs a bounded soak.
 
-Final T044 evidence: Go primary active/enabled, Python `prism.service` inactive, Caddy active, schema v16 migration status clean, 5 soak samples at 10-second intervals, no Go/Caddy error journal entries, and Go max RSS below the retained-Python baseline. This still does not delete Python packaged runtime/startup paths or Python backend source; that remains T045/T046.
+Final T044 evidence: Go primary active/enabled, Python `prism.service` inactive, Caddy active, schema v16 migration status clean, 5 soak samples at 10-second intervals, no Go/Caddy error journal entries, and Go max RSS below the retained-Python baseline.
+
+#### Python Packaged Runtime Deletion
+
+The active-roadmap T045 gate removes the Python packaged runtime/startup path after the T042-T044 live proof:
+
+- removed tracked embedded `python/`
+- removed portable Python launcher/packager and PyInstaller builder
+- replaced local start/install/package/deploy entrypoints with Go primary artifact paths
+- retained Python backend source and `requirements*.txt` only as legacy source/dev/test context until T046
+
+The machine-readable contract is `docs/contracts/go-primary-python-packaged-runtime-deletion.json`. T046 remains the source archival/deletion and final docs/API/release wording cleanup gate.
 
 ## Build Proof
 
@@ -436,3 +447,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t036_t038_static_security_workflow.py` locks the active-roadmap T036-T038 embedded SPA/static uploads serving, security no-mutation/public-bind boundary, full workflow E2E invariants, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t039_t041_package_staging.py` locks the active-roadmap T039-T041 Windows package smoke, linux/arm64 Pi staging smoke, staging unit/live-hash guard scripts, docs status, and non-live-cutover boundary.
 `tests/test_go_primary_t042_t044_live_cutover.py` locks the active-roadmap T042-T044 live Go primary cutover, rollback drill, soak evidence, script boundaries, docs status, and non-deletion boundary.
+`tests/test_go_primary_t045_python_packaged_runtime_deletion.py` locks the active-roadmap T045 embedded Python runtime deletion, Go primary product starter paths, legacy source retention, docs status, and T046 handoff boundary.

@@ -1,4 +1,4 @@
-> ⚠️ **本檔與 `AGENTS.md` 互為鏡像**：兩份內容必須完全一致（Claude Code 自動讀 `CLAUDE.md`，Codex / 其他外部 Agent 讀 `AGENTS.md`）。修改任一份必須同步另一份；發版前 Release Checklist 會比對 diff。
+> ⚠️ **`CLAUDE.md` / `AGENTS.md` 互為鏡像**：兩份內容必須完全一致（Claude Code 自動讀 `CLAUDE.md`，Codex / 其他外部 Agent 讀 `AGENTS.md`）。修改任一份必須同步另一份；發版前 Release Checklist 會比對 diff。
 
 # Prism 開發指引
 
@@ -7,7 +7,7 @@
 | 文件 | 內容 |
 |---|---|
 | `CLAUDE.md` / `AGENTS.md` | 開發規範（哲學 / 禁止事項 / 專案快查） — 雙份鏡像 |
-| `DEPLOY-PI.md` | 樹莓派更新流程（日常 tar+SSH sync、首次 venv 設定、常見問題） |
+| `DEPLOY-PI.md` | 樹莓派 Go primary 更新流程（artifact deploy、systemd、Caddy、rollback/soak） |
 | `docs/ARCHITECTURE.md` | 架構圖（C4 Container Diagram） |
 | `docs/SCHEMA.md` | 現行 DB 綱要（所有資料表欄位定義，改 DB 前必讀） |
 | `docs/TODO.md` | 原子化 active 待辦與近期更新摘要；完整完成項目 / Changelog 見 `docs/development-history/` |
@@ -36,34 +36,33 @@
 
 ```
 工作目錄：  D:/AI/Prism
-Python：    python (venv)
+Runtime：   scripts/start_go_primary.ps1（Go primary；Python 只保留 legacy/dev/test 到 T046）
 前端：      cd frontend && npm run dev
-後端：      python app.py
+建置：      scripts/build_go_runtime.ps1
 測試：      pytest tests/ -v
-建置前端：  cd frontend && npm run build
 資料庫：    knowledge.db (SQLite, WAL mode)
-設定：      config.py + .port_config
+設定：      Go external data-dir + config.py legacy source context
 ```
 
 ## 技術堆疊
 
 | 層 | 技術 |
 |---|---|
-| Backend | Python 3.10+ / Flask / SQLite (FTS5) |
+| Backend | Go primary runtime / SQLite (FTS5)；Python Flask source 僅 legacy/dev/test until T046 |
 | Frontend | React 18 / TypeScript / Vite / Zustand / Tailwind CSS |
 | Search | SQLite FTS5 + 關聯欄位 / 文字附件搜尋（純關鍵字，無 AI） |
-| Deploy | PyInstaller (exe) / Raspberry Pi (systemd + Caddy) |
+| Deploy | Go primary artifact / Raspberry Pi (`prism-go-primary.service` + Caddy) |
 
 ## 核心架構
 
 ```
-[Browser] → [React SPA (Vite)] → [Flask REST API] → [SQLite]
-                                                   → [File System (uploads/)]
+[Browser] → [React SPA (Vite)] → [Go Primary REST API] → [SQLite]
+                                                      → [File System (uploads/)]
 ```
 
-- **前後端分離**: Flask 為純 JSON API Server，React SPA 由 Vite 建置
-- **V2 模式**: 環境變數 `PRISM_V2=true` 啟用 React SPA，否則 fallback 到 V1 Jinja2 模板
-- **資料庫遷移**: `migrations/__init__.py` 版本化遷移，啟動時自動執行
+- **前後端分離**: Go primary 為 JSON API Server，React SPA 由 Vite 建置並嵌入 artifact
+- **Legacy Python**: Python Flask source 保留到 T046 作 source/deletion gate；不得再作產品啟動主路徑
+- **資料庫遷移**: Go runtime 已具備 v16 fresh/existing migration runner；Python migrations 僅保留 source parity context 到 T046
 
 ## 開發哲學
 

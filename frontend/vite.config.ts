@@ -13,23 +13,22 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Proxy API requests to Flask backend
+      // Proxy API requests to the Go primary backend.
       '/api': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5004',
         changeOrigin: true,
       },
       '/static': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5004',
         changeOrigin: true,
       },
-      // Proxy prompt-builder.html to Flask
+      // Proxy legacy static routes to the active backend.
       '/prompt-builder.html': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5004',
         changeOrigin: true,
       },
-      // Proxy all template-related paths
       '/templates': {
-        target: 'http://127.0.0.1:5000',
+        target: 'http://127.0.0.1:5004',
         changeOrigin: true,
       },
     },
