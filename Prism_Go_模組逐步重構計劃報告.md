@@ -19,14 +19,15 @@
 ### Final Target
 
 - **Local packaged run**: Prism should eventually have a clear local packaging path for Windows/dev machines: bundled React `dist`, Go runtime artifact, explicit config, external data dir, and repeatable local startup.
-- **Pi deployment unchanged**: Daily/real usage remains Raspberry Pi deployment with `prism.service`, Caddy, existing data dir, SQLite WAL mode, and the established backup/rollback discipline.
+- **Pi deployment updated**: Daily/real usage remains Raspberry Pi deployment with systemd, Caddy, existing data dir, SQLite WAL mode, and the established backup/rollback discipline; after T042-T044 the live/default service is `prism-go-primary.service`.
 - **Gradual ownership transfer**: Go takes ownership one surface at a time. Python remains the owner for every route class not explicitly promoted and verified.
 - **No implicit cutover**: A passing local build, single curl, or docs update never means Go owns a production surface.
 
 ### Current Runtime Truth
 
-- Go currently owns only the hardened permanent read-only Caddy-routed GET surface already verified in Phase 19-20: `/api/test`, `/api/categories`, `/api/tags`, `/api/notes`, and numeric `/api/notes/{id}`.
-- Python still owns writes, files/attachments, import/export, cleanup, system/server routes, migrations, frontend/static serving, and any unreviewed `/api/notes/...` path.
+- T042/T043/T044 now move Pi live/default ownership to Go primary. `PI5Mask24` runs `prism-go-primary.service` on `127.0.0.1:5004`; Caddy `https://prism.local` proxies to Go primary with `X-Prism-Go-Primary: hit`; Python `prism.service` is inactive and no longer receives Caddy traffic.
+- Python packaged runtime and backend source are still present as rollback/deletion targets. Python packaged runtime deletion remains T045; source/docs final removal or archival remains T046.
+- The T008-T041 entries below are provenance for the gates that made T042-T044 safe. Their old "local/copied candidate" or "not live owner" caveats were true at those gates; for Pi live/default ownership they are superseded by the T042-T044 evidence above.
 - Active roadmap T008-T010 now gives Go a local/copied-DB schema lifecycle proof: fresh init, existing DB migration v1-v16, `Schema_Meta` updates, backup-before-migrate, and failed rollback. Normal/live production migrations still remain Python-owned until a separate cutover gate.
 - Active roadmap T011/T012 now gives Go local/copied-DB notes read/search/create/update parity. `GET /api/notes?q=...` matches Python tokenized `Notes_FTS`, remarks, tags, attachment metadata, bounded text attachment body search, filters, and pagination; `POST /api/notes` / `PUT /api/notes/{id}` remain explicit `--enable-notes-write` local candidates only.
 - Active roadmap T013 now gives Go local/copied-DB-and-data notes delete parity. `DELETE /api/notes/{id}` and `POST /api/notes/batch/delete` remain explicit `--enable-notes-write` candidates and match Python response, DB/FTS/association deletion, referenced image preservation, original + `_thumb.webp` companion cleanup, and `_thumb.webp` reference cleanup of original candidates.
@@ -39,8 +40,8 @@
 - Active roadmap T028-T031 now gives Go local/copied-DB-and-data import/export parity. Markdown/JSON import and JSON/Markdown/DB/images/batch export remain explicit `--enable-import-export`; this write-mode candidate may update copied Notes/Tags/Source_Urls/Note_Attachments and copied uploads/attachments files.
 - Active roadmap T032-T035 now gives Go local/copied-DB-and-data server/system/config parity. Server status/hardware/logs, backup management, port/startup config, safe restart acknowledgement, prompt options, and wizard options remain explicit `--enable-server-system`; this candidate may maintain copied DBs and write copied backups/config files under `PRISM_GO_DATA_DIR`.
 - Active roadmap T036/T037/T038 now gives Go local/copied-DB-and-data embedded SPA/static uploads serving, security boundary, and full workflow proof. Go can serve `/`, client routes, and `/static/uploads/<file>` from `PRISM_GO_DATA_DIR`, keeps unknown `/api/*` as JSON 404, refuses public bind by default, reports no built-in auth/token layer, and passes a Python-vs-Go full workflow invariant fixture covering create/upload/search/export/import/delete/cleanup/backup/migration.
-- Active roadmap T039/T040/T041 now gives Go package and Pi staging proof. Windows package smoke runs the built Go artifact against a fresh Go-created DB with no Python/venv/Flask/PyInstaller runtime dependency, and linux/arm64 package smoke runs on `PI5Mask24` as `prism-go-primary-staging.service` against copied production DB/uploads/attachments on `127.0.0.1:5003`.
-- This does not mean live/default notes, taxonomy, files, uploads, cleanup, import/export, server/system, static serving, security boundary, or full Go-primary ownership has changed. This update did not switch live Caddy/default routing, stop Python `prism.service`, mutate live `knowledge.db`, remove Python, run rollback/soak, or expand public exposure.
+- Active roadmap T039/T040/T041 gives Go package and Pi staging proof. Windows package smoke runs the built Go artifact against a fresh Go-created DB with no Python/venv/Flask/PyInstaller runtime dependency, and linux/arm64 package smoke runs on `PI5Mask24` as `prism-go-primary-staging.service` against copied production DB/uploads/attachments on `127.0.0.1:5003`.
+- Active roadmap T042/T043/T044 gives live cutover, rollback, and soak proof. T042 created DB/files/Caddy/systemd backups, switched Caddy to Go primary, and ran live full workflow smoke. T043 restored DB/files from backup and proved Python rollback route. T044 cut back to Go primary, restored smoke mutations from backup, and ran 5 soak samples with no Go/Caddy error logs and Go max RSS below the retained-Python baseline. This does not delete Python packaged runtime/source or expand public exposure.
 
 ### Roadmap Big Items
 
@@ -58,7 +59,7 @@
 
 ### Active Next Gate
 
-`2026-06-13 active roadmap update`: T039/T040/T041 close the package/staging proof. Go package smoke now uses a shared HTTP-only full workflow harness; Windows package proof uses a fresh Go-created DB under `build/go-primary-package-smoke/windows/`; linux/arm64 proof runs on Pi via `prism-go-primary-staging.service` with copied production DB/data and live DB/Caddyfile hash guards. This update still does not switch live/default Caddy ownership, stop Python `prism.service`, mutate production DB/files, run rollback/soak, remove Python, or expand public exposure. The next active queue item is T042 live Go primary cutover.
+`2026-06-13 active roadmap update`: T042/T043/T044 close live Go primary cutover, rollback, and soak. Go package smoke still uses the shared HTTP-only full workflow harness; live Pi now runs `prism-go-primary.service` behind Caddy, rollback to Python was proven from the T042 backup set, and final state is Go primary active/enabled with Python `prism.service` inactive. This update still does not delete Python packaged runtime/source or expand public exposure. The next active queue item is T045 Python packaged runtime dependency and startup-path deletion.
 
 `23.1 Go file-read parity plan gate is complete`.
 

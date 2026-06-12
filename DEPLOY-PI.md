@@ -212,7 +212,46 @@ ssh PI5Mask24 "sudo systemctl status prism-go-primary-staging.service --no-pager
 ssh PI5Mask24 "curl -fsS http://127.0.0.1:5003/healthz | python3 -m json.tool | head -40"
 ```
 
-T041 通過後仍不得把 Go 寫成 live/default owner；正式切換必須走 T042，並先做 backup、Caddy/systemd switch 驗證與 rollback 準備。
+T041 只代表 staging proof；T042-T044 已另行完成 live Go primary cutover、rollback drill 與 soak。日常 live/default owner 現在是 `prism-go-primary.service`。
+
+---
+
+## Go primary live（T042-T044）
+
+T042-T044 使用 `scripts/go_primary_pi_live_ops.ps1` 執行 live cutover、rollback drill、再切回 Go primary 並做 bounded soak。此流程會建立 DB / uploads / attachments / Caddy / systemd backup，Caddy `https://prism.local` 會全量 proxy 到 `127.0.0.1:5004`，並用 `X-Prism-Go-Primary: hit` 作 route evidence。
+
+```powershell
+# 完整 cutover -> rollback -> cutover/soak
+powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode All
+
+# 已建置 artifact 時，可只重跑 rollback 或 soak
+powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Rollback -SkipBuild
+powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Soak -SkipBuild
+```
+
+目前 final live state：
+
+- `prism-go-primary.service`: active/enabled，監聽 `127.0.0.1:5004`
+- `prism.service`: inactive，保留為 T045 前的 rollback/deletion target
+- Caddy `https://prism.local`: proxy 到 Go primary，回應帶 `X-Prism-Go-Primary: hit`
+- `PRISM_GO_ALLOW_PUBLIC_BIND` 未啟用；Prism 仍只能放在 trusted LAN/VPN/proxy-auth 邊界內
+- Python packaged runtime 尚未刪除；刪除啟動路徑必須走 T045
+
+證據會回收到本機：
+
+- `build/go-primary-live/pi/evidence.json`
+- `build/go-primary-live/pi/t042-full-workflow.json`
+- `build/go-primary-live/pi/t043-rollback.json`
+- `build/go-primary-live/pi/t044-soak.json`
+
+常用 live 驗證：
+
+```bash
+ssh PI5Mask24 "systemctl is-active prism-go-primary.service && systemctl is-active prism.service || true"
+ssh PI5Mask24 "curl -skI https://prism.local/api/server/version | tr -d '\r' | grep -Ei 'HTTP|x-prism'"
+ssh PI5Mask24 "curl -sk https://prism.local/api/system/migration-status"
+ssh PI5Mask24 "sudo journalctl -u prism-go-primary.service -n 80 --no-pager"
+```
 
 ---
 
@@ -220,7 +259,7 @@ T041 通過後仍不得把 Go 寫成 live/default owner；正式切換必須走 
 
 ```bash
 # 確認服務正常、port 正確
-ssh PI5Mask24 "sudo systemctl status prism --no-pager | grep -E 'Active|Port'"
+ssh PI5Mask24 "sudo systemctl status prism-go-primary.service --no-pager | grep -E 'Active|Main PID'"
 
 # 確認 API 回應（需通過 Caddy HTTPS）
 ssh PI5Mask24 "curl -sk https://prism.local/api/system/stats | python3 -c 'import sys,json; d=json.load(sys.stdin); print(\"notes:\", d[\"data\"][\"database\"][\"notes_count\"])'"
@@ -247,13 +286,13 @@ ssh PI5Mask24 "curl -sk https://prism.local/api/system/stats | python3 -c 'impor
 
 ```bash
 # 查看即時日誌
-ssh PI5Mask24 "sudo journalctl -u prism -f"
+ssh PI5Mask24 "sudo journalctl -u prism-go-primary.service -f"
 
 # 重啟服務
-ssh PI5Mask24 "sudo systemctl restart prism"
+ssh PI5Mask24 "sudo systemctl restart prism-go-primary.service"
 
 # 查看 port 使用狀況
-ssh PI5Mask24 "sudo ss -tlnp | grep -E '5000|5001|5002'"
+ssh PI5Mask24 "sudo ss -tlnp | grep -E '5000|5001|5002|5003|5004'"
 
 # 查看 Caddy 狀態
 ssh PI5Mask24 "sudo systemctl status caddy --no-pager"

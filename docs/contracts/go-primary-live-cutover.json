@@ -1,0 +1,81 @@
+{
+  "task_id": "T042",
+  "title": "Pi live Go primary cutover",
+  "status": "completed_live_cutover",
+  "completed_date": "2026-06-13",
+  "script": "scripts/go_primary_pi_live_ops.ps1",
+  "evidence_file": "build/go-primary-live/pi/evidence.json",
+  "execution_target": {
+    "host_alias": "PI5Mask24",
+    "service": "prism-go-primary.service",
+    "addr": "127.0.0.1:5004",
+    "base_url": "https://prism.local",
+    "remote_live": "/home/mask070924/prism/go-primary-live"
+  },
+  "artifact": {
+    "path": "build/go-runtime/prism-go-runtime-linux-arm64",
+    "sha256": "ee025cfa1651264f5b61e22f60b4d198399a250055789b37003e9af438c78c4f"
+  },
+  "cutover": {
+    "backup_dir": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141",
+    "db_backup": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141/knowledge.db",
+    "data_backup": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141/data-files.tar.gz",
+    "caddy_backup": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141/Caddyfile.bak",
+    "systemd_backup": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141/prism.service.bak",
+    "caddy_route_header": "X-Prism-Go-Primary: hit",
+    "python_service_after_switch": "inactive",
+    "go_primary_after_switch": "active",
+    "caddy_after_switch": "active"
+  },
+  "full_workflow_smoke": {
+    "harness": "scripts/go_primary_full_workflow_smoke.py",
+    "base_url": "https://prism.local",
+    "status": "passed",
+    "evidence": "build/go-primary-live/pi/t042-full-workflow.json",
+    "covered": [
+      "healthz",
+      "create note",
+      "upload image",
+      "serve uploaded image",
+      "update note with upload reference",
+      "search updated note",
+      "export JSON",
+      "import JSON",
+      "delete workflow note",
+      "upload orphan image",
+      "scan/delete orphan image",
+      "download/delete smoke backup",
+      "migration status"
+    ],
+    "migration_current_version": 16,
+    "migration_pending": []
+  },
+  "post_cutover_state": {
+    "go_primary": "active",
+    "python_prism": "inactive",
+    "caddy": "active",
+    "public_bind": false,
+    "python_service_receives_caddy_traffic": false
+  },
+  "not_completed_by_t042": [
+    "Rollback drill",
+    "Soak window",
+    "Python runtime deletion",
+    "Public internet exposure expansion"
+  ],
+  "verification": {
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode All",
+      "ssh PI5Mask24 \"curl -skI https://prism.local/api/server/version\""
+    ],
+    "evidence": [
+      "build/go-primary-live/pi/t042-cutover.json",
+      "build/go-primary-live/pi/t042-full-workflow.json",
+      "build/go-primary-live/pi/t042-post-smoke.json"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T043",
+    "reason": "Live Go primary cutover is only safe to keep after rollback has been proven from the same backup set."
+  }
+}

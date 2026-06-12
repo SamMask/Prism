@@ -378,6 +378,18 @@ The active-roadmap T039-T041 gates close package and staging proof without chang
 
 `scripts/stage_go_primary_pi.ps1` copies `build/go-runtime/prism-go-runtime-linux-arm64` to `PI5Mask24:/home/mask070924/prism/go-primary-staging/`, installs/restarts only `prism-go-primary-staging.service`, binds it to `127.0.0.1:5003`, copies production `knowledge.db`, `static/uploads`, and `docs/attachments` into the staging data dir, runs the same full workflow smoke, and verifies live DB plus Caddyfile SHA256 remain unchanged. This is not a Caddy/default cutover, rollback drill, soak window, Python service stop, or Python removal.
 
+#### Live Go Primary Cutover, Rollback, and Soak
+
+The active-roadmap T042-T044 gates moved Pi live/default ownership to Go primary:
+
+```powershell
+.\scripts\go_primary_pi_live_ops.ps1 -Mode All
+```
+
+The live ops script deploys `prism-go-primary.service` on `PI5Mask24`, binds it to `127.0.0.1:5004`, switches Caddy `https://prism.local` to the Go primary target with `X-Prism-Go-Primary: hit`, and runs the HTTP-only full workflow smoke over Caddy. The same script proves rollback to Python `prism.service` with `X-Prism-Python-Rollback: hit`, restores DB/files from the T042 backup set, then cuts back to Go primary and runs a bounded soak.
+
+Final T044 evidence: Go primary active/enabled, Python `prism.service` inactive, Caddy active, schema v16 migration status clean, 5 soak samples at 10-second intervals, no Go/Caddy error journal entries, and Go max RSS below the retained-Python baseline. This still does not delete Python packaged runtime/startup paths or Python backend source; that remains T045/T046.
+
 ## Build Proof
 
 ```powershell
@@ -423,3 +435,4 @@ The pytest diff harness in `tests/test_phase18_go_shadow_contract.py` starts thi
 `tests/test_go_primary_t032_t035_server_system.py` locks the active-roadmap T032-T035 server status, backup management, port/startup config, prompt/wizard options fixtures, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t036_t038_static_security_workflow.py` locks the active-roadmap T036-T038 embedded SPA/static uploads serving, security no-mutation/public-bind boundary, full workflow E2E invariants, docs status, and non-live-promotion boundary.
 `tests/test_go_primary_t039_t041_package_staging.py` locks the active-roadmap T039-T041 Windows package smoke, linux/arm64 Pi staging smoke, staging unit/live-hash guard scripts, docs status, and non-live-cutover boundary.
+`tests/test_go_primary_t042_t044_live_cutover.py` locks the active-roadmap T042-T044 live Go primary cutover, rollback drill, soak evidence, script boundaries, docs status, and non-deletion boundary.

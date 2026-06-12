@@ -126,7 +126,7 @@ def test_pi_staging_script_writes_only_staging_unit_and_hash_guards_live_assets(
     assert "caddy reload" not in script.lower()
 
 
-def test_t039_t040_t041_docs_are_current_and_keep_t042_as_next_gate():
+def test_t039_t040_t041_docs_are_current_and_hand_off_to_completed_cutover_gate():
     todo = TODO_PATH.read_text(encoding="utf-8")
     architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
@@ -146,4 +146,6 @@ def test_t039_t040_t041_docs_are_current_and_keep_t042_as_next_gate():
     assert "T039/T040/T041" in go_report
     assert "T042" in todo
     t042_row = next(line for line in todo.splitlines() if line.startswith("| T042 "))
-    assert t042_row.endswith("| Todo |")
+    assert t042_row.endswith("| Done |")
+    t045_row = next(line for line in todo.splitlines() if line.startswith("| T045 "))
+    assert t045_row.endswith("| Todo |")

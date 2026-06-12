@@ -1,0 +1,64 @@
+{
+  "task_id": "T043",
+  "title": "Rollback drill from Go primary to retained Python runtime",
+  "status": "completed_rollback_drill",
+  "completed_date": "2026-06-13",
+  "script": "scripts/go_primary_pi_live_ops.ps1",
+  "evidence_file": "build/go-primary-live/pi/t043-rollback.json",
+  "source_cutover_task_id": "T042",
+  "rollback_target": {
+    "service": "prism.service",
+    "caddy_target": "localhost:5000",
+    "caddy_header": "X-Prism-Python-Rollback: hit"
+  },
+  "restore_evidence": {
+    "db_backup": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141/knowledge.db",
+    "db_sha256_after_restore": "f2bc5aa95c8006d0857188dfde75c10be68d5ac40baef11edc87bf49d1f45562",
+    "backup_db_sha256": "f2bc5aa95c8006d0857188dfde75c10be68d5ac40baef11edc87bf49d1f45562",
+    "db_matches_backup": true,
+    "data_backup": "/home/mask070924/prism/backups/go-primary-t042-20260613_031141/data-files.tar.gz",
+    "data_sha256_after_restore": "3b6375cd27883ca7c98c6e5fd0150559dd2bd5bb154e9defa8faa54f999e495b",
+    "data_matches_pre_cutover": true,
+    "note": "SQLite online backup produces a clean rollback DB whose file hash is compared to the backup artifact, not to the live DB file hash captured before backup."
+  },
+  "python_live_smoke": {
+    "harness": "scripts/python_live_workflow_smoke.py",
+    "base_url": "https://prism.local",
+    "status": "passed",
+    "evidence": "build/go-primary-live/pi/t043-python-workflow.json",
+    "covered": [
+      "system stats",
+      "server version",
+      "create note",
+      "upload image",
+      "serve uploaded image",
+      "update note",
+      "search note",
+      "export JSON",
+      "download/delete smoke backup",
+      "migration status",
+      "delete note"
+    ],
+    "migration_current_version": 16,
+    "migration_pending": []
+  },
+  "post_rollback_state": {
+    "go_primary": "inactive",
+    "python_prism": "active",
+    "caddy": "active",
+    "python_rss_kb": 44688
+  },
+  "verification": {
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Rollback -SkipBuild"
+    ],
+    "evidence": [
+      "build/go-primary-live/pi/t043-python-workflow.json",
+      "build/go-primary-live/pi/t043-rollback.json"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T044",
+    "reason": "Rollback is proven; the next gate is a bounded Go primary soak before any Python packaged runtime deletion."
+  }
+}

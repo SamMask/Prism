@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""HTTP-only Go primary full workflow smoke.
+"""HTTP-only live smoke for the retained Python runtime.
 
-This script intentionally imports only Python standard-library modules and never
-imports Prism Flask code. Python is the smoke harness; the runtime under test is
-the already-built Go binary listening at --base-url.
+The script talks to the deployed Prism HTTP surface only. It does not import
+Flask app code, so it can verify a Caddy/systemd rollback from Go primary back
+to the Python service.
 """
 
 from __future__ import annotations
@@ -35,6 +35,8 @@ def request_bytes(base_url, path, method="GET", data=None, headers=None, timeout
     if isinstance(data, dict):
         body = json.dumps(data).encode("utf-8")
         request_headers["Content-Type"] = "application/json"
+    if method in {"POST", "PUT", "DELETE", "PATCH"}:
+        request_headers.setdefault("Origin", base_url.rstrip("/"))
     request = urllib.request.Request(
         base_url.rstrip("/") + path,
         data=body,
@@ -61,7 +63,7 @@ def request_json(base_url, path, method="GET", data=None, timeout=20, context=No
 
 
 def request_multipart(base_url, path, files, fields=None, timeout=30, context=None):
-    boundary = f"----prism-go-primary-smoke-{time.time_ns()}"
+    boundary = f"----prism-python-live-smoke-{time.time_ns()}"
     body = io.BytesIO()
     for name, value in (fields or {}).items():
         body.write(f"--{boundary}\r\n".encode("ascii"))
@@ -84,7 +86,7 @@ def request_multipart(base_url, path, files, fields=None, timeout=30, context=No
         path,
         method="POST",
         data=body.getvalue(),
-        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}", "Origin": base_url.rstrip("/")},
         timeout=timeout,
         context=context,
     )
@@ -94,14 +96,7 @@ def request_multipart(base_url, path, files, fields=None, timeout=30, context=No
 
 def assert_status(step, status, expected, payload=None):
     if status != expected:
-        preview = payload
-        if isinstance(preview, bytes):
-            preview = preview[:200]
-        raise SmokeError(f"{step} expected HTTP {expected}, got {status}: {preview!r}")
-
-
-def filename_from_upload_url(upload_url):
-    return upload_url.rstrip("/").split("/")[-1]
+        raise SmokeError(f"{step} expected HTTP {expected}, got {status}: {payload!r}")
 
 
 def search_matches(base_url, token, context=None):
@@ -120,59 +115,51 @@ def filename_from_content_disposition(value):
     return None
 
 
-def run_smoke(base_url, label, insecure=False):
+def run_smoke(base_url, label, expected_header=None, forbidden_header=None, insecure=False):
     context = ssl._create_unverified_context() if insecure else None
     stamp = str(time.time_ns())
-    workflow_token = f"{label}-workflow-{stamp}"
-    import_token = f"{label}-imported-{stamp}"
+    token = f"{label}-python-rollback-{stamp}"
     evidence = {
         "status": "running",
         "label": label,
         "base_url": base_url,
         "workflow": [
-            "healthz",
+            "system stats",
+            "server version",
             "create note",
             "upload image",
             "serve uploaded image",
-            "update note with upload reference",
-            "search updated note",
+            "update note",
+            "search note",
             "export JSON",
-            "import JSON",
-            "delete workflow note",
-            "upload orphan image",
-            "scan/delete orphan image",
             "download backup",
-            "check migration status",
+            "delete smoke backup",
+            "migration status",
+            "delete note",
         ],
     }
 
-    status, health, _ = request_json(base_url, "/healthz", context=context)
-    assert_status("healthz", status, 200, health)
-    api_surface = health.get("runtime", {}).get("api_surface", "")
-    for marker in (
-        "local-notes-write",
-        "local-upload-write",
-        "local-thumbnail-write",
-        "local-upload-url-write",
-        "local-upload-delete",
-        "local-media-cleanup",
-        "local-import-export",
-        "local-server-system",
-    ):
-        if marker not in api_surface:
-            raise SmokeError(f"/healthz api_surface missing {marker}: {api_surface}")
-    evidence["healthz"] = {
-        "api_surface": api_surface,
-        "auth": health.get("runtime", {}).get("security", {}).get("auth"),
-        "sqlite_query_only": health.get("runtime", {}).get("sqlite_query_only"),
-    }
+    status, stats, headers = request_json(base_url, "/api/system/stats", context=context)
+    assert_status("system stats", status, 200, stats)
+    if expected_header:
+        name, expected = expected_header.split("=", 1)
+        actual = headers.get(name) or headers.get(name.lower()) or headers.get(name.title())
+        if actual != expected:
+            raise SmokeError(f"expected response header {name}={expected}, got {actual!r}")
+    if forbidden_header:
+        lowered = {key.lower() for key in headers}
+        if forbidden_header.lower() in lowered:
+            raise SmokeError(f"forbidden response header present: {forbidden_header}")
+
+    status, version, _ = request_json(base_url, "/api/server/version", context=context)
+    assert_status("server version", status, 200, version)
 
     create_payload = {
-        "title": f"{label} workflow",
-        "content": f"{workflow_token} initial content",
-        "tags": [f"{label}-go-primary"],
+        "title": f"{label} python rollback smoke",
+        "content": f"{token} initial content",
+        "tags": [f"{label}-python-rollback"],
         "urls": [f"https://example.test/{label}/{stamp}"],
-        "remarks": "go primary package smoke",
+        "remarks": "python rollback smoke",
     }
     status, created, _ = request_json(base_url, "/api/notes", method="POST", data=create_payload, context=context)
     assert_status("create note", status, 201, created)
@@ -181,27 +168,28 @@ def run_smoke(base_url, label, insecure=False):
     status, upload, _ = request_multipart(
         base_url,
         "/api/upload",
-        [("file", f"{label}-workflow.png", PNG_1X1, "image/png")],
+        [("file", f"{label}-python-rollback.png", PNG_1X1, "image/png")],
         {"thumbnail_only": "false"},
         context=context,
     )
     assert_status("upload image", status, 200, upload)
     image_url = upload["data"]["url"]
-    status, headers, image_body = request_bytes(base_url, image_url, context=context)
+
+    status, _, image_body = request_bytes(base_url, image_url, context=context)
     assert_status("serve uploaded image", status, 200, image_body)
     if image_body != PNG_1X1:
         raise SmokeError("served uploaded image bytes differ from uploaded PNG")
 
     update_payload = {
-        "title": f"{label} workflow updated",
-        "content": f"{workflow_token} updated image {image_url}",
+        "title": f"{label} python rollback smoke updated",
+        "content": f"{token} updated image {image_url}",
         "cover_image": image_url,
-        "tags": [f"{label}-go-primary-updated"],
+        "tags": [f"{label}-python-rollback-updated"],
         "urls": [f"https://example.test/{label}/{stamp}/updated"],
     }
     status, updated, _ = request_json(base_url, f"/api/notes/{note_id}", method="PUT", data=update_payload, context=context)
     assert_status("update note", status, 200, updated)
-    if not any(item.get("id") == note_id for item in search_matches(base_url, workflow_token, context=context)):
+    if not any(item.get("id") == note_id for item in search_matches(base_url, token, context=context)):
         raise SmokeError("updated note was not searchable by workflow token")
 
     status, _, export_body = request_bytes(base_url, "/api/export/json", context=context)
@@ -210,79 +198,11 @@ def run_smoke(base_url, label, insecure=False):
     if not any(note.get("id") == note_id for note in exported.get("notes", [])):
         raise SmokeError("export JSON did not contain the workflow note")
 
-    import_payload = {
-        "mode": "duplicate",
-        "data": {
-            "notes": [
-                {
-                    "id": 93941,
-                    "title": f"{label} imported",
-                    "content": import_token,
-                    "category": "smoke",
-                    "tags": [f"{label}-imported"],
-                    "urls": [f"https://example.test/{label}/{stamp}/imported"],
-                }
-            ],
-            "tags": [{"name": f"{label}-imported"}],
-        },
-    }
-    status, imported, _ = request_json(base_url, "/api/import/json", method="POST", data=import_payload, context=context)
-    assert_status("import JSON", status, 200, imported)
-    if imported["data"]["imported"] != 1:
-        raise SmokeError(f"import JSON imported unexpected count: {imported!r}")
-    imported_matches = search_matches(base_url, import_token, context=context)
-    if not imported_matches:
-        raise SmokeError("imported note was not searchable by import token")
-
-    for imported_note in imported_matches:
-        imported_id = imported_note.get("id")
-        if imported_id:
-            status, imported_deleted, _ = request_json(
-                base_url,
-                f"/api/notes/{imported_id}",
-                method="DELETE",
-                context=context,
-            )
-            assert_status("delete imported smoke note", status, 200, imported_deleted)
-    if search_matches(base_url, import_token, context=context):
-        raise SmokeError("imported smoke note remained searchable after cleanup")
-
-    status, deleted, _ = request_json(base_url, f"/api/notes/{note_id}", method="DELETE", context=context)
-    assert_status("delete workflow note", status, 200, deleted)
-    if any(item.get("id") == note_id for item in search_matches(base_url, workflow_token, context=context)):
-        raise SmokeError("deleted workflow note remained searchable")
-
-    status, orphan_upload, _ = request_multipart(
-        base_url,
-        "/api/upload",
-        [("file", f"{label}-orphan.png", PNG_1X1, "image/png")],
-        {"thumbnail_only": "false"},
-        context=context,
-    )
-    assert_status("upload orphan image", status, 200, orphan_upload)
-    orphan_url = orphan_upload["data"]["url"]
-    orphan_filename = filename_from_upload_url(orphan_url)
-    status, orphans, _ = request_json(base_url, "/api/cleanup/orphan-images", context=context)
-    assert_status("scan orphan images", status, 200, orphans)
-    orphan_names = {item["filename"] for item in orphans["data"]["orphan_images"]}
-    if orphan_filename not in orphan_names:
-        raise SmokeError(f"uploaded orphan {orphan_filename} was not reported in orphan scan")
-    status, cleanup, _ = request_json(
-        base_url,
-        "/api/cleanup/orphan-images",
-        method="DELETE",
-        data={"filenames": [orphan_filename]},
-        context=context,
-    )
-    assert_status("delete orphan image", status, 200, cleanup)
-    if orphan_filename not in cleanup["data"]["deleted"]:
-        raise SmokeError(f"uploaded orphan {orphan_filename} was not deleted: {cleanup!r}")
-
-    status, headers, backup_body = request_bytes(base_url, "/api/server/backup/download", timeout=60, context=context)
+    status, backup_headers, backup_body = request_bytes(base_url, "/api/server/backup/download", timeout=60, context=context)
     assert_status("download backup", status, 200, backup_body)
     if not backup_body.startswith(b"SQLite format 3"):
         raise SmokeError("backup download is not a SQLite database")
-    backup_filename = filename_from_content_disposition(headers.get("Content-Disposition"))
+    backup_filename = filename_from_content_disposition(backup_headers.get("Content-Disposition"))
     backup_deleted = False
     if backup_filename:
         status, backup_delete, _ = request_json(
@@ -300,21 +220,25 @@ def run_smoke(base_url, label, insecure=False):
     if migration_data["current_version"] != migration_data["latest_version"] or migration_data["pending"] != []:
         raise SmokeError(f"migration status is not clean: {migration_data!r}")
 
+    status, deleted, _ = request_json(base_url, f"/api/notes/{note_id}", method="DELETE", context=context)
+    assert_status("delete workflow note", status, 200, deleted)
+    if any(item.get("id") == note_id for item in search_matches(base_url, token, context=context)):
+        raise SmokeError("deleted workflow note remained searchable")
+
     evidence.update(
         {
             "status": "passed",
             "note_id": note_id,
-            "workflow_token": workflow_token,
-            "import_token": import_token,
+            "workflow_token": token,
             "upload_url": image_url,
-            "orphan_filename": orphan_filename,
             "backup": {
-                "content_type": headers.get("Content-Type"),
+                "content_type": backup_headers.get("Content-Type"),
                 "filename": backup_filename,
                 "deleted_after_download": backup_deleted,
                 "starts_with_sqlite_header": True,
             },
             "migration": migration_data,
+            "server_version": version.get("data") if isinstance(version, dict) else version,
         }
     )
     return evidence
@@ -323,16 +247,24 @@ def run_smoke(base_url, label, insecure=False):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-url", required=True)
-    parser.add_argument("--label", default="go-primary-smoke")
+    parser.add_argument("--label", default="python-live-smoke")
     parser.add_argument("--evidence-out", required=True)
+    parser.add_argument("--expected-header")
+    parser.add_argument("--forbidden-header")
     parser.add_argument("--insecure", action="store_true", help="skip TLS verification for Caddy internal certificates")
     args = parser.parse_args()
 
-    evidence = run_smoke(args.base_url, args.label, insecure=args.insecure)
+    evidence = run_smoke(
+        args.base_url,
+        args.label,
+        expected_header=args.expected_header,
+        forbidden_header=args.forbidden_header,
+        insecure=args.insecure,
+    )
     out_path = Path(args.evidence_out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(evidence, indent=2, sort_keys=True), encoding="utf-8")
-    print(f"Go primary full workflow smoke passed. Evidence: {out_path}")
+    print(f"Python live workflow smoke passed. Evidence: {out_path}")
 
 
 if __name__ == "__main__":

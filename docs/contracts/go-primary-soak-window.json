@@ -1,0 +1,66 @@
+{
+  "task_id": "T044",
+  "title": "Go primary soak window",
+  "status": "completed_soak_window",
+  "completed_date": "2026-06-13",
+  "script": "scripts/go_primary_pi_live_ops.ps1",
+  "evidence_file": "build/go-primary-live/pi/t044-soak.json",
+  "execution_target": {
+    "host_alias": "PI5Mask24",
+    "service": "prism-go-primary.service",
+    "addr": "127.0.0.1:5004",
+    "base_url": "https://prism.local",
+    "caddy_header": "X-Prism-Go-Primary: hit"
+  },
+  "pre_soak": {
+    "full_workflow_smoke": "passed",
+    "smoke_mutation_restored_from_backup": true,
+    "evidence": [
+      "build/go-primary-live/pi/t044-cutover.json",
+      "build/go-primary-live/pi/t044-full-workflow.json",
+      "build/go-primary-live/pi/t044-post-smoke.json"
+    ]
+  },
+  "soak": {
+    "samples": 5,
+    "interval_seconds": 10,
+    "start": "2026-06-13T03:18:00+08:00",
+    "go_primary_errors_since_start": [],
+    "caddy_errors_since_start": [],
+    "retained_python_baseline_rss_kb": 44688,
+    "go_primary_max_rss_kb": 19584,
+    "memory_not_higher_than_retained_python_baseline": true,
+    "sample_evidence": "build/go-primary-live/pi/t044-soak-samples.jsonl"
+  },
+  "final_live_state": {
+    "go_primary": "active",
+    "go_primary_enabled": true,
+    "python_prism": "inactive",
+    "caddy": "active",
+    "migration_current_version": 16,
+    "migration_pending": [],
+    "public_bind": false,
+    "python_service_receives_caddy_traffic": false
+  },
+  "not_completed_by_t044": [
+    "Python packaged runtime deletion",
+    "Python backend source deletion",
+    "Public internet exposure expansion"
+  ],
+  "verification": {
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Soak -SkipBuild",
+      "ssh PI5Mask24 \"systemctl is-active prism-go-primary.service && systemctl is-active prism.service || true\""
+    ],
+    "evidence": [
+      "build/go-primary-live/pi/t044-full-workflow.json",
+      "build/go-primary-live/pi/t044-post-smoke.json",
+      "build/go-primary-live/pi/t044-soak.json",
+      "build/go-primary-live/pi/evidence.json"
+    ]
+  },
+  "next_recommended_task": {
+    "id": "T045",
+    "reason": "Go primary cutover, rollback, and soak are now proven; the next smallest contract-safe gate is removing Python packaged runtime dependencies and startup paths while keeping source removal separate."
+  }
+}
