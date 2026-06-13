@@ -2767,3 +2767,53 @@ func TestNotesHistoryListAndDeleteHandlers(t *testing.T) {
 	}
 	assertTableCount(t, db, "Note_History", noteID, 0)
 }
+
+// TestCSRFProtectMiddleware locks the Go Origin/Referer CSRF guard ported from
+// the legacy Flask csrf_protect. Closes the 5th audited security-parity gap.
+func TestCSRFProtectMiddleware(t *testing.T) {
+	called := false
+	handler := csrfProtect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+		w.WriteHeader(http.StatusOK)
+	}))
+	do := func(method, host, origin, referer string) *httptest.ResponseRecorder {
+		called = false
+		req := httptest.NewRequest(method, "/api/notes", nil)
+		req.Host = host
+		if origin != "" {
+			req.Header.Set("Origin", origin)
+		}
+		if referer != "" {
+			req.Header.Set("Referer", referer)
+		}
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		return rec
+	}
+
+	cases := []struct {
+		name              string
+		method, host      string
+		origin, referer   string
+		wantCode          int
+		wantHandlerCalled bool
+	}{
+		{"same-origin POST", http.MethodPost, "127.0.0.1:5004", "http://127.0.0.1:5004", "", http.StatusOK, true},
+		{"localhost<->127 swap", http.MethodPost, "127.0.0.1:5004", "http://localhost:5004", "", http.StatusOK, true},
+		{"cross-origin POST blocked", http.MethodPost, "127.0.0.1:5004", "http://evil.example", "", http.StatusForbidden, false},
+		{"anonymous POST (curl/MCP)", http.MethodPost, "127.0.0.1:5004", "", "", http.StatusOK, true},
+		{"cross-origin GET is safe", http.MethodGet, "127.0.0.1:5004", "http://evil.example", "", http.StatusOK, true},
+		{"same-origin referer DELETE", http.MethodDelete, "prism.local", "", "https://prism.local/app", http.StatusOK, true},
+		{"cross-origin referer DELETE blocked", http.MethodDelete, "prism.local", "", "https://evil.example/x", http.StatusForbidden, false},
+		{"vite dev origin", http.MethodPost, "127.0.0.1:5004", "http://localhost:5173", "", http.StatusOK, true},
+	}
+	for _, tc := range cases {
+		rec := do(tc.method, tc.host, tc.origin, tc.referer)
+		if rec.Code != tc.wantCode {
+			t.Fatalf("%s: code=%d want %d body=%s", tc.name, rec.Code, tc.wantCode, rec.Body.String())
+		}
+		if called != tc.wantHandlerCalled {
+			t.Fatalf("%s: handler called=%v want %v", tc.name, called, tc.wantHandlerCalled)
+		}
+	}
+}

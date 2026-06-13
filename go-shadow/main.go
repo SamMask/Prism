@@ -225,7 +225,7 @@ func main() {
 	mux.Handle("/", srv.staticHandler())
 
 	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
-	if err := http.ListenAndServe(cfg.addr, logRequests(mux)); err != nil {
+	if err := http.ListenAndServe(cfg.addr, logRequests(csrfProtect(mux))); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -1424,6 +1424,63 @@ func logRequests(next http.Handler) http.Handler {
 		next.ServeHTTP(recorder, r)
 		log.Printf("request method=%s path=%s status=%d duration_ms=%d", r.Method, r.URL.RequestURI(), recorder.status, time.Since(started).Milliseconds())
 	})
+}
+
+// csrfProtect mirrors the legacy Flask Origin/Referer CSRF guard (app.py
+// csrf_protect): for state-changing methods it requires that a present
+// Origin/Referer be same-origin. Requests with neither header (curl, MCP and
+// other non-browser API clients, which cannot be used for browser CSRF) pass
+// through — only browser cross-site writes, which always carry an Origin, are
+// blocked.
+func csrfProtect(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// PATCH is intentionally omitted: the runtime exposes no PATCH route,
+		// so a cross-origin PATCH 404s at the mux and never reaches a writer.
+		switch r.Method {
+		case http.MethodPost, http.MethodPut, http.MethodDelete:
+			origin := r.Header.Get("Origin")
+			referer := r.Header.Get("Referer")
+			if origin == "" && referer == "" {
+				break
+			}
+			allowed := csrfAllowedOrigins(r.Host)
+			if !originPrefixAllowed(origin, allowed) && !originPrefixAllowed(referer, allowed) {
+				writeError(w, http.StatusForbidden, "CSRF validation failed: Origin mismatch")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func csrfAllowedOrigins(host string) []string {
+	if host == "" {
+		host = "127.0.0.1"
+	}
+	allowed := []string{"http://" + host, "https://" + host}
+	for _, o := range []string{"http://" + host, "https://" + host} {
+		if strings.Contains(o, "127.0.0.1") {
+			allowed = append(allowed, strings.Replace(o, "127.0.0.1", "localhost", 1))
+		} else if strings.Contains(o, "localhost") {
+			allowed = append(allowed, strings.Replace(o, "localhost", "127.0.0.1", 1))
+		}
+	}
+	return append(allowed,
+		"http://localhost:5173", "http://127.0.0.1:5173",
+		"http://localhost:5174", "http://127.0.0.1:5174",
+	)
+}
+
+func originPrefixAllowed(value string, allowed []string) bool {
+	if value == "" {
+		return false
+	}
+	for _, a := range allowed {
+		if strings.HasPrefix(value, a) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
