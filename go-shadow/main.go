@@ -1971,25 +1971,24 @@ func (s *server) handleServerHardware(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response{
 		"status": "success",
 		"data": response{
-			"cpu_temp": nil,
-			"memory":   goMemoryInfo(),
-			"disk":     goDiskInfo(s.runtime.dataDir),
+			"cpu_temp": readCPUTempC(),
+			"memory":   readMemoryInfo(),
+			"disk":     readDiskInfo(s.runtime.dataDir),
 			"database": response{
 				"size_mb":     roundMB(fileSizeOrZero(s.runtime.dbPath)),
 				"wal_size_mb": roundMB(fileSizeOrZero(s.runtime.dbPath + "-wal")),
 			},
 			"platform": response{
-				"system":         runtime.GOOS,
-				"machine":        runtime.GOARCH,
-				"hostname":       hostname,
-				"python_version": nil,
-				"go_version":     runtime.Version(),
+				"system":     runtime.GOOS,
+				"machine":    runtime.GOARCH,
+				"hostname":   hostname,
+				"go_version": runtime.Version(),
 			},
 			"service_management": response{
 				"available": false,
 				"reason":    "Go local server-system candidate does not restart host services",
 			},
-			"uptime_seconds": nil,
+			"uptime_seconds": readUptimeSeconds(),
 		},
 	})
 }
@@ -2458,7 +2457,9 @@ func boolValue(raw any) bool {
 	return false
 }
 
-func goMemoryInfo() response {
+// processMemoryInfo reports Go process memory; used as the non-Linux fallback
+// when system RAM is unavailable.
+func processMemoryInfo() response {
 	var stats runtime.MemStats
 	runtime.ReadMemStats(&stats)
 	total := int64(stats.Sys)
@@ -2475,7 +2476,9 @@ func goMemoryInfo() response {
 	}
 }
 
-func goDiskInfo(dataDir string) response {
+// diskFallback reports only measured data-dir usage; used on non-Linux where a
+// statfs-based total/free is unavailable.
+func diskFallback(dataDir string) response {
 	used, _ := directorySize(dataDir)
 	return response{
 		"total_gb": 0,
@@ -2483,6 +2486,59 @@ func goDiskInfo(dataDir string) response {
 		"free_gb":  0,
 		"percent":  0,
 	}
+}
+
+func gbFromBytes(bytes uint64) float64 {
+	return math.Round(float64(bytes)/1024/1024/1024*100) / 100
+}
+
+func mbFromKB(kb uint64) float64 {
+	return math.Round(float64(kb)/1024*10) / 10
+}
+
+// parseCPUTempMilliC parses a kernel thermal_zone temperature (millidegrees C)
+// into degrees C rounded to 0.1.
+func parseCPUTempMilliC(raw string) (float64, bool) {
+	milli, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, false
+	}
+	return math.Round(float64(milli)/1000.0*10) / 10, true
+}
+
+// parseUptimeSeconds parses the first field of /proc/uptime (seconds, float).
+func parseUptimeSeconds(raw string) (float64, bool) {
+	fields := strings.Fields(raw)
+	if len(fields) == 0 {
+		return 0, false
+	}
+	secs, err := strconv.ParseFloat(fields[0], 64)
+	if err != nil {
+		return 0, false
+	}
+	return math.Round(secs), true
+}
+
+// parseMeminfoKB pulls MemTotal / MemAvailable (kB) out of /proc/meminfo.
+func parseMeminfoKB(raw string) (total, avail uint64, ok bool) {
+	var gotTotal, gotAvail bool
+	for _, line := range strings.Split(raw, "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		val, err := strconv.ParseUint(fields[1], 10, 64)
+		if err != nil {
+			continue
+		}
+		switch fields[0] {
+		case "MemTotal:":
+			total, gotTotal = val, true
+		case "MemAvailable:":
+			avail, gotAvail = val, true
+		}
+	}
+	return total, avail, gotTotal && gotAvail
 }
 
 func (s *server) serverLogPath() string {

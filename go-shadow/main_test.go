@@ -2906,3 +2906,35 @@ func TestCSRFProtectionToggleHandlerAndGate(t *testing.T) {
 		t.Fatalf("with server-system disabled, expected 405, got %d", offRec.Code)
 	}
 }
+
+func TestHardwareMetricParsers(t *testing.T) {
+	if c, ok := parseCPUTempMilliC("48329\n"); !ok || c != 48.3 {
+		t.Fatalf("parseCPUTempMilliC = %v, %v; want 48.3, true", c, ok)
+	}
+	if _, ok := parseCPUTempMilliC("notanumber"); ok {
+		t.Fatal("parseCPUTempMilliC accepted non-numeric input")
+	}
+
+	if s, ok := parseUptimeSeconds("12345.67 9876.54\n"); !ok || s != 12346 {
+		t.Fatalf("parseUptimeSeconds = %v, %v; want 12346, true", s, ok)
+	}
+	if _, ok := parseUptimeSeconds(""); ok {
+		t.Fatal("parseUptimeSeconds accepted empty input")
+	}
+
+	meminfo := "MemTotal:        8000000 kB\nMemFree:          100000 kB\nMemAvailable:    6000000 kB\nBuffers:               1 kB\n"
+	total, avail, ok := parseMeminfoKB(meminfo)
+	if !ok || total != 8000000 || avail != 6000000 {
+		t.Fatalf("parseMeminfoKB = %d, %d, %v; want 8000000, 6000000, true", total, avail, ok)
+	}
+	if _, _, ok := parseMeminfoKB("Buffers: 1 kB\n"); ok {
+		t.Fatal("parseMeminfoKB ok without MemTotal/MemAvailable")
+	}
+
+	if got := gbFromBytes(2 * 1024 * 1024 * 1024); got != 2.0 {
+		t.Fatalf("gbFromBytes(2GiB) = %v; want 2.0", got)
+	}
+	if got := mbFromKB(2048); got != 2.0 {
+		t.Fatalf("mbFromKB(2048) = %v; want 2.0", got)
+	}
+}

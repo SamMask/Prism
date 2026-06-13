@@ -102,7 +102,7 @@ export interface HardwareStatus {
     system: string;
     machine: string;
     hostname: string;
-    python_version: string;
+    go_version: string;
   };
   service_management?: {
     available: boolean;

@@ -51,7 +51,7 @@ interface HardwareStatus {
     system: string;
     machine: string;
     hostname: string;
-    python_version: string;
+    go_version: string;
   };
   service_management?: {
     available: boolean;
@@ -319,7 +319,7 @@ export function ServerDashboardSection() {
               {hardware?.platform?.system || '-'} / {hardware?.platform?.machine || '-'}
             </span>
             <span className="bg-bg-base rounded px-2 py-0.5">
-              Python {hardware?.platform?.python_version || '-'}
+              Go {hardware?.platform?.go_version || '-'}
             </span>
             {hardware?.platform?.hostname && (
               <span className="bg-bg-base rounded px-2 py-0.5">
