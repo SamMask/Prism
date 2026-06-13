@@ -768,6 +768,20 @@ export const api = {
     return data.data;
   },
 
+  // Get CSRF protection state (Origin/Referer enforcement on writes)
+  getCsrfProtection: async (): Promise<boolean> => {
+    const { data } = await client.get("/system/csrf-protection");
+    return data.data.csrf_protection;
+  },
+
+  // Toggle CSRF protection (takes effect immediately, no restart)
+  setCsrfProtection: async (enabled: boolean): Promise<boolean> => {
+    const { data } = await client.post("/system/csrf-protection", {
+      csrf_protection: enabled,
+    });
+    return data.data.csrf_protection;
+  },
+
   // ===================================================================
   // Server Dashboard (Phase 8.2)
   // ===================================================================

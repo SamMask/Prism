@@ -37,6 +37,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 
@@ -76,9 +77,14 @@ var (
 )
 
 type server struct {
-	db      *sql.DB
-	runtime runtimeConfig
+	db          *sql.DB
+	runtime     runtimeConfig
+	csrfEnabled atomic.Bool
 }
+
+// csrfDisabledMarker, when present in the data dir, turns CSRF protection off.
+// Absence (the default) means CSRF is enabled.
+const csrfDisabledMarker = ".csrf_disabled"
 
 type runtimeConfig struct {
 	addr                     string
@@ -177,6 +183,7 @@ func main() {
 	}
 
 	srv := &server{db: db, runtime: cfg}
+	srv.csrfEnabled.Store(!fileExists(filepath.Join(cfg.dataDir, csrfDisabledMarker)))
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", srv.handleHealth)
 	mux.HandleFunc("/api/test", srv.handleTest)
@@ -193,6 +200,7 @@ func main() {
 	mux.HandleFunc("/api/system/vacuum", srv.handleSystemVacuum)
 	mux.HandleFunc("/api/system/clear-history", srv.handleSystemClearHistory)
 	mux.HandleFunc("/api/system/startup-preference", srv.handleStartupPreference)
+	mux.HandleFunc("/api/system/csrf-protection", srv.handleCSRFProtection)
 	mux.HandleFunc("/api/system/wal-checkpoint", srv.handleWALCheckpoint)
 	mux.HandleFunc("/api/system/check-consistency", srv.handleCheckConsistency)
 	mux.HandleFunc("/api/system/port-config", srv.handlePortConfig)
@@ -225,7 +233,7 @@ func main() {
 	mux.Handle("/", srv.staticHandler())
 
 	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
-	if err := http.ListenAndServe(cfg.addr, logRequests(csrfProtect(mux))); err != nil {
+	if err := http.ListenAndServe(cfg.addr, logRequests(srv.csrfGate(mux))); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -1483,6 +1491,21 @@ func originPrefixAllowed(value string, allowed []string) bool {
 	return false
 }
 
+// csrfGate applies csrfProtect only while CSRF protection is enabled (the
+// default). The flag is toggled at runtime via /api/system/csrf-protection and
+// persisted with the csrfDisabledMarker file, so changes take effect without a
+// restart.
+func (s *server) csrfGate(next http.Handler) http.Handler {
+	protected := csrfProtect(next)
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.csrfEnabled.Load() {
+			protected.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if !requireGET(w, r) {
 		return
@@ -1775,6 +1798,42 @@ func (s *server) handleStartupPreference(w http.ResponseWriter, r *http.Request)
 			return
 		}
 		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"auto_open_browser": autoOpen}})
+	default:
+		w.Header().Set("Allow", "GET, POST")
+		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+	}
+}
+
+func (s *server) handleCSRFProtection(w http.ResponseWriter, r *http.Request) {
+	if !s.requireServerSystem(w, r) {
+		return
+	}
+	markerPath := filepath.Join(s.runtime.dataDir, csrfDisabledMarker)
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"csrf_protection": s.csrfEnabled.Load()}})
+	case http.MethodPost:
+		payload, ok := decodeJSONObject(w, r, "csrf_protection is required")
+		if !ok {
+			return
+		}
+		raw, exists := payload["csrf_protection"]
+		enabled, ok := raw.(bool)
+		if !exists || !ok {
+			writeError(w, http.StatusBadRequest, "csrf_protection is required")
+			return
+		}
+		if enabled {
+			if err := os.Remove(markerPath); err != nil && !os.IsNotExist(err) {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		} else if err := os.WriteFile(markerPath, []byte("1"), 0644); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		s.csrfEnabled.Store(enabled)
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"csrf_protection": enabled}})
 	default:
 		w.Header().Set("Allow", "GET, POST")
 		writeError(w, http.StatusMethodNotAllowed, "method not allowed")

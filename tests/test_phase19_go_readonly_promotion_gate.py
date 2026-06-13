@@ -56,6 +56,7 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/system/vacuum")
     registered.discard("/api/system/clear-history")
     registered.discard("/api/system/startup-preference")
+    registered.discard("/api/system/csrf-protection")
     registered.discard("/api/system/wal-checkpoint")
     registered.discard("/api/system/check-consistency")
     registered.discard("/api/system/port-config")

@@ -10,6 +10,7 @@ import { AppearanceSection } from '../components/settings/AppearanceSection';
 import { BackupImportSection } from '../components/settings/BackupImportSection';
 import { DangerZoneSection } from '../components/settings/DangerZoneSection';
 import { SystemStatsSection } from '../components/settings/SystemStatsSection';
+import { SecuritySection } from '../components/settings/SecuritySection';
 import { PortConfigSection } from '../components/settings/PortConfigSection';
 import { UpdateSection } from '../components/settings/UpdateSection';
 import { ServerDashboardSection } from '../components/settings/ServerDashboardSection';
@@ -156,6 +157,7 @@ export function SettingsPage() {
                 onRefresh={fetchStats}
               />
               <BackupImportSection onStatsUpdate={fetchStats} />
+              <SecuritySection />
               <DangerZoneSection />
             </>
           )}

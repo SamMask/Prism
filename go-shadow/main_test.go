@@ -2817,3 +2817,92 @@ func TestCSRFProtectMiddleware(t *testing.T) {
 		}
 	}
 }
+
+// TestCSRFProtectionToggleHandlerAndGate locks the runtime CSRF on/off switch
+// (/api/system/csrf-protection) and the csrfGate that honours it: default on,
+// persisted via the marker file, effective without restart.
+func TestCSRFProtectionToggleHandlerAndGate(t *testing.T) {
+	dataDir := t.TempDir()
+	srv := &server{runtime: runtimeConfig{enableServerSystem: true, dataDir: dataDir}}
+	srv.csrfEnabled.Store(!fileExists(filepath.Join(dataDir, csrfDisabledMarker)))
+	if !srv.csrfEnabled.Load() {
+		t.Fatal("CSRF should default to enabled when no marker file exists")
+	}
+
+	gate := srv.csrfGate(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	crossOrigin := func() int {
+		req := httptest.NewRequest(http.MethodPost, "/api/notes", nil)
+		req.Host = "127.0.0.1:5004"
+		req.Header.Set("Origin", "http://evil.example")
+		rec := httptest.NewRecorder()
+		gate.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	// GET reports enabled
+	getRec := httptest.NewRecorder()
+	srv.handleCSRFProtection(getRec, httptest.NewRequest(http.MethodGet, "/api/system/csrf-protection", nil))
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("GET expected 200, got %d", getRec.Code)
+	}
+	var getResp struct {
+		Data struct {
+			CSRFProtection bool `json:"csrf_protection"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(getRec.Body.Bytes(), &getResp); err != nil {
+		t.Fatal(err)
+	}
+	if !getResp.Data.CSRFProtection {
+		t.Fatal("GET should report csrf_protection true by default")
+	}
+
+	// enabled: cross-origin blocked
+	if code := crossOrigin(); code != http.StatusForbidden {
+		t.Fatalf("while enabled, cross-origin POST should be 403, got %d", code)
+	}
+
+	// disable via POST
+	disableRec := httptest.NewRecorder()
+	srv.handleCSRFProtection(disableRec, httptest.NewRequest(http.MethodPost, "/api/system/csrf-protection", strings.NewReader(`{"csrf_protection":false}`)))
+	if disableRec.Code != http.StatusOK {
+		t.Fatalf("disable expected 200, got %d body=%s", disableRec.Code, disableRec.Body.String())
+	}
+	if srv.csrfEnabled.Load() {
+		t.Fatal("csrfEnabled should be false after disable")
+	}
+	if !fileExists(filepath.Join(dataDir, csrfDisabledMarker)) {
+		t.Fatal("disable should write the marker file")
+	}
+
+	// disabled: cross-origin now passes through
+	if code := crossOrigin(); code != http.StatusOK {
+		t.Fatalf("while disabled, cross-origin POST should pass, got %d", code)
+	}
+
+	// re-enable removes marker and restores enforcement
+	enableRec := httptest.NewRecorder()
+	srv.handleCSRFProtection(enableRec, httptest.NewRequest(http.MethodPost, "/api/system/csrf-protection", strings.NewReader(`{"csrf_protection":true}`)))
+	if enableRec.Code != http.StatusOK {
+		t.Fatalf("enable expected 200, got %d", enableRec.Code)
+	}
+	if !srv.csrfEnabled.Load() {
+		t.Fatal("csrfEnabled should be true after enable")
+	}
+	if fileExists(filepath.Join(dataDir, csrfDisabledMarker)) {
+		t.Fatal("enable should remove the marker file")
+	}
+	if code := crossOrigin(); code != http.StatusForbidden {
+		t.Fatalf("after re-enable, cross-origin POST should be 403 again, got %d", code)
+	}
+
+	// flag-gated: disabled server/system surface rejects
+	off := &server{runtime: runtimeConfig{enableServerSystem: false, dataDir: dataDir}}
+	offRec := httptest.NewRecorder()
+	off.handleCSRFProtection(offRec, httptest.NewRequest(http.MethodGet, "/api/system/csrf-protection", nil))
+	if offRec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("with server-system disabled, expected 405, got %d", offRec.Code)
+	}
+}
