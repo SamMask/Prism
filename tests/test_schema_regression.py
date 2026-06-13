@@ -1,200 +1,218 @@
 # -*- coding: utf-8 -*-
+"""Schema Regression Test — Go-sourced schema truth (T053 Gate 3 REWIRE).
+
+Originally this guarded the Python fixture/migration chain
+(`migrations.run_migrations` + `app.init_db`) as the authoritative schema.
+After the Go primary cutover, the **Go runtime's fresh-init and existing-DB
+migration output is the schema truth**, so this module now derives every
+invariant from a real Go-created DB and imports **no** Python backend.
+
+It therefore stays valid after T053 deletes `app.py` / `migrations/` / `db.py`.
+A guard test below proves this module imports no Flask backend, so the schema
+gate cannot silently regrow a Python dependency.
+
+If a column is accidentally re-added, a DROP COLUMN migration is skipped, or the
+v16 editor_layout normalization regresses, these tests fail against the Go DB
+before the regression reaches prod.
 """
-Schema Regression Test (10.13)
 
-Ensures that the temp_db fixture produced by conftest.py (which now runs the real
-migration chain) matches the authoritative final schema defined in migrations/__init__.py.
-
-If a column is accidentally re-added, or a DROP COLUMN migration is skipped, this
-test will catch it.  Add this to CI so the problem surfaces before it reaches prod.
-"""
-
-import sqlite3
-import tempfile
 import os
+import re
+import shutil
+import socket
+import sqlite3
+import subprocess
+import time
+import urllib.error
+import urllib.request
+from pathlib import Path
+
 import pytest
 
-
-def _get_table_columns(conn: sqlite3.Connection, table: str) -> set:
-    cursor = conn.execute(f"PRAGMA table_info({table})")
-    return {row[1] for row in cursor.fetchall()}
+from tests.go_primary_parity_harness import build_go_shadow_exe
 
 
-def _get_tables(conn: sqlite3.Connection) -> set:
-    cursor = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
+# Authoritative final schema (Go `freshSchemaStatements`, go-shadow/main.go).
+REQUIRED_NOTES_COLUMNS = {
+    "id", "title", "content", "remarks", "cover_image", "cover_position",
+    "editor_layout", "is_pinned", "is_archived", "sort_order", "category_id",
+    "parent_id", "prompt_params", "created_at", "updated_at",
+}
+
+# Columns removed by migration v14 (AI strip); must never reappear.
+STRIPPED_AI_COLUMNS = {
+    "text_embedding", "embedding_updated_at", "ai_summary", "ai_tags",
+    "embedding_status",
+}
+
+
+def _free_port():
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+def _wait_for_health(base, timeout=30):
+    deadline = time.time() + timeout
+    last_error = None
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(base + "/healthz", timeout=3) as response:
+                import json
+
+                return response.status, json.loads(response.read().decode("utf-8"))
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+            last_error = exc
+            time.sleep(0.25)
+    raise AssertionError(f"{base}/healthz did not become ready: {last_error}")
+
+
+def _boot_and_inspect(exe_path, data_dir, db_rel):
+    """Boot the Go runtime once on data_dir/db_rel, wait until ready, stop.
+
+    Returns the parsed /healthz `runtime` payload. The DB file persists at
+    data_dir/db_rel for caller inspection.
+    """
+    port = _free_port()
+    proc = subprocess.Popen(
+        [
+            str(exe_path),
+            "--db", db_rel,
+            "--addr", f"127.0.0.1:{port}",
+            "--data-dir", str(data_dir),
+        ],
+        env=os.environ.copy(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
     )
-    return {row[0] for row in cursor.fetchall()}
+    try:
+        try:
+            status, health = _wait_for_health(f"http://127.0.0.1:{port}")
+        except Exception as exc:
+            proc.terminate()
+            output, _ = proc.communicate(timeout=5)
+            raise AssertionError(output) from exc
+        assert status == 200
+        return health["runtime"]
+    finally:
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
 
 
-def _get_column_default(conn: sqlite3.Connection, table: str, column: str) -> str | None:
-    cursor = conn.execute(f"PRAGMA table_info({table})")
-    for row in cursor.fetchall():
-        if row[1] == column:
-            return row[4]
+def _columns(db_path):
+    with sqlite3.connect(db_path) as conn:
+        return {row[1] for row in conn.execute("PRAGMA table_info(Notes)")}
+
+
+def _column_default(db_path, column):
+    with sqlite3.connect(db_path) as conn:
+        for row in conn.execute("PRAGMA table_info(Notes)"):
+            if row[1] == column:
+                return row[4]
     return None
 
 
-def _build_migrated_db() -> sqlite3.Connection:
-    """Create a fresh in-memory DB and run the full migration chain."""
-    conn = sqlite3.connect(':memory:')
+@pytest.fixture(scope="module")
+def go_runtime(tmp_path_factory):
+    """Build the Go exe once and fresh-init a Go-created DB (schema truth)."""
+    go_bin = shutil.which("go")
+    if not go_bin:
+        pytest.skip("Go CLI is not installed; Go-sourced schema truth unavailable.")
 
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS Categories (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            icon TEXT DEFAULT '📝',
-            sort_order INTEGER DEFAULT 0,
-            is_default INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS Notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT,
-            content TEXT,
-            type TEXT DEFAULT '筆記',
-            remarks TEXT,
-            cover_image TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS Tags (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE TABLE IF NOT EXISTS Note_Tags (
-            note_id INTEGER,
-            tag_id INTEGER,
-            PRIMARY KEY (note_id, tag_id)
-        );
-        CREATE TABLE IF NOT EXISTS Source_Urls (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            note_id INTEGER,
-            url TEXT
-        );
-        CREATE TABLE IF NOT EXISTS Note_History (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            note_id INTEGER,
-            content TEXT,
-            diff_summary TEXT,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );
-        CREATE VIRTUAL TABLE IF NOT EXISTS Notes_FTS USING fts5(
-            title, content,
-            content='Notes',
-            content_rowid='id'
-        );
-        INSERT OR IGNORE INTO Categories (name, icon, is_default)
-        VALUES ('筆記', '📝', 1);
-    ''')
-    conn.commit()
+    build_dir = tmp_path_factory.mktemp("schema_build")
+    exe_path = build_go_shadow_exe(go_bin, build_dir)
 
-    from migrations import run_migrations
-    run_migrations(conn)
-    return conn
+    data_dir = tmp_path_factory.mktemp("schema_fresh") / "data"
+    fresh_db = data_dir / "schema" / "fresh.db"
+    runtime = _boot_and_inspect(exe_path, data_dir, "schema/fresh.db")
+    assert runtime["schema_version"] == 16
+    assert runtime["fresh_db_initialized"] is True
+    # Collapse WAL so the file is self-contained for copy/inspect.
+    with sqlite3.connect(fresh_db) as conn:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+    return {"exe_path": exe_path, "fresh_db": fresh_db}
 
 
-def test_init_db_editor_layout_default_is_single(tmp_path):
-    """Fresh init_db() databases must use the current editor_layout default."""
-    from app import create_app, init_db
-
-    db_path = tmp_path / 'fresh.db'
-    flask_app = create_app('testing')
-    flask_app.config['DATABASE'] = str(db_path)
-
-    with flask_app.app_context():
-        init_db()
-        conn = sqlite3.connect(db_path)
-        try:
-            default = _get_column_default(conn, 'Notes', 'editor_layout')
-            assert default == "'single'"
-            assert default != "'full'"
-        finally:
-            conn.close()
+def test_fresh_editor_layout_default_is_single(go_runtime):
+    """Fresh Go-init DB must use the current editor_layout default."""
+    default = _column_default(go_runtime["fresh_db"], "editor_layout")
+    assert default == "'single'"
+    assert default != "'full'"
 
 
-def test_notes_type_column_absent():
-    """Notes.type must be gone after migration v12 (kill_notes_type)."""
-    conn = _build_migrated_db()
-    cols = _get_table_columns(conn, 'Notes')
-    assert 'type' not in cols, (
-        "Notes.type column still exists — migration v12 (kill_notes_type) may have failed. "
+def test_notes_type_column_absent(go_runtime):
+    """Notes.type must be gone (migration v12 kill_notes_type)."""
+    assert "type" not in _columns(go_runtime["fresh_db"]), (
+        "Notes.type column still exists — migration v12 (kill_notes_type) regressed. "
         "This column was the root cause of 10.1 / 10.2."
     )
-    conn.close()
 
 
-def test_notes_required_columns_present():
-    """Core columns added by migrations must all be present."""
-    conn = _build_migrated_db()
-    cols = _get_table_columns(conn, 'Notes')
-    required = {
-        'id', 'title', 'content', 'remarks', 'cover_image',
-        'cover_position', 'editor_layout', 'is_pinned', 'is_archived',
-        'sort_order', 'category_id', 'prompt_params', 'parent_id',
-        'created_at', 'updated_at',
-    }
-    missing = required - cols
-    assert not missing, f"Notes is missing columns after migrations: {missing}"
-    conn.close()
+def test_notes_required_columns_present(go_runtime):
+    """Core columns of the authoritative schema must all be present."""
+    missing = REQUIRED_NOTES_COLUMNS - _columns(go_runtime["fresh_db"])
+    assert not missing, f"Notes is missing columns: {missing}"
 
 
-def test_editor_layout_legacy_values_normalized():
-    """Migration v16 normalizes legacy editor_layout values without rebuilding Notes."""
-    conn = sqlite3.connect(':memory:')
-    conn.executescript('''
-        CREATE TABLE Notes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            content TEXT NOT NULL,
-            editor_layout TEXT DEFAULT 'full'
-        );
-        CREATE TABLE Schema_Meta (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL
-        );
-        INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '15');
-        INSERT INTO Notes (title, content, editor_layout) VALUES ('legacy full', 'body', 'full');
-        INSERT INTO Notes (title, content, editor_layout) VALUES ('legacy null', 'body', NULL);
-        INSERT INTO Notes (title, content, editor_layout) VALUES ('valid dual', 'body', 'dual');
-    ''')
-
-    from migrations import run_migrations
-    run_migrations(conn)
-
-    values = [row[0] for row in conn.execute('SELECT editor_layout FROM Notes ORDER BY id')]
-    version = conn.execute("SELECT value FROM Schema_Meta WHERE key = 'schema_version'").fetchone()[0]
-
-    assert values == ['single', 'single', 'dual']
-    assert 'full' not in values
-    assert version == '16'
-    conn.close()
-
-
-def test_ai_columns_stripped():
+def test_ai_columns_stripped(go_runtime):
     """AI columns removed in migration v14 must not exist."""
-    conn = _build_migrated_db()
-    cols = _get_table_columns(conn, 'Notes')
-    dead = {'text_embedding', 'embedding_updated_at', 'ai_summary', 'ai_tags',
-            'embedding_status'}
-    present = dead & cols
+    present = STRIPPED_AI_COLUMNS & _columns(go_runtime["fresh_db"])
     assert not present, f"Stripped AI columns still present in Notes: {present}"
-    conn.close()
 
 
-def test_fixture_schema_matches_migration(temp_db):
-    """temp_db fixture must produce the same Notes columns as the migration chain."""
-    ref_conn = _build_migrated_db()
-    ref_cols = _get_table_columns(ref_conn, 'Notes')
-    ref_conn.close()
+def test_existing_v15_db_editor_layout_normalized(go_runtime, tmp_path):
+    """Migration v16 normalizes legacy editor_layout 'full'/NULL to 'single'.
 
-    fix_conn = sqlite3.connect(temp_db)
-    fix_cols = _get_table_columns(fix_conn, 'Notes')
-    fix_conn.close()
+    Seed a v15 DB by demoting a real Go-created DB (so every column is exactly
+    the runtime's own schema, never a hand-rolled approximation), inject legacy
+    editor_layout values, then let the Go existing-DB migration runner upgrade it.
+    """
+    data_dir = tmp_path / "data"
+    (data_dir / "schema").mkdir(parents=True)
+    legacy_db = data_dir / "schema" / "legacy.db"
+    shutil.copy(go_runtime["fresh_db"], legacy_db)
 
-    assert fix_cols == ref_cols, (
-        f"temp_db schema diverges from migration output.\n"
-        f"  Extra in fixture : {fix_cols - ref_cols}\n"
-        f"  Missing in fixture: {ref_cols - fix_cols}"
+    with sqlite3.connect(legacy_db) as conn:
+        conn.executemany(
+            "INSERT INTO Notes (title, content, editor_layout) VALUES (?, ?, ?)",
+            [("legacy full", "body", "full"),
+             ("legacy null", "body", None),
+             ("valid dual", "body", "dual")],
+        )
+        conn.execute("UPDATE Schema_Meta SET value = '15' WHERE key = 'schema_version'")
+
+    runtime = _boot_and_inspect(go_runtime["exe_path"], data_dir, "schema/legacy.db")
+    assert runtime["schema_version"] == 16
+    assert runtime["migrations_applied"] > 0
+
+    with sqlite3.connect(legacy_db) as conn:
+        rows = dict(
+            conn.execute(
+                "SELECT title, editor_layout FROM Notes "
+                "WHERE title IN ('legacy full', 'legacy null', 'valid dual')"
+            )
+        )
+        version = conn.execute(
+            "SELECT value FROM Schema_Meta WHERE key = 'schema_version'"
+        ).fetchone()[0]
+
+    assert rows == {"legacy full": "single", "legacy null": "single", "valid dual": "dual"}
+    assert version == "16"
+
+
+def test_schema_gate_has_no_python_backend_imports():
+    """Guard: this gate must stay valid after T053 deletes the Python source.
+
+    If anyone reintroduces a Flask-backend import, this fails — keeping the
+    schema truth genuinely Go-sourced and Python-independent.
+    """
+    forbidden = re.compile(
+        r"^\s*(?:from|import)\s+(app|routes|migrations|services|config|db)\b",
+        re.MULTILINE,
     )
+    text = Path(__file__).read_text(encoding="utf-8")
+    assert not forbidden.findall(text), "schema regression gate imports Python backend"

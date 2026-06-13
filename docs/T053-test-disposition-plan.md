@@ -186,9 +186,26 @@ test_phase19_go_runtime_packaging.py
 - 驗收：`go test ./...` ok（54 tests）、完整 `pytest` 527 passed。
 - **5/5 缺口全關閉。** `test_security_guards.py` 解除 DELETE\*-blocked：Go 現已覆蓋 SSRF（`TestUploadURLRejects*`）＋ localhost-only（main.go 403 guard）＋ CSRF（`TestCSRFProtectMiddleware`）三部分，T053 可走 DELETE。README §安全的「✅ CSRF 防護：驗證 Origin/Referer」宣稱重新成立。
 
-> **紅線已全部解除。** T053 剩餘前置：③ `schema_regression` REWIRE 到 Go schema 真相；之後即可進行物理刪除 + ④ 文案。
+> **紅線已全部解除。** T053 剩餘前置：③ `schema_regression` REWIRE 到 Go schema 真相 — **已完成（見下）**。之後即可進行物理刪除 + ④ 文案。
 
 ### 補捉（2026-06-13，clude-1 / codex-2 審查 reconciliation）
 
 - `tests/test_simple.py`（`def test_simple(): assert True`）：無 contract / runtime 意義，純佔測試數量。處置 **DELETE**（隨 ④ 一起；不依賴 Python，刪除不影響 Go 覆蓋，僅使 pytest 基準從 527 → 526）。本輪不動，避免在物理刪除前變動驗收基準。
+
+### 更新（2026-06-13，③ schema_regression REWIRE 已完成）
+
+`tests/test_schema_regression.py` 已就地 REWIRE：schema 真相從 Python（`migrations.run_migrations` + `app.init_db` + conftest `temp_db` fixture）改為 **Go runtime 自建 DB**，完全不 import Python backend（新增 `test_schema_gate_has_no_python_backend_imports` guard 鎖死）。
+
+| 原斷言 | REWIRE 後來源 | 狀態 |
+|---|---|---|
+| fresh `editor_layout` 預設 `'single'` | Go fresh-init DB（module fixture boot 一次） | ✅ |
+| `Notes.type` 不存在（v12） | Go fresh-init DB | ✅ |
+| required 欄位全集 | Go fresh-init DB（集合對齊 `freshSchemaStatements`） | ✅ |
+| AI 欄位全集剝除（v14） | Go fresh-init DB | ✅ |
+| v15→v16 `editor_layout` 'full'/NULL→'single' | **複製 Go fresh DB → 注入 legacy 值 + Schema_Meta 降版 '15' → Go existing-DB migration runner 升級**（打到 main.go:1280 `normalize_editor_layout`，先前無任何 Go-only 測試覆蓋） | ✅ |
+| ~~temp_db fixture 對齊 migration~~ | 主體是 Python conftest fixture，隨 Python 一起死 | DROP（改為 no-backend guard） |
+
+驗收：`pytest tests/test_schema_regression.py -v` = 6 passed（3.7s）。Go CLI 不存在時 module fixture skip（與 pure Go e2e net 一致）。pytest 基準維持 **527**（新舊同為 6 test）。
+
+> **紅線全部解除、③ 前置完成。** T053 剩餘工作即為：物理刪除 Python backend source（依本檔 DELETE/DELETE\* 逐項勾 Go 等價覆蓋）＋ ④ 文案收斂。`migrations/__init__.py` 不再被 `test_schema_regression.py` 需要；其去留改由本檔步驟 1/4 與 deletion-boundary inventory 決定。
 
