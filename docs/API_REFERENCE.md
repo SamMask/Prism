@@ -38,9 +38,10 @@
 - Prism 沒有獨立 API Token / Bearer Token / 使用者認證機制，預設定位是本機 / 區網內受信環境。
 - 不要把 Prism API 直接暴露到 public internet / 公網。
 - 外部 Agent 對接建議在同機、trusted LAN、VPN、SSH tunnel，或受認證保護的 reverse proxy（例如 Caddy auth）下使用。
-- `POST` / `PUT` / `DELETE` / `PATCH` 在生產模式會做簡易 CSRF 檢查：
-  - 需要合法 `Origin` 或 `Referer`
-  - 本機 dev server `localhost:5173/5174` 已在白名單
+- `POST` / `PUT` / `DELETE` 預設會做 CSRF 檢查（Go runtime `csrfGate` middleware）：
+  - 有 `Origin` / `Referer` 時必須同源；本機 dev server `localhost:5173/5174` 已在白名單，否則回 `403`
+  - 無 `Origin` / `Referer` 的請求（curl / MCP / 外部 Agent，無法被瀏覽器 CSRF）放行，不受影響
+  - 可在 **設定 > 資料 > CSRF 防護** 或 `/api/system/csrf-protection` 即時開關，預設開啟（關閉狀態以 data dir 的 `.csrf_disabled` marker 持久化）
 - `/api/server/*` 僅允許 `127.0.0.1` 或 `::1` 存取，遠端 Agent 不可直接呼叫。
 
 ### 歷史相容層
@@ -654,6 +655,24 @@ Response 每筆欄位：
 ```json
 {
   "auto_open_browser": true
+}
+```
+
+### GET `/api/system/csrf-protection`
+
+回傳目前 CSRF 防護開關狀態（預設開啟）：
+
+```json
+{ "status": "success", "data": { "csrf_protection": true } }
+```
+
+### POST `/api/system/csrf-protection`
+
+切換 CSRF 防護，立即生效、免重啟；關閉時於 data dir 寫入 `.csrf_disabled` marker，開啟時移除。
+
+```json
+{
+  "csrf_protection": false
 }
 ```
 

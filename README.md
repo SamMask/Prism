@@ -156,7 +156,7 @@ Prism/
 
 > ⚠️ **API 暴露邊界**：Prism API / Go runtime 目前沒有內建 API Token / Bearer Token / 使用者認證機制。預設使用場景是 `localhost`、trusted LAN、VPN，或 SSH tunnel / 受認證保護的 reverse proxy（例如 Caddy auth）。不要把 Go runtime 或 Caddy 入口直接暴露到 public internet / 公網。
 
-- ✅ **CSRF 防護**：驗證 Origin / Referer
+- ✅ **CSRF 防護**：Go runtime 驗證 Origin / Referer，可在「設定 > 資料 > CSRF 防護」即時開關（預設開啟）
 - ✅ **路徑穿越防護**：圖片 API 三層防禦 (basename + `..` 過濾 + abspath prefix)
 - ✅ **Magic Number 驗證**：上傳圖片必須通過 MIME 真實型別檢查
 - ✅ **FK 強制啟用**：資料庫連線啟動時驗證 `PRAGMA foreign_keys`
