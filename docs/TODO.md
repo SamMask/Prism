@@ -2,6 +2,26 @@
 
 本檔只保留目前可施工的 active roadmap。舊 TODO 與歷史 phase 已完整歸檔到 `docs/development-history/todo-archive-pre-go-primary-runtime-migration-20260606.md`。
 
+---
+
+## 產品方向：桌面化（.exe 視窗程式）— 決策與待辦（2026-06-14）
+
+Go 重構的目標之一是把本機產品封裝成**獨立 .exe 視窗程式**（非 .bat 啟動、非純 console）。本節記錄相關決策與待辦，供後續開發接續。
+
+**已定決策**
+- **桌面模型 = 視窗程式**，需有「關閉視窗時：連背景一起關 / 只關視窗、背景常駐（close-to-tray）」設定。tray 常駐主要服務「仍想用 API」的使用者。
+- **資料庫還原 = 重啟式（已實作，2026-06-14）**：`POST /api/server/backup/restore` 寫 pending-restore 標記 → 程序重啟 → 開機時於 `openDB` 前 swap（覆蓋前自動存 `prism_pre_restore_*.db`）。重啟協定：supervised（systemd，靠 `INVOCATION_ID` 偵測）走 `os.Exit(42)`；獨立 .exe 走自我 re-exec。**「重啟」僅 Prism 程序重開，非 PC/Pi 重開機。**
+- **備份策略**：**Pi 維持每週自動備份（keep 3）**；**.exe 本機不做自動排程**，使用者自行手動按備份即可。→ 不新增本機 scheduler。
+- **下載備份不留 server-side 記錄（已實作）**：`/backup/download` 改吐暫存快照、傳完即刪；server-side 留存交給 `/backup/rotate`。
+- **設定精簡（hidden sections，已實作）**：`設定 > 部署` 移除「部署安全邊界」「端口設定（PortConfigSection）」「版本更新（UpdateSection）」三區，封裝 .exe 後對使用者無用、在 Pi 上也僅資訊性。**元件檔仍保留**於 `frontend/src/components/settings/`，僅未 render。**復原方式**：在 `SettingsPage.tsx` deploy tab 重新 import 並加回 `<PortConfigSection />` / `<UpdateSection />` 與「部署安全邊界」SectionPanel 即可。部署 tab 現只剩 `ServerDashboardSection`。
+
+**待辦（未施工，待後續設計）**
+- [ ] **.exe 桌面外殼設計**：決定 windowing 技術（WebView2 / Wails / Tauri / 其他）、tray 常駐、close-to-tray 設定、開機自啟。重啟協定（exit 42 / re-exec）、background API、關閉行為皆掛在此決策下，需先拍板桌面模型再展開。
+- [x] **本機儀表板硬體讀值修正（Windows）（2026-06-14 完成）**：新增 `go-shadow/hardware_windows.go`，以 kernel32（GetDiskFreeSpaceExW / GlobalMemoryStatusEx / GetTickCount64）讀真實磁碟/記憶體/uptime；`hardware_other.go` build tag 改為 `!linux && !windows`。CPU 溫度在 Windows 維持 N/A（無第三方驅動無可靠 API，誠實回 nil）。regression：`hardware_windows_test.go`。native build/test + linux/arm64 cross-build 皆綠。
+- [ ] **語系（i18n）還原**：`frontend/src/i18n/index.ts` 目前為空架構（只 zh-TW/en 字典、0 處使用、無切換器）。還原目標：中/英/日/韓，於 `設定 > 外觀` 切換。需每個 UI 字串走 `t()` + 補 ja/ko 字典 + 切換器。純前端大工，與桌面化無關，可獨立排程。
+
+---
+
 目前結論：Pi live/default runtime 已切為 Go primary。T045 已移除 Python packaged runtime dependency 與產品啟動路徑；T046-T050 已補齊 2026-06-13 Go 收尾審查列出的 frontend 實際呼叫漏接 surface；T051/T052 已完成 current-truth docs refresh 與 stale tracked artifact cleanup。**T053 已完成 Python backend source 物理刪除與 docs/API/release wording 收斂**：`app.py`/`routes/`/`utils/`/`db.py`/`config.py`/`migrations/`/`templates/` 皆已移除，Go primary 為唯一 runtime，repo 內無 retained-Python 主路徑描述，驗收鏈未斷（純 Go 驗收網 + `go-shadow/main_test.go` + GO-ONLY runtime 測試 + 文件治理）。Go 漸進重構（T001-T053）全數完成，目前無 active roadmap item。
 
 近期完成（2026-06-13 更新）：

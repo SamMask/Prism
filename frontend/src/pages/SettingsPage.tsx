@@ -1,6 +1,6 @@
 
 import { ReactNode, useState, useEffect } from 'react';
-import { Database, FolderOpen, Info, Palette, Rocket, Search, ShieldAlert } from 'lucide-react';
+import { Database, FolderOpen, Info, Palette, Rocket, Search } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { ToastContainer } from '../components/ui/Toast';
 import { DataManager } from '../components/DataManager';
@@ -11,8 +11,6 @@ import { BackupImportSection } from '../components/settings/BackupImportSection'
 import { DangerZoneSection } from '../components/settings/DangerZoneSection';
 import { SystemStatsSection } from '../components/settings/SystemStatsSection';
 import { SecuritySection } from '../components/settings/SecuritySection';
-import { PortConfigSection } from '../components/settings/PortConfigSection';
-import { UpdateSection } from '../components/settings/UpdateSection';
 import { ServerDashboardSection } from '../components/settings/ServerDashboardSection';
 
 interface SystemStats {
@@ -170,14 +168,9 @@ export function SettingsPage() {
 
           {activeTab === 'deploy' && (
             <>
-              <SectionPanel title="部署安全邊界" icon={<ShieldAlert size={20} className="text-amber-400" />} testId="settings-deploy-safety">
-                <div className="space-y-2 text-sm text-text-secondary">
-                  <p>伺服器控制端點維持 localhost-only，這個頁面只重排既有控制項。</p>
-                  <p className="text-text-muted">遠端使用仍應透過 trusted LAN、VPN、SSH tunnel 或受保護的 reverse proxy。</p>
-                </div>
-              </SectionPanel>
-              <PortConfigSection />
-              <UpdateSection />
+              {/* 「部署安全邊界」「端口設定」「版本更新」暫時隱藏：封裝成 .exe 視窗程式後對使用者無用，
+                  在 Pi 上也僅資訊性。元件檔仍保留於 components/settings（PortConfigSection / UpdateSection）。
+                  隱藏理由與復原方式見 docs/TODO.md「設定精簡（hidden sections）」。 */}
               <ServerDashboardSection />
             </>
           )}
