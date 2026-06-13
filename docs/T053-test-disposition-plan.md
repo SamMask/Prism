@@ -151,3 +151,29 @@ test_phase19_go_runtime_packaging.py
 
 > **本驗證的價值**：證明「一口氣刪掉所有 parity + 純 Python 測試」會靜默掉 notes actions / batch / tags-merge / history / CSRF 的覆蓋。這正是紅線存在的理由——T053 執行時，上述四檔**不可**走 plain DELETE。
 
+### 更新（2026-06-13，缺口處理結果）
+
+**4/5 缺口已用真 Go unit test 補上**（commit `22d608d`，`go-shadow/main_test.go`，`go test ./...` ok，53 tests）：
+
+| 缺口 | 新增 Go 測試 | 狀態 |
+|---|---|---|
+| notes actions（pin/archive/duplicate/reorder） | `TestNotesPinArchiveDuplicateReorderHandlers` | ✅ 已補 |
+| batch（type/tags） | `TestNotesBatchTypeAndTagsHandlers` | ✅ 已補 |
+| tags/merge | `TestTagsMergeHandlerTransfersNotesAndDeletesSourceTags` | ✅ 已補 |
+| history list/delete | `TestNotesHistoryListAndDeleteHandlers` | ✅ 已補 |
+
+→ 因此 `test_go_primary_t014_t015`、`t016_t017`、`t018` 的處置**從 GOLDEN 改回可 DELETE**：行為已由上述 Go 測試獨立守門，T053 刪 Python oracle 不再掉覆蓋。
+
+**第 5 項 CSRF 升級為已確認的產品級缺口（非測試缺口）：**
+
+`go-shadow/main.go` 實查確認 **Go primary 完全沒有 CSRF / Origin / Referer 入站驗證**：唯一 middleware 是 `logRequests`（純記錄，main.go:228），唯一 `Referer` 是 SSRF 抓圖的**出站**標頭（main.go:4868）。但 `README.md` §安全與隱私仍宣稱「✅ CSRF 防護：驗證 Origin / Referer」。
+
+- 這是 **Python → Go 的安全 parity 退化**，不是 `test_security_guards.py` 寫不寫的問題——對應功能在 live runtime 不存在。
+- `test_security_guards.py` 的 SSRF（`TestUploadURLRejects*`）與 server-localhost-only（main.go:1588 403 guard）兩部分 **Go 已覆蓋**；唯獨 CSRF 部分 Go 無對應。
+- **需要決策（使用者層級，不該我擅自決定）**：
+  - (a) 在 Go 補入站 Origin/Referer 驗證 middleware（恢復 parity，但屬 live runtime 行為變更，須評估是否誤擋合法 client）；或
+  - (b) 接受無 CSRF 的現況（定位為 trusted LAN/VPN + reverse-proxy auth），並把 README 的 CSRF 宣稱改為實話。
+- 在 (a)/(b) 拍板前，`test_security_guards.py` 維持 **DELETE\*-blocked**，不刪。
+
+> 修正後紅線剩一條：**CSRF 決策（implement 或 honest-doc）未定前，`test_security_guards.py` 不刪、README CSRF 宣稱不視為已驗證。** 其餘四缺口已關閉。
+
