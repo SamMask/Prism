@@ -177,3 +177,14 @@ test_phase19_go_runtime_packaging.py
 
 > 修正後紅線剩一條：**CSRF 決策（implement 或 honest-doc）未定前，`test_security_guards.py` 不刪、README CSRF 宣稱不視為已驗證。** 其餘四缺口已關閉。
 
+### 更新（2026-06-13，CSRF 決策＝(a) implement，已完成）
+
+使用者選 (a)：**在 Go 補入站 Origin/Referer CSRF 驗證**。已完成（commit `885a6f9`）：
+
+- `go-shadow/main.go` 新增 `csrfProtect` middleware（`logRequests(csrfProtect(mux))`），對 POST/PUT/DELETE 比照 Flask `csrf_protect`：有 Origin/Referer 必須同源（host http/https、localhost↔127 互換、Vite 5173/5174），否則 403；無 Origin/Referer（curl/MCP/agent，無法被瀏覽器 CSRF）放行——保住 headless-KMS API 與所有 HTTP harness。
+- 新增 `TestCSRFProtectMiddleware`（same-origin / swap / cross-origin / anonymous / safe-method / referer / vite 八案）。
+- 驗收：`go test ./...` ok（54 tests）、完整 `pytest` 527 passed。
+- **5/5 缺口全關閉。** `test_security_guards.py` 解除 DELETE\*-blocked：Go 現已覆蓋 SSRF（`TestUploadURLRejects*`）＋ localhost-only（main.go 403 guard）＋ CSRF（`TestCSRFProtectMiddleware`）三部分，T053 可走 DELETE。README §安全的「✅ CSRF 防護：驗證 Origin/Referer」宣稱重新成立。
+
+> **紅線已全部解除。** T053 剩餘前置：③ `schema_regression` REWIRE 到 Go schema 真相；之後即可進行物理刪除 + ④ 文案。
+
