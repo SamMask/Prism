@@ -1,10 +1,10 @@
-//go:build !linux
+//go:build !linux && !windows
 
 package main
 
-// Non-Linux (dev/test, e.g. Windows) fallbacks. CPU temperature and system
-// uptime are only available on Linux/Raspberry Pi; disk and memory fall back to
-// the cross-platform process-level stats.
+// Fallbacks for platforms without a dedicated hardware reader (e.g. macOS dev).
+// Linux and Windows have their own implementations; here CPU temperature and
+// uptime are unavailable and disk/memory fall back to process-level stats.
 
 func readCPUTempC() *float64 { return nil }
 
