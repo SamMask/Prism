@@ -1,8 +1,8 @@
 
-import React, { useRef, useState } from 'react';
-import { Download, Upload, Loader2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Download, Upload, Loader2, RotateCcw, Database } from 'lucide-react';
 import { Button, toast } from '../ui';
-import { api } from '../../services/api';
+import { api, type BackupItem } from '../../services/api';
 
 interface BackupImportSectionProps {
   onStatsUpdate: () => void;
@@ -15,6 +15,51 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   const [importData, setImportData] = useState<unknown>(null);
   const [importMode, setImportMode] = useState<'skip' | 'duplicate'>('skip');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Restore-from-backup state
+  const [backups, setBackups] = useState<BackupItem[]>([]);
+  const [loadingBackups, setLoadingBackups] = useState(false);
+  const [restoreTarget, setRestoreTarget] = useState<BackupItem | null>(null);
+  const [isRestarting, setIsRestarting] = useState(false);
+
+  const loadBackups = async () => {
+    setLoadingBackups(true);
+    try {
+      const res = await api.listBackups();
+      setBackups(res.backups || []);
+    } catch {
+      // Server-management API is localhost-only; silently show an empty list off-box.
+      setBackups([]);
+    } finally {
+      setLoadingBackups(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBackups();
+  }, []);
+
+  // Confirm → stage restore → server restarts → poll until it is back → reload.
+  const handleRestore = async () => {
+    if (!restoreTarget) return;
+    const filename = restoreTarget.filename;
+    setRestoreTarget(null);
+    setIsRestarting(true);
+    try {
+      await api.restoreBackup(filename);
+    } catch {
+      setIsRestarting(false);
+      toast.error('還原啟動失敗，資料庫未變更');
+      return;
+    }
+    const healthy = await api.waitForHealthy(40000);
+    if (healthy) {
+      window.location.reload();
+    } else {
+      setIsRestarting(false);
+      toast.error('等待程式重新啟動逾時，請手動重新開啟 Prism');
+    }
+  };
 
   // Handle file selection for import
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -173,6 +218,97 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           </div>
         </div>
       </div>
+
+      {/* Restore from DB backup */}
+      <div className="glass rounded-xl p-6">
+        <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
+          <Database size={20} className="text-warning" />
+          從備份還原資料庫
+        </h2>
+        <p className="text-text-muted text-sm mb-4">
+          選一個自動備份還原。點「還原」後，Prism 會<strong className="text-text-primary">自動關閉並重新開啟</strong>，
+          用你選的備份覆蓋目前的資料庫。還原前會先自動把目前的資料庫另存一份，所以還原後若反悔仍救得回來。
+        </p>
+
+        {loadingBackups ? (
+          <div className="flex items-center gap-2 text-text-muted text-sm">
+            <Loader2 size={16} className="animate-spin" />
+            讀取備份清單…
+          </div>
+        ) : backups.length === 0 ? (
+          <p className="text-text-muted text-sm">目前沒有可還原的備份。</p>
+        ) : (
+          <div className="space-y-2">
+            {backups.map((b) => (
+              <div
+                key={b.filename}
+                className="flex items-center justify-between border border-border-subtle rounded-lg px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <p className="text-text-primary text-sm truncate">{b.created_at}</p>
+                  <p className="text-text-muted text-xs truncate">
+                    {b.filename} · {b.size_mb} MB
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  onClick={() => setRestoreTarget(b)}
+                  disabled={isRestarting}
+                >
+                  <RotateCcw size={16} />
+                  還原
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Restore confirm modal */}
+      {restoreTarget && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-bg-elevated rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
+            <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+              <Database size={20} className="text-warning" />
+              確認還原資料庫
+            </h3>
+            <p className="text-text-secondary mb-2">
+              將用這個備份覆蓋目前的資料庫：
+            </p>
+            <p className="text-text-primary text-sm mb-4">
+              {restoreTarget.created_at}
+              <span className="text-text-muted"> · {restoreTarget.size_mb} MB</span>
+            </p>
+            <p className="text-text-muted text-sm mb-6">
+              點「確認還原」後 Prism 會自動重新開啟，畫面會短暫中斷幾秒，回來後就是還原好的內容。
+              目前的資料庫會先自動備份一份。
+            </p>
+            <div className="flex justify-end gap-3">
+              <Button variant="secondary" onClick={() => setRestoreTarget(null)}>
+                取消
+              </Button>
+              <Button variant="primary" onClick={handleRestore}>
+                確認還原
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Restarting overlay */}
+      {isRestarting && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-bg-elevated rounded-xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center">
+            <Loader2 size={32} className="animate-spin text-accent mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-text-primary mb-2">
+              正在重新啟動 Prism…
+            </h3>
+            <p className="text-text-muted text-sm">
+              正在用備份還原資料庫，程式重新開啟後會自動回到這個畫面，請稍候。
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Import Modal */}
       {showImportModal && importData && (

@@ -289,8 +289,10 @@ Environment=PRISM_GO_ALLOW_PROD_DB=1
 Environment=PRISM_GO_ALLOW_PROD_UPLOADS=1
 Environment=PRISM_GO_ALLOW_PROD_IMPORT_EXPORT=1
 Environment=PRISM_GO_ALLOW_PROD_SERVER_SYSTEM=1
+Environment=PRISM_GO_SUPERVISED=1
 ExecStart=$BINARY --db $LIVE_DB --data-dir $REMOTE_ROOT --addr 127.0.0.1:$PORT --enable-tag-write --enable-category-write --enable-notes-write --enable-attachment-text-read --enable-attachment-raw-read --enable-attachment-write --enable-upload-write --enable-thumbnail-write --enable-upload-url-write --enable-upload-delete --enable-media-cleanup --enable-import-export --enable-server-system
 Restart=on-failure
+RestartForceExitStatus=42
 RestartSec=5
 NoNewPrivileges=true
 PrivateTmp=true

@@ -157,6 +157,12 @@ export interface RotateBackupsResponse {
   total_size_mb: number;
 }
 
+export interface RestoreBackupResponse {
+  restarting: boolean;
+  backup: string;
+  supervised: boolean;
+}
+
 export interface RestartServiceResponse {
   status: 'success' | 'error';
   message: string;
@@ -830,6 +836,26 @@ export const api = {
   deleteBackup: async (filename: string): Promise<DeleteBackupResponse> => {
     const { data } = await client.delete(`/server/backup/${encodeURIComponent(filename)}`);
     return data.data;
+  },
+
+  restoreBackup: async (filename: string): Promise<RestoreBackupResponse> => {
+    const { data } = await client.post('/server/backup/restore', { backup: filename });
+    return data.data;
+  },
+
+  // Poll the health endpoint until the server is back after a restart.
+  waitForHealthy: async (timeoutMs: number = 30000): Promise<boolean> => {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      try {
+        const res = await client.get('/healthz', { baseURL: '', timeout: 2000 });
+        if (res.status === 200) return true;
+      } catch {
+        // server still restarting; keep polling
+      }
+      await new Promise((r) => setTimeout(r, 1000));
+    }
+    return false;
   },
 
   restartService: async (): Promise<RestartServiceResponse> => {

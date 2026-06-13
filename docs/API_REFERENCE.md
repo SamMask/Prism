@@ -891,8 +891,9 @@ Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism
 - `GET /api/server/logs`
 - `POST /api/server/restart`
 - `GET /api/server/backup/list`
-- `GET /api/server/backup/download`（建立並下載 DB 備份；預設保留最近 3 份 server-side 備份）
-- `POST /api/server/backup/rotate`（body 可用 `{ "keep_count": 3 }`；相容 `{ "keep": 8 }`）
+- `GET /api/server/backup/download`（下載目前 DB 的快照供使用者自行保存；**不在 server-side 留存或輪換備份**——server-side 保留是 `rotate` 的職責）
+- `POST /api/server/backup/rotate`（建立 server-side 備份並輪換；body 可用 `{ "keep_count": 3 }`，預設保留最近 3 份；相容舊鍵 `{ "keep": N }`）
+- `POST /api/server/backup/restore`（body `{ "backup": "<managed backup filename>" }`；驗證該備份後寫入 pending-restore 標記並重啟程序，開機時以該備份覆蓋 live DB，覆蓋前自動另存目前 DB 一份）
 - `DELETE /api/server/backup/<filename>`
 - `GET /api/server/version`
 
