@@ -53,7 +53,7 @@ cco 審計後一次性補完：SSRF 防護（拒絕內網 / loopback IP）、`/a
 
 ### 6. 全自動備份（v2.4.7, 2026-05-13）
 
-Pi systemd timer 每週日 03:00 自動 `curl /api/server/backup/download` + `/rotate?keep=8`，保留最近 8 份（約 2 個月歷史）。**踩過的坑**：Caddy → Werkzeug HTTP/2 stream 收尾不乾淨會讓 curl exit 92，必須強制 `--http1.1`。
+Pi systemd timer 每週日 03:00 自動 `curl /api/server/backup/download` + `/rotate`（`keep_count=3`），保留最近 3 份。**踩過的坑**：Caddy → Werkzeug HTTP/2 stream 收尾不乾淨會讓 curl exit 92，必須強制 `--http1.1`。
 
 ### 7. Preview 編輯體驗修補（v2.4.8, 2026-05-26）
 
