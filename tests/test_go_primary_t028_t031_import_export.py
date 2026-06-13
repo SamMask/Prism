@@ -285,6 +285,9 @@ Body ![keep](/static/uploads/existing.png)
 def test_t029_json_import_duplicate_skip_and_rollback(temp_db, tmp_path):
     go_db = _copy_db(temp_db, tmp_path / "go_t029.db")
     go_data = tmp_path / "go_data"
+    # Duplicate detection matches title + content prefix, so derive the duplicate
+    # candidate from the seed's own note rather than assuming fixed seed content.
+    seed_note = _query_one(go_db, "SELECT title, content FROM Notes WHERE id = 1")
     proc, base = _start_go(go_db, go_data, tmp_path, "--enable-import-export")
     try:
         status, payload, _ = _request_json(
@@ -295,7 +298,7 @@ def test_t029_json_import_duplicate_skip_and_rollback(temp_db, tmp_path):
                 "mode": "skip",
                 "data": {
                     "notes": [
-                        {"id": 10, "title": "Welcome Note", "content": "Welcome to Prism!"},
+                        {"id": 10, "title": seed_note["title"], "content": seed_note["content"]},
                         {
                             "id": 11,
                             "title": "JSON Imported",
@@ -311,7 +314,7 @@ def test_t029_json_import_duplicate_skip_and_rollback(temp_db, tmp_path):
         assert status == 200
         assert payload["data"]["imported"] == 1
         assert payload["data"]["skipped"] == 1
-        assert payload["data"]["duplicates"] == ["Welcome Note"]
+        assert payload["data"]["duplicates"] == [seed_note["title"]]
         imported = _query_one(go_db, "SELECT id FROM Notes WHERE title = 'JSON Imported'")
         assert imported is not None
 

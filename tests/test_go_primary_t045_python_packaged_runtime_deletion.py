@@ -55,17 +55,19 @@ def test_embedded_python_and_legacy_packaged_runtime_files_are_removed():
         ROOT / "v2-\u6253\u5305\u5230Prism_\u65e5\u5e38\u4f7f\u7528\u7248.bat",
     ]
 
-    for path in removed_paths:
-        assert not path.exists(), f"legacy packaged runtime path should be removed: {path}"
-
-    for retained in [
+    # T053 has since removed the Python backend source the T045 boundary retained.
+    removed_paths += [
         ROOT / "app.py",
+        ROOT / "config.py",
+        ROOT / "db.py",
         ROOT / "routes",
+        ROOT / "utils",
         ROOT / "migrations",
-        REQ_PATH,
-        REQ_PI_PATH,
-    ]:
-        assert retained.exists(), f"T045 should retain Python source/dev path until T053: {retained}"
+        ROOT / "templates",
+    ]
+
+    for path in removed_paths:
+        assert not path.exists(), f"legacy packaged/backend source path should be removed: {path}"
 
 
 def test_product_entrypoints_start_go_primary_without_python_packaged_dependencies():

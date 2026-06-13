@@ -10,7 +10,6 @@ UPDATE_PATH = ROOT / "frontend" / "src" / "components" / "settings" / "UpdateSec
 SERVER_DASHBOARD_PATH = ROOT / "frontend" / "src" / "components" / "settings" / "ServerDashboardSection.tsx"
 SYSTEM_MAINTENANCE_PATH = ROOT / "frontend" / "src" / "components" / "SystemMaintenance.tsx"
 API_PATH = ROOT / "frontend" / "src" / "services" / "api.ts"
-SERVER_ROUTE_PATH = ROOT / "routes" / "server.py"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
@@ -31,7 +30,6 @@ def test_settings_deploy_controls_explain_port_update_and_hide_local_service_man
     update = UPDATE_PATH.read_text(encoding="utf-8")
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
     api = API_PATH.read_text(encoding="utf-8")
-    server_route = SERVER_ROUTE_PATH.read_text(encoding="utf-8")
 
     assert "目前可用網址" in port_config
     assert "若頁面已完全連不上" in port_config
@@ -40,14 +38,12 @@ def test_settings_deploy_controls_explain_port_update_and_hide_local_service_man
     assert "不需要另外選補丁檔" in update
     assert "service_management" in api
     assert "const canManageService = hardware?.service_management?.available === true" in server_dashboard
-    assert "getattr(sys, 'frozen', False)" in server_route
 
 
 def test_category_counts_and_backup_delete_controls_are_locked():
     data_manager = DATA_MANAGER_PATH.read_text(encoding="utf-8")
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
     api = API_PATH.read_text(encoding="utf-8")
-    server_route = SERVER_ROUTE_PATH.read_text(encoding="utf-8")
 
     assert 'data-testid="category-count"' in data_manager
     assert "w-12 shrink-0 rounded bg-bg-elevated px-2 py-0.5 text-right text-xs tabular-nums" in data_manager
@@ -57,7 +53,6 @@ def test_category_counts_and_backup_delete_controls_are_locked():
     assert "handleDeleteBackup" in server_dashboard
     assert "api.deleteBackup(backup.filename)" in server_dashboard
     assert "deleteBackup: async (filename: string)" in api
-    assert "@server_bp.route('/server/backup/<path:filename>', methods=['DELETE'])" in server_route
 
 
 def test_todo_records_phase24_settings_home_followup_scope():
