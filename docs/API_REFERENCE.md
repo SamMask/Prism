@@ -1,8 +1,8 @@
 # Prism API Reference
 
 > 用途：提供外部 Agent / 自動化工具（例如 `murmur厭世貓`）直接對接 Prism 的實際 API 契約。
-> 基準：以目前 Flask 路由實作為準，不以舊前端型別或歷史文件為準。
-> 最後確認：2026-05-27
+> 基準：以 Go primary live/default runtime 為準；Flask route source 僅保留 legacy/dev/test context 到 T053。
+> 最後確認：2026-06-13
 
 ---
 
@@ -47,6 +47,7 @@
 
 - `Notes.type` 已從資料庫移除。
 - 部分 API 仍保留 `type` 作為「分類名稱字串」的相容欄位或查詢參數，不代表資料庫仍有 `type` 欄位。
+- `/api/system/go-read-routing` 是 Phase 19 舊讀取路由 proof 的 legacy Flask source-only 狀態端點，不屬於 Go primary product API（not part of the Go primary product API）；T051 決議保留到 T053 與 legacy Python source 一起封存或刪除。
 
 ### 建議對接範圍
 
@@ -126,7 +127,7 @@
 #### 備註
 
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
-- Go read-only route parity: Phase 20.3 後，Go sidecar 的既有 `/api/notes?q=...` read surface 已對齊 DB-backed `Note_Attachments.title` / `file_path` metadata 搜尋；text attachment body search remains Python-owned，因為它需要 request-time file body scan。
+- Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
 - 列表回應目前不包含 `parent_id`。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。
 
@@ -699,10 +700,10 @@ Response：
 
 ```json
 {
-  "current_version": "2.4.5",
-  "latest_version": "v2.4.6",
+  "current_version": "2.4.9",
+  "latest_version": "v2.4.10",
   "has_update": true,
-  "release_url": "https://github.com/.../releases/tag/v2.4.6",
+  "release_url": "https://github.com/.../releases/tag/v2.4.10",
   "release_notes": "...",
   "message": "發現新版本"
 }
@@ -715,7 +716,7 @@ Response：
 
 ### GET `/api/system/go-read-routing`
 
-Phase 19.3 controlled read routing proof 狀態。這是 Python-owned status endpoint，用來確認目前是否啟用 opt-in Go read routing switch；它不是 Go runtime endpoint，也不代表 production cutover。
+Legacy-only Phase 19.3 controlled read routing proof 狀態。這個 endpoint 只存在於 legacy Flask source，Go primary product runtime 不提供它；外部 Agent 與前端不應依賴此 endpoint。T051 決議：不移植到 Go primary，保留到 T053 與 legacy Python source 一起封存或刪除。
 
 Response：
 
@@ -749,6 +750,8 @@ Response：
 - `PRISM_GO_READ_BASE_URL=http://127.0.0.1:<port>` 或 localhost / `[::1]`
 - 只代理已驗證 GET read surface；其他 API 仍由 Python 處理。
 
+目前產品 runtime 已是 Go primary；上述啟用條件只供讀歷史 evidence 或手動跑 legacy Flask source 時理解，不是現行部署步驟。
+
 ### GET `/api/system/migration-status`
 
 取得資料庫 migration 狀態。
@@ -770,7 +773,7 @@ Response：
 
 ## 12. Export / Import API
 
-> Go shadow note (T028-T031): `go-shadow` 已有 `--enable-import-export` / `PRISM_GO_ENABLE_IMPORT_EXPORT=1` local/copied-DB-and-data 候選實作；production/default runtime owner 仍是 Python，未切 Pi / Caddy / frontend default。
+Current owner: Go primary runtime。T028-T031 原本是 local/copied candidate；T042-T050 後產品啟動與 Pi live route 已由 Go primary 提供 import/export surface。
 
 ### GET `/api/export/json`
 
@@ -842,7 +845,7 @@ Response：
 
 ## 13. Prompt / Wizard Config API
 
-> Go shadow note (T035): `go-shadow` 已有 `--enable-server-system` / `PRISM_GO_ENABLE_SERVER_SYSTEM=1` local/copied-data 候選實作；讀寫 `PRISM_GO_DATA_DIR/config/*.json`，production/default runtime owner 仍是 Python，未切 Pi / Caddy / frontend default。
+Current owner: Go primary runtime。Prompt / Wizard options 讀寫 `PRISM_GO_DATA_DIR/config/*.json`；PromptBuilder 目前使用 `/api/wizard-options`，不再讀 legacy `/static/config/wizard_options.json`。
 
 這組主要是 Prism 內建 Prompt Builder 用的設定檔 CRUD；如果 `murmur厭世貓` 不需要管理 UI 選項，可以跳過。
 
@@ -861,7 +864,7 @@ Response：
 
 ## 14. Server API
 
-> Go shadow note (T032-T034): `go-shadow` 已有 `--enable-server-system` / `PRISM_GO_ENABLE_SERVER_SYSTEM=1` local/copied-DB-and-data 候選實作，涵蓋 server status/hardware/logs、backup、port/startup config 與 safe restart acknowledgement；production/default runtime owner 仍是 Python，未切 Pi / Caddy / frontend default。Go local candidate 不實際重啟 host service。
+Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism-go-primary.service` 會啟用 server/system surface。Go primary 的 restart endpoint 只回 safe acknowledgement，不直接重啟 host service；Pi service restart 仍走 systemd / ops script。
 
 以下端點僅供本機 headless 維運，外部 Agent 通常不要接：
 
@@ -887,7 +890,7 @@ Response：
 已同步的歷史差異：
 
 - `GET /api/system/check-update` 已補回後端路由。
-- `GET /api/system/go-read-routing` 是 Phase 19.3 Python-owned Go read routing proof status endpoint。
+- `GET /api/system/go-read-routing` 是 legacy Flask source-only Phase 19 proof endpoint，不屬於 Go primary product API；T053 會隨 Python source cleanup 處理。
 - `GET /api/system/migration-status` 已補回後端路由。
 - `DELETE /api/categories/<id>` 使用 `target_category_id`，不再使用舊的 `target_category` / `target_name`。
 - `GET /api/notes` 支援 `archived`、`include_archived`、`pinned_only`、`category_id`。

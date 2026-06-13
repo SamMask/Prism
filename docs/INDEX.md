@@ -23,7 +23,7 @@
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
-| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-05-27) |
+| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-06-13) |
 | [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 新 UI 參考檔 + Go shadow backend 路線整合規劃；前端改版與重構前必讀 | 📋 規劃中 |
 | [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
 | [contracts/api-readonly-manifest.json](./contracts/api-readonly-manifest.json) | Phase 18 read-only API manifest；Go shadow backend 與工具 surface 的機器可讀草稿 | ✅ 已建立 |
@@ -46,6 +46,8 @@
 | [contracts/phase20-go-write-surface-contract-inventory.json](./contracts/phase20-go-write-surface-contract-inventory.json) | Phase 20.1 write surface contract inventory；plan-only 盤點 Python-owned mutation/file/system/import/export/cleanup/config route classes、side effects、rollback 與 fixture requirements | ✅ 已建立 |
 | [../go-shadow/README.md](../go-shadow/README.md) | Phase 18.4 Go read-only shadow backend scaffold；啟動方式、scope、runtime safety 與 diff harness | ✅ 已建立 |
 | [contracts/go-primary-python-packaged-runtime-deletion.json](./contracts/go-primary-python-packaged-runtime-deletion.json) | T045 Python packaged runtime deletion；記錄 embedded Python/runtime scripts removal 與 T053 source boundary | ✅ 已建立 |
+| [contracts/go-primary-route-ownership-manifest.json](./contracts/go-primary-route-ownership-manifest.json) | T051 current-truth route ownership manifest；Go primary production owner、legacy Flask source context、`go-read-routing` source-only 決策 | ✅ 已刷新 |
+| [contracts/go-primary-frontend-route-coverage.json](./contracts/go-primary-frontend-route-coverage.json) | T046-T050 frontend 實際呼叫 surface coverage 與 Go primary gap closure | ✅ 已建立 |
 | [DEPLOYMENT.md](./DEPLOYMENT.md) | Go primary runtime、本機 artifact、Raspberry Pi `prism-go-primary.service` 與 Caddy 部署流程 | ✅ 仍適用 |
 | [CONTRIBUTING.md](./CONTRIBUTING.md) | 本地開發環境建置、依賴安裝、PR 規範 | ✅ 仍適用 |
 
@@ -55,6 +57,7 @@
 
 | 文件 | 說明 | 狀態 |
 |------|------|------|
+| [Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | **Go primary 收尾審查** — 唯讀靜態審查原文；T046-T052 已吸收 findings，T053 前作 Python source 封存/刪除 guardrail | 🗄️ 已歸檔 / 已吸收 |
 | [20260412-cco-綜合分析報告.md](./過期/20260412-cco-綜合分析報告.md) | **體檢報告** — Linus-mode 深度審核，列出 P0/P1/P2 問題與「好品味」段落 | ✅ 已完成 v2.4.2 |
 
 ---
@@ -74,6 +77,7 @@
 |------|------|------|
 | [README.md](./README.md) | 舊版文檔索引 (v1.4.1, 2025-12-15) | 🗄️ 已由本文件取代 |
 | [development-history/README.md](./development-history/README.md) | 從 TODO 拆出的完成階段與完整 Changelog 保存區 | 🗄️ 歷史保存，按需更新 |
+| [development-history/Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | 2026-06-13 Go 收尾審查原文；T046-T052 已處理，T053 前只作 guardrail 參考 | 🗄️ 歷史保存 |
 | [hypothetical_modern_prism.md](./hypothetical_modern_prism.md) | 現代化架構評估報告（前後端分離 Vite/React 方案探討）| 🗄️ 已完成實作，僅供歷史參考 |
 | [future_possibilities_heavy_local.md](./future_possibilities_heavy_local.md) | 本地 AI 重度依賴方案探索（PyTorch / Ollama / HuggingFace）| 🗄️ 已廢棄 — AI 功能於 v2.3.0 全面移除 |
 
@@ -98,6 +102,6 @@
 | 規劃新功能 / 查進度 | `TODO.md` |
 | 前端改版 / UI rewrite | `FRONTEND-REDESIGN-PLAN.md` + `docs/New_UI/Prism Redesign - standalone.html` |
 | Go shadow backend / API contract lock | `contracts/phase18-readiness.md` + `contracts/api-readonly-manifest.json` + `development-history/Prism_Go_模組逐步重構計劃報告.md` + `API_REFERENCE.md` + `SCHEMA.md` |
-| Go runtime / packaging proof | `contracts/phase19-go-runtime-packaging.md` + `contracts/phase19-go-readonly-promotion-gate.json` + `contracts/phase19-go-read-routing-proof.json` + `contracts/phase19-go-cutover-readiness-audit.json` + `contracts/phase19-go-readonly-service-cutover-plan.json` + `contracts/phase19-go-readonly-soak-execution.json` + `contracts/phase19-go-readonly-long-soak-decision.json` + `contracts/phase19-go-reverse-proxy-service-cutover-plan.json` + `contracts/phase19-go-caddy-readonly-routing-drill.json` + `contracts/phase19-go-caddy-extended-readonly-soak.json` + `contracts/phase19-go-caddy-cutover-candidate-decision.json` + `contracts/phase19-go-permanent-caddy-readonly-cutover.json` + `contracts/phase19-go-post-permanent-caddy-stabilization.json` + `contracts/phase19-go-caddy-matcher-runbook-hardening.json` + `contracts/phase19-go-post-matcher-hardening-stabilization.json` + `contracts/phase20-go-post-readonly-scope-assessment.json` + `contracts/phase20-go-write-surface-contract-inventory.json` + `contracts/go-primary-python-packaged-runtime-deletion.json` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |
+| Go primary runtime / packaging proof | `TODO.md` + `contracts/go-primary-route-ownership-manifest.json` + `contracts/go-primary-frontend-route-coverage.json` + `contracts/go-primary-python-packaged-runtime-deletion.json` + `development-history/Go重構審查報告-20260613-codex.md` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |
 | 首次部署 / 環境設定 | `DEPLOYMENT.md` + `CONTRIBUTING.md` |
 | 理解整體方向 | `Prism.md` |

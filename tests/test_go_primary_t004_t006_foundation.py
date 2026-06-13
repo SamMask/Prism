@@ -84,7 +84,8 @@ def test_t004_manifest_records_owner_handler_and_side_effect_shape():
 
     assert manifest["task_id"] == "T004"
     assert manifest["status"] == "completed"
-    assert manifest["production_runtime_owner"] == "python"
+    assert manifest["last_refreshed_task_id"] == "T051"
+    assert manifest["production_runtime_owner"] == "go-primary"
     assert manifest["source_of_truth"] == "Flask app.url_map"
 
     for route in manifest["routes"]:
@@ -92,13 +93,13 @@ def test_t004_manifest_records_owner_handler_and_side_effect_shape():
         assert route["endpoint"]
         assert route["methods"]
         assert route["python_handler"]
-        assert route["production_owner"] == "python"
+        assert route["production_owner"] != "python"
+        assert route["go_primary_owner"]
+        assert route["current_owner_note"]
         assert "db_side_effects" in route
         assert "file_side_effects" in route
         assert isinstance(route["db_side_effects"], list)
         assert isinstance(route["file_side_effects"], list)
-        if not route["go_primary_owner"]:
-            assert route["production_owner"] == "python"
 
     upload = next(
         route
@@ -110,8 +111,14 @@ def test_t004_manifest_records_owner_handler_and_side_effect_shape():
     migration = next(
         route for route in manifest["routes"] if route["rule"] == "/api/system/migration-status"
     )
-    assert migration["production_owner"] == "python"
-    assert migration["go_primary_owner"] is None
+    assert migration["production_owner"] == "go-primary"
+    assert migration["go_primary_owner"] == "go-primary runtime route"
+
+    read_routing = next(
+        route for route in manifest["routes"] if route["rule"] == "/api/system/go-read-routing"
+    )
+    assert read_routing["production_owner"] == "legacy-python-source-only"
+    assert "legacy Flask source" in read_routing["go_primary_owner"]
 
 
 def test_t005_parity_harness_contract_exposes_status_json_db_and_file_diffs():

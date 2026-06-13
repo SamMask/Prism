@@ -102,9 +102,13 @@ def test_t042_t043_t044_docs_are_current_and_hand_off_to_t045_t046():
     t045_row = next(line for line in todo.splitlines() if line.startswith("| T045 "))
     t046_row = next(line for line in todo.splitlines() if line.startswith("| T046 "))
     t051_row = next(line for line in todo.splitlines() if line.startswith("| T051 "))
+    t052_row = next(line for line in todo.splitlines() if line.startswith("| T052 "))
+    t053_row = next(line for line in todo.splitlines() if line.startswith("| T053 "))
     assert t045_row.endswith("| Done |")
     assert t046_row.endswith("| Done |")
-    assert t051_row.endswith("| Todo |")
+    assert t051_row.endswith("| Done |")
+    assert t052_row.endswith("| Done |")
+    assert t053_row.endswith("| Todo |")
 
     assert "T042-T044 Go primary live cutover, rollback, and soak gates are complete" in architecture
     assert "Go T042/T043/T044" in schema

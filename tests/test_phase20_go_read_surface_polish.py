@@ -51,7 +51,7 @@ def test_phase20_3_diff_fixture_covers_attachment_metadata_search():
     assert "/api/notes?q=attachment-meta-canary&page=1&per_page=20" in diff_test
 
 
-def test_phase20_3_documents_text_attachment_body_search_as_python_owned_gap():
+def test_phase20_3_contract_keeps_historical_gap_while_current_docs_record_go_primary_truth():
     polish = _polish()
     gaps = {gap["id"]: gap for gap in polish["documented_gaps"]}
 
@@ -62,8 +62,9 @@ def test_phase20_3_documents_text_attachment_body_search_as_python_owned_gap():
 
     api_docs = API_REFERENCE_PATH.read_text(encoding="utf-8")
     arch_docs = ARCHITECTURE_PATH.read_text(encoding="utf-8")
-    assert "Go read-only route parity" in api_docs
-    assert "text attachment body search remains Python-owned" in api_docs
+    assert "Go primary current truth" in api_docs
+    assert "bounded text attachment body scan" in api_docs
+    assert "text attachment body search remains Python-owned" not in api_docs
     assert "Phase 20.3" in arch_docs
     assert "文字附件 body 搜尋仍是 Python-owned gap" in arch_docs
 

@@ -78,7 +78,7 @@ npm run dev                      # -> http://localhost:5173
 scripts\pack.bat
 ```
 
-PyInstaller / embedded Python portable path 已在 T045 移除；Python source 只保留 legacy/dev/test 到 T053。Python runtime 不依賴 Pillow；thumbnail generation 已由 Go helper / Go primary 路徑承接。
+PyInstaller / embedded Python portable path 已在 T045 移除，T052 也清掉 tracked embedded Python zip / Pillow wheel 殘留；Python source 只保留 legacy/dev/test 到 T053。Python runtime 不依賴 Pillow；thumbnail generation 已由 Go helper / Go primary 路徑承接。
 
 ---
 

@@ -13,11 +13,12 @@
 | `docs/TODO.md` | 原子化 active 待辦與近期更新摘要；完整完成項目 / Changelog 見 `docs/development-history/` |
 | `docs/Prism.md` | V2 規劃期歷史記錄（已凍結，不再更新；僅供重構決策脈絡參考） |
 
-### 重大重構 / 前端改版額外必讀
+### 重大重構 / Go 收尾 / 前端改版額外必讀
 
 | 文件 | 內容 |
 |---|---|
 | `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` | 已封存的 Python → Go 漸進替換盤點；只供早期 shadow backend / response diff 決策追溯，current truth 以 `docs/TODO.md` 為準 |
+| `docs/development-history/Go重構審查報告-20260613-codex.md` | 2026-06-13 Go primary 收尾審查原文；T046-T052 findings 已掃過並收斂，T053 前只作 source 封存/刪除 guardrail，current truth 以 `docs/TODO.md` / contracts / API docs 為準 |
 | `docs/FRONTEND-REDESIGN-PLAN.md` | 新 UI 參考檔與 Go 重構路線的整合規劃；採納 UX 工作流，明確暫緩 collections schema、AI、協作與大規模 scope creep |
 | `docs/contracts/phase19-go-runtime-packaging.md` | Go runtime / packaging proof；single binary、external data dir、SQLite driver spike、Windows/Pi build plan |
 | `docs/New_UI/Prism Redesign - standalone.html` | UI 原型參考；只採工作流與視覺方向，不直接搬 prototype-only code / sample data / tweak panel |
@@ -30,7 +31,7 @@
    - `docs/ARCHITECTURE.md`（新模組 / 架構變動時）
    - `docs/SCHEMA.md`（有新 DB 欄位或遷移時）
    - `CLAUDE.md` + `AGENTS.md`（開發規範本身要改時，**兩份都要改**）
-3. **測試** → 每次實作後跑 `pytest tests/ -v`
+3. **測試** → 每次實作後跑 `pytest tests/ -v`；Go runtime / contracts 有變更時加跑 `cd go-shadow && go test ./...`；docs-only 變更至少跑 `git diff --check`、鏡像比對與相關文件 regression
 
 ## 專案快查
 
@@ -82,10 +83,10 @@ Runtime：   scripts/start_go_primary.ps1（Go primary；Python 只保留 legacy
 Anti-bloat 不等於最短程式碼；不得犧牲 correctness、tests、runtime safety、schema integrity 或 contract boundaries。必要的 validation、error handling 與 tests 不是 bloat。目標是減少沒有理由的 moving parts。
 
 > **白話說明**：
-> 這一段是在修「點 Header 上的 Command Palette 按鈕時，開啟方式太繞」的問題。
-> 現在 Header 可能是用「假裝使用者按下 Ctrl+K」的方式去打開 Command Palette；這能動，但不夠乾淨，也容易讓之後維護的人搞不清楚到底誰負責開關狀態。
-> 22.1 要改成 Header 直接呼叫明確的 open/toggle 方法；鍵盤快捷鍵 Ctrl+K / Cmd+K 仍然保留。
-> 修完後，使用者看到的功能不應該改變：點按鈕能開、快捷鍵能開、Esc 能關、搜尋與導覽都照舊。這是內部可靠性修正，不是新功能。
+> 目前 Go primary 已是 live/default runtime，T046-T052 也已把 2026-06-13 收尾審查中的前端漏接 API、文件 current truth 與 stale artifact 清完。
+> 下一個大邊界是 T053：封存或刪除剩餘 Python backend source，並把 docs/API/deploy/release wording 收斂成 Go primary runtime truth。
+> T053 不是重開 Python 路線，也不是順手做新功能；它只處理 legacy source/dev/test context 的最終歸宿。開始前先確認哪些 Python 檔案仍被 pytest、parity fixture、migration history 或 rollback evidence 需要，不能因為「看起來舊」就刪。
+> 若審查報告、舊 roadmap 與 current docs 衝突，以 `docs/TODO.md`、contracts、`docs/API_REFERENCE.md`、runtime source 與新測試為準。
 
 ## 禁止事項
 
@@ -93,4 +94,4 @@ Anti-bloat 不等於最短程式碼；不得犧牲 correctness、tests、runtime
 - 不使用 CDN — 所有前端資源必須本地化（離線優先）
 - 不破壞現有 API 契約 — 新增可以，修改簽名要建遷移
 - 不在 WSGI 請求生命週期內啟動背景執行緒
-- 不直接操作 DB — 統一使用 `db.py` 的 `get_db()`
+- 不繞過既有 DB owner/helper 直接散落操作 DB；Go 走現有 SQLite owner / transaction helper，legacy Python source 若仍保留則使用 `db.py` 的 `get_db()`

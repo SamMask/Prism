@@ -94,6 +94,7 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 - Caddy `https://prism.local`: proxy 到 Go primary，回應帶 `X-Prism-Go-Primary: hit`
 - `PRISM_GO_ALLOW_PUBLIC_BIND` 未啟用；仍只適合 trusted LAN/VPN/proxy-auth 邊界
 - Python packaged runtime 與 product startup path 已由 T045 移除；Python backend source 是否刪除/封存留給 T053
+- T051/T052 已同步 route/API/docs current truth 並清理 tracked stale packaging artifacts；Pi data paths 仍不被 package/deploy 覆蓋
 
 證據會回收到本機：
 
@@ -220,4 +221,4 @@ ssh PI5Mask24 "ls -l /home/mask070924/prism/go-primary-live/bin/prism-go-runtime
 
 ---
 
-**文件版本**：T045 / 2026-06-13
+**文件版本**：T052 / 2026-06-13

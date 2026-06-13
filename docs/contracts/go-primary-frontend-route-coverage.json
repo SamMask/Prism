@@ -13,7 +13,7 @@
     ],
     "go_runtime_source": "go-shadow/main.go",
     "route_manifest_basis": "docs/contracts/go-primary-route-ownership-manifest.json",
-    "review_basis": "Go重構審查報告-20260613-codex.md"
+    "review_basis": "docs/development-history/Go重構審查報告-20260613-codex.md"
   },
   "coverage_decisions": [
     {

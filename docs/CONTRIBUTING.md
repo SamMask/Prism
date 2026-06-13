@@ -144,6 +144,7 @@ npx tsc --noEmit
 ## 打包發布 (Packaging)
 
 > **狀態說明**: v2.4.9+ 的穩定主線是 Go primary runtime artifact 與 Raspberry Pi `prism-go-primary.service` 部署。PyInstaller / embedded Python portable path 已由 T045 移除。
+> T052 後，repo 不再追蹤 embedded Python zip、Pillow wheel 或 root empty `package-lock.json`；前端 lockfile 只在 `frontend/package-lock.json`。
 
 ### 版本號 (Single Source of Truth)
 

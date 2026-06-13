@@ -45,6 +45,9 @@ start_dev.bat
 dist/
 build/
 *.egg-info/
+/package-lock.json
+resources/python-embed.zip
+resources/wheels/*.whl
 
 # IDE & Editor
 # .vscode/

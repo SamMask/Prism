@@ -70,7 +70,7 @@ def test_go_primary_registers_frontend_called_missing_routes_and_static_guard():
     assert 'docs", "notes"' in main_go
 
 
-def test_docs_record_t046_t050_completion_without_claiming_t051():
+def test_docs_record_t046_t052_completion_and_t053_handoff():
     todo = TODO_PATH.read_text(encoding="utf-8")
     architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
@@ -81,7 +81,10 @@ def test_docs_record_t046_t050_completion_without_claiming_t051():
     for task_id in ("T046", "T047", "T048", "T049", "T050"):
         assert f"| {task_id} |" in todo
         assert f"| {task_id} |" in todo and "| Done |" in todo.split(f"| {task_id} |", 1)[1].splitlines()[0]
-    assert "| T051 |" in todo and "| Todo |" in todo.split("| T051 |", 1)[1].splitlines()[0]
+    assert "| T051 |" in todo and "| Done |" in todo.split("| T051 |", 1)[1].splitlines()[0]
+    assert "| T052 |" in todo and "| Done |" in todo.split("| T052 |", 1)[1].splitlines()[0]
+    assert "| T053 |" in todo and "| Todo |" in todo.split("| T053 |", 1)[1].splitlines()[0]
     assert "T046-T050 frontend-to-Go route coverage closure is complete" in architecture
+    assert "T051 route ownership / API docs current-truth refresh is complete" in architecture
     assert "Go T046-T050 補齊 frontend 實際呼叫的漏接 route" in schema
     assert "T046-T050 frontend route coverage closure" in readme

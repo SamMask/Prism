@@ -3,6 +3,7 @@
 ## Go primary deployment
 
 目前產品 runtime owner 是 Go primary。產品啟動、Pi live 部署與 package path 不再依賴 Python、venv、Flask 或 PyInstaller。
+T051 已將 API / route ownership 文件刷新為 Go primary current truth；T052 已清理 tracked embedded Python / Pillow packaging artifacts 與 root empty package lock，避免 release/package 語義與 T045 衝突。
 
 本機啟動：
 
@@ -115,4 +116,4 @@ Retained until T053:
 - `requirements.txt`
 - `requirements-pi.txt`
 
-T053 會決定 Python backend source 的最終刪除或封存，並做 API/deploy/release wording cleanup。
+T053 會決定 Python backend source 的最終刪除或封存，並做最後 API/deploy/release wording cleanup。`/api/system/go-read-routing` 只屬於 legacy Flask source 的 Phase 19 proof status，不是 Go primary product API。

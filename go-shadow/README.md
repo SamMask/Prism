@@ -18,6 +18,7 @@ Phase 19.14 executed approved Caddy matcher hardening; it narrows `/api/notes/*`
 Phase 19.15 executed approved post-hardening stabilization; it closes Phase 19 read-only promotion as stabilized.
 Phase 20.0 is an approved plan-only scope assessment; it does not expand Go ownership after Phase 19 closure.
 Phase 20.1 is an approved plan-only write surface inventory; it does not select or implement a Go write candidate.
+T042-T044 later moved live/default product traffic to Go primary, T045 removed the Python packaged runtime/startup path, T046-T050 closed frontend-called Go route gaps, and T051/T052 refreshed current-truth docs plus cleaned stale tracked packaging artifacts. Historical sections below keep the evidence chain from earlier gates; current product startup uses `scripts/start_go_primary.ps1` / `prism-go-primary.service` with the route flags enabled.
 
 ## Scope
 
@@ -49,7 +50,9 @@ Runtime-only endpoint:
 
 - `GET /healthz`
 
-Excluded endpoints remain Python-owned by default/live runtime: live/default notes writes, category/tag writes, files/uploads, upload delete, import/export, cleanup, maintenance, and `/api/server/*` until their explicit local/copied gates are promoted by later cutover work.
+Legacy-only endpoint:
+
+- `GET /api/system/go-read-routing` remains in Flask source only as Phase 19 proof/status context. It is not part of the Go primary product API and is deferred to T053 with the rest of the Python source archival/deletion decision.
 
 ## Promotion Gate
 
@@ -402,6 +405,12 @@ The active-roadmap T045 gate removes the Python packaged runtime/startup path af
 - retained Python backend source and `requirements*.txt` only as legacy source/dev/test context until T053
 
 The machine-readable contract is `docs/contracts/go-primary-python-packaged-runtime-deletion.json`. After the 2026-06-13 closure review, T046 is the frontend-to-Go route coverage and missing-surface audit gate; T053 is the source archival/deletion and final docs/API/release wording cleanup gate.
+
+#### Route Ownership Refresh And Stale Artifact Cleanup
+
+T051 refreshes `docs/contracts/go-primary-route-ownership-manifest.json`, `docs/API_REFERENCE.md`, schema/deployment wording, and docs indexes so current production owner fields match the Go primary live/default runtime. Flask handler names are retained only as legacy source context until T053. `/api/system/go-read-routing` is explicitly not ported to Go primary.
+
+T052 removes tracked stale packaging/root artifacts that conflicted with the T045 no-Python-package truth: `resources/python-embed.zip`, `resources/wheels/pillow-12.0.0-cp312-cp312-win_amd64.whl`, and the root empty `package-lock.json`. This does not touch user DB/data paths or delete Python backend source.
 
 ## Build Proof
 

@@ -4,921 +4,1361 @@
   "status": "completed",
   "completed_date": "2026-06-12",
   "source_of_truth": "Flask app.url_map",
-  "production_runtime_owner": "python",
-  "scope": "All non-HEAD/OPTIONS Flask url_map entries from default and V2 app modes. API routes are the Go-primary replacement surface; frontend/static routes are included to keep url_map coverage explicit.",
-  "boundary": "This manifest does not promote any route to live Go ownership. Missing Go-primary owners remain Python-owned.",
+  "production_runtime_owner": "go-primary",
+  "scope": "All legacy Flask url_map entries plus the matching Go primary product surface. Flask handler names are retained as legacy source context until T053; production ownership reflects the Go primary runtime after T042-T050.",
+  "boundary": "T051 current-truth refresh: product startup, Pi live Caddy traffic, and package paths are Go primary. Python backend source remains legacy/dev/test context until T053 and is not a current production owner.",
   "routes": [
     {
       "rule": "/",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "index",
       "python_handler": "app.index",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "go_candidate": "implemented local embedded SPA candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read templates/index.html"]
+      "file_side_effects": [
+        "read templates/index.html"
+      ],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "serve_spa",
       "python_handler": "app.serve_spa",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "go_candidate": "implemented local embedded SPA candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read frontend/dist/index.html"]
+      "file_side_effects": [
+        "read frontend/dist/index.html"
+      ],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/<path:path>",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "serve_spa",
       "python_handler": "app.serve_spa",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "go_candidate": "implemented local embedded SPA candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read frontend/dist asset or index.html"]
+      "file_side_effects": [
+        "read frontend/dist asset or index.html"
+      ],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/prompt-builder",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "prompt_builder",
       "python_handler": "app.prompt_builder",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "db_side_effects": [],
-      "file_side_effects": ["read templates/prompt-builder.html"]
+      "file_side_effects": [
+        "read templates/prompt-builder.html"
+      ],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/prompt-builder.html",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "prompt_builder_v1",
       "python_handler": "app.prompt_builder_v1",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "db_side_effects": [],
-      "file_side_effects": ["read templates/prompt-builder.html"]
+      "file_side_effects": [
+        "read templates/prompt-builder.html"
+      ],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/favicon.ico",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "favicon",
       "python_handler": "app.favicon",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/static/<path:filename>",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "static",
       "python_handler": "flask.static",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary embedded SPA/static runtime",
       "go_candidate": "implemented local static/uploads candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read static files and static/uploads"]
+      "file_side_effects": [
+        "read static files and static/uploads"
+      ],
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
     },
     {
       "rule": "/api/test",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "test_api",
       "python_handler": "app.test_api",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented read-only candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/categories",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "categories.get_categories",
       "python_handler": "routes/categories.py:get_categories",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/categories",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "categories.create_category",
       "python_handler": "routes/categories.py:create_category",
-      "production_owner": "python",
-      "go_primary_owner": null,
-      "db_side_effects": ["insert Categories"],
-      "file_side_effects": []
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "db_side_effects": [
+        "insert Categories"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/categories/<int:category_id>",
-      "methods": ["PUT"],
+      "methods": [
+        "PUT"
+      ],
       "endpoint": "categories.update_category",
       "python_handler": "routes/categories.py:update_category",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Categories"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Categories"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/categories/<int:category_id>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "categories.delete_category",
       "python_handler": "routes/categories.py:delete_category",
-      "production_owner": "python",
-      "go_primary_owner": null,
-      "db_side_effects": ["delete Categories", "reassign Notes.category_id"],
-      "file_side_effects": []
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "db_side_effects": [
+        "delete Categories",
+        "reassign Notes.category_id"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/tags",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "tags.get_tags",
       "python_handler": "routes/tags.py:get_tags",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/tags/<int:tag_id>",
-      "methods": ["PUT"],
+      "methods": [
+        "PUT"
+      ],
       "endpoint": "tags.rename_tag",
       "python_handler": "routes/tags.py:rename_tag",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Tags.name"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Tags.name"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/tags/<int:tag_id>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "tags.delete_tag",
       "python_handler": "routes/tags.py:delete_tag",
-      "production_owner": "python",
-      "go_primary_owner": null,
-      "db_side_effects": ["delete Tags", "delete Note_Tags links"],
-      "file_side_effects": []
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "db_side_effects": [
+        "delete Tags",
+        "delete Note_Tags links"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/tags/merge",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "tags.merge_tags",
       "python_handler": "routes/tags.py:merge_tags",
-      "production_owner": "python",
-      "go_primary_owner": null,
-      "db_side_effects": ["update Note_Tags", "delete merged Tags"],
-      "file_side_effects": []
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "db_side_effects": [
+        "update Note_Tags",
+        "delete merged Tags"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "notes.get_notes",
       "python_handler": "routes/notes/crud.py:get_notes",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read docs/attachments text files during search"]
+      "file_side_effects": [
+        "read docs/attachments text files during search"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.create_note",
       "python_handler": "routes/notes/crud.py:create_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["insert Notes", "insert Note_Tags", "insert Source_Urls", "insert Tags as needed"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "insert Notes",
+        "insert Note_Tags",
+        "insert Source_Urls",
+        "insert Tags as needed"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "notes.get_note",
       "python_handler": "routes/notes/crud.py:get_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>",
-      "methods": ["PUT"],
+      "methods": [
+        "PUT"
+      ],
       "endpoint": "notes.update_note",
       "python_handler": "routes/notes/crud.py:update_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Notes", "insert Note_History", "replace Note_Tags", "replace Source_Urls", "insert Tags as needed"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes",
+        "insert Note_History",
+        "replace Note_Tags",
+        "replace Source_Urls",
+        "insert Tags as needed"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "notes.delete_note",
       "python_handler": "routes/notes/crud.py:delete_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only; live media cleanup remains Python-owned",
-      "db_side_effects": ["delete Notes and related DB rows"],
-      "file_side_effects": ["may delete note-owned static/uploads image files"]
+      "db_side_effects": [
+        "delete Notes and related DB rows"
+      ],
+      "file_side_effects": [
+        "may delete note-owned static/uploads image files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/pin",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.toggle_pin_note",
       "python_handler": "routes/notes/actions.py:toggle_pin_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Notes.is_pinned"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes.is_pinned"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/archive",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.toggle_archive_note",
       "python_handler": "routes/notes/actions.py:toggle_archive_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Notes.is_archived"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes.is_archived"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/duplicate",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.duplicate_note",
       "python_handler": "routes/notes/actions.py:duplicate_note",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["insert duplicated Notes", "copy Note_Tags", "copy Source_Urls"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "insert duplicated Notes",
+        "copy Note_Tags",
+        "copy Source_Urls"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/reorder",
-      "methods": ["PUT"],
+      "methods": [
+        "PUT"
+      ],
       "endpoint": "notes.reorder_notes",
       "python_handler": "routes/notes/actions.py:reorder_notes",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Notes.sort_order"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes.sort_order"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/batch/type",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.batch_update_type",
       "python_handler": "routes/notes/batch.py:batch_update_type",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Notes.category_id"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes.category_id"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/batch/tags",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.batch_update_tags",
       "python_handler": "routes/notes/batch.py:batch_update_tags",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["insert/delete Note_Tags", "insert Tags as needed"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "insert/delete Note_Tags",
+        "insert Tags as needed"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/batch/delete",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.batch_delete_notes",
       "python_handler": "routes/notes/batch.py:batch_delete_notes",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only; live media cleanup remains Python-owned",
-      "db_side_effects": ["delete multiple Notes and related DB rows"],
-      "file_side_effects": ["may delete note-owned static/uploads image files"]
+      "db_side_effects": [
+        "delete multiple Notes and related DB rows"
+      ],
+      "file_side_effects": [
+        "may delete note-owned static/uploads image files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/history",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "notes.get_note_history",
       "python_handler": "routes/notes/history.py:get_note_history",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/restore/<int:history_id>",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.restore_note_version",
       "python_handler": "routes/notes/history.py:restore_note_version",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["update Notes from Note_History"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes from Note_History"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/history",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "notes.delete_note_history",
       "python_handler": "routes/notes/history.py:delete_note_history",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
-      "db_side_effects": ["delete Note_History rows"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "delete Note_History rows"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/import/md",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.import_markdown",
       "python_handler": "routes/notes/import_.py:import_markdown",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
-      "db_side_effects": ["insert Notes", "insert Tags", "insert Note_Tags", "insert Source_Urls"],
-      "file_side_effects": ["may copy local images into static/uploads", "may download remote images"]
+      "db_side_effects": [
+        "insert Notes",
+        "insert Tags",
+        "insert Note_Tags",
+        "insert Source_Urls"
+      ],
+      "file_side_effects": [
+        "may copy local images into static/uploads",
+        "may download remote images"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/export/batch",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "notes.export_batch",
       "python_handler": "routes/notes/export.py:export_batch",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read referenced static/uploads files"]
+      "file_side_effects": [
+        "read referenced static/uploads files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/attachments",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "attachments.get_note_attachments",
       "python_handler": "routes/attachments.py:get_note_attachments",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/attachments",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "attachments.upload_attachment",
       "python_handler": "routes/attachments.py:upload_attachment",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-files candidate only",
-      "db_side_effects": ["insert Note_Attachments"],
-      "file_side_effects": ["write docs/attachments file"]
+      "db_side_effects": [
+        "insert Note_Attachments"
+      ],
+      "file_side_effects": [
+        "write docs/attachments file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/attachments/<int:attachment_id>",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "attachments.get_attachment_content",
       "python_handler": "routes/attachments.py:get_attachment_content",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented text JSON and raw/binary local copied-files candidates only",
       "db_side_effects": [],
-      "file_side_effects": ["read docs/attachments file"]
+      "file_side_effects": [
+        "read docs/attachments file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/attachments/<int:attachment_id>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "attachments.delete_attachment",
       "python_handler": "routes/attachments.py:delete_attachment",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-files candidate only",
-      "db_side_effects": ["delete Note_Attachments"],
-      "file_side_effects": ["delete docs/attachments file"]
+      "db_side_effects": [
+        "delete Note_Attachments"
+      ],
+      "file_side_effects": [
+        "delete docs/attachments file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/check_separation",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "attachments.check_separation_needed",
       "python_handler": "routes/attachments.py:check_separation_needed",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/separate",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "attachments.separate_content",
       "python_handler": "routes/attachments.py:separate_content",
-      "production_owner": "python",
-      "go_primary_owner": null,
-      "db_side_effects": ["insert Note_Attachments", "update Notes.content"],
-      "file_side_effects": ["write docs/attachments file"]
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "db_side_effects": [
+        "insert Note_Attachments",
+        "update Notes.content"
+      ],
+      "file_side_effects": [
+        "write docs/attachments file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/restore",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "attachments.restore_content",
       "python_handler": "routes/attachments.py:restore_content",
-      "production_owner": "python",
-      "go_primary_owner": null,
-      "db_side_effects": ["update Notes.content", "delete Note_Attachments"],
-      "file_side_effects": ["delete docs/attachments file"]
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "db_side_effects": [
+        "update Notes.content",
+        "delete Note_Attachments"
+      ],
+      "file_side_effects": [
+        "delete docs/attachments file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/upload",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "upload.upload_file",
       "python_handler": "routes/upload.py:upload_file",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data upload and thumbnail candidates only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/uploads original and thumbnail files"]
+      "file_side_effects": [
+        "write static/uploads original and thumbnail files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/upload/delete",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "upload.delete_image",
       "python_handler": "routes/upload.py:delete_image",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data upload delete candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["delete static/uploads file and thumbnail companion"]
+      "file_side_effects": [
+        "delete static/uploads file and thumbnail companion"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/upload/url",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "upload.download_from_url",
       "python_handler": "routes/upload.py:download_from_url",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["fetch remote image", "write static/uploads original and thumbnail files"]
+      "file_side_effects": [
+        "fetch remote image",
+        "write static/uploads original and thumbnail files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/upload/extract-prompt",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "upload.extract_prompt",
       "python_handler": "routes/upload.py:extract_prompt",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "db_side_effects": [],
-      "file_side_effects": ["read uploaded image metadata"]
+      "file_side_effects": [
+        "read uploaded image metadata"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/cleanup/orphan-images",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "cleanup.get_orphan_images",
       "python_handler": "routes/cleanup.py:get_orphan_images",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["scan static/uploads files"]
+      "file_side_effects": [
+        "scan static/uploads files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/cleanup/orphan-images",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "cleanup.delete_orphan_images",
       "python_handler": "routes/cleanup.py:delete_orphan_images",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["delete orphan static/uploads files"]
+      "file_side_effects": [
+        "delete orphan static/uploads files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/cleanup/originals",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "cleanup.get_original_images",
       "python_handler": "routes/cleanup.py:get_original_images",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["scan static/uploads originals"]
+      "file_side_effects": [
+        "scan static/uploads originals"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/cleanup/originals",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "cleanup.delete_all_originals",
       "python_handler": "routes/cleanup.py:delete_all_originals",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
-      "db_side_effects": ["update Notes.content or cover_image references"],
-      "file_side_effects": ["delete static/uploads originals after thumbnail rewrite"]
+      "db_side_effects": [
+        "update Notes.content or cover_image references"
+      ],
+      "file_side_effects": [
+        "delete static/uploads originals after thumbnail rewrite"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/cleanup/broken-images",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "cleanup.get_broken_images",
       "python_handler": "routes/cleanup.py:get_broken_images",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["scan static/uploads references"]
+      "file_side_effects": [
+        "scan static/uploads references"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/cleanup/broken-images",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "cleanup.fix_broken_images",
       "python_handler": "routes/cleanup.py:fix_broken_images",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data media cleanup candidate only",
-      "db_side_effects": ["update Notes.content or cover_image references"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "update Notes.content or cover_image references"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/export/json",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "export.export_json",
       "python_handler": "routes/export.py:export_json",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/import/json",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "export.import_json",
       "python_handler": "routes/export.py:import_json",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
-      "db_side_effects": ["insert/update imported Notes, Tags, Categories, relations"],
-      "file_side_effects": ["may restore uploaded files from import payload"]
+      "db_side_effects": [
+        "insert/update imported Notes, Tags, Categories, relations"
+      ],
+      "file_side_effects": [
+        "may restore uploaded files from import payload"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/export/markdown",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "export.export_markdown",
       "python_handler": "routes/export.py:export_markdown",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read referenced static/uploads files"]
+      "file_side_effects": [
+        "read referenced static/uploads files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/export/db",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "export.export_db",
       "python_handler": "routes/export.py:export_db",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read SQLite database file"]
+      "file_side_effects": [
+        "read SQLite database file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/export/images",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "export.export_images",
       "python_handler": "routes/export.py:export_images",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read static/uploads files"]
+      "file_side_effects": [
+        "read static/uploads files"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/stats",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.get_system_stats",
       "python_handler": "routes/system.py:get_system_stats",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read upload directory stats"]
+      "file_side_effects": [
+        "read upload directory stats"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/vacuum",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "system.vacuum_database",
       "python_handler": "routes/system.py:vacuum_database",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
-      "db_side_effects": ["VACUUM SQLite database"],
-      "file_side_effects": ["rewrite SQLite database file"]
+      "db_side_effects": [
+        "VACUUM SQLite database"
+      ],
+      "file_side_effects": [
+        "rewrite SQLite database file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/clear-history",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "system.clear_history",
       "python_handler": "routes/system.py:clear_history",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
-      "db_side_effects": ["delete Note_History rows"],
-      "file_side_effects": []
+      "db_side_effects": [
+        "delete Note_History rows"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/startup-preference",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.get_startup_preference",
       "python_handler": "routes/system.py:get_startup_preference",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read local startup preference config"]
+      "file_side_effects": [
+        "read local startup preference config"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/startup-preference",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "system.set_startup_preference",
       "python_handler": "routes/system.py:set_startup_preference",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write local startup preference config"]
+      "file_side_effects": [
+        "write local startup preference config"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/wal-checkpoint",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "system.wal_checkpoint",
       "python_handler": "routes/system.py:wal_checkpoint",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
-      "db_side_effects": ["SQLite WAL checkpoint"],
-      "file_side_effects": ["rewrite knowledge.db-wal and knowledge.db-shm state"]
+      "db_side_effects": [
+        "SQLite WAL checkpoint"
+      ],
+      "file_side_effects": [
+        "rewrite knowledge.db-wal and knowledge.db-shm state"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/check-consistency",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.check_consistency",
       "python_handler": "routes/system.py:check_consistency",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/check-update",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.check_update",
       "python_handler": "routes/system.py:check_update",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/go-read-routing",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.go_read_routing_status",
       "python_handler": "routes/system.py:go_read_routing_status",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "legacy-python-source-only",
+      "go_primary_owner": "not implemented in Go primary; retained only by legacy Flask source until T053",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Removed from product API surface by Go primary cutover; not part of the Go primary product API; keep only as Phase 19 historical/status source context until T053 archival/deletion."
     },
     {
       "rule": "/api/system/migration-status",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.migration_status",
       "python_handler": "routes/system.py:migration_status",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented status-only local candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/port-config",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "system.get_port_config",
       "python_handler": "routes/system.py:get_port_config",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read .port_config"]
+      "file_side_effects": [
+        "read .port_config"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/system/port-config",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "system.set_port_config",
       "python_handler": "routes/system.py:set_port_config",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write .port_config"]
+      "file_side_effects": [
+        "write .port_config"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/hardware",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "server.get_hardware_status",
       "python_handler": "routes/server.py:get_hardware_status",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/logs",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "server.get_server_logs",
       "python_handler": "routes/server.py:get_server_logs",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read app.log or journal logs"]
+      "file_side_effects": [
+        "read app.log or journal logs"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/restart",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "server.restart_service",
       "python_handler": "routes/server.py:restart_service",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data server/system safe acknowledgement only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "process_side_effects": ["restart local Prism service/process"]
+      "process_side_effects": [
+        "restart local Prism service/process"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/backup/download",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "server.download_backup",
       "python_handler": "routes/server.py:download_backup",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data backup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read SQLite database backup payload"]
+      "file_side_effects": [
+        "read SQLite database backup payload"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/backup/rotate",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "server.rotate_backups",
       "python_handler": "routes/server.py:rotate_backups",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data backup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["delete old backups under backups"]
+      "file_side_effects": [
+        "delete old backups under backups"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/backup/list",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "server.list_backups",
       "python_handler": "routes/server.py:list_backups",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data backup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["list backups directory"]
+      "file_side_effects": [
+        "list backups directory"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/backup/<path:filename>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "server.delete_backup",
       "python_handler": "routes/server.py:delete_backup",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data backup candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["delete selected backup file"]
+      "file_side_effects": [
+        "delete selected backup file"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/server/version",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "server.get_version",
       "python_handler": "routes/server.py:get_version",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
-      "file_side_effects": []
+      "file_side_effects": [],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/prompt-options",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "prompt_options.get_options",
       "python_handler": "routes/prompt_options.py:get_options",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read static/config/prompt_options.json"]
+      "file_side_effects": [
+        "read static/config/prompt_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/prompt-options/category/<category_key>",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "prompt_options.add_option",
       "python_handler": "routes/prompt_options.py:add_option",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/prompt_options.json"]
+      "file_side_effects": [
+        "write static/config/prompt_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/prompt-options/category/<category_key>/<int:index>",
-      "methods": ["PUT"],
+      "methods": [
+        "PUT"
+      ],
       "endpoint": "prompt_options.update_option",
       "python_handler": "routes/prompt_options.py:update_option",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/prompt_options.json"]
+      "file_side_effects": [
+        "write static/config/prompt_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/prompt-options/category/<category_key>/<int:index>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "prompt_options.delete_option",
       "python_handler": "routes/prompt_options.py:delete_option",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/prompt_options.json"]
+      "file_side_effects": [
+        "write static/config/prompt_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/prompt-options/template",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "prompt_options.save_template",
       "python_handler": "routes/prompt_options.py:save_template",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/prompt_options.json"]
+      "file_side_effects": [
+        "write static/config/prompt_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/prompt-options/template/<template_id>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "prompt_options.delete_template",
       "python_handler": "routes/prompt_options.py:delete_template",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/prompt_options.json"]
+      "file_side_effects": [
+        "write static/config/prompt_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/wizard-options",
-      "methods": ["GET"],
+      "methods": [
+        "GET"
+      ],
       "endpoint": "wizard_options.get_wizard_options",
       "python_handler": "routes/wizard_options.py:get_wizard_options",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["read static/config/wizard_options.json"]
+      "file_side_effects": [
+        "read static/config/wizard_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/wizard-options/dimension/<dimension_key>",
-      "methods": ["POST"],
+      "methods": [
+        "POST"
+      ],
       "endpoint": "wizard_options.add_wizard_option",
       "python_handler": "routes/wizard_options.py:add_wizard_option",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/wizard_options.json"]
+      "file_side_effects": [
+        "write static/config/wizard_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     },
     {
       "rule": "/api/wizard-options/dimension/<dimension_key>/<int:index>",
-      "methods": ["DELETE"],
+      "methods": [
+        "DELETE"
+      ],
       "endpoint": "wizard_options.delete_wizard_option",
       "python_handler": "routes/wizard_options.py:delete_wizard_option",
-      "production_owner": "python",
-      "go_primary_owner": null,
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
       "go_candidate": "implemented local copied-data prompt/wizard options candidate only",
       "db_side_effects": [],
-      "file_side_effects": ["write static/config/wizard_options.json"]
+      "file_side_effects": [
+        "write static/config/wizard_options.json"
+      ],
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
     }
-  ]
+  ],
+  "last_refreshed_task_id": "T051",
+  "last_refreshed_date": "2026-06-13",
+  "current_owner_basis": [
+    "scripts/start_go_primary.ps1 enables Go route classes for product startup",
+    "scripts/go_primary_pi_live_ops.ps1 installs prism-go-primary.service at 127.0.0.1:5004 and Caddy routes to Go primary",
+    "docs/contracts/go-primary-frontend-route-coverage.json closes T047-T050 frontend-called Go route gaps"
+  ],
+  "go_candidate_field_note": "Existing go_candidate values are historical implementation provenance from local/copied gates; production_owner is the current owner field after T051."
 }

@@ -42,7 +42,7 @@ npm run dev
 pytest tests/ -v
 ```
 
-Python backend source 與 `requirements*.txt` 只保留為 legacy source / dev / test context；T045 後不再是產品啟動必要條件。T053 會決定 source 最終刪除或封存。
+Python backend source 與 `requirements*.txt` 只保留為 legacy source / dev / test context；T045 後不再是產品啟動必要條件，T052 已清掉 tracked embedded Python / Pillow package 殘留。T053 會決定 source 最終刪除或封存。
 
 ---
 
