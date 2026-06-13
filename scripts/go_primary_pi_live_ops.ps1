@@ -16,6 +16,27 @@ $ErrorActionPreference = "Stop"
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 
+# Non-interactive SSH/SCP options. BatchMode=yes means ssh/scp never prompt for a
+# password, passphrase, or host-key confirmation — they fail fast instead of hanging
+# forever when run without a TTY (e.g. background automation). ConnectTimeout and the
+# keepalive pair turn a dead connection into a prompt error rather than an infinite wait.
+$script:SshBaseOpts = @(
+    "-o", "BatchMode=yes",
+    "-o", "ConnectTimeout=30",
+    "-o", "ServerAliveInterval=15",
+    "-o", "ServerAliveCountMax=4"
+)
+
+# ssh with stdin redirected from the null device (-n) so it can never consume the
+# caller's stdin pipe — the other classic non-TTY hang.
+function Invoke-Ssh([string]$RemoteCommand) {
+    & ssh -n @script:SshBaseOpts $HostAlias $RemoteCommand
+}
+
+function Invoke-Scp([string]$Source, [string]$Dest) {
+    & scp @script:SshBaseOpts $Source $Dest
+}
+
 function Resolve-RepoPath([string]$PathValue) {
     if ([System.IO.Path]::IsPathRooted($PathValue)) {
         return [System.IO.Path]::GetFullPath($PathValue)
@@ -44,19 +65,19 @@ function Invoke-RemoteBash([string]$Description, [string]$Script, [string[]]$Rem
     $remoteTemp = "/tmp/$scriptName"
     [System.IO.File]::WriteAllText($localTemp, $Script, [System.Text.UTF8Encoding]::new($false))
     try {
-        & scp $localTemp "${HostAlias}:$remoteTemp"
+        Invoke-Scp $localTemp "${HostAlias}:$remoteTemp"
         if ($LASTEXITCODE -ne 0) {
             throw "$Description could not copy remote script to $HostAlias"
         }
         $quotedArgs = ($RemoteArgs | ForEach-Object { Quote-RemoteArg $_ }) -join " "
-        & ssh $HostAlias "chmod +x '$remoteTemp' && '$remoteTemp' $quotedArgs"
+        Invoke-Ssh "chmod +x '$remoteTemp' && '$remoteTemp' $quotedArgs"
         if ($LASTEXITCODE -ne 0) {
             throw "$Description failed with exit code $LASTEXITCODE"
         }
     }
     finally {
         Remove-Item -LiteralPath $localTemp -Force -ErrorAction SilentlyContinue
-        & ssh $HostAlias "rm -f '$remoteTemp'" | Out-Null
+        Invoke-Ssh "rm -f '$remoteTemp'" | Out-Null
     }
 }
 
@@ -78,21 +99,21 @@ if ($Mode -eq "All" -and (Test-Path $localEvidencePath)) {
 New-Item -ItemType Directory -Force -Path $localEvidencePath | Out-Null
 
 $remoteLive = "$RemoteRoot/go-primary-live"
-& ssh $HostAlias "mkdir -p '$remoteLive/bin' '$remoteLive/scripts' '$remoteLive/evidence'"
+Invoke-Ssh "mkdir -p '$remoteLive/bin' '$remoteLive/scripts' '$remoteLive/evidence'"
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to create remote live directories on $HostAlias"
 }
 $remoteArtifactTemp = "$remoteLive/bin/prism-go-runtime-linux-arm64.upload"
-& scp $linuxArm64Artifact "${HostAlias}:$remoteArtifactTemp"
+Invoke-Scp $linuxArm64Artifact "${HostAlias}:$remoteArtifactTemp"
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to copy linux/arm64 Go artifact to $HostAlias"
 }
-& ssh $HostAlias "mv -f '$remoteArtifactTemp' '$remoteLive/bin/prism-go-runtime-linux-arm64' && chmod +x '$remoteLive/bin/prism-go-runtime-linux-arm64'"
+Invoke-Ssh "mv -f '$remoteArtifactTemp' '$remoteLive/bin/prism-go-runtime-linux-arm64' && chmod +x '$remoteLive/bin/prism-go-runtime-linux-arm64'"
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to install linux/arm64 Go artifact on $HostAlias"
 }
 foreach ($scriptName in @("go_primary_full_workflow_smoke.py", "python_live_workflow_smoke.py")) {
-    & scp (Join-Path $repoRoot "scripts/$scriptName") "${HostAlias}:$remoteLive/scripts/$scriptName"
+    Invoke-Scp (Join-Path $repoRoot "scripts/$scriptName") "${HostAlias}:$remoteLive/scripts/$scriptName"
     if ($LASTEXITCODE -ne 0) {
         throw "Unable to copy $scriptName to $HostAlias"
     }
@@ -726,14 +747,14 @@ if ($Mode -in @("All", "Soak")) {
     Invoke-RemoteBash "T044 Go primary soak" $soakScript @($RemoteRoot, $remoteLive, "t044", [string]$SoakSamples, [string]$SoakIntervalSeconds, "t044")
 }
 
-& scp "${HostAlias}:$remoteLive/evidence/*.json" "$localEvidencePath/"
+Invoke-Scp "${HostAlias}:$remoteLive/evidence/*.json" "$localEvidencePath/"
 if ($LASTEXITCODE -ne 0) {
     throw "Unable to copy live evidence from $HostAlias"
 }
-$remoteJsonlFiles = & ssh $HostAlias "find '$remoteLive/evidence' -maxdepth 1 -name '*.jsonl' -print"
+$remoteJsonlFiles = Invoke-Ssh "find '$remoteLive/evidence' -maxdepth 1 -name '*.jsonl' -print"
 if ($LASTEXITCODE -eq 0 -and $remoteJsonlFiles) {
     foreach ($remoteJsonl in $remoteJsonlFiles) {
-        & scp "${HostAlias}:$remoteJsonl" "$localEvidencePath/"
+        Invoke-Scp "${HostAlias}:$remoteJsonl" "$localEvidencePath/"
         if ($LASTEXITCODE -ne 0) {
             throw "Unable to copy live evidence JSONL $remoteJsonl from $HostAlias"
         }
