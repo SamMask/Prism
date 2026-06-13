@@ -115,3 +115,39 @@ test_phase19_go_runtime_packaging.py
 5. **④** 更新 docs/API/release 文案，同步調整 D 組 wording-coupled 斷言。
 
 > **紅線**：DELETE\* 在「Go 等價覆蓋未勾到」前一律不執行；schema_regression 在 REWIRE 完成前不刪。違反就是把驗收守門一起刪掉。
+
+---
+
+## E. Go 覆蓋驗證（`go-shadow/main_test.go` 實查，2026-06-13）
+
+> 對每個行為查 `main_test.go` 是否真有打該 HTTP 路徑的斷言（path-literal 實查，非關鍵字計數）。`main_test.go` 共 49 個測試。
+
+| 行為 | Go unit 覆蓋（main_test.go path-literal） | 結論 |
+|---|---|---|
+| notes create/update/FTS/search/delete | ✅ `TestNotesCreateAndUpdate...` / `TestNotesSearch...` / `TestNotesDeleteCleansImagesFTS...` | DELETE\*/GOLDEN 可行 |
+| separation `check_separation` / `separate` / `restore` | ✅ `/restore`×2、`check_separation`×2、`TestLongContentSeparationAndRestoreHandlers` | 已覆蓋 |
+| pagination `per_page` | ✅ ×6 | `test_pagination.py` DELETE\* 可行 |
+| categories write | ✅ `TestCategoryWriteMode...` | 可行 |
+| tags write | ✅ `TestTagWriteMode...` | 可行（但 **merge 除外**，見下） |
+| attachments text/raw/write | ✅ `TestAttachmentTextRead...` / `TestAttachmentWrite...` | 可行 |
+| upload / upload-url / thumbnail / SSRF | ✅ 多個 `TestUpload*` / `TestThumbnail*`（含 private host/redirect/invalid 拒絕） | 可行 |
+| migrations / fresh init / rollback | ✅ `TestOpenRuntimeSQLite*` / `TestRunExistingDBMigrations...` | 可行 |
+| **notes actions：`/pin` `/archive` `/duplicate` `reorder`** | ❌ **path-literal = 0** | **⚠️ 缺口** |
+| **batch：`batch/type` `batch/tags`** | ❌ **path-literal = 0** | **⚠️ 缺口** |
+| **`tags/merge`** | ❌ **path-literal = 0** | **⚠️ 缺口** |
+| **notes history list/delete：`/history`** | ❌ **path-literal = 0**（`restore` 有、list/delete 無） | **⚠️ 缺口** |
+| **CSRF（Origin/Referer）** | ❌ main_test.go = 0 | **⚠️ 缺口**（SSRF 有覆蓋，CSRF 無） |
+
+### 修正後處置（覆蓋本檔 A/B 組的暫定值）
+
+這些行為目前**只活在用 Python oracle 的 parity 測試裡**；盲刪 = 靜默漏測。改判為 **GOLDEN（保留 Go 半邊斷言）或先補 `main_test.go` Go unit test 再 DELETE**：
+
+| 測試檔 | 原暫定 | **修正** | 原因 |
+|---|---|---|---|
+| `test_go_primary_t014_t015_notes_actions_batch.py` | DELETE\* | **GOLDEN / 先補 Go test** | pin/archive/duplicate/reorder/batch Go unit 零覆蓋 |
+| `test_go_primary_t016_t017_history_categories.py` | DELETE\* | **GOLDEN（history 半邊）** | history list/delete Go unit 零覆蓋（categories 已覆蓋） |
+| `test_go_primary_t018_tags.py` | DELETE\* | **GOLDEN（merge 半邊）** | tags merge Go unit 零覆蓋 |
+| `test_security_guards.py` | DELETE\* | **DELETE\*-blocked** | CSRF Go 覆蓋未證實，補 Go CSRF test 或確認 Go 行為前不刪 |
+
+> **本驗證的價值**：證明「一口氣刪掉所有 parity + 純 Python 測試」會靜默掉 notes actions / batch / tags-merge / history / CSRF 的覆蓋。這正是紅線存在的理由——T053 執行時，上述四檔**不可**走 plain DELETE。
+
