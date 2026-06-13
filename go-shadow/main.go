@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"compress/zlib"
 	"context"
 	"crypto/md5"
 	"database/sql"
@@ -48,6 +49,8 @@ const sqliteBusyTimeoutMS = 5000
 const sqlitePragmaQueryOnlyOn = "PRAGMA query_only = ON"
 const sqlitePragmaQueryOnlyOff = "PRAGMA query_only = OFF"
 const maxAttachmentFileBytes int64 = 1048576
+const separationThreshold = 5000
+const separationPreviewLength = 500
 const maxAttachmentScanFiles = 200
 const maxAttachmentScanBytes int64 = 5242880
 const maxAttachmentScanDuration = 250 * time.Millisecond
@@ -83,6 +86,7 @@ type runtimeConfig struct {
 	dataDir                  string
 	uploadsDir               string
 	attachmentsDir           string
+	notesDir                 string
 	logsDir                  string
 	backupsDir               string
 	configDir                string
@@ -184,6 +188,7 @@ func main() {
 	mux.HandleFunc("/api/notes/", srv.handleNoteDetail)
 	mux.HandleFunc("/api/attachments/", srv.handleAttachmentDetail)
 	mux.HandleFunc("/api/system/migration-status", srv.handleMigrationStatus)
+	mux.HandleFunc("/api/system/check-update", srv.handleCheckUpdate)
 	mux.HandleFunc("/api/system/stats", srv.handleSystemStats)
 	mux.HandleFunc("/api/system/vacuum", srv.handleSystemVacuum)
 	mux.HandleFunc("/api/system/clear-history", srv.handleSystemClearHistory)
@@ -214,6 +219,7 @@ func main() {
 	mux.HandleFunc("/api/export/images", srv.handleExportImages)
 	mux.HandleFunc("/api/import/json", srv.handleImportJSON)
 	mux.HandleFunc("/api/upload/delete", srv.handleUploadDelete)
+	mux.HandleFunc("/api/upload/extract-prompt", srv.handleExtractPrompt)
 	mux.HandleFunc("/api/upload/url", srv.handleUploadURL)
 	mux.HandleFunc("/api/upload", srv.handleUpload)
 	mux.Handle("/", srv.staticHandler())
@@ -337,6 +343,10 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 	if err != nil {
 		return runtimeConfig{}, err
 	}
+	notesDir, err := ensureDataSubdir(absData, "docs", "notes")
+	if err != nil {
+		return runtimeConfig{}, err
+	}
 	logsDir, err := ensureDataSubdir(absData, "logs")
 	if err != nil {
 		return runtimeConfig{}, err
@@ -356,6 +366,7 @@ func resolveRuntimeConfig(addr, dbPath, dataDir string, enableTagWrite, enableCa
 		dataDir:                  absData,
 		uploadsDir:               uploadsDir,
 		attachmentsDir:           attachmentsDir,
+		notesDir:                 notesDir,
 		logsDir:                  logsDir,
 		backupsDir:               backupsDir,
 		configDir:                configDir,
@@ -1275,6 +1286,10 @@ func (s *server) staticHandler() http.Handler {
 			writeError(w, http.StatusNotFound, "API route not found")
 			return
 		}
+		if strings.HasPrefix(r.URL.Path, "/static/config/") {
+			writeError(w, http.StatusNotFound, "Static config is available through API options routes")
+			return
+		}
 		if r.URL.Path == "/static/uploads" {
 			writeError(w, http.StatusNotFound, "File not found")
 			return
@@ -1475,6 +1490,27 @@ func (s *server) handleMigrationStatus(w http.ResponseWriter, r *http.Request) {
 			"latest_version":  status.LatestVersion,
 			"completed":       completed,
 			"pending":         pending,
+		},
+	})
+}
+
+func (s *server) handleCheckUpdate(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) {
+		return
+	}
+	if !s.runtime.enableServerSystem {
+		writeError(w, http.StatusMethodNotAllowed, "Server/system route is disabled")
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"current_version": prismVersion(),
+			"latest_version":  nil,
+			"has_update":      false,
+			"release_url":     "",
+			"release_notes":   "",
+			"message":         "未設定更新來源",
 		},
 	})
 }
@@ -4343,6 +4379,236 @@ func categoryIDForNameTx(tx *sql.Tx, name string) (int, error) {
 	return id, err
 }
 
+func (s *server) handleExtractPrompt(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) {
+		return
+	}
+	if !s.runtime.enableUploadWrite {
+		_, _ = io.Copy(io.Discard, r.Body)
+		writeError(w, http.StatusMethodNotAllowed, "Upload route is disabled")
+		return
+	}
+	payload, ok := decodeJSONObject(w, r, "image_path is required")
+	if !ok {
+		return
+	}
+	imagePath := strings.TrimSpace(stringField(payload, "image_path"))
+	if imagePath == "" {
+		writeError(w, http.StatusBadRequest, "image_path is required")
+		return
+	}
+	resolved, ok := s.resolvePromptImagePath(imagePath)
+	if !ok {
+		writeError(w, http.StatusNotFound, "Image file not found")
+		return
+	}
+	promptData, err := extractPromptMetadata(resolved)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Failed to read image metadata: "+err.Error())
+		return
+	}
+	if strings.TrimSpace(promptData.Prompt) == "" {
+		writeJSON(w, http.StatusOK, response{
+			"status": "success",
+			"data": response{
+				"prompt":          nil,
+				"negative_prompt": nil,
+				"source":          nil,
+				"has_prompt":      false,
+			},
+		})
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"prompt":          promptData.Prompt,
+			"negative_prompt": nilIfEmpty(promptData.NegativePrompt),
+			"source":          nilIfEmpty(promptData.Source),
+			"has_prompt":      true,
+		},
+	})
+}
+
+func (s *server) resolvePromptImagePath(imagePath string) (string, bool) {
+	cleaned := strings.TrimSpace(strings.ReplaceAll(imagePath, "\\", "/"))
+	if strings.HasPrefix(cleaned, "/static/uploads/") {
+		cleaned = strings.TrimPrefix(cleaned, "/static/uploads/")
+	} else if strings.HasPrefix(cleaned, "static/uploads/") {
+		cleaned = strings.TrimPrefix(cleaned, "static/uploads/")
+	}
+	if cleaned == "" || strings.Contains(cleaned, ":") || strings.HasPrefix(cleaned, "/") {
+		return "", false
+	}
+	absPath, ok := s.resolveUploadFile(cleaned)
+	if !ok {
+		return "", false
+	}
+	info, err := os.Lstat(absPath)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxUploadFileBytes {
+		return "", false
+	}
+	resolved, err := filepath.EvalSymlinks(absPath)
+	if err != nil || filepath.Clean(resolved) != filepath.Clean(absPath) || !isSubpath(resolved, s.runtime.uploadsDir) {
+		return "", false
+	}
+	return resolved, true
+}
+
+type promptMetadata struct {
+	Prompt         string
+	NegativePrompt string
+	Source         string
+}
+
+func extractPromptMetadata(filename string) (promptMetadata, error) {
+	content, err := os.ReadFile(filename)
+	if err != nil {
+		return promptMetadata{}, err
+	}
+	fields := readPNGTextFields(content)
+	return promptMetadataFromFields(fields), nil
+}
+
+func readPNGTextFields(content []byte) map[string]string {
+	fields := map[string]string{}
+	if len(content) < 8 || !bytes.Equal(content[:8], []byte("\x89PNG\r\n\x1a\n")) {
+		return fields
+	}
+	for offset := 8; offset+12 <= len(content); {
+		length := int(content[offset])<<24 | int(content[offset+1])<<16 | int(content[offset+2])<<8 | int(content[offset+3])
+		chunkType := string(content[offset+4 : offset+8])
+		chunkStart := offset + 8
+		chunkEnd := chunkStart + length
+		if chunkEnd+4 > len(content) {
+			return fields
+		}
+		chunk := content[chunkStart:chunkEnd]
+		switch chunkType {
+		case "tEXt":
+			if key, value, ok := parsePNGTextChunk(chunk); ok {
+				fields[key] = value
+			}
+		case "zTXt":
+			if key, value, ok := parsePNGZTextChunk(chunk); ok {
+				fields[key] = value
+			}
+		case "iTXt":
+			if key, value, ok := parsePNGInternationalTextChunk(chunk); ok {
+				fields[key] = value
+			}
+		case "IEND":
+			return fields
+		}
+		offset = chunkEnd + 4
+	}
+	return fields
+}
+
+func parsePNGTextChunk(chunk []byte) (string, string, bool) {
+	parts := bytes.SplitN(chunk, []byte{0}, 2)
+	if len(parts) != 2 {
+		return "", "", false
+	}
+	return latin1String(parts[0]), string(parts[1]), true
+}
+
+func parsePNGZTextChunk(chunk []byte) (string, string, bool) {
+	parts := bytes.SplitN(chunk, []byte{0}, 2)
+	if len(parts) != 2 || len(parts[1]) == 0 || parts[1][0] != 0 {
+		return "", "", false
+	}
+	reader, err := zlib.NewReader(bytes.NewReader(parts[1][1:]))
+	if err != nil {
+		return "", "", false
+	}
+	defer reader.Close()
+	text, err := io.ReadAll(io.LimitReader(reader, maxUploadFileBytes+1))
+	if err != nil || int64(len(text)) > maxUploadFileBytes {
+		return "", "", false
+	}
+	return latin1String(parts[0]), string(text), true
+}
+
+func parsePNGInternationalTextChunk(chunk []byte) (string, string, bool) {
+	parts := bytes.SplitN(chunk, []byte{0}, 6)
+	if len(parts) != 6 {
+		return "", "", false
+	}
+	text := parts[5]
+	if len(parts[1]) > 0 && parts[1][0] == 1 {
+		if len(parts[2]) == 0 || parts[2][0] != 0 {
+			return "", "", false
+		}
+		reader, err := zlib.NewReader(bytes.NewReader(text))
+		if err != nil {
+			return "", "", false
+		}
+		defer reader.Close()
+		decoded, err := io.ReadAll(io.LimitReader(reader, maxUploadFileBytes+1))
+		if err != nil || int64(len(decoded)) > maxUploadFileBytes {
+			return "", "", false
+		}
+		text = decoded
+	}
+	return latin1String(parts[0]), string(text), true
+}
+
+func promptMetadataFromFields(fields map[string]string) promptMetadata {
+	if value := strings.TrimSpace(fields["parameters"]); value != "" {
+		prompt, negative := splitStableDiffusionPrompt(value)
+		return promptMetadata{Prompt: prompt, NegativePrompt: negative, Source: "stable_diffusion"}
+	}
+	if value := strings.TrimSpace(fields["prompt"]); value != "" {
+		return promptMetadata{Prompt: value, Source: "comfyui"}
+	}
+	if value := strings.TrimSpace(fields["Comment"]); value != "" {
+		payload := map[string]any{}
+		if err := json.Unmarshal([]byte(value), &payload); err == nil {
+			if prompt := strings.TrimSpace(stringField(payload, "prompt")); prompt != "" {
+				return promptMetadata{Prompt: prompt, NegativePrompt: stringField(payload, "uc"), Source: "novelai"}
+			}
+		}
+	}
+	if value := strings.TrimSpace(fields["Description"]); value != "" {
+		return promptMetadata{Prompt: value, Source: "description"}
+	}
+	return promptMetadata{}
+}
+
+func splitStableDiffusionPrompt(parameters string) (string, string) {
+	lines := strings.Split(parameters, "\n")
+	promptLines := []string{}
+	negative := ""
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "Negative prompt:") {
+			negative = strings.TrimSpace(strings.TrimPrefix(trimmed, "Negative prompt:"))
+			continue
+		}
+		if strings.HasPrefix(trimmed, "Steps:") || strings.HasPrefix(trimmed, "Size:") || strings.HasPrefix(trimmed, "Sampler:") {
+			break
+		}
+		promptLines = append(promptLines, line)
+	}
+	return strings.TrimSpace(strings.Join(promptLines, "\n")), negative
+}
+
+func latin1String(raw []byte) string {
+	var builder strings.Builder
+	for _, b := range raw {
+		builder.WriteRune(rune(b))
+	}
+	return builder.String()
+}
+
+func nilIfEmpty(value string) any {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	return value
+}
+
 func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
@@ -6643,7 +6909,10 @@ func isAllowedAttachmentPath(relativePath, fileType string) bool {
 		}
 	}
 	cleaned := path.Clean(relativePath)
-	if cleaned == "." || strings.HasPrefix(cleaned, "../") || cleaned == ".." || !strings.HasPrefix(cleaned, "docs/attachments/") {
+	if cleaned == "." || strings.HasPrefix(cleaned, "../") || cleaned == ".." {
+		return false
+	}
+	if !strings.HasPrefix(cleaned, "docs/attachments/") && !strings.HasPrefix(cleaned, "docs/notes/") {
 		return false
 	}
 	ext := strings.TrimPrefix(strings.ToLower(path.Ext(cleaned)), ".")
@@ -7806,10 +8075,32 @@ func (s *server) handleNoteAction(w http.ResponseWriter, r *http.Request, noteID
 		}
 		w.Header().Set("Allow", "GET, DELETE")
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-	case "restore":
-		if r.Method != http.MethodPost || len(parts) != 2 {
+	case "check_separation":
+		if r.Method != http.MethodGet || len(parts) != 1 {
+			w.Header().Set("Allow", http.MethodGet)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		s.checkSeparation(w, noteID)
+	case "separate":
+		if r.Method != http.MethodPost || len(parts) != 1 {
 			w.Header().Set("Allow", http.MethodPost)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		s.separateContent(w, r, noteID)
+	case "restore":
+		if r.Method != http.MethodPost {
+			w.Header().Set("Allow", http.MethodPost)
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if len(parts) == 1 {
+			s.restoreSeparatedContent(w, noteID)
+			return
+		}
+		if len(parts) != 2 {
+			http.NotFound(w, r)
 			return
 		}
 		historyID, err := strconv.Atoi(parts[1])
@@ -7822,6 +8113,222 @@ func (s *server) handleNoteAction(w http.ResponseWriter, r *http.Request, noteID
 	default:
 		http.NotFound(w, r)
 	}
+}
+
+func (s *server) checkSeparation(w http.ResponseWriter, noteID int) {
+	var content sql.NullString
+	if err := s.db.QueryRow("SELECT content FROM Notes WHERE id = ?", noteID).Scan(&content); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	contentLength := len([]rune(nullableString(content)))
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"should_separate": contentLength > separationThreshold,
+			"content_length":  contentLength,
+			"threshold":       separationThreshold,
+		},
+	})
+}
+
+func (s *server) separateContent(w http.ResponseWriter, r *http.Request, noteID int) {
+	payload := map[string]any{}
+	_ = json.NewDecoder(r.Body).Decode(&payload)
+	previewLen, ok := intField(payload, "preview_length")
+	if !ok || previewLen <= 0 {
+		previewLen = separationPreviewLength
+	}
+
+	var title, content sql.NullString
+	if err := s.db.QueryRow("SELECT title, content FROM Notes WHERE id = ?", noteID).Scan(&title, &content); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "Note not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	fullContent := nullableString(content)
+	originalLength := len([]rune(fullContent))
+	if originalLength <= separationThreshold {
+		writeJSON(w, http.StatusOK, response{
+			"status":  "info",
+			"message": fmt.Sprintf("Content length (%d) is under threshold (%d), no separation needed", originalLength, separationThreshold),
+		})
+		return
+	}
+
+	if err := os.MkdirAll(s.notesDirectory(), 0755); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	filename := fmt.Sprintf("note_%d.md", noteID)
+	absPath := filepath.Join(s.notesDirectory(), filename)
+	if !isSubpath(absPath, s.runtime.dataDir) {
+		writeError(w, http.StatusInternalServerError, "unsafe notes path")
+		return
+	}
+	if err := os.WriteFile(absPath, []byte(fullContent), 0644); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	relativePath := path.Join("docs", "notes", filename)
+	attachmentTitle := nullableString(title) + " (完整內容)"
+	preview := separatedPreview(fullContent, previewLen)
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+
+	var attachmentID int
+	err = tx.QueryRow("SELECT id FROM Note_Attachments WHERE note_id = ? AND is_auto_extracted = 1", noteID).Scan(&attachmentID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if attachmentID != 0 {
+		if _, err := tx.Exec("UPDATE Note_Attachments SET size_bytes = ?, title = ?, file_path = ?, file_type = 'md' WHERE id = ?", info.Size(), attachmentTitle, relativePath, attachmentID); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	} else {
+		result, err := tx.Exec(`
+			INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted, created_at)
+			VALUES (?, ?, 'md', ?, ?, 1, CURRENT_TIMESTAMP)`, noteID, relativePath, attachmentTitle, info.Size())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		newID, err := result.LastInsertId()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		attachmentID = int(newID)
+	}
+	if _, err := tx.Exec("UPDATE Notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", preview, noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status":  "success",
+		"message": "內容已成功分離為附件",
+		"data": response{
+			"attachment_id":   attachmentID,
+			"file_path":       relativePath,
+			"original_length": originalLength,
+			"preview_length":  len([]rune(preview)),
+		},
+	})
+}
+
+func (s *server) restoreSeparatedContent(w http.ResponseWriter, noteID int) {
+	var attachmentID int
+	var filePath sql.NullString
+	if err := s.db.QueryRow("SELECT id, file_path FROM Note_Attachments WHERE note_id = ? AND is_auto_extracted = 1", noteID).Scan(&attachmentID, &filePath); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "No auto-extracted attachment found for this note")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	resolved, ok := resolveAutoExtractedNotePath(s.runtime.dataDir, nullableString(filePath))
+	if !ok {
+		writeError(w, http.StatusNotFound, "Attachment file not found on disk")
+		return
+	}
+	content, err := os.ReadFile(resolved)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "Attachment file not found on disk")
+		return
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec("UPDATE Notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", normalizeTextContent(string(content)), noteID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := tx.Exec("DELETE FROM Note_Attachments WHERE id = ?", attachmentID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = os.Remove(resolved)
+	writeJSON(w, http.StatusOK, response{"status": "success", "message": "內容已成功還原至筆記"})
+}
+
+func (s *server) notesDirectory() string {
+	if s.runtime.notesDir != "" {
+		return s.runtime.notesDir
+	}
+	return filepath.Join(s.runtime.dataDir, "docs", "notes")
+}
+
+func separatedPreview(content string, previewLen int) string {
+	runes := []rune(content)
+	if len(runes) <= previewLen {
+		return content
+	}
+	return string(runes[:previewLen]) + "\n\n---\n📎 **[完整內容已分離為附件]**\n\n> 此筆記內容過長，已自動分離為附件。點擊附件可查看完整內容。"
+}
+
+func resolveAutoExtractedNotePath(dataDir, relativePath string) (string, bool) {
+	relativePath = strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))
+	if relativePath == "" || filepath.IsAbs(relativePath) || filepath.VolumeName(relativePath) != "" || strings.Contains(relativePath, ":") {
+		return "", false
+	}
+	cleaned := path.Clean(relativePath)
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") || !strings.HasPrefix(cleaned, "docs/notes/") {
+		return "", false
+	}
+	ext := strings.ToLower(path.Ext(cleaned))
+	if ext != ".md" && ext != ".markdown" && ext != ".txt" {
+		return "", false
+	}
+	root, err := filepath.Abs(dataDir)
+	if err != nil {
+		return "", false
+	}
+	candidate := filepath.Join(root, filepath.FromSlash(cleaned))
+	absCandidate, err := filepath.Abs(candidate)
+	if err != nil || !isSubpath(absCandidate, root) {
+		return "", false
+	}
+	info, err := os.Lstat(absCandidate)
+	if err != nil || !info.Mode().IsRegular() || info.Size() > maxAttachmentFileBytes {
+		return "", false
+	}
+	resolved, err := filepath.EvalSymlinks(absCandidate)
+	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+		return "", false
+	}
+	return resolved, true
 }
 
 func (s *server) toggleNoteBool(w http.ResponseWriter, r *http.Request, noteID int, column, payloadKey string) {

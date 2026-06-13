@@ -1,0 +1,70 @@
+{
+  "task_ids": ["T046", "T047", "T048", "T049", "T050"],
+  "title": "Frontend-to-Go primary route coverage closure",
+  "status": "completed",
+  "completed_date": "2026-06-13",
+  "scope": {
+    "frontend_sources_scanned": [
+      "frontend/src/services/api.ts",
+      "frontend/src/hooks/usePromptBuilder.ts",
+      "frontend/src/hooks/editor/usePromptExtraction.ts",
+      "frontend/src/hooks/editor/useNoteForm.ts",
+      "frontend/src/components/settings/UpdateSection.tsx"
+    ],
+    "go_runtime_source": "go-shadow/main.go",
+    "route_manifest_basis": "docs/contracts/go-primary-route-ownership-manifest.json",
+    "review_basis": "Go重構審查報告-20260613-codex.md"
+  },
+  "coverage_decisions": [
+    {
+      "task_id": "T047",
+      "frontend_surface": "api.extractImagePrompt -> POST /api/upload/extract-prompt",
+      "decision": "go_primary_route_added",
+      "go_surface": "POST /api/upload/extract-prompt",
+      "guard": "--enable-upload-write / PRISM_GO_ENABLE_UPLOAD_WRITE",
+      "fallback_behavior": "missing image and disabled route return controlled JSON errors"
+    },
+    {
+      "task_id": "T048",
+      "frontend_surface": "api.checkSeparation / separateContent / restoreContent",
+      "decision": "go_primary_routes_added_and_silent_catch_removed",
+      "go_surface": [
+        "GET /api/notes/<id>/check_separation",
+        "POST /api/notes/<id>/separate",
+        "POST /api/notes/<id>/restore"
+      ],
+      "guard": "--enable-notes-write / PRISM_GO_ENABLE_NOTES_WRITE",
+      "file_root": "PRISM_GO_DATA_DIR/docs/notes",
+      "frontend_error_visibility": "useNoteForm shows a toast if automatic separation fails after save"
+    },
+    {
+      "task_id": "T049",
+      "frontend_surface": "api.checkUpdate -> GET /api/system/check-update",
+      "decision": "go_primary_route_added",
+      "go_surface": "GET /api/system/check-update",
+      "guard": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM",
+      "response_contract": "returns current_version, null latest_version, has_update=false, and a controlled no-source message"
+    },
+    {
+      "task_id": "T050",
+      "frontend_surface": "PromptBuilder wizard options load",
+      "decision": "frontend_switched_to_api_route",
+      "old_path": "/static/config/wizard_options.json",
+      "new_path": "/api/wizard-options",
+      "go_static_guard": "/static/config/* returns JSON 404 instead of SPA HTML"
+    }
+  ],
+  "regression_guards": [
+    "tests/test_go_primary_t046_t050_frontend_route_coverage.py",
+    "go-shadow/main_test.go"
+  ],
+  "not_in_scope": [
+    "full route ownership manifest refresh",
+    "API reference wording refresh",
+    "SCHEMA wording refresh beyond no-schema-change status",
+    "tracked stale packaging artifact cleanup",
+    "Python backend source deletion or archival",
+    "public internet exposure expansion"
+  ],
+  "recommended_next_task": "T051"
+}

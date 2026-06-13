@@ -44,11 +44,12 @@ def test_go_roadmap_report_is_archived_not_root_current_truth():
 
 def test_t046_t053_queue_captures_confirmed_go_primary_audit_gaps():
     todo = _text(TODO_PATH)
-    assert "T046 \u5148\u505a frontend \u2192 Go route coverage" in todo
-    assert "\u6700\u7d42 Python backend source deletion/archive \u5f8c\u79fb\u5230 T053" in todo
+    assert "T046-T050 \u5df2\u88dc\u9f4a 2026-06-13 Go \u6536\u5c3e\u5be9\u67e5\u5217\u51fa\u7684 frontend \u5be6\u969b\u547c\u53eb\u6f0f\u63a5 surface" in todo
+    assert "\u6700\u7d42 Python backend source deletion/archive \u4ecd\u5f8c\u79fb\u5230 T053" in todo
 
     rows = {task_id: _todo_row(task_id) for task_id in [f"T{n:03d}" for n in range(46, 54)]}
-    assert all(row.endswith("| Todo |") for row in rows.values())
+    assert all(rows[task_id].endswith("| Done |") for task_id in [f"T{n:03d}" for n in range(46, 51)])
+    assert all(rows[task_id].endswith("| Todo |") for task_id in [f"T{n:03d}" for n in range(51, 54)])
 
     assert "frontend \u2192 Go primary route coverage" in rows["T046"]
     assert "extract-prompt" in rows["T047"]

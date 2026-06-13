@@ -120,7 +120,11 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
         toast.success('筆記已建立')
       }
       if (content.length > SEPARATION_THRESHOLD) {
-        try { await api.separateContent(savedNoteId) } catch { /* silent */ }
+        try {
+          await api.separateContent(savedNoteId)
+        } catch {
+          toast.warning('筆記已儲存，但長文自動分離失敗，完整內容仍保留在筆記內')
+        }
       }
       fetchNotes(true)
       onClose()

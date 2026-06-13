@@ -38,10 +38,12 @@ Local/copied-DB candidate endpoints behind explicit flags:
 - `GET /api/attachments/{id}?raw=true` raw/text/binary serving with `--enable-attachment-raw-read`
 - `GET /api/notes/{id}/attachments`, `POST /api/notes/{id}/attachments`, and `DELETE /api/attachments/{id}` metadata/file mutation with `--enable-attachment-write`
 - `POST /api/upload` original upload candidate with `--enable-upload-write`
+- `POST /api/upload/extract-prompt` prompt metadata extraction with `--enable-upload-write`
 - `POST /api/upload` `_thumb.webp` generation and `thumbnail_only` with `--enable-thumbnail-write`
 - `POST /api/upload/url` remote image fetch candidate with `--enable-upload-url-write`
 - server/system/config candidates with `--enable-server-system`
 - embedded SPA and `/static/uploads/<file>` serving from the explicit data dir, with unknown `/api/*` returning JSON 404 instead of SPA fallback
+- T046-T050 frontend route coverage closure: long-content `GET /api/notes/{id}/check_separation`, `POST /api/notes/{id}/separate`, and `POST /api/notes/{id}/restore` are handled with `--enable-notes-write`; `GET /api/system/check-update` returns a controlled Go primary response with `--enable-server-system`; PromptBuilder uses `/api/wizard-options`, and `/static/config/*` returns JSON 404 instead of SPA HTML.
 
 Runtime-only endpoint:
 

@@ -149,5 +149,7 @@ def test_t039_t040_t041_docs_are_current_and_hand_off_to_completed_cutover_gate(
     assert t042_row.endswith("| Done |")
     t045_row = next(line for line in todo.splitlines() if line.startswith("| T045 "))
     t046_row = next(line for line in todo.splitlines() if line.startswith("| T046 "))
+    t051_row = next(line for line in todo.splitlines() if line.startswith("| T051 "))
     assert t045_row.endswith("| Done |")
-    assert t046_row.endswith("| Todo |")
+    assert t046_row.endswith("| Done |")
+    assert t051_row.endswith("| Todo |")

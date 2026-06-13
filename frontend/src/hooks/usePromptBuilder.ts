@@ -216,10 +216,12 @@ export function usePromptBuilder() {
   // Load Wizard Options
   const loadWizardOptions = useCallback(async () => {
     try {
-      const response = await fetch("/static/config/wizard_options.json");
+      const response = await fetch("/api/wizard-options");
       if (!response.ok) throw new Error("Failed to load wizard options");
 
-      const config = await response.json();
+      const result = await response.json();
+      if (result.status !== "success") throw new Error(result.message);
+      const config = result.data;
 
       if (config.technicalSpecs) {
         setTechnicalOptions({

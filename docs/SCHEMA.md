@@ -214,6 +214,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T039/T040/T041 已在 package/Pi staging 證明 Windows artifact fresh DB smoke、linux/arm64 artifact copied production DB/data staging smoke、以及 staging service active；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Pi staging 使用 `knowledge_t041_staging.db` 與 copied uploads/attachments，live `knowledge.db` SHA256 必須不變；live/default Caddy/systemd ownership、rollback、soak 與 Python removal 仍未切換。
 > Go T042/T043/T044 已在 Pi live/default 完成 Go primary cutover、rollback drill 與 bounded soak；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。T042/T044 使用 live `knowledge.db` 與 external data dir `/home/mask070924/prism`，T043 以 SQLite online backup artifact 與 uploads/attachments tar restore 作 rollback 證據；final state 是 Go primary active、Python `prism.service` inactive。
 > Go T045 已移除 Python packaged runtime 與產品啟動路徑；這同樣不新增資料表或欄位，SQLite 仍維持 v16。Python backend source / `requirements*.txt` 只保留為 legacy source/dev/test context，最終刪除或封存留給 T053。
+> Go T046-T050 補齊 frontend 實際呼叫的漏接 route：prompt metadata extraction、長文自動分離/還原、system check-update、wizard options API path 與 static config fallback guard。這些變更只使用既有 `Notes` / `Note_Attachments` / external data dir `docs/notes` contract，不新增資料表、欄位、索引或 migration，SQLite 仍維持 v16。
 
 ---
 

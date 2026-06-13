@@ -22,14 +22,15 @@ export function UpdateSection() {
     try {
       const data = await api.checkUpdate();
       setUpdateInfo(data);
-    } catch {
+    } catch (error) {
+      const status = (error as { response?: { status?: number } })?.response?.status;
       setUpdateInfo({
         current_version: '未知',
         latest_version: null,
         has_update: false,
         release_url: '',
         release_notes: '',
-        error: '無法連接更新伺服器',
+        error: status === 404 ? '目前的 Go primary runtime 尚未提供更新檢查 API' : '無法連接更新伺服器',
       });
     } finally {
       setIsChecking(false);
