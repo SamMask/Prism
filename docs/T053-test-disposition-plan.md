@@ -188,3 +188,7 @@ test_phase19_go_runtime_packaging.py
 
 > **紅線已全部解除。** T053 剩餘前置：③ `schema_regression` REWIRE 到 Go schema 真相；之後即可進行物理刪除 + ④ 文案。
 
+### 補捉（2026-06-13，clude-1 / codex-2 審查 reconciliation）
+
+- `tests/test_simple.py`（`def test_simple(): assert True`）：無 contract / runtime 意義，純佔測試數量。處置 **DELETE**（隨 ④ 一起；不依賴 Python，刪除不影響 Go 覆蓋，僅使 pytest 基準從 527 → 526）。本輪不動，避免在物理刪除前變動驗收基準。
+
