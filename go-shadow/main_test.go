@@ -2488,3 +2488,282 @@ func assertWebPWidth(t *testing.T, path string, width int) {
 		t.Fatalf("expected thumbnail width %d, got %d", width, cfg.Width)
 	}
 }
+
+func assertNoteIntColumn(t *testing.T, db *sql.DB, noteID int, column string, want int) {
+	t.Helper()
+	var got int
+	if err := db.QueryRow("SELECT COALESCE("+column+", -1) FROM Notes WHERE id = ?", noteID).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Fatalf("note %d column %s got %d, want %d", noteID, column, got, want)
+	}
+}
+
+func tagIDByName(t *testing.T, db *sql.DB, name string) int {
+	t.Helper()
+	var id int
+	if err := db.QueryRow("SELECT id FROM Tags WHERE name = ?", name).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// TestNotesPinArchiveDuplicateReorderHandlers locks the notes action surface that
+// previously had no Go unit coverage (only Python-oracle parity). See
+// docs/T053-test-disposition-plan.md §E.
+func TestNotesPinArchiveDuplicateReorderHandlers(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true}}
+	firstID := insertSearchNote(t, db, "Pin Fixture", "pincontent", "", 1)
+	secondID := insertSearchNote(t, db, "Reorder Fixture", "reordercontent", "", 1)
+
+	// pin with empty body toggles 0 -> 1
+	pinRec := httptest.NewRecorder()
+	srv.handleNoteDetail(pinRec, httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/pin", firstID), nil))
+	if pinRec.Code != http.StatusOK {
+		t.Fatalf("expected pin 200, got %d body=%s", pinRec.Code, pinRec.Body.String())
+	}
+	var pinResp struct {
+		Data struct {
+			IsPinned bool `json:"is_pinned"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(pinRec.Body.Bytes(), &pinResp); err != nil {
+		t.Fatal(err)
+	}
+	if !pinResp.Data.IsPinned {
+		t.Fatalf("expected is_pinned true after pin, body=%s", pinRec.Body.String())
+	}
+	assertNoteIntColumn(t, db, firstID, "is_pinned", 1)
+
+	// pin again toggles 1 -> 0
+	pinAgain := httptest.NewRecorder()
+	srv.handleNoteDetail(pinAgain, httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/pin", firstID), nil))
+	if pinAgain.Code != http.StatusOK {
+		t.Fatalf("expected second pin 200, got %d", pinAgain.Code)
+	}
+	assertNoteIntColumn(t, db, firstID, "is_pinned", 0)
+
+	// archive with explicit body
+	archiveRec := httptest.NewRecorder()
+	srv.handleNoteDetail(archiveRec, httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/archive", firstID), strings.NewReader(`{"archived":true}`)))
+	if archiveRec.Code != http.StatusOK {
+		t.Fatalf("expected archive 200, got %d body=%s", archiveRec.Code, archiveRec.Body.String())
+	}
+	assertNoteIntColumn(t, db, firstID, "is_archived", 1)
+
+	// duplicate creates a new note with the copy suffix
+	dupRec := httptest.NewRecorder()
+	srv.handleNoteDetail(dupRec, httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/duplicate", firstID), strings.NewReader(`{}`)))
+	if dupRec.Code != http.StatusCreated {
+		t.Fatalf("expected duplicate 201, got %d body=%s", dupRec.Code, dupRec.Body.String())
+	}
+	newID := noteIDFromResponse(t, dupRec.Body.Bytes())
+	if newID == firstID {
+		t.Fatalf("duplicate should create a new note id, got original %d", newID)
+	}
+	var dupTitle string
+	if err := db.QueryRow("SELECT title FROM Notes WHERE id = ?", newID).Scan(&dupTitle); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasSuffix(dupTitle, " (Copy)") {
+		t.Fatalf("duplicate title should carry copy suffix, got %q", dupTitle)
+	}
+
+	// reorder [second, first] sets sort_order second=0, first=1
+	reorderRec := httptest.NewRecorder()
+	reorderBody := fmt.Sprintf(`{"note_ids":[%d,%d]}`, secondID, firstID)
+	srv.handleNoteDetail(reorderRec, httptest.NewRequest(http.MethodPut, "/api/notes/reorder", strings.NewReader(reorderBody)))
+	if reorderRec.Code != http.StatusOK {
+		t.Fatalf("expected reorder 200, got %d body=%s", reorderRec.Code, reorderRec.Body.String())
+	}
+	assertNoteIntColumn(t, db, secondID, "sort_order", 0)
+	assertNoteIntColumn(t, db, firstID, "sort_order", 1)
+}
+
+// TestNotesBatchTypeAndTagsHandlers locks batch/type and batch/tags, previously
+// only covered by Python-oracle parity. See docs/T053-test-disposition-plan.md §E.
+func TestNotesBatchTypeAndTagsHandlers(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec("INSERT INTO Categories (name) VALUES ('Batch Target Cat')"); err != nil {
+		t.Fatal(err)
+	}
+	var targetCat int
+	if err := db.QueryRow("SELECT id FROM Categories WHERE name = 'Batch Target Cat'").Scan(&targetCat); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true}}
+	aID := insertSearchNote(t, db, "Batch One", "batchone", "", 1)
+	bID := insertSearchNote(t, db, "Batch Two", "batchtwo", "", 1)
+
+	typeRec := httptest.NewRecorder()
+	typeBody := fmt.Sprintf(`{"note_ids":[%d,%d],"category_id":%d}`, aID, bID, targetCat)
+	srv.handleNoteDetail(typeRec, httptest.NewRequest(http.MethodPost, "/api/notes/batch/type", strings.NewReader(typeBody)))
+	if typeRec.Code != http.StatusOK {
+		t.Fatalf("expected batch/type 200, got %d body=%s", typeRec.Code, typeRec.Body.String())
+	}
+	var typeResp struct {
+		Data struct {
+			UpdatedCount int `json:"updated_count"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(typeRec.Body.Bytes(), &typeResp); err != nil {
+		t.Fatal(err)
+	}
+	if typeResp.Data.UpdatedCount != 2 {
+		t.Fatalf("expected updated_count 2, got %d", typeResp.Data.UpdatedCount)
+	}
+	assertNoteIntColumn(t, db, aID, "category_id", targetCat)
+	assertNoteIntColumn(t, db, bID, "category_id", targetCat)
+
+	tagsRec := httptest.NewRecorder()
+	tagsBody := fmt.Sprintf(`{"note_ids":[%d,%d],"tags":["batchx","batchy"],"mode":"append"}`, aID, bID)
+	srv.handleNoteDetail(tagsRec, httptest.NewRequest(http.MethodPost, "/api/notes/batch/tags", strings.NewReader(tagsBody)))
+	if tagsRec.Code != http.StatusOK {
+		t.Fatalf("expected batch/tags 200, got %d body=%s", tagsRec.Code, tagsRec.Body.String())
+	}
+	var tagsResp struct {
+		Data struct {
+			AffectedNotes int    `json:"affected_notes"`
+			TagsAdded     int    `json:"tags_added"`
+			Mode          string `json:"mode"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(tagsRec.Body.Bytes(), &tagsResp); err != nil {
+		t.Fatal(err)
+	}
+	if tagsResp.Data.AffectedNotes != 2 || tagsResp.Data.Mode != "append" || tagsResp.Data.TagsAdded == 0 {
+		t.Fatalf("unexpected batch/tags response: %+v", tagsResp.Data)
+	}
+	assertTableCount(t, db, "Note_Tags", aID, 2)
+	assertTableCount(t, db, "Note_Tags", bID, 2)
+}
+
+// TestTagsMergeHandlerTransfersNotesAndDeletesSourceTags locks tags/merge,
+// previously only covered by Python-oracle parity. See
+// docs/T053-test-disposition-plan.md §E.
+func TestTagsMergeHandlerTransfersNotesAndDeletesSourceTags(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{enableTagWrite: true}}
+	noteID := insertSearchNote(t, db, "Merge Note", "mergecontent", "", 1)
+	for _, name := range []string{"src-one", "src-two", "merge-target"} {
+		if _, err := db.Exec("INSERT INTO Tags (name) VALUES (?)", name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srcOne := tagIDByName(t, db, "src-one")
+	srcTwo := tagIDByName(t, db, "src-two")
+	target := tagIDByName(t, db, "merge-target")
+	if _, err := db.Exec("INSERT INTO Note_Tags (note_id, tag_id) VALUES (?, ?)", noteID, srcOne); err != nil {
+		t.Fatal(err)
+	}
+
+	mergeRec := httptest.NewRecorder()
+	mergeBody := fmt.Sprintf(`{"source_tag_ids":[%d,%d],"target_tag_id":%d}`, srcOne, srcTwo, target)
+	srv.handleTagDetail(mergeRec, httptest.NewRequest(http.MethodPost, "/api/tags/merge", strings.NewReader(mergeBody)))
+	if mergeRec.Code != http.StatusOK {
+		t.Fatalf("expected merge 200, got %d body=%s", mergeRec.Code, mergeRec.Body.String())
+	}
+	var mergeResp struct {
+		Data struct {
+			MergedCount int `json:"merged_count"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(mergeRec.Body.Bytes(), &mergeResp); err != nil {
+		t.Fatal(err)
+	}
+	if mergeResp.Data.MergedCount != 2 {
+		t.Fatalf("expected merged_count 2, got %d", mergeResp.Data.MergedCount)
+	}
+	for _, id := range []int{srcOne, srcTwo} {
+		var count int
+		if err := db.QueryRow("SELECT COUNT(*) FROM Tags WHERE id = ?", id).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatalf("source tag %d should be deleted after merge", id)
+		}
+	}
+	var hasTarget int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Note_Tags WHERE note_id = ? AND tag_id = ?", noteID, target).Scan(&hasTarget); err != nil {
+		t.Fatal(err)
+	}
+	if hasTarget != 1 {
+		t.Fatalf("note should carry target tag after merge, got %d", hasTarget)
+	}
+}
+
+// TestNotesHistoryListAndDeleteHandlers locks history list/delete, previously
+// only covered by Python-oracle parity. See docs/T053-test-disposition-plan.md §E.
+func TestNotesHistoryListAndDeleteHandlers(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true}}
+	noteID := insertSearchNote(t, db, "History Note", "historycontent", "", 1)
+	for i := 0; i < 2; i++ {
+		if _, err := db.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, ?, ?)", noteID, fmt.Sprintf("old %d", i), "history"); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	listRec := httptest.NewRecorder()
+	srv.handleNoteDetail(listRec, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/notes/%d/history", noteID), nil))
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected history list 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+	var listResp struct {
+		Data struct {
+			Total   int              `json:"total"`
+			History []map[string]any `json:"history"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &listResp); err != nil {
+		t.Fatal(err)
+	}
+	if listResp.Data.Total != 2 || len(listResp.Data.History) != 2 {
+		t.Fatalf("expected 2 history rows, got total=%d len=%d", listResp.Data.Total, len(listResp.Data.History))
+	}
+
+	delRec := httptest.NewRecorder()
+	srv.handleNoteDetail(delRec, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/notes/%d/history", noteID), nil))
+	if delRec.Code != http.StatusOK {
+		t.Fatalf("expected history delete 200, got %d body=%s", delRec.Code, delRec.Body.String())
+	}
+	var delResp struct {
+		Data struct {
+			DeletedCount int `json:"deleted_count"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(delRec.Body.Bytes(), &delResp); err != nil {
+		t.Fatal(err)
+	}
+	if delResp.Data.DeletedCount != 2 {
+		t.Fatalf("expected deleted_count 2, got %d", delResp.Data.DeletedCount)
+	}
+	assertTableCount(t, db, "Note_History", noteID, 0)
+}
