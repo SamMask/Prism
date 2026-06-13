@@ -2,7 +2,7 @@
 
 > 🔒 **本地優先** | 📴 **離線可用** | 🧠 **Headless KMS**
 > 📦 **目前推薦**：Go primary runtime artifact（Node.js / Go 用於建置）
-> 🧪 **Python source/dev/test only**：Python backend source 保留到 T053 作 legacy/deletion gate
+> 🧪 **純 Go runtime**：Python Flask backend source 已於 T053 移除；測試以純 Go 驗收網 + pytest（dev/test orchestration）為主
 
 ![Version](https://img.shields.io/badge/version-2.4.9-blue)
 ![Go](https://img.shields.io/badge/runtime-Go%20primary-green)
@@ -78,7 +78,7 @@ npm run dev                      # -> http://localhost:5173
 scripts\pack.bat
 ```
 
-PyInstaller / embedded Python portable path 已在 T045 移除，T052 也清掉 tracked embedded Python zip / Pillow wheel 殘留；Python source 只保留 legacy/dev/test 到 T053。Python runtime 不依賴 Pillow；thumbnail generation 已由 Go helper / Go primary 路徑承接。
+PyInstaller / embedded Python portable path 已在 T045 移除，T052 也清掉 tracked embedded Python zip / Pillow wheel 殘留；T053 進一步刪除整個 Python Flask backend source。Go primary runtime 不依賴 Pillow；thumbnail generation 由 Go helper / Go primary 路徑承接。
 
 ---
 
@@ -121,23 +121,12 @@ curl http://127.0.0.1:5004/api/system/check-consistency
 
 ```
 Prism/
-├── go-shadow/                # Go primary runtime source
+├── go-shadow/                # Go primary runtime source（唯一 backend）
+│   ├── main.go               # 所有 API handler + SQLite owner + v16 migration runner + 嵌入式 SPA
+│   └── main_test.go          # Go 單元/整合測試
 ├── scripts/start_go_primary.ps1 # 本機 Go primary 啟動入口
-├── app.py                    # Legacy Python source until T053
-├── config.py                 # Legacy Python source context
-├── db.py                     # Legacy Python DB source context
-├── routes/                   # Legacy Flask route source until T053
-│   ├── notes/                # CRUD / actions / history / batch / import / export
-│   ├── attachments.py        # Phase 3.4 附件系統
-│   ├── upload.py             # 圖片上傳 + URL 下載 + AI metadata 提取
-│   ├── system.py             # VACUUM / WAL / 一致性檢查 / port-config
-│   ├── server.py             # Phase 8.2 樹莓派 Server Dashboard
-│   ├── categories.py / tags.py / cleanup.py / export.py
-│   └── prompt_options.py / wizard_options.py
-├── migrations/               # Legacy Python migration source; Go owns runtime migration path
-├── utils/
-│   └── query_builder.py      # NoteQueryBuilder + sanitize_fts_query
-├── tests/                    # pytest 測試套件（執行 pytest --collect-only 列出，全綠以 test_run.log 為準）
+│   # Python Flask backend source（app.py / routes/ / utils/ / db.py / config.py / migrations/）已於 T053 移除
+├── tests/                    # pytest（純 Go 驗收網 + GO-ONLY runtime 測試 + 文件治理；temp_db 由 Go fresh-init DB 提供 seed）
 ├── frontend/                 # React SPA
 │   └── src/
 │       ├── components/       # NoteCard / NoteEditor / DataManager / ...

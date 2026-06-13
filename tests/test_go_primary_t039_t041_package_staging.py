@@ -156,4 +156,4 @@ def test_t039_t040_t041_docs_are_current_and_hand_off_to_completed_cutover_gate(
     assert t046_row.endswith("| Done |")
     assert t051_row.endswith("| Done |")
     assert t052_row.endswith("| Done |")
-    assert t053_row.endswith("| Todo |")
+    assert t053_row.endswith("| Done |")

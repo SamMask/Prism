@@ -177,7 +177,7 @@ CREATE TABLE Schema_Meta (
 -- key='schema_version', value='16'
 ```
 
-> T042-T044 後，live/default DB migration owner 已是 Go primary runtime。Python `migrations/__init__.py` source 保留到 T053 作 legacy parity/context，不再是產品啟動必要條件。
+> T042-T044 後，live/default DB migration owner 已是 Go primary runtime。Python migration source 已於 T053 移除；Go runtime 為唯一 migration owner。
 
 ---
 
@@ -215,7 +215,7 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 > Go T042/T043/T044 已在 Pi live/default 完成 Go primary cutover、rollback drill 與 bounded soak；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。T042/T044 使用 live `knowledge.db` 與 external data dir `/home/mask070924/prism`，T043 以 SQLite online backup artifact 與 uploads/attachments tar restore 作 rollback 證據；final state 是 Go primary active、Python `prism.service` inactive。
 > Go T045 已移除 Python packaged runtime 與產品啟動路徑；這同樣不新增資料表或欄位，SQLite 仍維持 v16。Python backend source / `requirements*.txt` 只保留為 legacy source/dev/test context，最終刪除或封存留給 T053。
 > Go T046-T050 補齊 frontend 實際呼叫的漏接 route：prompt metadata extraction、長文自動分離/還原、system check-update、wizard options API path 與 static config fallback guard。這些變更只使用既有 `Notes` / `Note_Attachments` / external data dir `docs/notes` contract，不新增資料表、欄位、索引或 migration，SQLite 仍維持 v16。
-> Go T051 刷新 route ownership manifest、API reference 與部署/schema wording；這是 current-truth documentation gate，不新增資料表、欄位、索引或 migration。舊 T008-T041 段落中的「未切 live/default」語句是當時 gate 邊界；目前產品 runtime / Pi live default owner 已是 Go primary，Python source 僅保留到 T053。
+> Go T051 刷新 route ownership manifest、API reference 與部署/schema wording；這是 current-truth documentation gate，不新增資料表、欄位、索引或 migration。舊 T008-T041 段落中的「未切 live/default」語句是當時 gate 邊界；目前產品 runtime / Pi live default owner 已是 Go primary；Python backend source 已於 T053 移除。
 > Go T052 清理 stale tracked packaging/root artifacts（embedded Python zip、Pillow wheel、root empty package-lock）；這不改 DB schema、不碰 `knowledge.db`、WAL/SHM、`static/uploads`、`docs/attachments`、`docs/notes` 或 backups。
 
 ---

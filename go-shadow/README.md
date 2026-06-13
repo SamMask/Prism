@@ -402,13 +402,13 @@ The active-roadmap T045 gate removes the Python packaged runtime/startup path af
 - removed tracked embedded `python/`
 - removed portable Python launcher/packager and PyInstaller builder
 - replaced local start/install/package/deploy entrypoints with Go primary artifact paths
-- retained Python backend source and `requirements*.txt` only as legacy source/dev/test context until T053
+- Python backend source removed in T053; `requirements*.txt` retained only as dev/test (pytest) tooling
 
 The machine-readable contract is `docs/contracts/go-primary-python-packaged-runtime-deletion.json`. After the 2026-06-13 closure review, T046 is the frontend-to-Go route coverage and missing-surface audit gate; T053 is the source archival/deletion and final docs/API/release wording cleanup gate.
 
 #### Route Ownership Refresh And Stale Artifact Cleanup
 
-T051 refreshes `docs/contracts/go-primary-route-ownership-manifest.json`, `docs/API_REFERENCE.md`, schema/deployment wording, and docs indexes so current production owner fields match the Go primary live/default runtime. Flask handler names are retained only as legacy source context until T053. `/api/system/go-read-routing` is explicitly not ported to Go primary.
+T051 refreshes `docs/contracts/go-primary-route-ownership-manifest.json`, `docs/API_REFERENCE.md`, schema/deployment wording, and docs indexes so current production owner fields match the Go primary live/default runtime. Flask handler names are retained in the manifest only as historical provenance; the Python source was removed in T053. `/api/system/go-read-routing` no longer exists in any runtime.
 
 T052 removes tracked stale packaging/root artifacts that conflicted with the T045 no-Python-package truth: `resources/python-embed.zip`, `resources/wheels/pillow-12.0.0-cp312-cp312-win_amd64.whl`, and the root empty `package-lock.json`. This does not touch user DB/data paths or delete Python backend source.
 

@@ -43,10 +43,12 @@ def test_e_retains_python_package_files_and_dependency_manifests_truthfully():
     assert contract["decision"]["delete_python_runtime_dependencies"] is False
     assert contract["decision"]["delete_python_packaging_scripts"] is False
     assert "upload/delete/cleanup/import/export/server/migration-runner" in contract["decision"]["reason"]
-    assert "Flask==3.0.0" in requirements
-    assert "python-magic-bin==0.4.14" in requirements
-    assert "Flask==3.0.0" in requirements_pi
-    assert "python-magic" in requirements_pi
+    # The contract decision above records the historical (pre-T053) Phase 23 E
+    # closure that retained Flask. T053 has since pruned the live manifests to
+    # pytest-only, so the current files no longer carry the Python backend deps.
+    assert "Flask" not in requirements
+    assert "Flask" not in requirements_pi
+    assert "pytest==" in requirements
     assert "Pillow" not in requirements
     assert "Pillow" not in requirements_pi
     assert "app.py" in contract["retained_python_runtime_files"]

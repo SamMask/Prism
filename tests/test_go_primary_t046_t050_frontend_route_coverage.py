@@ -83,7 +83,7 @@ def test_docs_record_t046_t052_completion_and_t053_handoff():
         assert f"| {task_id} |" in todo and "| Done |" in todo.split(f"| {task_id} |", 1)[1].splitlines()[0]
     assert "| T051 |" in todo and "| Done |" in todo.split("| T051 |", 1)[1].splitlines()[0]
     assert "| T052 |" in todo and "| Done |" in todo.split("| T052 |", 1)[1].splitlines()[0]
-    assert "| T053 |" in todo and "| Todo |" in todo.split("| T053 |", 1)[1].splitlines()[0]
+    assert "| T053 |" in todo and "| Done |" in todo.split("| T053 |", 1)[1].splitlines()[0]
     assert "T046-T050 frontend-to-Go route coverage closure is complete" in architecture
     assert "T051 route ownership / API docs current-truth refresh is complete" in architecture
     assert "Go T046-T050 補齊 frontend 實際呼叫的漏接 route" in schema

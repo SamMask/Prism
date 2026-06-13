@@ -5,7 +5,7 @@
 | Contract | Boundary |
 |---|---|
 | CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | `docs/TODO.md` 只保留 active roadmap；歷史 phase 移入 `docs/development-history/`，active task 必須有依賴、結構依據、驗收標準與狀態。 |
-| CONTRACT-GO-PRIMARY-ARCHITECTURE | 文件必須明確區分 current retained-Python runtime 與 target Go-primary runtime，不得把 candidate、sidecar、rollback proof 寫成 live owner。 |
+| CONTRACT-GO-PRIMARY-ARCHITECTURE | 文件必須以 Go primary 為唯一 current runtime owner；歷史 candidate、sidecar、rollback proof 不得寫成 live owner，retained-Python 主路徑描述不得出現在 current docs。 |
 | CONTRACT-GO-PRIMARY-ROUTE-OWNERSHIP | 所有正式 API route 必須有唯一 production owner；Go 替代 Python 前，manifest 中不得留有 Python-owned request-time surface。 |
 | CONTRACT-GO-PRIMARY-PARITY | Go route promoted 前，必須有 Python-vs-Go parity fixture 證明 status、JSON shape、DB state、file state 與 rollback 行為一致。 |
 | CONTRACT-GO-PRIMARY-CONFIG | Go runtime 必須使用明確 external data dir，所有 DB/uploads/attachments/logs/backups path 都不能逃逸資料根目錄。 |

@@ -8,7 +8,7 @@
 |------|------|------|
 | Go | current stable | Go primary runtime |
 | Node.js | 18+ | 前端建置工具 (Vite) |
-| Python | 3.10+ | Legacy source/dev/test only until T053 |
+| Python | 3.10+ | Dev/test only (pytest)；無 backend source |
 | SQLite | 內建 | 無需額外安裝 |
 
 ### 安裝依賴
@@ -32,7 +32,7 @@ npm run dev
 # → http://127.0.0.1:5173
 ```
 
-> **Runtime 說明**: React SPA 由 Go primary artifact 嵌入與服務。Python backend source remains legacy until T053；不得再作產品啟動主路徑。
+> **Runtime 說明**: React SPA 由 Go primary artifact 嵌入與服務。Python backend source 已於 T053 移除；Go primary 為唯一產品 runtime。
 
 ---
 
@@ -40,29 +40,11 @@ npm run dev
 
 ```
 D:/AI/Prism/
-├── go-shadow/              # Go primary runtime source
+├── go-shadow/              # Go primary runtime source（唯一 backend；notes/tags/categories/upload/cleanup/import-export/server/system 全 Go-owned）
+│   ├── main.go             # 所有 API handler + SQLite owner + migration runner + 嵌入式 SPA
+│   └── main_test.go        # Go 單元/整合測試
 ├── scripts/start_go_primary.ps1 # Product startup entrypoint
-├── app.py                  # Legacy Python source until T053
-├── config.py               # Legacy Python source context
-├── db.py                   # Legacy Python DB source context
-├── migrations/             # Legacy Python migration source; Go owns runtime migration path
-├── routes/                 # Legacy Flask Blueprints until T053
-│   ├── notes/              # 筆記子模組
-│   │   ├── crud.py         # GET/POST/PUT/DELETE /api/notes
-│   │   ├── actions.py      # pin / archive / duplicate / reorder
-│   │   ├── batch.py        # 批次 category / tags / delete
-│   │   ├── history.py      # 版本歷史 / 還原
-│   │   ├── import_.py      # 匯入 Markdown
-│   │   └── export.py       # 匯出 ZIP
-│   ├── tags.py             # 標籤 CRUD + 合併
-│   ├── categories.py       # 分類 CRUD
-│   ├── upload.py           # 圖片上傳 / 刪除 / URL 下載 / prompt 擷取
-│   ├── attachments.py      # 附件管理 + 長文分離
-│   ├── cleanup.py          # 孤兒圖片 / 原圖清理 / 斷圖修復
-│   ├── system.py           # VACUUM / 統計 / 端口設定 / WAL
-│   ├── server.py           # 硬體監控 / 日誌 / 備份 / 版本 (Headless)
-│   ├── prompt_options.py   # Prompt Builder 選項配置
-│   └── export.py           # JSON / DB / 圖片 匯出入
+# Python Flask backend source（app.py / routes/ / utils/ / db.py / config.py / migrations/）已於 T053 移除
 ├── frontend/               # React SPA (Vite)
 │   ├── src/
 │   │   ├── components/     # UI 組件 (含 ui/ 設計系統)
@@ -100,7 +82,7 @@ D:/AI/Prism/
 
 ### 資料庫遷移
 
-- Go runtime 已具備 v16 fresh/existing migration path；Python migration source 保留 parity context 到 T053
+- Go runtime 為唯一 migration path（v16 fresh/existing）；Python migration source 已於 T053 移除
 - 每個 Migration 必須**冪等**（重複執行結果相同）
 - 修改 Schema 前必讀 `docs/SCHEMA.md`
 

@@ -1,7 +1,7 @@
 # Prism API Reference
 
 > 用途：提供外部 Agent / 自動化工具（例如 `murmur厭世貓`）直接對接 Prism 的實際 API 契約。
-> 基準：以 Go primary live/default runtime 為準；Flask route source 僅保留 legacy/dev/test context 到 T053。
+> 基準：以 Go primary live/default runtime 為準；Python Flask backend source 已於 T053 移除，Go primary 為唯一 runtime。
 > 最後確認：2026-06-13
 
 ---
@@ -48,7 +48,7 @@
 
 - `Notes.type` 已從資料庫移除。
 - 部分 API 仍保留 `type` 作為「分類名稱字串」的相容欄位或查詢參數，不代表資料庫仍有 `type` 欄位。
-- `/api/system/go-read-routing` 是 Phase 19 舊讀取路由 proof 的 legacy Flask source-only 狀態端點，不屬於 Go primary product API（not part of the Go primary product API）；T051 決議保留到 T053 與 legacy Python source 一起封存或刪除。
+- `/api/system/go-read-routing` 是 Phase 19 舊讀取路由 proof 端點，已隨 T053 Python source 移除，不存在於 Go primary product runtime（not part of the Go primary product API）；本條僅作歷史說明。
 
 ### 建議對接範圍
 
@@ -735,7 +735,7 @@ Response：
 
 ### GET `/api/system/go-read-routing`
 
-Legacy-only Phase 19.3 controlled read routing proof 狀態。這個 endpoint 只存在於 legacy Flask source，Go primary product runtime 不提供它；外部 Agent 與前端不應依賴此 endpoint。T051 決議：不移植到 Go primary，保留到 T053 與 legacy Python source 一起封存或刪除。
+Legacy-only Phase 19.3 controlled read routing proof 狀態。這個 endpoint 已隨 T053 Python source 移除，不存在於任何 runtime；外部 Agent 與前端不應依賴此 endpoint。保留本節僅作 Phase 19 歷史說明。
 
 Response：
 
@@ -909,7 +909,7 @@ Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism
 已同步的歷史差異：
 
 - `GET /api/system/check-update` 已補回後端路由。
-- `GET /api/system/go-read-routing` 是 legacy Flask source-only Phase 19 proof endpoint，不屬於 Go primary product API；T053 會隨 Python source cleanup 處理。
+- `GET /api/system/go-read-routing` 是 legacy Phase 19 proof endpoint，已於 T053 隨 Python source 移除，不存在於任何 runtime。
 - `GET /api/system/migration-status` 已補回後端路由。
 - `DELETE /api/categories/<id>` 使用 `target_category_id`，不再使用舊的 `target_category` / `target_name`。
 - `GET /api/notes` 支援 `archived`、`include_archived`、`pinned_only`、`category_id`。

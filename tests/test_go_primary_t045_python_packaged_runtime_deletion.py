@@ -115,12 +115,13 @@ def test_dependency_manifests_are_legacy_dev_test_only_not_product_startup():
     requirements = _text(REQ_PATH)
     requirements_pi = _text(REQ_PI_PATH)
 
-    assert "Legacy Python source/dev/test only" in requirements
-    assert "Legacy Python source/dev/test only" in requirements_pi
-    assert "Flask==3.0.0" in requirements
-    assert "python-magic-bin==0.4.14" in requirements
-    assert "Flask==3.0.0" in requirements_pi
-    assert "python-magic" in requirements_pi
+    assert "Dev/test tooling only" in requirements
+    assert "Dev/test tooling only" in requirements_pi
+    assert "no Python backend after T053" in requirements
+    assert "pytest==" in requirements
+    # T053 removed the Python backend, so the manifests no longer carry Flask et al.
+    assert "Flask" not in requirements
+    assert "Flask" not in requirements_pi
     assert "Pillow" not in requirements
     assert "Pillow" not in requirements_pi
 
@@ -144,10 +145,10 @@ def test_t045_docs_mark_go_primary_product_startup_and_t046_source_followup():
     assert "prism-go-primary.service" in deploy_pi
     assert "linux-venv" not in deploy_pi
     assert "ExecStart=/home/mask070924/prism/linux-venv/bin/python app.py" not in deploy_pi
-    assert "Python source/dev/test only" in readme
+    assert "Python Flask backend source 已於 T053 移除" in readme
     assert "Go primary" in docs_readme
     assert "Go primary deployment" in deployment
-    assert "Python backend source remains legacy until T053" in contributing
+    assert "Python backend source 已於 T053 移除" in contributing
     assert "Python Packaged Runtime Deletion" in go_readme
     assert "T045 removes the Python packaged runtime/startup path" in go_report
 
@@ -160,4 +161,4 @@ def test_t045_docs_mark_go_primary_product_startup_and_t046_source_followup():
     assert t046_row.endswith("| Done |")
     assert t051_row.endswith("| Done |")
     assert t052_row.endswith("| Done |")
-    assert t053_row.endswith("| Todo |")
+    assert t053_row.endswith("| Done |")

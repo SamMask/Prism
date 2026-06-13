@@ -29,9 +29,9 @@ def test_t051_manifest_records_go_primary_current_owner_and_legacy_read_routing_
     manifest = json.loads(_text(MANIFEST_PATH))
 
     assert manifest["task_id"] == "T004"
-    assert manifest["last_refreshed_task_id"] == "T051"
+    assert manifest["last_refreshed_task_id"] == "T053"
     assert manifest["production_runtime_owner"] == "go-primary"
-    assert "Python backend source remains legacy/dev/test context until T053" in manifest["boundary"]
+    assert "Python backend source was removed in T053; Go primary is the sole runtime owner" in manifest["boundary"]
     assert "go_candidate values are historical implementation provenance" in manifest["go_candidate_field_note"]
 
     routes = {(route["rule"], tuple(route["methods"])): route for route in manifest["routes"]}
@@ -41,7 +41,7 @@ def test_t051_manifest_records_go_primary_current_owner_and_legacy_read_routing_
     assert routes[("/", ("GET",))]["go_primary_owner"] == "go-primary embedded SPA/static runtime"
 
     legacy_route = routes[("/api/system/go-read-routing", ("GET",))]
-    assert legacy_route["production_owner"] == "legacy-python-source-only"
+    assert legacy_route["production_owner"] == "removed-in-t053"
     assert "not part of the Go primary product API" in legacy_route["current_owner_note"]
     assert not any(route["production_owner"] == "python" for route in manifest["routes"])
 
@@ -56,7 +56,7 @@ def test_t051_docs_replace_stale_python_owner_wording_with_current_truth():
     index = _text(INDEX_PATH)
 
     assert "Go primary live/default runtime" in api_reference
-    assert "legacy Flask source-only" in api_reference
+    assert "已隨 T053 Python source 移除" in api_reference
     assert "not part of the Go primary product API" in api_reference
     assert "production/default runtime owner 仍是 Python" not in api_reference
     assert "text attachment body search remains Python-owned" not in api_reference
@@ -94,5 +94,5 @@ def test_t051_t052_todo_closes_current_items_and_hands_off_to_t053():
     assert "tests/test_go_primary_t051_t052_current_truth_cleanup.py" in todo
     assert _todo_row("T051").endswith("| Done |")
     assert _todo_row("T052").endswith("| Done |")
-    assert _todo_row("T053").endswith("| Todo |")
-    assert "下一個 active item 是 T053" in todo
+    assert _todo_row("T053").endswith("| Done |")
+    assert "Go 漸進重構（T001-T053）全數完成" in todo

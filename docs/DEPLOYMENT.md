@@ -59,7 +59,7 @@ Prism API 目前沒有內建 API Token / Bearer Token / 使用者認證機制。
 - Go toolchain（建置 `go-shadow` runtime）
 - Node.js 18+（建置 React SPA 並嵌入 artifact）
 - SQLite（runtime 透過 Go SQLite driver 管理）
-- Python 只作 legacy source/dev/test tooling until T053
+- Python backend source 已於 T053 移除；Go primary 為唯一 runtime
 
 ---
 
@@ -105,15 +105,16 @@ T045 移除的是 Python packaged runtime dependency 與 product startup path：
 - removed: PyInstaller builder
 - replaced: product start/deploy/package scripts now point to Go primary
 
-Retained until T053:
+Removed in T053 (Python backend source):
 
 - `app.py`
+- `config.py`
+- `db.py`
 - `routes/`
-- `services/`
 - `utils/`
-- `workers/`
-- `migrations/`
-- `requirements.txt`
-- `requirements-pi.txt`
+- `migrations/`（`migrations/add_*.py` standalone 腳本封存到 `docs/development-history/`）
+- `templates/`
 
-T053 會決定 Python backend source 的最終刪除或封存，並做最後 API/deploy/release wording cleanup。`/api/system/go-read-routing` 只屬於 legacy Flask source 的 Phase 19 proof status，不是 Go primary product API。
+`requirements.txt` / `requirements-pi.txt` 已 prune 成 dev/test tooling（只剩 `pytest`），不再含 Flask backend 相依。
+
+T053 已完成 Python backend source 的物理刪除與最後 API/deploy/release wording cleanup；Go primary 為唯一 runtime。`/api/system/go-read-routing` 是 legacy Phase 19 proof status，已隨 Python source 移除，不存在於任何 runtime。

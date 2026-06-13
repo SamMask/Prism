@@ -5,8 +5,8 @@
   "completed_date": "2026-06-12",
   "source_of_truth": "Flask app.url_map",
   "production_runtime_owner": "go-primary",
-  "scope": "All legacy Flask url_map entries plus the matching Go primary product surface. Flask handler names are retained as legacy source context until T053; production ownership reflects the Go primary runtime after T042-T050.",
-  "boundary": "T051 current-truth refresh: product startup, Pi live Caddy traffic, and package paths are Go primary. Python backend source remains legacy/dev/test context until T053 and is not a current production owner.",
+  "scope": "All legacy Flask url_map entries plus the matching Go primary product surface. Flask handler names are retained as historical provenance; the Python source was removed in T053; production ownership reflects the Go primary runtime after T042-T050.",
+  "boundary": "T051 current-truth refresh: product startup, Pi live Caddy traffic, and package paths are Go primary. Python backend source was removed in T053; Go primary is the sole runtime owner.",
   "routes": [
     {
       "rule": "/",
@@ -22,7 +22,7 @@
       "file_side_effects": [
         "read templates/index.html"
       ],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/",
@@ -38,7 +38,7 @@
       "file_side_effects": [
         "read frontend/dist/index.html"
       ],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/<path:path>",
@@ -54,7 +54,7 @@
       "file_side_effects": [
         "read frontend/dist asset or index.html"
       ],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/prompt-builder",
@@ -69,7 +69,7 @@
       "file_side_effects": [
         "read templates/prompt-builder.html"
       ],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/prompt-builder.html",
@@ -84,7 +84,7 @@
       "file_side_effects": [
         "read templates/prompt-builder.html"
       ],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/favicon.ico",
@@ -97,7 +97,7 @@
       "go_primary_owner": "go-primary embedded SPA/static runtime",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/static/<path:filename>",
@@ -113,7 +113,7 @@
       "file_side_effects": [
         "read static files and static/uploads"
       ],
-      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route is legacy source context until T053."
+      "current_owner_note": "Served by Go primary embedded SPA/static handler or SPA fallback in product runtime; Flask template/static route was removed in T053."
     },
     {
       "rule": "/api/test",
@@ -127,7 +127,7 @@
       "go_candidate": "implemented read-only candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/categories",
@@ -141,7 +141,7 @@
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/categories",
@@ -156,7 +156,7 @@
         "insert Categories"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/categories/<int:category_id>",
@@ -172,7 +172,7 @@
         "update Categories"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/categories/<int:category_id>",
@@ -188,7 +188,7 @@
         "reassign Notes.category_id"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/tags",
@@ -202,7 +202,7 @@
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/tags/<int:tag_id>",
@@ -218,7 +218,7 @@
         "update Tags.name"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/tags/<int:tag_id>",
@@ -234,7 +234,7 @@
         "delete Note_Tags links"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/tags/merge",
@@ -250,7 +250,7 @@
         "delete merged Tags"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes",
@@ -266,7 +266,7 @@
       "file_side_effects": [
         "read docs/attachments text files during search"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes",
@@ -285,7 +285,7 @@
         "insert Tags as needed"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>",
@@ -299,7 +299,7 @@
       "go_candidate": "implemented read-only/local candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>",
@@ -319,7 +319,7 @@
         "insert Tags as needed"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>",
@@ -337,7 +337,7 @@
       "file_side_effects": [
         "may delete note-owned static/uploads image files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/pin",
@@ -353,7 +353,7 @@
         "update Notes.is_pinned"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/archive",
@@ -369,7 +369,7 @@
         "update Notes.is_archived"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/duplicate",
@@ -387,7 +387,7 @@
         "copy Source_Urls"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/reorder",
@@ -403,7 +403,7 @@
         "update Notes.sort_order"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/batch/type",
@@ -419,7 +419,7 @@
         "update Notes.category_id"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/batch/tags",
@@ -436,7 +436,7 @@
         "insert Tags as needed"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/batch/delete",
@@ -454,7 +454,7 @@
       "file_side_effects": [
         "may delete note-owned static/uploads image files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/history",
@@ -468,7 +468,7 @@
       "go_candidate": "implemented local copied-DB candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/restore/<int:history_id>",
@@ -484,7 +484,7 @@
         "update Notes from Note_History"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/history",
@@ -500,7 +500,7 @@
         "delete Note_History rows"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/import/md",
@@ -522,7 +522,7 @@
         "may copy local images into static/uploads",
         "may download remote images"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/export/batch",
@@ -538,7 +538,7 @@
       "file_side_effects": [
         "read referenced static/uploads files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/attachments",
@@ -552,7 +552,7 @@
       "go_candidate": "implemented local copied-DB candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/attachments",
@@ -570,7 +570,7 @@
       "file_side_effects": [
         "write docs/attachments file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/attachments/<int:attachment_id>",
@@ -586,7 +586,7 @@
       "file_side_effects": [
         "read docs/attachments file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/attachments/<int:attachment_id>",
@@ -604,7 +604,7 @@
       "file_side_effects": [
         "delete docs/attachments file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/check_separation",
@@ -617,7 +617,7 @@
       "go_primary_owner": "go-primary runtime route",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/separate",
@@ -635,7 +635,7 @@
       "file_side_effects": [
         "write docs/attachments file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/notes/<int:note_id>/restore",
@@ -653,7 +653,7 @@
       "file_side_effects": [
         "delete docs/attachments file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/upload",
@@ -669,7 +669,7 @@
       "file_side_effects": [
         "write static/uploads original and thumbnail files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/upload/delete",
@@ -685,7 +685,7 @@
       "file_side_effects": [
         "delete static/uploads file and thumbnail companion"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/upload/url",
@@ -702,7 +702,7 @@
         "fetch remote image",
         "write static/uploads original and thumbnail files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/upload/extract-prompt",
@@ -717,7 +717,7 @@
       "file_side_effects": [
         "read uploaded image metadata"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/cleanup/orphan-images",
@@ -733,7 +733,7 @@
       "file_side_effects": [
         "scan static/uploads files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/cleanup/orphan-images",
@@ -749,7 +749,7 @@
       "file_side_effects": [
         "delete orphan static/uploads files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/cleanup/originals",
@@ -765,7 +765,7 @@
       "file_side_effects": [
         "scan static/uploads originals"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/cleanup/originals",
@@ -783,7 +783,7 @@
       "file_side_effects": [
         "delete static/uploads originals after thumbnail rewrite"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/cleanup/broken-images",
@@ -799,7 +799,7 @@
       "file_side_effects": [
         "scan static/uploads references"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/cleanup/broken-images",
@@ -815,7 +815,7 @@
         "update Notes.content or cover_image references"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/export/json",
@@ -829,7 +829,7 @@
       "go_candidate": "implemented local copied-DB-and-data candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/import/json",
@@ -847,7 +847,7 @@
       "file_side_effects": [
         "may restore uploaded files from import payload"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/export/markdown",
@@ -863,7 +863,7 @@
       "file_side_effects": [
         "read referenced static/uploads files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/export/db",
@@ -879,7 +879,7 @@
       "file_side_effects": [
         "read SQLite database file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/export/images",
@@ -895,7 +895,7 @@
       "file_side_effects": [
         "read static/uploads files"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/stats",
@@ -911,7 +911,7 @@
       "file_side_effects": [
         "read upload directory stats"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/vacuum",
@@ -929,7 +929,7 @@
       "file_side_effects": [
         "rewrite SQLite database file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/clear-history",
@@ -945,7 +945,7 @@
         "delete Note_History rows"
       ],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/startup-preference",
@@ -961,7 +961,7 @@
       "file_side_effects": [
         "read local startup preference config"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/startup-preference",
@@ -977,7 +977,7 @@
       "file_side_effects": [
         "write local startup preference config"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/wal-checkpoint",
@@ -995,7 +995,7 @@
       "file_side_effects": [
         "rewrite knowledge.db-wal and knowledge.db-shm state"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/check-consistency",
@@ -1009,7 +1009,7 @@
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/check-update",
@@ -1022,20 +1022,20 @@
       "go_primary_owner": "go-primary runtime route",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/go-read-routing",
       "methods": [
         "GET"
       ],
-      "endpoint": "system.go_read_routing_status",
-      "python_handler": "routes/system.py:go_read_routing_status",
-      "production_owner": "legacy-python-source-only",
-      "go_primary_owner": "not implemented in Go primary; retained only by legacy Flask source until T053",
+      "endpoint": "system.go_read_routing_status (removed)",
+      "python_handler": "routes/system.py:go_read_routing_status (removed in T053)",
+      "production_owner": "removed-in-t053",
+      "go_primary_owner": "not implemented in Go primary; route no longer exists after T053",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Removed from product API surface by Go primary cutover; not part of the Go primary product API; keep only as Phase 19 historical/status source context until T053 archival/deletion."
+      "current_owner_note": "Removed from product API surface by Go primary cutover; not part of the Go primary product API; keep only as Phase 19 historical context; Python source removed in T053 archival/deletion."
     },
     {
       "rule": "/api/system/migration-status",
@@ -1049,7 +1049,7 @@
       "go_candidate": "implemented status-only local candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/port-config",
@@ -1065,7 +1065,7 @@
       "file_side_effects": [
         "read .port_config"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/system/port-config",
@@ -1081,7 +1081,7 @@
       "file_side_effects": [
         "write .port_config"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/hardware",
@@ -1095,7 +1095,7 @@
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/logs",
@@ -1111,7 +1111,7 @@
       "file_side_effects": [
         "read app.log or journal logs"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/restart",
@@ -1128,7 +1128,7 @@
       "process_side_effects": [
         "restart local Prism service/process"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/backup/download",
@@ -1144,7 +1144,7 @@
       "file_side_effects": [
         "read SQLite database backup payload"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/backup/rotate",
@@ -1160,7 +1160,7 @@
       "file_side_effects": [
         "delete old backups under backups"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/backup/list",
@@ -1176,7 +1176,7 @@
       "file_side_effects": [
         "list backups directory"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/backup/<path:filename>",
@@ -1192,7 +1192,7 @@
       "file_side_effects": [
         "delete selected backup file"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/server/version",
@@ -1206,7 +1206,7 @@
       "go_candidate": "implemented local copied-DB-and-data server/system candidate only",
       "db_side_effects": [],
       "file_side_effects": [],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/prompt-options",
@@ -1222,7 +1222,7 @@
       "file_side_effects": [
         "read static/config/prompt_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/prompt-options/category/<category_key>",
@@ -1238,7 +1238,7 @@
       "file_side_effects": [
         "write static/config/prompt_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/prompt-options/category/<category_key>/<int:index>",
@@ -1254,7 +1254,7 @@
       "file_side_effects": [
         "write static/config/prompt_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/prompt-options/category/<category_key>/<int:index>",
@@ -1270,7 +1270,7 @@
       "file_side_effects": [
         "write static/config/prompt_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/prompt-options/template",
@@ -1286,7 +1286,7 @@
       "file_side_effects": [
         "write static/config/prompt_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/prompt-options/template/<template_id>",
@@ -1302,7 +1302,7 @@
       "file_side_effects": [
         "write static/config/prompt_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/wizard-options",
@@ -1318,7 +1318,7 @@
       "file_side_effects": [
         "read static/config/wizard_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/wizard-options/dimension/<dimension_key>",
@@ -1334,7 +1334,7 @@
       "file_side_effects": [
         "write static/config/wizard_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
       "rule": "/api/wizard-options/dimension/<dimension_key>/<int:index>",
@@ -1350,10 +1350,10 @@
       "file_side_effects": [
         "write static/config/wizard_options.json"
       ],
-      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler remains source/dev/test context until T053."
+      "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     }
   ],
-  "last_refreshed_task_id": "T051",
+  "last_refreshed_task_id": "T053",
   "last_refreshed_date": "2026-06-13",
   "current_owner_basis": [
     "scripts/start_go_primary.ps1 enables Go route classes for product startup",

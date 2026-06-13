@@ -2,7 +2,7 @@
 
 > **版本**: v2.4.9 / Go primary runtime
 > **更新日期**: 2026-06-13
-> **狀態**: Go primary live owner；Python source/dev/test only until T053
+> **狀態**: Go primary 為唯一 runtime owner；Python backend source 已於 T053 移除
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。
 
