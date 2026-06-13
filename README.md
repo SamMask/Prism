@@ -98,9 +98,9 @@ cd frontend && npm run build
 curl http://127.0.0.1:5004/api/system/check-consistency
 ```
 
-> ⚠️ **注意**：目前 (v2.4.1) 測試 fixture 仍走手寫 schema 而非真實 migration，
-> 部分 schema regression 不會被測試捕捉到。詳見
-> [`docs/過期/20260412-cco-綜合分析報告.md`](docs/過期/20260412-cco-綜合分析報告.md) §2.1。
+> ✅ **注意**：測試 fixture（`tests/conftest.py`）已改走真實 migration chain
+> （`run_migrations`），schema regression 由 `tests/test_schema_regression.py` 守門。
+> （歷史背景見 [`docs/過期/20260412-cco-綜合分析報告.md`](docs/過期/20260412-cco-綜合分析報告.md) §2.1。）
 
 ---
 
