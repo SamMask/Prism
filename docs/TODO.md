@@ -9,14 +9,24 @@
 Go 重構的目標之一是把本機產品封裝成**獨立 .exe 視窗程式**（非 .bat 啟動、非純 console）。本節記錄相關決策與待辦，供後續開發接續。
 
 **已定決策**
-- **桌面模型 = 視窗程式**，需有「關閉視窗時：連背景一起關 / 只關視窗、背景常駐（close-to-tray）」設定。tray 常駐主要服務「仍想用 API」的使用者。
+- **桌面模型 = 視窗程式**，需有「關閉視窗時：連背景一起關 / 只關視窗、背景常駐（close-to-tray）」設定。tray 常駐主要服務「仍想用 API」的使用者。**關閉行為預設 = 直接結束行程**（2026-06-14 拍板）；close-to-tray 常駐為進階選項，使用者主動開啟。
+- **Windowing 技術 = 內嵌 WebView2，純 Go syscall（2026-06-14 拍板）**：
+  - 單一 .exe = 在同一行程內啟動現有 Go server（goroutine，沿用 `go-shadow/main.go`）+ 主執行緒開 WebView2 視窗指向 `127.0.0.1:<port>` + tray icon + named mutex 單一實例。後端零改動。
+  - 套件走 **`jchv/go-webview2`（純 syscall，可保 `CGO_ENABLED=0`）**，**不用** `webview/webview_go`（要 cgo，會毀掉純 Go build 與 linux/arm64 交叉編譯）。
+  - **無 console 視窗**：正式 build 用 `-ldflags="-H=windowsgui"`（GUI subsystem，從不配給 console，非事後隱藏）。代價：stdout/stderr 無處顯示，log 必須寫檔。
+  - **無孤兒行程**：server 是同行程 goroutine，非 spawn 子行程；關視窗 → 行程結束 → server 隨之消失，不會殘留背景。
+  - **唯一真風險**：WebView2 與 tray 都要主執行緒 Win32 message pump，會互搶。解法 = 自寫薄層 `Shell_NotifyIcon` 共用單一 message loop。**故先 spike 驗證事件迴圈，再接後端。**
 - **資料庫還原 = 重啟式（已實作，2026-06-14）**：`POST /api/server/backup/restore` 寫 pending-restore 標記 → 程序重啟 → 開機時於 `openDB` 前 swap（覆蓋前自動存 `prism_pre_restore_*.db`）。重啟協定：supervised（systemd，靠 `INVOCATION_ID` 偵測）走 `os.Exit(42)`；獨立 .exe 走自我 re-exec。**「重啟」僅 Prism 程序重開，非 PC/Pi 重開機。**
 - **備份策略**：**Pi 維持每週自動備份（keep 3）**；**.exe 本機不做自動排程**，使用者自行手動按備份即可。→ 不新增本機 scheduler。
 - **下載備份不留 server-side 記錄（已實作）**：`/backup/download` 改吐暫存快照、傳完即刪；server-side 留存交給 `/backup/rotate`。
 - **設定精簡（hidden sections，已實作）**：`設定 > 部署` 移除「部署安全邊界」「端口設定（PortConfigSection）」「版本更新（UpdateSection）」三區，封裝 .exe 後對使用者無用、在 Pi 上也僅資訊性。**元件檔仍保留**於 `frontend/src/components/settings/`，僅未 render。**復原方式**：在 `SettingsPage.tsx` deploy tab 重新 import 並加回 `<PortConfigSection />` / `<UpdateSection />` 與「部署安全邊界」SectionPanel 即可。部署 tab 現只剩 `ServerDashboardSection`。
 
 **待辦（未施工，待後續設計）**
-- [ ] **.exe 桌面外殼設計**：決定 windowing 技術（WebView2 / Wails / Tauri / 其他）、tray 常駐、close-to-tray 設定、開機自啟。重啟協定（exit 42 / re-exec）、background API、關閉行為皆掛在此決策下，需先拍板桌面模型再展開。
+- [ ] **.exe 桌面外殼（windowing 技術已拍板，見上方「已定決策」）** — 分階段施工：
+  - [ ] **階段 0：message loop spike**（下一步，進行中）。獨立 `desktop-spike/`（自己的 go.mod，僅 `golang.org/x/sys/windows` syscall，零第三方）：空 Win32 視窗 + tray icon（右鍵 Show / Quit）+ **單一 message loop** 同餵視窗與 tray。驗收：tray 選單有反應、關視窗正常退出、loop 不卡。spike 階段先用普通 console build（看得到 log 好除錯），不引 WebView2。
+  - [ ] **階段 1：接 WebView2**。spike 綠後引 `jchv/go-webview2`，視窗指向 `127.0.0.1:<port>`，沿用同一 message loop。
+  - [ ] **階段 2：接後端 + 單一實例**。同行程 goroutine 起 Go server、named mutex 單一實例（第二次啟動喚醒既有視窗）。
+  - [ ] **階段 3：正式封裝**。切 `-ldflags="-H=windowsgui"`、log 寫檔、關閉=直接結束、close-to-tray 進階選項、開機自啟（registry Run key）。重啟協定（exit 42 / re-exec）在此串接驗證。
 - [x] **本機儀表板硬體讀值修正（Windows）（2026-06-14 完成）**：新增 `go-shadow/hardware_windows.go`，以 kernel32（GetDiskFreeSpaceExW / GlobalMemoryStatusEx / GetTickCount64）讀真實磁碟/記憶體/uptime；`hardware_other.go` build tag 改為 `!linux && !windows`。CPU 溫度在 Windows 維持 N/A（無第三方驅動無可靠 API，誠實回 nil）。regression：`hardware_windows_test.go`。native build/test + linux/arm64 cross-build 皆綠。
 - [ ] **語系（i18n）還原** → 獨立大工，細項見下方專節。與桌面化無關，可獨立排程。
 

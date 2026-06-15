@@ -11,6 +11,20 @@ interface OrphanImage {
   path: string;
 }
 
+const orphanImageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg'];
+
+function countOrphanImageGroups(images: OrphanImage[]): number {
+  const filenames = new Set(images.map((image) => image.filename.toLowerCase()));
+  const companionThumbCount = images.filter((image) => {
+    const match = image.filename.toLowerCase().match(/^(.*)_thumb\.[^.]+$/);
+    if (!match) {
+      return false;
+    }
+    return orphanImageExtensions.some((extension) => filenames.has(`${match[1]}${extension}`));
+  }).length;
+  return images.length - companionThumbCount;
+}
+
 export function DangerZoneSection() {
   // Orphan Image Cleanup
   const [orphanImages, setOrphanImages] = useState<OrphanImage[]>([]);
@@ -27,6 +41,8 @@ export function DangerZoneSection() {
   const [brokenPaths, setBrokenPaths] = useState<{total: number, fixable: number} | null>(null);
   const [isScanningBroken, setIsScanningBroken] = useState(false); // Added missing state
   const [isFixingBroken, setIsFixingBroken] = useState(false); // Added missing state
+  const orphanFileCount = orphanImages.length;
+  const orphanGroupCount = countOrphanImageGroups(orphanImages);
 
   // Scan for orphan images
   const scanOrphanImages = async () => {
@@ -38,7 +54,8 @@ export function DangerZoneSection() {
       if (result.total_count === 0) {
         toast.success('沒有發現孤兒圖片！');
       } else {
-        toast.info(`發現 ${result.total_count} 張孤兒圖片，共 ${result.total_size_mb} MB`);
+        const groupCount = countOrphanImageGroups(result.orphan_images);
+        toast.info(`發現 ${groupCount} 組未使用圖片（${result.total_count} 個檔案），共 ${result.total_size_mb} MB`);
       }
     } catch (error: any) {
       toast.error(error?.response?.data?.message || '掃描失敗');
@@ -54,7 +71,7 @@ export function DangerZoneSection() {
       return;
     }
 
-    if (!await confirm({ title: '刪除孤兒圖片', message: `確定要刪除 ${orphanImages.length} 張孤兒圖片嗎？此操作無法復原！`, variant: 'danger' })) {
+    if (!await confirm({ title: '刪除孤兒圖片', message: `確定要刪除 ${orphanGroupCount} 組未使用圖片（${orphanFileCount} 個檔案）嗎？此操作無法復原！`, variant: 'danger' })) {
       return;
     }
 
@@ -62,7 +79,7 @@ export function DangerZoneSection() {
     try {
       const filenames = orphanImages.map(img => img.filename);
       const result = await api.deleteOrphanImages(filenames);
-      toast.success(`已刪除 ${result.deleted_count} 張圖片`);
+      toast.success(`已刪除 ${result.deleted_count} 個圖片檔`);
       // Reset state
       setOrphanImages([]);
       setOrphanTotalSize(0);
@@ -193,10 +210,10 @@ export function DangerZoneSection() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-primary font-medium">
-                  發現 {orphanImages.length} 張孤兒圖片
+                  發現 {orphanGroupCount} 組未使用圖片
                 </p>
                 <p className="text-text-muted text-sm">
-                  佔用空間：{orphanTotalSize} MB
+                  {orphanFileCount} 個檔案，佔用空間：{orphanTotalSize} MB
                 </p>
               </div>
               <Button
@@ -230,7 +247,7 @@ export function DangerZoneSection() {
                 ))}
                 {orphanImages.length > 10 && (
                   <span className="text-xs px-2 py-0.5 text-text-muted">
-                    還有 {orphanImages.length - 10} 張...
+                    還有 {orphanImages.length - 10} 個檔案...
                   </span>
                 )}
               </div>

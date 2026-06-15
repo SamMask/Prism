@@ -66,6 +66,7 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/server/backup/download")
     registered.discard("/api/server/backup/rotate")
     registered.discard("/api/server/backup/list")
+    registered.discard("/api/server/backup/restore")
     registered.discard("/api/server/backup/")
     registered.discard("/api/server/version")
     registered.discard("/api/prompt-options")

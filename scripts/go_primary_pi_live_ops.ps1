@@ -63,7 +63,8 @@ function Invoke-RemoteBash([string]$Description, [string]$Script, [string[]]$Rem
     $scriptName = "prism-go-primary-live-" + ([System.Guid]::NewGuid().ToString("N")) + ".sh"
     $localTemp = Join-Path ([System.IO.Path]::GetTempPath()) $scriptName
     $remoteTemp = "/tmp/$scriptName"
-    [System.IO.File]::WriteAllText($localTemp, $Script, [System.Text.UTF8Encoding]::new($false))
+    $lfScript = $Script -replace "`r`n", "`n"
+    [System.IO.File]::WriteAllText($localTemp, $lfScript, [System.Text.UTF8Encoding]::new($false))
     try {
         Invoke-Scp $localTemp "${HostAlias}:$remoteTemp"
         if ($LASTEXITCODE -ne 0) {

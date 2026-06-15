@@ -180,7 +180,15 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
     attachments_dir = go_data / "docs" / "attachments"
     attachments_dir.mkdir(parents=True, exist_ok=True)
     (attachments_dir / "refs.md").write_text("![a](/static/uploads/attachment_ref.png)", encoding="utf-8")
-    _set_note_media(go_db, "![ref](/static/uploads/referenced.png)")
+    _set_note_media(
+        go_db,
+        "\n".join(
+            [
+                "![ref](/static/uploads/referenced.png)",
+                "![thumb](/static/uploads/thumb_only_ref_thumb.webp)",
+            ]
+        ),
+    )
     conn = sqlite3.connect(go_db)
     try:
         conn.execute(
@@ -198,6 +206,8 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
         "referenced.png",
         "referenced_thumb.webp",
         "attachment_ref.png",
+        "thumb_only_ref.png",
+        "thumb_only_ref_thumb.webp",
         "orphan.png",
         "orphan_thumb.webp",
     ):
@@ -217,18 +227,22 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
         assert "referenced.png" not in orphan_names
         assert "referenced_thumb.webp" not in orphan_names
         assert "attachment_ref.png" not in orphan_names
+        assert "thumb_only_ref.png" in orphan_names
+        assert "thumb_only_ref_thumb.webp" not in orphan_names
 
         status, payload = _request_json(
             base,
             "/api/cleanup/orphan-images",
             method="DELETE",
-            data={"filenames": ["orphan.png", "referenced.png"]},
+            data={"filenames": ["orphan.png", "thumb_only_ref.png", "referenced.png"]},
         )
         assert status == 200
-        assert set(payload["data"]["deleted"]) == {"orphan.png", "orphan_thumb.webp"}
+        assert set(payload["data"]["deleted"]) == {"orphan.png", "orphan_thumb.webp", "thumb_only_ref.png"}
         assert payload["data"]["errors"] == [{"filename": "referenced.png", "error": "File is not orphan"}]
         assert not (go_data / "static" / "uploads" / "orphan.png").exists()
         assert not (go_data / "static" / "uploads" / "orphan_thumb.webp").exists()
+        assert not (go_data / "static" / "uploads" / "thumb_only_ref.png").exists()
+        assert (go_data / "static" / "uploads" / "thumb_only_ref_thumb.webp").exists()
         assert (go_data / "static" / "uploads" / "referenced.png").exists()
     finally:
         _stop(proc)

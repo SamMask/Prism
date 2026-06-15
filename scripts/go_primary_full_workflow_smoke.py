@@ -283,16 +283,6 @@ def run_smoke(base_url, label, insecure=False):
     if not backup_body.startswith(b"SQLite format 3"):
         raise SmokeError("backup download is not a SQLite database")
     backup_filename = filename_from_content_disposition(headers.get("Content-Disposition"))
-    backup_deleted = False
-    if backup_filename:
-        status, backup_delete, _ = request_json(
-            base_url,
-            f"/api/server/backup/{urllib.parse.quote(backup_filename)}",
-            method="DELETE",
-            context=context,
-        )
-        assert_status("delete smoke backup", status, 200, backup_delete)
-        backup_deleted = True
 
     status, migration, _ = request_json(base_url, "/api/system/migration-status", context=context)
     assert_status("migration status", status, 200, migration)
@@ -311,7 +301,8 @@ def run_smoke(base_url, label, insecure=False):
             "backup": {
                 "content_type": headers.get("Content-Type"),
                 "filename": backup_filename,
-                "deleted_after_download": backup_deleted,
+                "deleted_after_download": False,
+                "server_side_retained": False,
                 "starts_with_sqlite_header": True,
             },
             "migration": migration_data,

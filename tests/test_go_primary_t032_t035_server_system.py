@@ -213,7 +213,7 @@ def test_t033_backup_list_download_rotate_delete_and_path_safety(temp_db, tmp_pa
         assert status == 200
         assert body.startswith(b"SQLite format 3")
         assert "application/x-sqlite3" in headers["Content-Type"]
-        assert not oldest.exists()
+        assert oldest.exists()
         assert len(list(backup_dir.glob("prism_backup_*.db"))) == 3
 
         status, payload, _ = _request_json(
