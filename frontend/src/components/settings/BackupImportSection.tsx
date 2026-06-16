@@ -123,25 +123,28 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
 
   return (
     <>
-      {/* Export / Backup */}
+      {/* Export Copies */}
       <div className="glass rounded-xl p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
           <Download size={20} className="text-success" />
-          匯出備份
+          匯出副本
         </h2>
+        <p className="text-text-muted text-sm mb-4">
+          下載一份可自行保存或帶到其他工具使用的資料副本；這不會建立 Prism 內建還原點。
+        </p>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-text-primary">匯出 JSON</p>
+              <p className="text-text-primary">下載 JSON 副本</p>
               <p className="text-text-muted text-sm">
-                匯出所有筆記、分類、標籤為 JSON 格式
+                下載所有筆記、分類、標籤，之後可用「匯入資料」帶回 Prism
               </p>
             </div>
             <Button
               variant="secondary"
               onClick={() => {
                 api.exportJSON();
-                toast.success('開始下載 JSON 備份檔案');
+                toast.success('開始下載 JSON 副本');
               }}
             >
               下載 JSON
@@ -150,16 +153,16 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <div className="border-t border-border-subtle pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-text-primary">匯出資料庫</p>
+                <p className="text-text-primary">下載資料庫副本</p>
                 <p className="text-text-muted text-sm">
-                  匯出完整 SQLite 資料庫檔案
+                  下載完整 SQLite .db 檔，適合離線保存或人工檢查
                 </p>
               </div>
               <Button
                 variant="secondary"
                 onClick={() => {
                   api.exportDB();
-                  toast.success('開始下載資料庫備份檔案');
+                  toast.success('開始下載資料庫副本');
                 }}
               >
                 下載 .db
@@ -198,7 +201,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <div>
             <p className="text-text-primary">從 JSON 匯入</p>
             <p className="text-text-muted text-sm">
-              匯入先前匯出的 JSON 備份檔案
+              匯入先前下載的 JSON 副本；這會新增或建立副本，不會覆蓋整個資料庫
             </p>
           </div>
           <div>
@@ -223,20 +226,20 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       <div className="glass rounded-xl p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
           <Database size={20} className="text-warning" />
-          從備份還原資料庫
+          還原資料庫
         </h2>
         <p className="text-text-muted text-sm mb-4">
-          選一個自動備份還原。點「還原」後，Prism 會<strong className="text-text-primary">自動關閉並重新開啟</strong>，
-          用你選的備份覆蓋目前的資料庫。還原前會先自動把目前的資料庫另存一份，所以還原後若反悔仍救得回來。
+          選一個 Prism 內建還原點。點「還原」後，Prism 會<strong className="text-text-primary">自動關閉並重新開啟</strong>，
+          用你選的還原點覆蓋目前資料庫。還原前會先把目前資料庫另存一份。
         </p>
 
         {loadingBackups ? (
           <div className="flex items-center gap-2 text-text-muted text-sm">
             <Loader2 size={16} className="animate-spin" />
-            讀取備份清單…
+            讀取還原點清單…
           </div>
         ) : backups.length === 0 ? (
-          <p className="text-text-muted text-sm">目前沒有可還原的備份。</p>
+          <p className="text-text-muted text-sm">目前沒有可還原的 Prism 內建還原點。</p>
         ) : (
           <div className="space-y-2">
             {backups.map((b) => (
@@ -273,7 +276,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
               確認還原資料庫
             </h3>
             <p className="text-text-secondary mb-2">
-              將用這個備份覆蓋目前的資料庫：
+              將用這個 Prism 內建還原點覆蓋目前的資料庫：
             </p>
             <p className="text-text-primary text-sm mb-4">
               {restoreTarget.created_at}

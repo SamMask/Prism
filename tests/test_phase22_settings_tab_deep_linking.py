@@ -19,7 +19,7 @@ def test_settings_tabs_are_driven_by_url_search_params():
 def test_settings_tabs_accept_only_known_tab_ids_and_preserve_default_appearance():
     settings_page = SETTINGS_PATH.read_text(encoding="utf-8")
 
-    assert "type SettingsTab = 'appearance' | 'data' | 'search' | 'deploy' | 'about'" in settings_page
+    assert "type SettingsTab = 'appearance' | 'organization' | 'backup' | 'maintenance' | 'access' | 'about'" in settings_page
     assert "function isSettingsTab(value: string | null): value is SettingsTab" in settings_page
     assert "SETTINGS_TAB_IDS.includes(value as SettingsTab)" in settings_page
     assert ": 'appearance'" in settings_page

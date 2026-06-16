@@ -25,7 +25,7 @@ export function SystemMaintenance() {
       setWalResult(result)
       toast.success(`WAL 合併完成，已處理 ${result.pages_checkpointed} 頁`)
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'WAL Checkpoint 失敗')
+      toast.error(error?.response?.data?.message || '整理資料庫暫存日誌失敗')
     } finally {
       setIsWalRunning(false)
     }
@@ -79,7 +79,7 @@ export function SystemMaintenance() {
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border-subtle bg-bg-elevated/60 p-3 text-xs text-text-muted">
-        這區仍保留作為進階維護與疑難排解工具；日常使用不需要手動執行，備份前或懷疑資料異常時再使用即可。
+        這區是資料健康檢查與進階維護工具；日常使用不需要手動執行，匯出資料庫副本前或懷疑資料異常時再使用即可。
       </div>
 
       {/* WAL Checkpoint */}
@@ -87,7 +87,7 @@ export function SystemMaintenance() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <HardDrive size={18} className="text-primary" />
-            <span className="font-medium text-text-primary">WAL Checkpoint</span>
+            <span className="font-medium text-text-primary">整理資料庫暫存日誌</span>
           </div>
           <Button
             size="sm"
@@ -106,11 +106,11 @@ export function SystemMaintenance() {
           </Button>
         </div>
         <p className="text-xs text-text-muted mb-2">
-          手動將暫存日誌寫入主檔案（僅需在備份 .db 檔前執行，平常由系統自動處理）
+          將 SQLite WAL / checkpoint 暫存內容寫回主資料庫檔；通常只需在下載 .db 副本前手動執行。
         </p>
         {walResult && (
           <div className="text-xs text-text-secondary bg-bg-surface rounded p-2 mt-2">
-            ✅ WAL 大小: {(walResult.wal_size_before / 1024).toFixed(1)} KB → 已處理 {walResult.pages_checkpointed} 頁
+            ✅ 暫存日誌大小: {(walResult.wal_size_before / 1024).toFixed(1)} KB → 已處理 {walResult.pages_checkpointed} 頁
           </div>
         )}
       </div>
@@ -139,7 +139,7 @@ export function SystemMaintenance() {
           </Button>
         </div>
         <p className="text-xs text-text-muted mb-2">
-          檢查標籤關聯、分類一致性等資料完整性問題
+          檢查標籤關聯、分類與外鍵狀態；這只會回報狀態，不會自動修改資料。
         </p>
         {consistencyResult && (
           <div className="mt-3 space-y-2">
@@ -162,7 +162,7 @@ export function SystemMaintenance() {
               </div>
 
               <div className="flex justify-between bg-bg-surface rounded p-2">
-                <span className="text-text-muted">FK 狀態</span>
+                <span className="text-text-muted">外鍵檢查</span>
                 <span className={consistencyResult.fk_enabled ? 'text-success' : 'text-warning'}>
                   {consistencyResult.fk_enabled ? '啟用' : '停用'}
                 </span>

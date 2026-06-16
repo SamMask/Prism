@@ -33,6 +33,18 @@
    - `CLAUDE.md` + `AGENTS.md`（開發規範本身要改時，**兩份都要改**）
 3. **測試** → 每次實作後跑 `pytest tests/ -v`；Go runtime / contracts 有變更時加跑 `cd go-shadow && go test ./...`；docs-only 變更至少跑 `git diff --check`、鏡像比對與相關文件 regression
 
+## Codex Loop Engineering（開發迴圈）
+
+當使用者要求「照 Loop Engineering 跑」、「跑迴圈」、「做到 gate 通過再收尾」或同義開發迴圈時，Codex 必須使用 repo-local Codex 版流程：
+
+1. 先讀 `.loop/LOOP-PROCEDURE.md` 與 `.loop/manifest.md`
+2. 依 manifest 的 explore / plan / execute / verify / iterate 階段讀取 Prism 治理文件
+3. verify 階段主動執行 manifest 的 `gate` 指令，gate 未通過不得宣稱完成
+4. gate 失敗時回到 iterate 修正並重跑，直到通過或達到 `max_iterations`
+5. 使用者可隨時說「停」「中斷迴圈」「先回報目前狀態」；收到後停止新動作並回報已讀、已改、已驗證與剩餘風險
+
+此流程只屬於開發治理，不是 Prism 產品 runtime；不得因接入迴圈而新增功能、schema/API、deploy 或 runtime path。
+
 ## 專案快查
 
 ```

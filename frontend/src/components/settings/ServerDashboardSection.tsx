@@ -204,10 +204,10 @@ export function ServerDashboardSection() {
   const handleDownloadBackup = async () => {
     try {
       await api.downloadBackup();
-      toast.success('備份下載已開始，已套用 3 份保留');
+      toast.success('目前資料庫副本下載已開始');
       await fetchBackups();
     } catch (error: any) {
-      toast.error('備份下載失敗: ' + (error?.message || '未知錯誤'));
+      toast.error('資料庫副本下載失敗: ' + (error?.message || '未知錯誤'));
     }
   };
 
@@ -216,27 +216,27 @@ export function ServerDashboardSection() {
     setIsBackingUp(true);
     try {
       const result = await api.rotateBackups(3);
-      toast.success(`備份完成！已建立 ${result.new_backup}，保留 ${result.kept_backups.length} 份`);
+      toast.success(`已建立還原點 ${result.new_backup}，保留 ${result.kept_backups.length} 份`);
       if (result.deleted_backups.length > 0) {
-        toast.info(`已清理 ${result.deleted_backups.length} 份舊備份`);
+        toast.info(`已清理 ${result.deleted_backups.length} 份舊還原點`);
       }
       fetchBackups();
     } catch (error: any) {
-      toast.error('備份輪換失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
+      toast.error('建立還原點失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
     } finally {
       setIsBackingUp(false);
     }
   };
 
   const handleDeleteBackup = async (backup: BackupInfo) => {
-    if (!await confirm({ title: '刪除備份', message: `確定要刪除備份「${backup.filename}」嗎？`, variant: 'danger' })) return;
+    if (!await confirm({ title: '刪除還原點', message: `確定要刪除 Prism 內建還原點「${backup.filename}」嗎？`, variant: 'danger' })) return;
     setDeletingBackup(backup.filename);
     try {
       await api.deleteBackup(backup.filename);
-      toast.success('備份已刪除');
+      toast.success('還原點已刪除');
       fetchBackups();
     } catch (error: any) {
-      toast.error('刪除備份失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
+      toast.error('刪除還原點失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
     } finally {
       setDeletingBackup(null);
     }
@@ -442,13 +442,13 @@ export function ServerDashboardSection() {
       </div>
 
       {/* ============================================================= */}
-      {/* Backup Management */}
+      {/* Restore Point Management */}
       {/* ============================================================= */}
       <div className="bg-bg-elevated rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-emerald-400" />
-            <span className="text-text-secondary text-sm font-medium">資料庫備份</span>
+            <span className="text-text-secondary text-sm font-medium">Prism 內建還原點</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -457,7 +457,7 @@ export function ServerDashboardSection() {
               className="text-xs"
             >
               <Download size={14} />
-              一鍵下載
+              下載目前資料庫
             </Button>
             <Button
               onClick={handleRotateBackups}
@@ -466,19 +466,19 @@ export function ServerDashboardSection() {
               disabled={isBackingUp}
             >
               <RotateCcw size={14} className={isBackingUp ? 'animate-spin' : ''} />
-              {isBackingUp ? '備份中...' : '輪換備份'}
+              {isBackingUp ? '建立中...' : '建立還原點'}
             </Button>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-xs text-text-muted mb-2">
-          <span>一鍵下載與輪換備份都會保留最近 3 份</span>
+          <span>下載目前資料庫是一次性副本；建立還原點會保留最近 3 份供資料庫還原使用</span>
           <button
             onClick={() => { setShowBackups(!showBackups); if (!showBackups) fetchBackups(); }}
             className="text-text-muted hover:text-text-secondary flex items-center gap-1"
           >
             {showBackups ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {backups.length} 份備份 ({backupTotalMb} MB)
+            {backups.length} 個還原點 ({backupTotalMb} MB)
           </button>
         </div>
 
@@ -502,8 +502,8 @@ export function ServerDashboardSection() {
                     onClick={() => handleDeleteBackup(backup)}
                     disabled={deletingBackup === backup.filename}
                     className="inline-flex h-7 w-7 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
-                    aria-label={`刪除備份 ${backup.filename}`}
-                    title="刪除備份"
+                    aria-label={`刪除還原點 ${backup.filename}`}
+                    title="刪除還原點"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -515,7 +515,7 @@ export function ServerDashboardSection() {
 
         {showBackups && backups.length === 0 && (
           <div className="text-xs text-text-muted text-center py-2">
-            尚無備份，點擊「輪換備份」建立第一份
+            尚無還原點，點擊「建立還原點」建立第一份
           </div>
         )}
       </div>
