@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslation } from "./useTranslation";
 
 // Types
 export interface PromptOption {
@@ -110,6 +111,8 @@ const getOptDisplay = (
 
 // Main Hook
 export function usePromptBuilder() {
+  const { t } = useTranslation();
+
   // Loading State
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -177,10 +180,10 @@ export function usePromptBuilder() {
       setError(null);
 
       const response = await fetch("/api/prompt-options");
-      if (!response.ok) throw new Error("Failed to load config");
+      if (!response.ok) throw new Error(t("promptBuilder.errors.loadConfig"));
 
       const result = await response.json();
-      if (result.status !== "success") throw new Error(result.message);
+      if (result.status !== "success") throw new Error(result.message || t("promptBuilder.errors.loadConfig"));
 
       const config = result.data;
 
@@ -208,19 +211,19 @@ export function usePromptBuilder() {
       setIsLoading(false);
     } catch (err) {
       console.error("Load config error:", err);
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setError(err instanceof Error ? err.message : t("promptBuilder.errors.unknown"));
       setIsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // Load Wizard Options
   const loadWizardOptions = useCallback(async () => {
     try {
       const response = await fetch("/api/wizard-options");
-      if (!response.ok) throw new Error("Failed to load wizard options");
+      if (!response.ok) throw new Error(t("promptBuilder.errors.loadWizardOptions"));
 
       const result = await response.json();
-      if (result.status !== "success") throw new Error(result.message);
+      if (result.status !== "success") throw new Error(result.message || t("promptBuilder.errors.loadWizardOptions"));
       const config = result.data;
 
       if (config.technicalSpecs) {
@@ -251,7 +254,7 @@ export function usePromptBuilder() {
     } catch (err) {
       console.error("Load wizard options error:", err);
     }
-  }, []);
+  }, [t]);
 
   // Initialize
   useEffect(() => {
@@ -439,7 +442,7 @@ export function usePromptBuilder() {
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
       console.error("Copy failed:", err);
-      alert("複製失敗，請手動選取複製");
+      alert(t("promptBuilder.alerts.copyFailed"));
     }
   }, [
     outputMode,
@@ -447,37 +450,32 @@ export function usePromptBuilder() {
     narrativeOutput,
     jsonOutput,
     form.negativePrompt,
+    t,
   ]);
 
   // Copy for LLM Optimization
   const copyForLLM = useCallback(async () => {
     const currentOutput = outputMode === "narrative" ? narrativeOutput : textOutput;
     if (!currentOutput) {
-      alert("尚無輸出內容");
+      alert(t("promptBuilder.alerts.noOutput"));
       return;
     }
 
-    const llmPrompt = `請幫我優化以下 AI 圖像生成提示詞，保持原有意圖但讓描述更具表現力和細節：
-
-原始提示詞：
-${currentOutput}
-${form.negativePrompt ? `\nNegative Prompt: ${form.negativePrompt}` : ""}
-
-請提供：
-1. 優化後的正向提示詞 (Enhanced Positive Prompt)
-2. 建議的負面提示詞 (Suggested Negative Prompt)
-3. 簡短說明你做了哪些改進`;
+    const llmPrompt = t("promptBuilder.llmPrompt", {
+      prompt: currentOutput,
+      negative: form.negativePrompt ? `\nNegative Prompt: ${form.negativePrompt}` : "",
+    });
 
     try {
       await navigator.clipboard.writeText(llmPrompt);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
-      alert("已複製 LLM 優化指令！\n貼到 ChatGPT 或 Claude 即可獲得優化建議。");
+      alert(t("promptBuilder.alerts.llmCopied"));
     } catch (err) {
       console.error("Copy failed:", err);
-      alert("複製失敗，請手動選取複製");
+      alert(t("promptBuilder.alerts.copyFailed"));
     }
-  }, [outputMode, textOutput, narrativeOutput, form.negativePrompt]);
+  }, [outputMode, textOutput, narrativeOutput, form.negativePrompt, t]);
 
   // Reset Form
   const resetForm = useCallback(() => {
@@ -523,7 +521,7 @@ ${form.negativePrompt ? `\nNegative Prompt: ${form.negativePrompt}` : ""}
   // Save to Library
   const saveToLibrary = useCallback(async () => {
     if (!form.description) {
-      alert("請先輸入主要描述");
+      alert(t("promptBuilder.alerts.enterDescription"));
       return;
     }
 
@@ -593,15 +591,15 @@ ${form.negativePrompt ? `\nNegative Prompt: ${form.negativePrompt}` : ""}
 
       const result = await response.json();
       if (result.status === "success") {
-        alert("已儲存至筆記庫！");
+        alert(t("promptBuilder.alerts.saved"));
       } else {
-        alert("儲存失敗: " + (result.message || "未知錯誤"));
+        alert(t("promptBuilder.alerts.saveFailedWithMessage", { message: result.message || t("promptBuilder.errors.unknown") }));
       }
     } catch (err) {
       console.error("Save error:", err);
-      alert("儲存失敗，請檢查網路連線");
+      alert(t("promptBuilder.alerts.saveNetworkFailed"));
     }
-  }, [form, weights, textOutput]);
+  }, [form, weights, textOutput, t]);
 
   // Wizard Functions
   const openWizardModal = useCallback(() => {
@@ -634,7 +632,7 @@ ${form.negativePrompt ? `\nNegative Prompt: ${form.negativePrompt}` : ""}
     const result = parts.join(", ");
 
     if (!result) {
-      alert("請至少填寫一個欄位");
+      alert(t("promptBuilder.alerts.fillOneField"));
       return;
     }
 
@@ -659,7 +657,7 @@ ${form.negativePrompt ? `\nNegative Prompt: ${form.negativePrompt}` : ""}
     });
     setWizardAppend(false);
     setWizardModalOpen(false);
-  }, [wizardForm, wizardAppend, form.description]);
+  }, [wizardForm, wizardAppend, form.description, t]);
 
   return {
     // State

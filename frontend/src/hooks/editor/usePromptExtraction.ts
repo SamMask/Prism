@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../../services/api'
 import { toast } from '../../components/ui/Toast'
+import { t } from '../../i18n'
 
 const IMAGE_PATTERN_SINGLE =
   /!\[.*?\]\((\/static\/uploads\/[^)]+)\)|<img[^>]+src=["'](\/static\/uploads\/[^"']+)["']/
@@ -38,7 +39,7 @@ export function usePromptExtraction(content: string) {
     while ((m = pattern.exec(content || '')) !== null) {
       matches.push(m[1] || m[2])
     }
-    if (matches.length === 0) { toast.warning('未找到圖片'); return }
+    if (matches.length === 0) { toast.warning(t('editor.promptExtraction.noImage')); return }
 
     for (const imagePath of matches) {
       try {
@@ -47,12 +48,12 @@ export function usePromptExtraction(content: string) {
           let textToCopy = result.prompt
           if (result.negative_prompt) textToCopy += `\n\nNegative prompt: ${result.negative_prompt}`
           await navigator.clipboard.writeText(textToCopy)
-          toast.success(`已複製 ${result.source || 'AI'} 提示詞`)
+          toast.success(t('editor.promptExtraction.copiedPrompt', { source: result.source || 'AI' }))
           return
         }
       } catch { /* try next image */ }
     }
-    toast.warning('圖片中未找到 AI 提示詞')
+    toast.warning(t('editor.promptExtraction.noPrompt'))
   }, [content])
 
   return { hasAIPrompt, isCheckingPrompt, handleCopyPrompt }

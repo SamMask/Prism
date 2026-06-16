@@ -5,6 +5,7 @@ import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useAppStore } from '../stores/appStore'
+import { useTranslation } from '../hooks/useTranslation'
 
 interface CategoryManagerProps {
   categories: Category[]
@@ -12,6 +13,7 @@ interface CategoryManagerProps {
 }
 
 function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
+  const { t } = useTranslation()
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
   const [editIcon, setEditIcon] = useState('')
@@ -22,19 +24,20 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
 
   const handleCreate = async () => {
     if (!newName.trim()) {
-      toast.warning('請輸入分類名稱')
+      toast.warning(t('settings.organization.categoryNameRequired'))
       return
     }
+    const categoryName = newName.trim()
     setIsLoading(true)
     try {
-      await api.createCategory(newName.trim(), newIcon || '📁')
-      toast.success(`分類 "${newName}" 已建立`)
+      await api.createCategory(categoryName, newIcon || '📁')
+      toast.success(t('settings.organization.categoryCreated', { name: categoryName }))
       setNewName('')
       setNewIcon('📁')
       setIsAdding(false)
       onRefresh()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '建立失敗')
+      toast.error(error?.response?.data?.message || t('settings.organization.createFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -42,17 +45,17 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
 
   const handleUpdate = async (id: number) => {
     if (!editName.trim()) {
-      toast.warning('請輸入分類名稱')
+      toast.warning(t('settings.organization.categoryNameRequired'))
       return
     }
     setIsLoading(true)
     try {
       await api.updateCategory(id, { name: editName.trim(), icon: editIcon })
-      toast.success('分類已更新')
+      toast.success(t('settings.organization.categoryUpdated'))
       setEditingId(null)
       onRefresh()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '更新失敗')
+      toast.error(error?.response?.data?.message || t('settings.organization.updateFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -60,24 +63,28 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
 
   const handleDelete = async (cat: Category) => {
     if (cat.is_default) {
-      toast.warning('無法刪除預設分類')
+      toast.warning(t('settings.organization.defaultCategoryCannotDelete'))
       return
     }
     const targetCategory = categories.find((candidate) => candidate.is_default)
-    if (!await confirm({ title: '刪除分類', message: `確定要刪除分類「${cat.name}」嗎？\n其中的 ${cat.count || 0} 篇筆記將移至「筆記」分類。`, variant: 'danger' })) {
+    if (!targetCategory) {
+      toast.error(t('settings.organization.defaultCategoryMissing'))
       return
     }
-    if (!targetCategory) {
-      toast.error('找不到預設分類，無法遷移筆記')
+    if (!await confirm({
+      title: t('settings.organization.deleteCategoryTitle'),
+      message: t('settings.organization.deleteCategoryMessage', { name: cat.name, count: cat.count || 0, target: targetCategory.name }),
+      variant: 'danger',
+    })) {
       return
     }
     setIsLoading(true)
     try {
       await api.deleteCategory(cat.id, targetCategory.id)
-      toast.success(`分類 "${cat.name}" 已刪除`)
+      toast.success(t('settings.organization.categoryDeleted', { name: cat.name }))
       onRefresh()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '刪除失敗')
+      toast.error(error?.response?.data?.message || t('settings.organization.deleteFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -99,11 +106,11 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-medium text-text-primary">
-          <FolderOpen size={16} /> 分類管理
+          <FolderOpen size={16} /> {t('settings.organization.categoryManagement')}
         </h3>
         {!isAdding && (
           <Button size="sm" variant="ghost" onClick={() => setIsAdding(true)}>
-            <Plus size={14} /> 新增
+            <Plus size={14} /> {t('common.add')}
           </Button>
         )}
       </div>
@@ -123,13 +130,13 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
             className="flex-1 px-3 py-1.5 rounded bg-bg-surface border border-border-default text-sm"
-            placeholder="分類名稱"
+            placeholder={t('settings.organization.categoryNamePlaceholder')}
             autoFocus
           />
-          <IconButton size="sm" variant="success" onClick={handleCreate} disabled={isLoading} aria-label="儲存">
+          <IconButton size="sm" variant="success" onClick={handleCreate} disabled={isLoading} aria-label={t('common.save')}>
             <Save size={16} />
           </IconButton>
-          <IconButton size="sm" onClick={() => setIsAdding(false)} aria-label="取消">
+          <IconButton size="sm" onClick={() => setIsAdding(false)} aria-label={t('common.cancel')}>
             <X size={16} />
           </IconButton>
         </div>
@@ -154,10 +161,10 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
                   className="flex-1 px-3 py-1.5 rounded bg-bg-surface border border-border-default text-sm"
                   autoFocus
                 />
-                <IconButton size="sm" variant="success" onClick={() => handleUpdate(cat.id)} disabled={isLoading} aria-label="儲存">
+                <IconButton size="sm" variant="success" onClick={() => handleUpdate(cat.id)} disabled={isLoading} aria-label={t('common.save')}>
                   <Save size={16} />
                 </IconButton>
-                <IconButton size="sm" onClick={cancelEdit} aria-label="取消">
+                <IconButton size="sm" onClick={cancelEdit} aria-label={t('common.cancel')}>
                   <X size={16} />
                 </IconButton>
               </>
@@ -172,11 +179,11 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
                   {cat.count || 0}
                 </span>
                 <span className="flex w-16 shrink-0 justify-end gap-1" data-testid="category-actions">
-                  <IconButton size="sm" onClick={() => startEdit(cat)} className="opacity-0 group-hover:opacity-100" aria-label="編輯">
+                  <IconButton size="sm" onClick={() => startEdit(cat)} className="opacity-0 group-hover:opacity-100" aria-label={t('common.edit')}>
                     <Pencil size={14} />
                   </IconButton>
                   {!cat.is_default ? (
-                    <IconButton size="sm" variant="danger-solid" onClick={() => handleDelete(cat)} disabled={isLoading} className="opacity-0 group-hover:opacity-100" aria-label="刪除">
+                    <IconButton size="sm" variant="danger-solid" onClick={() => handleDelete(cat)} disabled={isLoading} className="opacity-0 group-hover:opacity-100" aria-label={t('common.delete')}>
                       <Trash2 size={14} />
                     </IconButton>
                   ) : (
@@ -198,6 +205,7 @@ interface TagManagerProps {
 }
 
 function TagManager({ tags, onRefresh }: TagManagerProps) {
+  const { t } = useTranslation()
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editName, setEditName] = useState('')
   const [selectedTags, setSelectedTags] = useState<number[]>([])
@@ -206,31 +214,35 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
 
   const handleRename = async (id: number) => {
     if (!editName.trim()) {
-      toast.warning('請輸入標籤名稱')
+      toast.warning(t('settings.organization.tagNameRequired'))
       return
     }
     setIsLoading(true)
     try {
       await api.renameTag(id, editName.trim())
-      toast.success('標籤已重命名')
+      toast.success(t('settings.organization.tagRenamed'))
       setEditingId(null)
       onRefresh()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '重命名失敗')
+      toast.error(error?.response?.data?.message || t('settings.organization.renameFailed'))
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleDelete = async (tag: TagType) => {
-    if (!await confirm({ title: '刪除標籤', message: `確定要刪除標籤「${tag.name}」嗎？`, variant: 'danger' })) return
+    if (!await confirm({
+      title: t('settings.organization.deleteTagTitle'),
+      message: t('settings.organization.deleteTagMessage', { name: tag.name }),
+      variant: 'danger',
+    })) return
     setIsLoading(true)
     try {
       await api.deleteTag(tag.id)
-      toast.success(`標籤 "${tag.name}" 已刪除`)
+      toast.success(t('settings.organization.tagDeleted', { name: tag.name }))
       onRefresh()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '刪除失敗')
+      toast.error(error?.response?.data?.message || t('settings.organization.deleteFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -238,22 +250,22 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
 
   const handleMerge = async () => {
     if (!mergeTarget || selectedTags.length === 0) {
-      toast.warning('請選擇要合併的標籤和目標標籤')
+      toast.warning(t('settings.organization.mergeSelectionRequired'))
       return
     }
     if (selectedTags.includes(mergeTarget)) {
-      toast.warning('目標標籤不能被合併')
+      toast.warning(t('settings.organization.mergeTargetCannotBeSource'))
       return
     }
     setIsLoading(true)
     try {
       const result = await api.mergeTags(selectedTags, mergeTarget)
-      toast.success(`已合併 ${result.merged_count} 個標籤`)
+      toast.success(t('settings.organization.tagsMerged', { count: result.merged_count }))
       setSelectedTags([])
       setMergeTarget(null)
       onRefresh()
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '合併失敗')
+      toast.error(error?.response?.data?.message || t('settings.organization.mergeFailed'))
     } finally {
       setIsLoading(false)
     }
@@ -271,7 +283,7 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="flex items-center gap-2 text-sm font-medium text-text-primary">
-          <Tag size={16} /> 標籤管理 ({tags.length})
+          <Tag size={16} /> {t('settings.organization.tagManagement', { count: tags.length })}
         </h3>
         {selectedTags.length > 0 && (
           <div className="flex items-center gap-2">
@@ -280,13 +292,13 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
               onChange={(e) => setMergeTarget(e.target.value ? Number(e.target.value) : null)}
               className="px-2 py-1 rounded text-xs bg-bg-elevated border border-border-default"
             >
-              <option value="">選擇目標標籤</option>
+              <option value="">{t('settings.organization.selectMergeTarget')}</option>
               {tags.filter((t) => !selectedTags.includes(t.id)).map((t) => (
                 <option key={t.id} value={t.id}>{t.name}</option>
               ))}
             </select>
             <Button size="sm" variant="ghost" onClick={handleMerge} disabled={!mergeTarget || isLoading}>
-              <GitMerge size={14} /> 合併 ({selectedTags.length})
+              <GitMerge size={14} /> {t('settings.organization.mergeAction', { count: selectedTags.length })}
             </Button>
           </div>
         )}
@@ -315,10 +327,10 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
                   className="w-20 px-1 py-0.5 rounded bg-bg-surface border text-xs"
                   autoFocus
                 />
-                <IconButton size="xs" variant="success" onClick={(e) => { e.stopPropagation(); handleRename(tag.id) }} aria-label="儲存">
+                <IconButton size="xs" variant="success" onClick={(e) => { e.stopPropagation(); handleRename(tag.id) }} aria-label={t('common.save')}>
                   <Save size={12} />
                 </IconButton>
-                <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(null) }} aria-label="取消">
+                <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(null) }} aria-label={t('common.cancel')}>
                   <X size={12} />
                 </IconButton>
               </>
@@ -326,10 +338,10 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
               <>
                 <span>{tag.name}</span>
                 <span className="text-text-muted">({tag.count || 0})</span>
-                <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(tag.id); setEditName(tag.name) }} className="opacity-50 hover:opacity-100" aria-label="重新命名">
+                <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(tag.id); setEditName(tag.name) }} className="opacity-50 hover:opacity-100" aria-label={t('settings.organization.rename')}>
                   <Pencil size={10} />
                 </IconButton>
-                <IconButton size="xs" variant="danger-solid" onClick={(e) => { e.stopPropagation(); handleDelete(tag) }} className="opacity-50 hover:opacity-100" aria-label="刪除">
+                <IconButton size="xs" variant="danger-solid" onClick={(e) => { e.stopPropagation(); handleDelete(tag) }} className="opacity-50 hover:opacity-100" aria-label={t('common.delete')}>
                   <Trash2 size={10} />
                 </IconButton>
               </>
@@ -339,7 +351,7 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
       </div>
 
       {tags.length === 0 && (
-        <p className="text-sm text-text-muted text-center py-4">尚無標籤</p>
+        <p className="text-sm text-text-muted text-center py-4">{t('settings.organization.noTags')}</p>
       )}
     </div>
   )

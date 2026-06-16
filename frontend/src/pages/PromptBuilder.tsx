@@ -18,8 +18,10 @@ import {
   WizardModal
 } from '../components/prompt-builder'
 import { Button } from '../components/ui/Button'
+import { useTranslation } from '../hooks/useTranslation'
 
 export function PromptBuilder() {
+  const { t } = useTranslation()
   const {
     isLoading,
     error,
@@ -61,11 +63,11 @@ export function PromptBuilder() {
     <>
       <Button onClick={saveToLibrary} variant="primary" className="flex-1 flex items-center justify-center gap-2">
         <Save size={18} />
-        儲存至筆記庫
+        {t('promptBuilder.actions.saveToLibrary')}
       </Button>
       <Button onClick={resetForm} variant="ghost" className="flex items-center gap-2">
         <RotateCcw size={18} />
-        重置
+        {t('promptBuilder.actions.reset')}
       </Button>
     </>
   )
@@ -76,7 +78,7 @@ export function PromptBuilder() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 size={48} className="animate-spin text-primary" />
-          <p className="text-text-secondary">載入配置中...</p>
+          <p className="text-text-secondary">{t('promptBuilder.loading')}</p>
         </div>
       </div>
     )
@@ -90,10 +92,10 @@ export function PromptBuilder() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-error/20 flex items-center justify-center">
             <span className="text-3xl">⚠️</span>
           </div>
-          <h2 className="text-xl font-semibold text-text-primary mb-2">載入失敗</h2>
+          <h2 className="text-xl font-semibold text-text-primary mb-2">{t('promptBuilder.loadFailed')}</h2>
           <p className="text-text-secondary mb-4">{error}</p>
           <Button onClick={loadConfig} variant="primary">
-            重試
+            {t('promptBuilder.retry')}
           </Button>
         </div>
       </div>
@@ -113,7 +115,7 @@ export function PromptBuilder() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-text-primary">Prompt Builder</h1>
-              <p className="text-sm text-text-muted">結構化提示詞組裝器</p>
+              <p className="text-sm text-text-muted">{t('promptBuilder.subtitle')}</p>
             </div>
           </div>
           
@@ -125,7 +127,7 @@ export function PromptBuilder() {
               onChange={(e) => setUseWeights(e.target.checked)}
               className="w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary"
             />
-            <span className="text-sm text-text-secondary">權重模式</span>
+            <span className="text-sm text-text-secondary">{t('promptBuilder.weightMode')}</span>
           </label>
         </div>
 
@@ -140,20 +142,20 @@ export function PromptBuilder() {
         <div className="glass rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-text-secondary">
-              主要描述 *
+              {t('promptBuilder.mainDescription')}
             </label>
             <button
               onClick={openWizardModal}
               className="px-3 py-1.5 text-xs font-medium rounded-lg bg-gradient-to-r from-primary to-accent text-white hover:opacity-90 transition-opacity flex items-center gap-1.5 shadow-lg shadow-primary/20"
             >
               <Sparkles size={14} />
-              靈感引導
+              {t('promptBuilder.inspirationGuide')}
             </button>
           </div>
           <textarea
             value={form.description}
             onChange={(e) => updateForm('description', e.target.value)}
-            placeholder="描述你想要生成的圖像內容..."
+            placeholder={t('promptBuilder.descriptionPlaceholder')}
             rows={3}
             className="w-full bg-bg-elevated border border-border-subtle rounded-lg px-4 py-3
                        text-text-primary placeholder:text-text-muted resize-none
@@ -163,13 +165,13 @@ export function PromptBuilder() {
 
         {/* Camera Parameters */}
         <ParameterGroup 
-          title="鏡頭設定" 
+          title={t('promptBuilder.camera.title')}
           icon={<Camera size={18} className="text-primary" />}
           onRandomize={() => randomizeCategory('camera')}
         >
           <div className="grid grid-cols-2 gap-4">
             <ParameterSelect
-              label="景別"
+              label={t('promptBuilder.camera.shotSize')}
               value={form.shotSize}
               options={options.shotSize}
               onChange={(v) => updateForm('shotSize', v)}
@@ -178,7 +180,7 @@ export function PromptBuilder() {
               showWeight={useWeights}
             />
             <ParameterSelect
-              label="鏡頭運動"
+              label={t('promptBuilder.camera.cameraMovement')}
               value={form.cameraMovement}
               options={options.cameraMovement}
               onChange={(v) => updateForm('cameraMovement', v)}
@@ -187,7 +189,7 @@ export function PromptBuilder() {
               showWeight={useWeights}
             />
             <ParameterSelect
-              label="拍攝角度"
+              label={t('promptBuilder.camera.angle')}
               value={form.angle}
               options={options.angle}
               onChange={(v) => updateForm('angle', v)}
@@ -196,7 +198,7 @@ export function PromptBuilder() {
               showWeight={useWeights}
             />
             <ParameterSelect
-              label="對焦"
+              label={t('promptBuilder.camera.focus')}
               value={form.focus}
               options={options.focus}
               onChange={(v) => updateForm('focus', v)}
@@ -209,13 +211,13 @@ export function PromptBuilder() {
 
         {/* Style Parameters */}
         <ParameterGroup 
-          title="風格設定" 
+          title={t('promptBuilder.style.title')}
           icon={<Palette size={18} className="text-accent" />}
           onRandomize={() => randomizeCategory('style')}
         >
           <div className="grid grid-cols-2 gap-4">
             <ParameterSelect
-              label="藝術風格"
+              label={t('promptBuilder.style.artStyle')}
               value={form.style}
               options={options.style}
               onChange={(v) => updateForm('style', v)}
@@ -224,7 +226,7 @@ export function PromptBuilder() {
               showWeight={useWeights}
             />
             <ParameterSelect
-              label="光線"
+              label={t('promptBuilder.style.lighting')}
               value={form.lighting}
               options={options.lighting}
               onChange={(v) => updateForm('lighting', v)}
@@ -233,7 +235,7 @@ export function PromptBuilder() {
               showWeight={useWeights}
             />
             <ParameterSelect
-              label="色調"
+              label={t('promptBuilder.style.colorPalette')}
               value={form.colorPalette}
               options={options.colorPalette}
               onChange={(v) => updateForm('colorPalette', v)}
@@ -242,7 +244,7 @@ export function PromptBuilder() {
               showWeight={useWeights}
             />
             <ParameterSelect
-              label="品質強調"
+              label={t('promptBuilder.style.quality')}
               value={form.quality}
               options={options.quality}
               onChange={(v) => updateForm('quality', v)}
@@ -265,7 +267,7 @@ export function PromptBuilder() {
                 className="text-xs bg-bg-elevated border border-border-subtle rounded px-2 py-1
                            text-text-muted cursor-pointer"
               >
-                <option value="">預設...</option>
+                <option value="">{t('promptBuilder.negativePresetPlaceholder')}</option>
                 {negativePresets.map((preset, idx) => (
                   <option key={idx} value={preset.value}>{preset.name}</option>
                 ))}
@@ -275,7 +277,7 @@ export function PromptBuilder() {
           <textarea
             value={form.negativePrompt}
             onChange={(e) => updateForm('negativePrompt', e.target.value)}
-            placeholder="不想要的元素..."
+            placeholder={t('promptBuilder.negativePlaceholder')}
             rows={2}
             className="w-full bg-bg-elevated border border-border-subtle rounded-lg px-4 py-2
                        text-text-primary placeholder:text-text-muted resize-none text-sm

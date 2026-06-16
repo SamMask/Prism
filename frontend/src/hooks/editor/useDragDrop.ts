@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import { api } from '../../services/api'
 import { toast } from '../../components/ui/Toast'
 import type { Attachment } from '../../components/editor/AttachmentPanel'
+import { t } from '../../i18n'
 
 export function useDragDrop(
   noteId: number | undefined,
@@ -45,19 +46,19 @@ export function useDragDrop(
 
       for (const file of imageFiles) {
         try {
-          toast.info('上傳圖片中...')
+          toast.info(t('editor.uploadToast.imageUploading'))
           const result = await api.uploadImage(file)
           setContent((prev) => prev + '\n' + `![image](${result.url})`)
-          toast.success('圖片已上傳')
+          toast.success(t('editor.uploadToast.imageUploaded'))
         } catch {
-          toast.error('圖片上傳失敗')
+          toast.error(t('editor.uploadToast.imageUploadFailed'))
         }
       }
 
       if (mdFiles.length > 0 && noteId) {
         for (const file of mdFiles) {
           try {
-            toast.info(`上傳 ${file.name}...`)
+            toast.info(t('editor.attachmentsToast.uploading', { name: file.name }))
             const result = await api.uploadAttachment(noteId, file)
             setAttachments((prev) => [
               ...prev,
@@ -71,14 +72,14 @@ export function useDragDrop(
                 created_at: new Date().toISOString(),
               },
             ])
-            toast.success(`附件 "${result.title}" 已上傳`)
+            toast.success(t('editor.attachmentsToast.uploaded', { title: result.title }))
           } catch (error: unknown) {
             const axiosErr = error as { response?: { data?: { message?: string } } }
-            toast.error(axiosErr?.response?.data?.message || '附件上傳失敗')
+            toast.error(axiosErr?.response?.data?.message || t('editor.attachmentsToast.uploadFailed'))
           }
         }
       } else if (mdFiles.length > 0) {
-        toast.warning('請先儲存筆記後再上傳附件')
+        toast.warning(t('editor.uploadToast.attachmentSaveFirst'))
       }
     },
     [noteId, setContent, setAttachments]

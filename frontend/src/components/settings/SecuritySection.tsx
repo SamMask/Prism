@@ -3,8 +3,10 @@ import { ShieldCheck, Loader2, RefreshCw } from 'lucide-react';
 import { api } from '../../services/api';
 import { toast } from '../ui/Toast';
 import { IconButton } from '../ui';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export function SecuritySection() {
+  const { t } = useTranslation();
   const [enabled, setEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -28,9 +30,9 @@ export function SecuritySection() {
     try {
       const saved = await api.setCsrfProtection(next);
       setEnabled(saved);
-      toast.success(saved ? 'CSRF 防護已開啟' : 'CSRF 防護已關閉');
+      toast.success(t(saved ? 'settings.security.enabledToast' : 'settings.security.disabledToast'));
     } catch (error) {
-      toast.error('儲存失敗');
+      toast.error(t('settings.security.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -45,9 +47,9 @@ export function SecuritySection() {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
           <ShieldCheck size={20} className="text-primary" />
-          CSRF 防護
+          {t('settings.security.title')}
         </h2>
-        <IconButton onClick={load} disabled={isLoading} aria-label="重新載入">
+        <IconButton onClick={load} disabled={isLoading} aria-label={t('settings.security.reload')}>
           <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
         </IconButton>
       </div>
@@ -61,11 +63,10 @@ export function SecuritySection() {
           <div className="flex items-center justify-between">
             <div className="pr-4">
               <label className="text-sm font-medium text-text-secondary">
-                驗證 Origin / Referer
+                {t('settings.security.verifyOrigin')}
               </label>
               <p className="text-xs text-text-muted">
-                對寫入請求（POST/PUT/DELETE）檢查來源是否同源，阻擋瀏覽器跨站偽造請求。
-                curl / MCP / 外部 Agent 等無 Origin 的請求不受影響。
+                {t('settings.security.description')}
               </p>
             </div>
             <button
@@ -88,13 +89,12 @@ export function SecuritySection() {
 
           {!enabled && (
             <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-warning">
-              已關閉 CSRF 防護。僅在你明確需要跨來源呼叫（且已透過 trusted LAN / VPN /
-              受認證 reverse proxy 保護）時才關閉。一般本機使用建議保持開啟。
+              {t('settings.security.disabledWarning')}
             </div>
           )}
 
           <p className="text-xs text-text-muted">
-            變更立即生效，無需重新啟動。預設為開啟。
+            {t('settings.security.restartNotRequired')}
           </p>
         </div>
       )}

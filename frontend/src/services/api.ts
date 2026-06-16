@@ -1,5 +1,6 @@
 import axios from "axios";
 import { toast } from "../components/ui/Toast";
+import { t } from "../i18n";
 
 // Types matching backend schema
 export interface Note {
@@ -184,7 +185,7 @@ client.interceptors.response.use(
   (error) => {
     if (!error.response) {
       // Network error / server unreachable
-      toast.error("無法連線到伺服器，請檢查網路或服務狀態。");
+      toast.error(t("apiErrors.networkUnavailable"));
       return Promise.reject(error);
     }
 
@@ -198,7 +199,7 @@ client.interceptors.response.use(
 
     // 5xx: always toast — server is broken, not the user's fault
     if (status >= 500) {
-      toast.error(msg || `伺服器錯誤 (${status})`);
+      toast.error(msg || t("apiErrors.serverError", { status }));
     }
 
     return Promise.reject(error);

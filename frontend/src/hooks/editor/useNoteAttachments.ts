@@ -3,6 +3,7 @@ import { api, Note } from '../../services/api'
 import { confirm } from '../../components/ui/ConfirmDialog'
 import { toast } from '../../components/ui/Toast'
 import type { Attachment } from '../../components/editor/AttachmentPanel'
+import { t } from '../../i18n'
 
 export function useNoteAttachments(
   note: Note | null,
@@ -24,7 +25,7 @@ export function useNoteAttachments(
           setContent(fullContent)
           updateOriginalContent(fullContent)
         } catch {
-          toast.error('無法載入完整內容，目前顯示預覽')
+          toast.error(t('editor.attachmentsToast.loadFullFailed'))
         }
       }
     } catch {
@@ -37,7 +38,7 @@ export function useNoteAttachments(
     if (!files || files.length === 0 || !note?.id) return
     for (const file of Array.from(files)) {
       try {
-        toast.info(`上傳 ${file.name}...`)
+        toast.info(t('editor.attachmentsToast.uploading', { name: file.name }))
         const result = await api.uploadAttachment(note.id, file)
         setAttachments((prev) => [
           ...prev,
@@ -51,24 +52,28 @@ export function useNoteAttachments(
             created_at: new Date().toISOString(),
           },
         ])
-        toast.success(`附件 "${result.title}" 已上傳`)
+        toast.success(t('editor.attachmentsToast.uploaded', { title: result.title }))
       } catch (error: unknown) {
         const axiosErr = error as { response?: { data?: { message?: string } } }
-        toast.error(axiosErr?.response?.data?.message || '附件上傳失敗')
+        toast.error(axiosErr?.response?.data?.message || t('editor.attachmentsToast.uploadFailed'))
       }
     }
     if (attachmentInputRef.current) attachmentInputRef.current.value = ''
   }
 
   const handleDeleteAttachment = async (attachmentId: number) => {
-    const ok = await confirm({ title: '刪除附件', message: '確定要刪除此附件？', variant: 'danger' })
+    const ok = await confirm({
+      title: t('editor.attachmentsToast.deleteTitle'),
+      message: t('editor.attachmentsToast.deleteMessage'),
+      variant: 'danger',
+    })
     if (!ok) return
     try {
       await api.deleteAttachment(attachmentId)
       setAttachments((prev) => prev.filter((a) => a.id !== attachmentId))
-      toast.success('附件已刪除')
+      toast.success(t('editor.attachmentsToast.deleted'))
     } catch {
-      toast.error('刪除附件失敗')
+      toast.error(t('editor.attachmentsToast.deleteFailed'))
     }
   }
 
@@ -77,14 +82,14 @@ export function useNoteAttachments(
       const { content: attachmentContent } = await api.getAttachmentContent(attachmentId)
       if (isAutoExtracted) {
         setContent(attachmentContent)
-        toast.success('內容已載入')
+        toast.success(t('editor.attachmentsToast.loaded'))
       } else {
         const win = window.open('', '_blank')
         if (win) {
           win.document.write(`
             <html>
               <head>
-                <title>附件內容</title>
+                <title>${t('editor.attachment.contentTitle')}</title>
                 <style>body{font-family:monospace;padding:20px;background:#1a1a2e;color:#e0e0e0}pre{white-space:pre-wrap;word-wrap:break-word}</style>
               </head>
               <body><pre>${attachmentContent}</pre></body>
@@ -94,7 +99,7 @@ export function useNoteAttachments(
         }
       }
     } catch {
-      toast.error('讀取附件失敗')
+      toast.error(t('editor.attachmentsToast.readFailed'))
     }
   }
 

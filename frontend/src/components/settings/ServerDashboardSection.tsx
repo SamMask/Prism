@@ -24,6 +24,7 @@ import { Button } from '../ui';
 import { api } from '../../services/api';
 import { toast } from '../ui/Toast';
 import { confirm } from '../ui/ConfirmDialog';
+import { useTranslation } from '../../hooks/useTranslation';
 
 // ===================================================================
 // Types
@@ -82,14 +83,16 @@ interface BackupInfo {
 // Helpers
 // ===================================================================
 
-function formatUptime(seconds: number | null): string {
+type Translator = (key: string, params?: Record<string, string | number>) => string;
+
+function formatUptime(seconds: number | null, t: Translator): string {
   if (seconds == null) return '-';
   const days = Math.floor(seconds / 86400);
   const hours = Math.floor((seconds % 86400) / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
-  if (days > 0) return `${days}天 ${hours}時 ${mins}分`;
-  if (hours > 0) return `${hours}時 ${mins}分`;
-  return `${mins}分`;
+  if (days > 0) return t('settings.serverDashboard.uptimeDays', { days, hours, mins });
+  if (hours > 0) return t('settings.serverDashboard.uptimeHours', { hours, mins });
+  return t('settings.serverDashboard.uptimeMinutes', { mins });
 }
 
 function getProgressColor(percent: number): string {
@@ -138,6 +141,7 @@ function ProgressBar({ percent, label, detail }: { percent: number; label: strin
 // ===================================================================
 
 export function ServerDashboardSection() {
+  const { locale, t } = useTranslation();
   const [hardware, setHardware] = useState<HardwareStatus | null>(null);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
@@ -204,10 +208,10 @@ export function ServerDashboardSection() {
   const handleDownloadBackup = async () => {
     try {
       await api.downloadBackup();
-      toast.success('目前資料庫副本下載已開始');
+      toast.success(t('settings.serverDashboard.dbDownloadStarted'));
       await fetchBackups();
     } catch (error: any) {
-      toast.error('資料庫副本下載失敗: ' + (error?.message || '未知錯誤'));
+      toast.error(t('settings.serverDashboard.dbDownloadFailed', { message: error?.message || t('settings.serverDashboard.unknownError') }));
     }
   };
 
@@ -216,27 +220,31 @@ export function ServerDashboardSection() {
     setIsBackingUp(true);
     try {
       const result = await api.rotateBackups(3);
-      toast.success(`已建立還原點 ${result.new_backup}，保留 ${result.kept_backups.length} 份`);
+      toast.success(t('settings.serverDashboard.restorePointCreated', { name: result.new_backup, count: result.kept_backups.length }));
       if (result.deleted_backups.length > 0) {
-        toast.info(`已清理 ${result.deleted_backups.length} 份舊還原點`);
+        toast.info(t('settings.serverDashboard.oldRestorePointsDeleted', { count: result.deleted_backups.length }));
       }
       fetchBackups();
     } catch (error: any) {
-      toast.error('建立還原點失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
+      toast.error(t('settings.serverDashboard.createRestorePointFailed', { message: error?.response?.data?.message || error?.message || t('settings.serverDashboard.unknownError') }));
     } finally {
       setIsBackingUp(false);
     }
   };
 
   const handleDeleteBackup = async (backup: BackupInfo) => {
-    if (!await confirm({ title: '刪除還原點', message: `確定要刪除 Prism 內建還原點「${backup.filename}」嗎？`, variant: 'danger' })) return;
+    if (!await confirm({
+      title: t('settings.serverDashboard.deleteRestorePointTitle'),
+      message: t('settings.serverDashboard.deleteRestorePointMessage', { name: backup.filename }),
+      variant: 'danger',
+    })) return;
     setDeletingBackup(backup.filename);
     try {
       await api.deleteBackup(backup.filename);
-      toast.success('還原點已刪除');
+      toast.success(t('settings.serverDashboard.restorePointDeleted'));
       fetchBackups();
     } catch (error: any) {
-      toast.error('刪除還原點失敗: ' + (error?.response?.data?.message || error?.message || '未知錯誤'));
+      toast.error(t('settings.serverDashboard.deleteRestorePointFailed', { message: error?.response?.data?.message || error?.message || t('settings.serverDashboard.unknownError') }));
     } finally {
       setDeletingBackup(null);
     }
@@ -244,15 +252,19 @@ export function ServerDashboardSection() {
 
   // Handle service restart
   const handleRestart = async () => {
-    if (!await confirm({ title: '重啟服務', message: '確定要重啟 Prism 服務嗎？重啟期間將暫時無法使用。', variant: 'warning' })) return;
+    if (!await confirm({
+      title: t('settings.serverDashboard.restartServiceTitle'),
+      message: t('settings.serverDashboard.restartServiceMessage'),
+      variant: 'warning',
+    })) return;
     setIsRestarting(true);
     try {
       await api.restartService();
-      toast.success('服務重啟指令已發送，頁面將在數秒後自動重新載入...');
+      toast.success(t('settings.serverDashboard.restartCommandSent'));
       // Auto-reload after a delay
       setTimeout(() => window.location.reload(), 5000);
     } catch (error: any) {
-      const msg = error?.response?.data?.message || error?.message || '重啟失敗';
+      const msg = error?.response?.data?.message || error?.message || t('settings.serverDashboard.restartFailed');
       toast.error(msg);
       setIsRestarting(false);
     }
@@ -277,7 +289,7 @@ export function ServerDashboardSection() {
       <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
           <Server size={20} className="text-cyan-400" />
-          伺服器儀表板
+          {t('settings.serverDashboard.title')}
         </h2>
         <Button
           onClick={() => { fetchHardware(); fetchVersion(); fetchBackups(); }}
@@ -286,16 +298,16 @@ export function ServerDashboardSection() {
           disabled={isLoading}
         >
           <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          重新整理
+          {t('settings.serverDashboard.refresh')}
         </Button>
       </div>
 
       <div className="mb-4 flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3" data-testid="server-local-only-boundary">
         <Shield size={16} className="mt-0.5 shrink-0 text-amber-400" />
         <div className="space-y-1 text-sm">
-          <p className="font-medium text-text-primary">Server controls are local-only.</p>
+          <p className="font-medium text-text-primary">{t('settings.serverDashboard.localOnlyTitle')}</p>
           <p className="text-text-muted">
-            `/api/server/*` 仍由後端限制在 localhost / trusted internal access；這裡只呈現既有控制項，不放寬遠端存取。
+            {t('settings.serverDashboard.localOnlyDescription')}
           </p>
         </div>
       </div>
@@ -337,7 +349,7 @@ export function ServerDashboardSection() {
               className="text-xs text-text-muted hover:text-text-secondary flex items-center gap-1 transition-colors"
             >
               {showChangelog ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              更新日誌 ({versionInfo.changelog.length} 筆)
+              {t('settings.serverDashboard.changelogCount', { count: versionInfo.changelog.length })}
             </button>
             {showChangelog && (
               <div className="mt-2 space-y-2 max-h-48 overflow-y-auto">
@@ -363,16 +375,16 @@ export function ServerDashboardSection() {
         <div className="bg-bg-elevated rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <MemoryStick size={16} className="text-blue-400" />
-            <span className="text-text-secondary text-sm font-medium">記憶體</span>
+            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.memory')}</span>
           </div>
           {hardware?.memory ? (
             <ProgressBar
               percent={hardware.memory.percent}
-              label={`${hardware.memory.used_mb.toLocaleString()} / ${hardware.memory.total_mb.toLocaleString()} MB`}
-              detail={`可用 ${hardware.memory.available_mb.toLocaleString()} MB`}
+              label={`${hardware.memory.used_mb.toLocaleString(locale)} / ${hardware.memory.total_mb.toLocaleString(locale)} MB`}
+              detail={t('settings.serverDashboard.availableMb', { value: hardware.memory.available_mb.toLocaleString(locale) })}
             />
           ) : (
-            <div className="text-text-muted text-sm">無法取得</div>
+            <div className="text-text-muted text-sm">{t('settings.serverDashboard.unavailable')}</div>
           )}
         </div>
 
@@ -380,16 +392,16 @@ export function ServerDashboardSection() {
         <div className="bg-bg-elevated rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <HardDrive size={16} className="text-purple-400" />
-            <span className="text-text-secondary text-sm font-medium">儲存空間</span>
+            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.storage')}</span>
           </div>
           {hardware?.disk ? (
             <ProgressBar
               percent={hardware.disk.percent}
               label={`${hardware.disk.used_gb} / ${hardware.disk.total_gb} GB`}
-              detail={`可用 ${hardware.disk.free_gb} GB`}
+              detail={t('settings.serverDashboard.availableGb', { value: hardware.disk.free_gb })}
             />
           ) : (
-            <div className="text-text-muted text-sm">無法取得</div>
+            <div className="text-text-muted text-sm">{t('settings.serverDashboard.unavailable')}</div>
           )}
         </div>
 
@@ -397,15 +409,15 @@ export function ServerDashboardSection() {
         <div className="bg-bg-elevated rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Thermometer size={16} className="text-orange-400" />
-            <span className="text-text-secondary text-sm font-medium">CPU 溫度</span>
+            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.cpuTemperature')}</span>
           </div>
           <div className={`text-2xl font-bold ${getTempColor(hardware?.cpu_temp ?? null)}`}>
             {hardware?.cpu_temp != null ? `${hardware.cpu_temp}°C` : 'N/A'}
           </div>
           <div className="text-xs text-text-muted mt-1">
-            {hardware?.cpu_temp == null ? '僅支援 Linux / Raspberry Pi' : 
-             hardware.cpu_temp < 50 ? '溫度正常' :
-             hardware.cpu_temp < 70 ? '溫度偏高' : '⚠️ 溫度過高'}
+            {hardware?.cpu_temp == null ? t('settings.serverDashboard.linuxPiOnly') :
+             hardware.cpu_temp < 50 ? t('settings.serverDashboard.tempNormal') :
+             hardware.cpu_temp < 70 ? t('settings.serverDashboard.tempHigh') : t('settings.serverDashboard.tempCritical')}
           </div>
         </div>
 
@@ -413,28 +425,28 @@ export function ServerDashboardSection() {
         <div className="bg-bg-elevated rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Cpu size={16} className="text-cyan-400" />
-            <span className="text-text-secondary text-sm font-medium">系統資訊</span>
+            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.systemInfo')}</span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-text-muted">資料庫大小</span>
+              <span className="text-text-muted">{t('settings.serverDashboard.databaseSize')}</span>
               <span className="text-text-primary font-mono">
                 {hardware?.database?.size_mb ?? '-'} MB
               </span>
             </div>
             {hardware?.database?.wal_size_mb != null && hardware.database.wal_size_mb > 0 && (
               <div className="flex justify-between">
-                <span className="text-text-muted">WAL 日誌</span>
+                <span className="text-text-muted">{t('settings.serverDashboard.walLog')}</span>
                 <span className="text-text-primary font-mono">
                   {hardware.database.wal_size_mb} MB
                 </span>
               </div>
             )}
             <div className="flex justify-between">
-              <span className="text-text-muted">系統運行</span>
+              <span className="text-text-muted">{t('settings.serverDashboard.uptime')}</span>
               <span className="text-text-primary">
                 <Clock size={12} className="inline mr-1" />
-                {formatUptime(hardware?.uptime_seconds ?? null)}
+                {formatUptime(hardware?.uptime_seconds ?? null, t)}
               </span>
             </div>
           </div>
@@ -448,7 +460,7 @@ export function ServerDashboardSection() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Shield size={16} className="text-emerald-400" />
-            <span className="text-text-secondary text-sm font-medium">Prism 內建還原點</span>
+            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.restorePoints')}</span>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -457,7 +469,7 @@ export function ServerDashboardSection() {
               className="text-xs"
             >
               <Download size={14} />
-              下載目前資料庫
+              {t('settings.serverDashboard.downloadCurrentDb')}
             </Button>
             <Button
               onClick={handleRotateBackups}
@@ -466,19 +478,19 @@ export function ServerDashboardSection() {
               disabled={isBackingUp}
             >
               <RotateCcw size={14} className={isBackingUp ? 'animate-spin' : ''} />
-              {isBackingUp ? '建立中...' : '建立還原點'}
+              {isBackingUp ? t('settings.serverDashboard.creating') : t('settings.serverDashboard.createRestorePoint')}
             </Button>
           </div>
         </div>
 
         <div className="flex items-center justify-between text-xs text-text-muted mb-2">
-          <span>下載目前資料庫是一次性副本；建立還原點會保留最近 3 份供資料庫還原使用</span>
+          <span>{t('settings.serverDashboard.restorePointDescription')}</span>
           <button
             onClick={() => { setShowBackups(!showBackups); if (!showBackups) fetchBackups(); }}
             className="text-text-muted hover:text-text-secondary flex items-center gap-1"
           >
             {showBackups ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {backups.length} 個還原點 ({backupTotalMb} MB)
+            {t('settings.serverDashboard.restorePointCount', { count: backups.length, mb: backupTotalMb })}
           </button>
         </div>
 
@@ -496,14 +508,14 @@ export function ServerDashboardSection() {
                 </div>
                 <div className="flex items-center gap-3 text-text-muted">
                   <span>{backup.size_mb} MB</span>
-                  <span>{new Date(backup.created_at).toLocaleDateString()}</span>
+                  <span>{new Date(backup.created_at).toLocaleDateString(locale)}</span>
                   <button
                     type="button"
                     onClick={() => handleDeleteBackup(backup)}
                     disabled={deletingBackup === backup.filename}
                     className="inline-flex h-7 w-7 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
-                    aria-label={`刪除還原點 ${backup.filename}`}
-                    title="刪除還原點"
+                    aria-label={t('settings.serverDashboard.deleteRestorePointLabel', { name: backup.filename })}
+                    title={t('settings.serverDashboard.deleteRestorePointTitle')}
                   >
                     <Trash2 size={13} />
                   </button>
@@ -515,7 +527,7 @@ export function ServerDashboardSection() {
 
         {showBackups && backups.length === 0 && (
           <div className="text-xs text-text-muted text-center py-2">
-            尚無還原點，點擊「建立還原點」建立第一份
+            {t('settings.serverDashboard.noRestorePoints')}
           </div>
         )}
       </div>
@@ -527,7 +539,7 @@ export function ServerDashboardSection() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <FileText size={16} className="text-amber-400" />
-            <span className="text-text-secondary text-sm font-medium">系統日誌</span>
+            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.systemLogs')}</span>
           </div>
           <div className="flex items-center gap-2">
             <select
@@ -535,9 +547,9 @@ export function ServerDashboardSection() {
               onChange={(e) => handleLogLevelChange(e.target.value as 'ALL' | 'WARNING' | 'ERROR')}
               className="text-xs bg-bg-base text-text-secondary rounded px-2 py-1 border border-border-subtle"
             >
-              <option value="ALL">全部</option>
-              <option value="WARNING">⚠️ 警告</option>
-              <option value="ERROR">❌ 錯誤</option>
+              <option value="ALL">{t('settings.serverDashboard.logAll')}</option>
+              <option value="WARNING">{t('settings.serverDashboard.logWarning')}</option>
+              <option value="ERROR">{t('settings.serverDashboard.logError')}</option>
             </select>
             <Button
               onClick={() => { setShowLogs(!showLogs); if (!showLogs) fetchLogs(); }}
@@ -545,7 +557,7 @@ export function ServerDashboardSection() {
               className="text-xs"
             >
               {showLogs ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-              {showLogs ? '收合' : '展開'}
+              {showLogs ? t('settings.serverDashboard.collapse') : t('settings.serverDashboard.expand')}
             </Button>
           </div>
         </div>
@@ -557,7 +569,7 @@ export function ServerDashboardSection() {
               style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}
             >
               {isLoadingLogs ? (
-                <span className="text-text-muted">載入中...</span>
+                <span className="text-text-muted">{t('common.loading')}</span>
               ) : logs.length > 0 ? (
                 logs.map((line, i) => (
                   <div
@@ -572,7 +584,7 @@ export function ServerDashboardSection() {
                   </div>
                 ))
               ) : (
-                <span className="text-text-muted">日誌為空或尚未建立</span>
+                <span className="text-text-muted">{t('settings.serverDashboard.logsEmpty')}</span>
               )}
             </div>
             <div className="mt-2 flex justify-end">
@@ -583,7 +595,7 @@ export function ServerDashboardSection() {
                 disabled={isLoadingLogs}
               >
                 <RefreshCw size={12} className={isLoadingLogs ? 'animate-spin' : ''} />
-                重新載入
+                {t('settings.serverDashboard.reload')}
               </Button>
             </div>
           </>
@@ -599,8 +611,8 @@ export function ServerDashboardSection() {
             <div className="flex items-center gap-2">
               <Power size={16} className="text-red-400" />
               <div>
-                <span className="text-text-secondary text-sm font-medium">服務管理</span>
-                <p className="text-xs text-text-muted">透過 Systemd 重啟 Prism 服務</p>
+                <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.serviceManagement')}</span>
+                <p className="text-xs text-text-muted">{t('settings.serverDashboard.serviceManagementDescription')}</p>
               </div>
             </div>
             <Button
@@ -610,7 +622,7 @@ export function ServerDashboardSection() {
               disabled={isRestarting}
             >
               <AlertTriangle size={14} />
-              {isRestarting ? '重啟中...' : '重啟服務'}
+              {isRestarting ? t('settings.serverDashboard.restarting') : t('settings.serverDashboard.restartService')}
             </Button>
           </div>
         </div>

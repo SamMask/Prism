@@ -5,6 +5,7 @@ import { NoteEditor } from '../components/NoteEditor'
 import { ReadingView } from '../components/ReadingView'
 import { ToastContainer, toast } from '../components/ui/Toast'
 import { Loader2 } from 'lucide-react'
+import { useTranslation } from '../hooks/useTranslation'
 import {
   DndContext,
   closestCenter,
@@ -50,6 +51,7 @@ function SortableNoteCard({ note, viewMode }: { note: Note; viewMode: ViewMode }
 }
 
 export function HomePage() {
+  const { t } = useTranslation()
   const {
     notes,
     isLoading,
@@ -118,11 +120,11 @@ export function HomePage() {
       try {
         const noteIds = newNotes.map((n) => n.id)
         await api.reorderNotes(noteIds)
-        toast.success('排序已更新')
+        toast.success(t('home.reorderSuccess'))
       } catch {
         // Revert on error
         setLocalNotes(notes)
-        toast.error('排序更新失敗')
+        toast.error(t('home.reorderFailed'))
       }
     }
   }
@@ -162,23 +164,23 @@ export function HomePage() {
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
   const sectionTitle = searchQuery
-    ? '搜尋結果'
+    ? t('home.searchResults')
     : showArchived
-      ? '封存'
-      : activeCategory?.name || (activeTag ? `#${activeTag.name}` : '全部')
+      ? t('home.archive')
+      : activeCategory?.name || (activeTag ? `#${activeTag.name}` : t('home.all'))
   const sectionSub = searchQuery
-    ? `關鍵字「${searchQuery}」 · ${totalNotes.toLocaleString()} 筆結果`
+    ? t('home.searchMeta', { query: searchQuery, count: totalNotes.toLocaleString() })
     : showArchived
-      ? `${totalNotes.toLocaleString()} 筆封存內容`
+      ? t('home.archiveMeta', { count: totalNotes.toLocaleString() })
       : selectedCategoryId
-        ? `分類 · ${totalNotes.toLocaleString()} 筆內容`
+        ? t('home.categoryMeta', { count: totalNotes.toLocaleString() })
         : selectedTagId
-          ? `標籤 · ${totalNotes.toLocaleString()} 筆內容`
-          : '所有筆記，依更新時間排序'
-  const emptyStateTitle = searchQuery ? '找不到符合的筆記' : '還沒有任何筆記'
+          ? t('home.tagMeta', { count: totalNotes.toLocaleString() })
+          : t('home.allMeta')
+  const emptyStateTitle = searchQuery ? t('home.emptySearchTitle') : t('home.emptyTitle')
   const emptyStateDescription = searchQuery
-    ? `沒有筆記符合「${searchQuery}」。請調整關鍵字或清除搜尋。`
-    : '點擊上方「新增筆記」按鈕開始創作'
+    ? t('home.emptySearchDescription', { query: searchQuery })
+    : t('home.emptyDescription')
 
   // Render notes grid/list content
   const notesContent = (
@@ -269,9 +271,9 @@ export function HomePage() {
           {!isLoading && (
             <span className="text-text-muted text-sm flex items-center gap-2">
               {autoLoadMore ? (
-                '滾動載入更多...'
+                t('home.autoLoadMore')
               ) : (
-                '點擊載入更多'
+                t('home.loadMore')
               )}
             </span>
           )}
@@ -281,7 +283,7 @@ export function HomePage() {
       {/* End of List */}
       {!hasMore && localNotes.length > 0 && (
         <div className="py-8 text-center text-text-muted text-sm">
-          已載入所有筆記
+          {t('home.loadedAll')}
         </div>
       )}
 
@@ -290,7 +292,7 @@ export function HomePage() {
         <div className="fixed bottom-4 left-1/2 -translate-x-1/2 bg-bg-elevated/90 backdrop-blur-sm 
                         border border-border-default rounded-full px-4 py-2 text-sm text-text-secondary
                         shadow-lg z-10">
-          💡 拖曳卡片可調整順序
+          {t('home.dragHint')}
         </div>
       )}
 

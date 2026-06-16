@@ -1,10 +1,12 @@
 import { Archive, Hash, Home, Tag } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
+import { useTranslation } from '../hooks/useTranslation'
 
 export function FilterStrip() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const {
     categories,
     tags,
@@ -68,7 +70,7 @@ export function FilterStrip() {
           data-testid="filter-all"
         >
           <Home size={14} />
-          <span>全部</span>
+          <span>{t('filter.all')}</span>
         </button>
 
         <button
@@ -79,7 +81,7 @@ export function FilterStrip() {
           data-testid="filter-archive"
         >
           <Archive size={14} />
-          <span>封存</span>
+          <span>{t('filter.archive')}</span>
         </button>
 
         {categories.length > 0 && (

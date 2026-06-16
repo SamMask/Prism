@@ -2,6 +2,7 @@
 
 import { Database, RefreshCw } from 'lucide-react';
 import { Button } from '../ui';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface SystemStats {
   notes_count: number;
@@ -18,11 +19,13 @@ interface SystemStatsSectionProps {
 }
 
 export function SystemStatsSection({ stats, isLoading, onRefresh }: SystemStatsSectionProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="glass rounded-xl p-6">
       <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
         <Database size={20} className="text-primary" />
-        資料庫統計
+        {t('settings.systemStats.title')}
       </h2>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -30,25 +33,25 @@ export function SystemStatsSection({ stats, isLoading, onRefresh }: SystemStatsS
           <div className="text-2xl font-bold text-primary">
             {stats?.notes_count ?? '-'}
           </div>
-          <div className="text-text-muted text-sm">筆記數</div>
+          <div className="text-text-muted text-sm">{t('settings.systemStats.notes')}</div>
         </div>
         <div className="bg-bg-elevated rounded-lg p-4 text-center">
           <div className="text-2xl font-bold text-accent">
             {stats?.categories_count ?? '-'}
           </div>
-          <div className="text-text-muted text-sm">分類數</div>
+          <div className="text-text-muted text-sm">{t('settings.systemStats.categories')}</div>
         </div>
         <div className="bg-bg-elevated rounded-lg p-4 text-center">
           <div className="text-2xl font-bold text-success">
             {stats?.tags_count ?? '-'}
           </div>
-          <div className="text-text-muted text-sm">標籤數</div>
+          <div className="text-text-muted text-sm">{t('settings.systemStats.tags')}</div>
         </div>
         <div className="bg-bg-elevated rounded-lg p-4 text-center">
           <div className="text-2xl font-bold text-warning">
             {stats?.images_count ?? '-'}
           </div>
-          <div className="text-text-muted text-sm">圖片數</div>
+          <div className="text-text-muted text-sm">{t('settings.systemStats.images')}</div>
         </div>
       </div>
 
@@ -60,7 +63,7 @@ export function SystemStatsSection({ stats, isLoading, onRefresh }: SystemStatsS
           disabled={isLoading}
         >
           <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
-          重新整理
+          {t('settings.systemStats.refresh')}
         </Button>
       </div>
     </div>

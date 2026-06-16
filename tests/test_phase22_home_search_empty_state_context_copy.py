@@ -3,16 +3,22 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 HOME_PATH = ROOT / "frontend" / "src" / "pages" / "HomePage.tsx"
+I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
 def test_home_empty_state_has_search_specific_copy_and_preserves_default_copy():
     home = HOME_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
 
-    assert "const emptyStateTitle = searchQuery ? '找不到符合的筆記' : '還沒有任何筆記'" in home
-    assert "沒有筆記符合" in home
-    assert "請調整關鍵字或清除搜尋" in home
-    assert "點擊上方「新增筆記」按鈕開始創作" in home
+    assert "const emptyStateTitle = searchQuery ? t('home.emptySearchTitle') : t('home.emptyTitle')" in home
+    assert "t('home.emptySearchDescription', { query: searchQuery })" in home
+    assert "t('home.emptyDescription')" in home
+    assert "找不到符合的筆記" in i18n
+    assert "還沒有任何筆記" in i18n
+    assert "沒有筆記符合" in i18n
+    assert "請調整關鍵字或清除搜尋" in i18n
+    assert "點擊上方「新增筆記」按鈕開始創作" in i18n
     assert 'data-testid="empty-state-title"' in home
     assert 'data-testid="empty-state-description"' in home
 

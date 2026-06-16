@@ -1,9 +1,11 @@
 
 import { useState } from 'react';
-import { Sun, Moon, Check, LayoutGrid, List, AlignJustify } from 'lucide-react';
+import { Sun, Moon, Check, LayoutGrid, List, AlignJustify, Languages } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { Category } from '../../services/api';
 import { useAppStore, type ViewMode } from '../../stores/appStore';
+import { useTranslation } from '../../hooks/useTranslation';
+import { type Locale, translate } from '../../i18n';
 
 interface AppearanceSectionProps {
   categories: Category[];
@@ -25,25 +27,26 @@ const setRootPixelVariable = (name: string, value: number) => {
   document.documentElement.style.setProperty(name, `${value}px`);
 };
 
-const accentOptions: Array<{ id: AccentColor; name: string; color: string }> = [
-  { id: 'default', name: '專業藍', color: '#3b82f6' },
-  { id: 'cyberpunk', name: '賽博龐克', color: '#e879f9' },
-  { id: 'eye-care', name: '護眼綠', color: '#34d399' },
-  { id: 'elegant', name: '典雅金', color: '#d4a574' },
-  { id: 'ocean', name: '海洋青', color: '#14b8a6' },
-  { id: 'sunset', name: '夕陽橙', color: '#f97316' },
+const accentOptions: Array<{ id: AccentColor; name: string; labelKey: string; color: string }> = [
+  { id: 'default', name: '專業藍', labelKey: 'settings.appearance.accent.default', color: '#3b82f6' },
+  { id: 'cyberpunk', name: '賽博龐克', labelKey: 'settings.appearance.accent.cyberpunk', color: '#e879f9' },
+  { id: 'eye-care', name: '護眼綠', labelKey: 'settings.appearance.accent.eyeCare', color: '#34d399' },
+  { id: 'elegant', name: '典雅金', labelKey: 'settings.appearance.accent.elegant', color: '#d4a574' },
+  { id: 'ocean', name: '海洋青', labelKey: 'settings.appearance.accent.ocean', color: '#14b8a6' },
+  { id: 'sunset', name: '夕陽橙', labelKey: 'settings.appearance.accent.sunset', color: '#f97316' },
 ];
 
-const backgroundOptions: Array<{ id: BackgroundScheme; name: string; colors: [string, string, string] }> = [
-  { id: 'neutral', name: '預設藍灰', colors: ['#0b1020', '#141a2a', '#263247'] },
-  { id: 'black', name: '純黑', colors: ['#000000', '#080808', '#1a1a1a'] },
-  { id: 'warm', name: '暖灰', colors: ['#17130f', '#211c17', '#3a3128'] },
-  { id: 'green', name: '護眼灰綠', colors: ['#0d1511', '#14201a', '#2a3a31'] },
-  { id: 'paper', name: '紙張米色', colors: ['#f4ecd9', '#fbf5e4', '#d4c8a4'] },
+const backgroundOptions: Array<{ id: BackgroundScheme; name: string; labelKey: string; colors: [string, string, string] }> = [
+  { id: 'neutral', name: '預設藍灰', labelKey: 'settings.appearance.background.neutral', colors: ['#0b1020', '#141a2a', '#263247'] },
+  { id: 'black', name: '純黑', labelKey: 'settings.appearance.background.black', colors: ['#000000', '#080808', '#1a1a1a'] },
+  { id: 'warm', name: '暖灰', labelKey: 'settings.appearance.background.warm', colors: ['#17130f', '#211c17', '#3a3128'] },
+  { id: 'green', name: '護眼灰綠', labelKey: 'settings.appearance.background.green', colors: ['#0d1511', '#14201a', '#2a3a31'] },
+  { id: 'paper', name: '紙張米色', labelKey: 'settings.appearance.background.paper', colors: ['#f4ecd9', '#fbf5e4', '#d4c8a4'] },
 ];
 
 export function AppearanceSection({ categories }: AppearanceSectionProps) {
   const { viewMode, setViewMode } = useAppStore();
+  const { locale, setLocale, availableLocales, t } = useTranslation();
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
   });
@@ -68,7 +71,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('light', newTheme === 'light');
     document.documentElement.setAttribute('data-mode', newTheme);
-    toast.success(`已切換至${newTheme === 'dark' ? '深色' : '淺色'}主題`);
+    toast.success(t('settings.appearance.theme.switched', {
+      theme: t(newTheme === 'dark' ? 'settings.appearance.theme.dark' : 'settings.appearance.theme.light'),
+    }));
   };
 
   const setAccent = (color: AccentColor, label: string) => {
@@ -76,14 +81,14 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     localStorage.setItem('prism.accentColor', color);
     localStorage.setItem('colorTheme', color);
     document.documentElement.setAttribute('data-accent', color);
-    toast.success(`已切換至「${label}」強調色`);
+    toast.success(t('settings.appearance.accent.changed', { label }));
   };
 
   const setBackground = (scheme: BackgroundScheme, label: string) => {
     setBackgroundScheme(scheme);
     localStorage.setItem('prism.backgroundScheme', scheme);
     document.documentElement.setAttribute('data-bg', scheme);
-    toast.success(`已切換至「${label}」背景色調`);
+    toast.success(t('settings.appearance.background.changed', { label }));
   };
 
   const updateCornerRadius = (value: number) => {
@@ -101,25 +106,25 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     setRootPixelVariable('--sidebar-w', nextValue);
   };
 
-  const viewOptions: Array<{ value: ViewMode; label: string; icon: typeof LayoutGrid }> = [
-    { value: 'grid', label: '網格', icon: LayoutGrid },
-    { value: 'list', label: '列表', icon: List },
-    { value: 'compact', label: '精簡', icon: AlignJustify },
+  const viewOptions: Array<{ value: ViewMode; label: string; labelKey: string; icon: typeof LayoutGrid }> = [
+    { value: 'grid', label: '網格', labelKey: 'settings.appearance.view.grid', icon: LayoutGrid },
+    { value: 'list', label: '列表', labelKey: 'settings.appearance.view.list', icon: List },
+    { value: 'compact', label: '精簡', labelKey: 'settings.appearance.view.compact', icon: AlignJustify },
   ];
 
   return (
     <div className="glass rounded-xl p-6">
       <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
         <Sun size={20} className="text-primary" />
-        外觀
+        {t('settings.appearance.title')}
       </h2>
       
       {/* Dark/Light Mode */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <p className="text-text-primary">主題模式</p>
+          <p className="text-text-primary">{t('settings.appearance.theme.title')}</p>
           <p className="text-text-muted text-sm">
-            選擇深色或淺色主題
+            {t('settings.appearance.theme.description')}
           </p>
         </div>
         <Button
@@ -128,16 +133,46 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
           className="flex items-center gap-2"
         >
           {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
-          {theme === 'dark' ? '深色' : '淺色'}
+          {t(theme === 'dark' ? 'settings.appearance.theme.dark' : 'settings.appearance.theme.light')}
         </Button>
+      </div>
+
+      <div className="flex items-center justify-between gap-4 pt-6 border-t border-border-subtle">
+        <div>
+          <p className="text-text-primary">{t('settings.appearance.language.title')}</p>
+          <p className="text-text-muted text-sm">
+            {t('settings.appearance.language.description')}
+          </p>
+        </div>
+        <div className="relative min-w-[180px]">
+          <Languages size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <select
+            value={locale}
+            onChange={(event) => {
+              const nextLocale = event.target.value as Locale;
+              const language = availableLocales.find((option) => option.code === nextLocale)?.nativeName || nextLocale;
+              setLocale(nextLocale);
+              toast.success(translate(nextLocale, 'settings.appearance.language.changed', { language }));
+            }}
+            className="w-full rounded-lg border border-border-default bg-bg-elevated py-2 pl-9 pr-3 text-text-primary transition-colors focus:border-primary focus:outline-none"
+            aria-label={t('settings.appearance.language.title')}
+            data-testid="language-select"
+          >
+            {availableLocales.map((option) => (
+              <option key={option.code} value={option.code}>
+                {option.nativeName}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {/* Background Scheme */}
       <div className="pt-6 border-t border-border-subtle">
         <div className="mb-3">
-          <p className="text-text-primary">背景色調</p>
+          <p className="text-text-primary">{t('settings.appearance.background.title')}</p>
           <p className="text-text-muted text-sm">
-            調整底色、卡片層次與邊框色階
+            {t('settings.appearance.background.description')}
           </p>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -147,7 +182,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
               <button
                 key={option.id}
                 type="button"
-                onClick={() => setBackground(option.id, option.name)}
+                onClick={() => setBackground(option.id, t(option.labelKey))}
                 className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all
                   ${isSelected
                     ? 'border-primary bg-primary/10'
@@ -162,7 +197,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                   ))}
                 </span>
                 <span className={`min-w-0 flex-1 text-sm font-medium ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
-                  {option.name}
+                  {t(option.labelKey)}
                 </span>
                 {isSelected && <Check size={16} className="shrink-0 text-primary" />}
               </button>
@@ -175,19 +210,19 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       <div className="pt-6 border-t border-border-subtle">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-text-primary">筆記顯示模式</p>
+            <p className="text-text-primary">{t('settings.appearance.view.title')}</p>
             <p className="text-text-muted text-sm">
-              設定 Home 筆記列表的預設密度
+              {t('settings.appearance.view.description')}
             </p>
           </div>
           <div className="inline-flex w-fit items-center gap-1 rounded-lg bg-bg-elevated p-1">
-            {viewOptions.map(({ value, label, icon: Icon }) => (
+            {viewOptions.map(({ value, labelKey, icon: Icon }) => (
               <button
                 key={value}
                 type="button"
                 onClick={() => {
                   setViewMode(value);
-                  toast.success(`已切換為「${label}」顯示`);
+                  toast.success(t('settings.appearance.view.changed', { label: t(labelKey) }));
                 }}
                 className={`inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-colors
                   ${viewMode === value
@@ -197,7 +232,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                 aria-pressed={viewMode === value}
               >
                 <Icon size={16} />
-                {label}
+                {t(labelKey)}
               </button>
             ))}
           </div>
@@ -207,9 +242,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       {/* Color Theme */}
       <div className="pt-6 border-t border-border-subtle">
         <div className="mb-3">
-          <p className="text-text-primary">強調色</p>
+          <p className="text-text-primary">{t('settings.appearance.accent.title')}</p>
           <p className="text-text-muted text-sm">
-            只影響按鈕、焦點、標籤與啟用狀態
+            {t('settings.appearance.accent.description')}
           </p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -219,7 +254,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
               <button
                 key={themeOption.id}
                 type="button"
-                onClick={() => setAccent(themeOption.id, themeOption.name)}
+                onClick={() => setAccent(themeOption.id, t(themeOption.labelKey))}
                 className={`
                   flex items-center gap-3 p-3 rounded-lg border
                   transition-all duration-200
@@ -237,7 +272,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                 />
                 <div className="text-left flex-1">
                   <div className={`font-medium ${isSelected ? 'text-primary' : 'text-text-primary'}`}>
-                    {themeOption.name}
+                    {t(themeOption.labelKey)}
                   </div>
                 </div>
                 {isSelected && (
@@ -254,9 +289,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
         <div className="space-y-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-text-primary">邊角圓潤度</p>
+              <p className="text-text-primary">{t('settings.appearance.geometry.cornerRadius')}</p>
               <p className="text-text-muted text-sm">
-                影響卡片、按鈕、輸入框等所有圓角
+                {t('settings.appearance.geometry.cornerRadiusDescription')}
               </p>
             </div>
             <div className="flex min-w-[220px] items-center gap-4">
@@ -268,7 +303,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                 value={cornerRadius}
                 onChange={(event) => updateCornerRadius(Number(event.target.value))}
                 className="prism-slider flex-1"
-                aria-label="邊角圓潤度"
+                aria-label={t('settings.appearance.geometry.cornerRadius')}
                 data-testid="corner-radius-slider"
               />
               <span className="w-12 text-right text-sm tabular-nums text-text-primary">{cornerRadius}px</span>
@@ -277,9 +312,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="text-text-primary">側邊欄寬度</p>
+              <p className="text-text-primary">{t('settings.appearance.geometry.sidebarWidth')}</p>
               <p className="text-text-muted text-sm">
-                調整桌面版側邊欄與筆記區的空間比例
+                {t('settings.appearance.geometry.sidebarWidthDescription')}
               </p>
             </div>
             <div className="flex min-w-[220px] items-center gap-4">
@@ -291,7 +326,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                 value={sidebarWidth}
                 onChange={(event) => updateSidebarWidth(Number(event.target.value))}
                 className="prism-slider flex-1"
-                aria-label="側邊欄寬度"
+                aria-label={t('settings.appearance.geometry.sidebarWidth')}
                 data-testid="sidebar-width-slider"
               />
               <span className="w-14 text-right text-sm tabular-nums text-text-primary">{sidebarWidth}px</span>
@@ -303,17 +338,21 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       {/* Card Open Mode */}
       <div className="pt-6 border-t border-border-subtle">
         <div className="mb-3">
-          <p className="text-text-primary">卡片開啟模式</p>
-          <p className="text-text-muted text-sm">
-            選擇點擊卡片時的預設開啟模式
-          </p>
+            <p className="text-text-primary">{t('settings.appearance.cardOpenMode.title')}</p>
+            <p className="text-text-muted text-sm">
+              {t('settings.appearance.cardOpenMode.description')}
+            </p>
         </div>
         <select
           value={localStorage.getItem('cardOpenMode') || 'reading'}
           onChange={(e) => {
             localStorage.setItem('cardOpenMode', e.target.value);
-            const modeName = e.target.value === 'preview' ? '預覽' : e.target.value === 'reading' ? '閱讀' : '編輯';
-            toast.success(`已設定為「${modeName}」模式`);
+            const modeKey = e.target.value === 'preview'
+              ? 'settings.appearance.cardOpenMode.previewLabel'
+              : e.target.value === 'reading'
+                ? 'settings.appearance.cardOpenMode.readingLabel'
+                : 'settings.appearance.cardOpenMode.editLabel';
+            toast.success(t('settings.appearance.cardOpenMode.changed', { mode: t(modeKey) }));
           }}
           className="w-full px-4 py-2 rounded-lg
                      bg-bg-elevated border border-border-default
@@ -321,9 +360,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                      focus:outline-none focus:border-primary
                      transition-colors"
         >
-          <option value="preview">預覽模式 (Preview) - 快速瀏覽內容</option>
-          <option value="reading">閱讀模式 (Reading) - 沉浸式閱讀</option>
-          <option value="edit">編輯模式 (Edit) - 直接編輯</option>
+          <option value="preview">{t('settings.appearance.cardOpenMode.preview')}</option>
+          <option value="reading">{t('settings.appearance.cardOpenMode.reading')}</option>
+          <option value="edit">{t('settings.appearance.cardOpenMode.edit')}</option>
         </select>
       </div>
 
@@ -331,17 +370,19 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       <div className="pt-6 border-t border-border-subtle">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-text-primary">圖片保存模式</p>
+            <p className="text-text-primary">{t('settings.appearance.imageSaveMode.title')}</p>
             <p className="text-text-muted text-sm">
-              選擇上傳圖片時保存原圖或僅縮圖（節省空間）
+              {t('settings.appearance.imageSaveMode.description')}
             </p>
           </div>
           <select
             value={localStorage.getItem('imageSaveMode') || 'both'}
             onChange={(e) => {
               localStorage.setItem('imageSaveMode', e.target.value);
-              const modeName = e.target.value === 'both' ? '原圖+縮圖' : '僅縮圖';
-              toast.success(`已設定為「${modeName}」模式`);
+              const modeKey = e.target.value === 'both'
+                ? 'settings.appearance.imageSaveMode.bothLabel'
+                : 'settings.appearance.imageSaveMode.thumbnailOnlyLabel';
+              toast.success(t('settings.appearance.imageSaveMode.changed', { mode: t(modeKey) }));
             }}
             className="px-4 py-2 rounded-lg
                        bg-bg-elevated border border-border-default
@@ -349,8 +390,8 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                        focus:outline-none focus:border-primary
                        transition-colors"
           >
-            <option value="both">原圖+縮圖 (Both) - 保留完整品質</option>
-            <option value="thumbnail_only">僅縮圖 (Thumbnail Only) - 節省儲存空間</option>
+            <option value="both">{t('settings.appearance.imageSaveMode.both')}</option>
+            <option value="thumbnail_only">{t('settings.appearance.imageSaveMode.thumbnailOnly')}</option>
           </select>
         </div>
       </div>
@@ -359,17 +400,17 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       <div className="pt-6 border-t border-border-subtle">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-text-primary">快速新增預設分類</p>
+            <p className="text-text-primary">{t('settings.appearance.quickAdd.title')}</p>
             <p className="text-text-muted text-sm">
-              Header 新增按鈕預設選擇的分類
+              {t('settings.appearance.quickAdd.description')}
             </p>
           </div>
           <select
             value={localStorage.getItem('quickAddDefaultCategory') || ''}
             onChange={(e) => {
               localStorage.setItem('quickAddDefaultCategory', e.target.value);
-              const categoryName = categories.find(c => c.id === Number(e.target.value))?.name || '無分類';
-              toast.success(`快速新增預設分類設定為「${categoryName}」`);
+              const categoryName = categories.find(c => c.id === Number(e.target.value))?.name || t('settings.appearance.quickAdd.uncategorized');
+              toast.success(t('settings.appearance.quickAdd.changed', { category: categoryName }));
             }}
             className="px-4 py-2 rounded-lg
                        bg-bg-elevated border border-border-default
@@ -377,7 +418,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                        focus:outline-none focus:border-primary
                        transition-colors"
           >
-            <option value="">無（每次選擇）</option>
+            <option value="">{t('settings.appearance.quickAdd.empty')}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.icon} {cat.name}
@@ -391,9 +432,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
       <div className="pt-6 border-t border-border-subtle">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-text-primary">自動載入更多</p>
+            <p className="text-text-primary">{t('settings.appearance.autoLoadMore.title')}</p>
             <p className="text-text-muted text-sm">
-              滾動到底部時自動載入下一頁（無限滾動）
+              {t('settings.appearance.autoLoadMore.description')}
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -404,7 +445,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                 const newValue = e.target.checked;
                 setAutoLoadMore(newValue);
                 localStorage.setItem('autoLoadMore', String(newValue));
-                toast.success(newValue ? '已開啟無限滾動' : '已關閉無限滾動');
+                toast.success(t(newValue ? 'settings.appearance.autoLoadMore.enabled' : 'settings.appearance.autoLoadMore.disabled'));
               }}
               className="sr-only peer"
             />

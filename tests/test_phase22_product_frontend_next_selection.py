@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase22-product-frontend-next-selection.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 HOME_PATH = ROOT / "frontend" / "src" / "pages" / "HomePage.tsx"
+I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 
 
 def _contract():
@@ -55,10 +56,13 @@ def test_phase22_2_selects_only_home_search_empty_state_context_copy():
 def test_phase22_2_selected_candidate_matches_current_home_empty_state_gap():
     contract = _contract()
     home = HOME_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
 
     assert "searchQuery" in home
-    assert "搜尋結果" in home
-    assert "還沒有任何筆記" in home
+    assert "t('home.searchResults')" in home
+    assert "t('home.emptyTitle')" in home
+    assert "搜尋結果" in i18n
+    assert "還沒有任何筆記" in i18n
     assert "Searching for a term with zero matches no longer shows the generic" in (
         contract["selected_candidate"]["success_criteria"][0]
     )

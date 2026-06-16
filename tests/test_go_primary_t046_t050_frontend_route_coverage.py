@@ -12,6 +12,7 @@ GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
 API_TS_PATH = ROOT / "frontend" / "src" / "services" / "api.ts"
 PROMPT_BUILDER_PATH = ROOT / "frontend" / "src" / "hooks" / "usePromptBuilder.ts"
 NOTE_FORM_PATH = ROOT / "frontend" / "src" / "hooks" / "editor" / "useNoteForm.ts"
+I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 UPDATE_SECTION_PATH = ROOT / "frontend" / "src" / "components" / "settings" / "UpdateSection.tsx"
 
 
@@ -45,13 +46,15 @@ def test_frontend_no_longer_uses_legacy_static_wizard_options_path():
 def test_frontend_missing_surfaces_have_visible_or_supported_paths():
     api_ts = API_TS_PATH.read_text(encoding="utf-8")
     note_form = NOTE_FORM_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
     update_section = UPDATE_SECTION_PATH.read_text(encoding="utf-8")
 
     assert 'client.post("/upload/extract-prompt"' in api_ts
     assert "`/notes/${noteId}/check_separation`" in api_ts
     assert "`/notes/${noteId}/separate`" in api_ts
     assert "`/notes/${noteId}/restore`" in api_ts
-    assert "toast.warning('筆記已儲存，但長文自動分離失敗" in note_form
+    assert "toast.warning(t('editor.form.separationFailed'))" in note_form
+    assert "筆記已儲存，但長文自動分離失敗" in i18n
     assert "silent" not in note_form
     assert "status === 404" in update_section
     assert "尚未提供更新檢查 API" in update_section

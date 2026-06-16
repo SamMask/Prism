@@ -5,6 +5,7 @@ import { api } from '../../services/api';
 import { toast } from '../ui/Toast';
 import { confirm } from '../ui/ConfirmDialog';
 import { extractImageReferences, removeImageReferences } from './imageReferences';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface ImageManagementPanelProps {
   content: string;
@@ -19,6 +20,7 @@ export function ImageManagementPanel({
   onSetCover,
   onContentChange,
 }: ImageManagementPanelProps) {
+  const { t } = useTranslation();
   const [selectedImages, setSelectedImages] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -54,7 +56,7 @@ export function ImageManagementPanel({
 
   const handleCopySyntax = (url: string) => {
     navigator.clipboard.writeText(`![image](${url})`);
-    toast.success('已複製圖片語法');
+    toast.success(t('editor.imagePanel.copiedSyntax'));
   };
 
   const handleRemoveFromContent = (urls: string[]) => {
@@ -64,11 +66,15 @@ export function ImageManagementPanel({
       onSetCover(null);
     }
     setSelectedImages(new Set());
-    toast.success(`已從內容移除 ${urls.length} 張圖片引用`);
+    toast.success(t('editor.imagePanel.removedReferences', { count: urls.length }));
   };
 
   const handleDeleteFiles = async (urls: string[]) => {
-    if (!await confirm({ title: '刪除圖片', message: `確定要刪除 ${urls.length} 個圖片檔案嗎？此操作無法還原。`, variant: 'danger' })) return;
+    if (!await confirm({
+      title: t('editor.imagePanel.deleteTitle'),
+      message: t('editor.imagePanel.deleteMessage', { count: urls.length }),
+      variant: 'danger',
+    })) return;
 
     setIsDeleting(true);
     let successCount = 0;
@@ -88,9 +94,12 @@ export function ImageManagementPanel({
 
     setIsDeleting(false);
     if (successCount > 0) {
-      toast.success(`已刪除 ${successCount} 個檔案${failCount > 0 ? `，${failCount} 個失敗` : ''}`);
+      toast.success(t('editor.imagePanel.deletedFiles', {
+        success: successCount,
+        failed: failCount > 0 ? t('editor.imagePanel.failedSuffix', { count: failCount }) : '',
+      }));
     } else {
-      toast.error('刪除失敗');
+      toast.error(t('editor.imagePanel.deleteFailed'));
     }
   };
 
@@ -98,7 +107,7 @@ export function ImageManagementPanel({
     return (
       <div className="text-center py-6" data-testid="image-management-empty">
         <Image size={32} className="mx-auto mb-2 text-text-muted opacity-30" />
-        <p className="text-sm text-text-muted">此筆記尚無圖片</p>
+        <p className="text-sm text-text-muted">{t('editor.imagePanel.empty')}</p>
       </div>
     );
   }
@@ -113,7 +122,7 @@ export function ImageManagementPanel({
                    bg-bg-elevated text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
         >
           {selectedImages.size === images.length ? <XCircle size={12} /> : <CheckSquare size={12} />}
-          {selectedImages.size === images.length ? '取消全選' : '全選'}
+          {selectedImages.size === images.length ? t('editor.imagePanel.deselectAll') : t('editor.imagePanel.selectAll')}
         </button>
 
         {selectedImages.size > 0 && (
@@ -124,7 +133,7 @@ export function ImageManagementPanel({
                        bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 transition-colors"
             >
               <X size={12} />
-              移除引用 ({selectedImages.size})
+              {t('editor.imagePanel.removeReferences', { count: selectedImages.size })}
             </button>
             <button
               onClick={() => handleDeleteFiles(Array.from(selectedImages))}
@@ -134,7 +143,7 @@ export function ImageManagementPanel({
                        disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Trash2 size={12} />
-              {isDeleting ? '刪除中...' : `刪除檔案 (${selectedImages.size})`}
+              {isDeleting ? t('editor.imagePanel.deleting') : t('editor.imagePanel.deleteFiles', { count: selectedImages.size })}
             </button>
           </>
         )}
@@ -142,7 +151,8 @@ export function ImageManagementPanel({
 
       {/* Image count */}
       <p className="text-xs text-text-muted">
-        共 {images.length} 張圖片{selectedImages.size > 0 ? `，已選 ${selectedImages.size} 張` : ''}
+        {t('editor.imagePanel.countSummary', { count: images.length })}
+        {selectedImages.size > 0 ? t('editor.imagePanel.selectedSuffix', { count: selectedImages.size }) : ''}
       </p>
 
       {/* Image Grid */}
@@ -162,7 +172,7 @@ export function ImageManagementPanel({
               {/* Image */}
               <img
                 src={src}
-                alt={`圖片 ${index + 1}`}
+                alt={t('editor.imagePanel.imageAlt', { index: index + 1 })}
                 className="w-full h-20 object-cover"
                 onClick={() => window.open(src, '_blank')}
               />
@@ -179,7 +189,7 @@ export function ImageManagementPanel({
               {isCover && (
                 <span className="absolute top-1 right-1 px-1.5 py-0.5 text-[10px] font-medium rounded
                              bg-yellow-500 text-black">
-                  封面
+                  {t('editor.imagePanel.cover')}
                 </span>
               )}
 
@@ -191,14 +201,14 @@ export function ImageManagementPanel({
                   className={`p-1 rounded text-xs transition-colors ${
                     isCover ? 'text-yellow-400 hover:text-yellow-300' : 'text-white/70 hover:text-yellow-400'
                   }`}
-                  title={isCover ? '取消封面' : '設為封面'}
+                  title={isCover ? t('editor.imagePanel.unsetCover') : t('editor.imagePanel.setCover')}
                 >
                   <Star size={12} fill={isCover ? 'currentColor' : 'none'} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleCopySyntax(src); }}
                   className="p-1 rounded text-white/70 hover:text-white text-xs transition-colors"
-                  title="複製語法"
+                  title={t('editor.imagePanel.copySyntax')}
                 >
                   <Copy size={12} />
                 </button>
@@ -206,14 +216,14 @@ export function ImageManagementPanel({
                   onClick={(e) => { e.stopPropagation(); handleRemoveFromContent([src]); }}
                   data-testid={`remove-image-reference-${index}`}
                   className="p-1 rounded text-white/70 hover:text-yellow-400 text-xs transition-colors"
-                  title="移除引用"
+                  title={t('editor.imagePanel.removeReference')}
                 >
                   <X size={12} />
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); handleDeleteFiles([src]); }}
                   className="p-1 rounded text-white/70 hover:text-red-400 text-xs transition-colors"
-                  title="刪除檔案"
+                  title={t('editor.imagePanel.deleteFile')}
                 >
                   <Trash2 size={12} />
                 </button>

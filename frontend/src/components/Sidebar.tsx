@@ -14,10 +14,12 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../stores/appStore'
+import { useTranslation } from '../hooks/useTranslation'
 
 export function Sidebar() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { 
     categories, 
     tags,
@@ -70,7 +72,7 @@ export function Sidebar() {
   const systemSection = !isCollapsed && (
     <div>
       <h3 className="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-wider text-text-muted sm:block">
-        系統
+        {t('shell.system')}
       </h3>
       <div className="space-y-1">
         <button
@@ -82,7 +84,7 @@ export function Sidebar() {
             }`}
         >
           <Archive size={16} />
-          <span className="hidden min-w-0 flex-1 truncate sm:block">封存</span>
+          <span className="hidden min-w-0 flex-1 truncate sm:block">{t('sidebar.archive')}</span>
         </button>
         <Link
           to="/settings"
@@ -94,7 +96,7 @@ export function Sidebar() {
             }`}
         >
           <Settings size={16} />
-          <span className="hidden truncate sm:block">設定</span>
+          <span className="hidden truncate sm:block">{t('sidebar.settings')}</span>
         </Link>
       </div>
     </div>
@@ -128,7 +130,7 @@ export function Sidebar() {
           <div>
             {!isCollapsed && (
               <h3 className="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-wider text-text-muted sm:block">
-                導覽
+                {t('shell.navigation')}
               </h3>
             )}
             <div className="space-y-1">
@@ -147,7 +149,7 @@ export function Sidebar() {
                 <Home size={16} />
                 {!isCollapsed && (
                   <>
-                    <span className="hidden min-w-0 flex-1 truncate sm:block">全部</span>
+                    <span className="hidden min-w-0 flex-1 truncate sm:block">{t('sidebar.all')}</span>
                     <span className="hidden font-mono text-[11px] text-text-muted sm:inline">
                       {categories.reduce((sum, cat) => sum + (cat.count || 0), 0).toLocaleString()}
                     </span>
@@ -178,7 +180,7 @@ export function Sidebar() {
           <div>
             <h3 className="mb-2 hidden px-2 text-[11px] font-medium uppercase tracking-wider text-text-muted sm:flex items-center gap-2">
               <FolderOpen size={14} />
-              分類
+              {t('sidebar.categories')}
             </h3>
             <div className="space-y-1">
               {categories.map((cat) => (
@@ -213,7 +215,7 @@ export function Sidebar() {
               className="w-full mb-2 hidden px-2 text-[11px] font-medium text-text-muted uppercase tracking-wider sm:flex items-center gap-2 hover:text-text-primary transition-colors"
             >
               <Tag size={14} />
-              標籤
+              {t('sidebar.tags')}
               <span className="text-text-muted">({tags.length})</span>
               <span className="ml-auto">
                 {showTags ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
@@ -250,12 +252,12 @@ export function Sidebar() {
                     {showAllTags ? (
                       <>
                         <ChevronUp size={14} />
-                        收起
+                        {t('sidebar.showLess')}
                       </>
                     ) : (
                       <>
                         <ChevronDown size={14} />
-                        顯示全部 {tags.length} 個標籤
+                        {t('sidebar.showAllTags', { count: tags.length })}
                       </>
                     )}
                   </button>
@@ -274,10 +276,10 @@ export function Sidebar() {
           className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md
                      text-text-muted hover:bg-bg-hover hover:text-text-primary
                      transition-colors duration-150 text-sm"
-          title={isCollapsed ? '展開側邊欄' : '收縮側邊欄'}
+          title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
         >
           {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-          {!isCollapsed && <span className="hidden sm:inline">收縮側邊欄</span>}
+          {!isCollapsed && <span className="hidden sm:inline">{t('sidebar.collapse')}</span>}
         </button>
       </div>
     </aside>

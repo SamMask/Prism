@@ -3,6 +3,7 @@ import { api, Note, Tag } from '../../services/api'
 import { useAppStore } from '../../stores/appStore'
 import { confirm } from '../../components/ui/ConfirmDialog'
 import { toast } from '../../components/ui/Toast'
+import { t } from '../../i18n'
 
 const SEPARATION_THRESHOLD = 5000
 
@@ -72,9 +73,9 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   const handleClose = useCallback(async () => {
     if (hasUnsavedChanges) {
       const shouldDiscard = await confirm({
-        title: '未儲存的變更',
-        message: '您有未保存的變更。確定要放棄變更並關閉嗎？',
-        confirmText: '放棄變更',
+        title: t('editor.form.unsavedTitle'),
+        message: t('editor.form.unsavedMessage'),
+        confirmText: t('editor.form.discard'),
         variant: 'warning',
       })
       if (!shouldDiscard) return
@@ -85,7 +86,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   // ---- Save ----
   const handleSave = useCallback(async () => {
     if (!title.trim() && !content.trim()) {
-      toast.warning('請輸入標題或內容')
+      toast.warning(t('editor.form.missingTitleOrContent'))
       return
     }
     setIsSaving(true)
@@ -99,7 +100,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
         setSourceUrls(finalUrls)
       }
       const payload = {
-        title: title.trim() || '無標題',
+        title: title.trim() || t('editor.form.untitled'),
         content,
         category_id: categoryId,
         remarks,
@@ -113,23 +114,23 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       if (isEditing) {
         await api.updateNote(note.id, payload)
         savedNoteId = note.id
-        toast.success('筆記已更新')
+        toast.success(t('editor.form.updated'))
       } else {
         const result = await api.createNote(payload)
         savedNoteId = result.note_id
-        toast.success('筆記已建立')
+        toast.success(t('editor.form.created'))
       }
       if (content.length > SEPARATION_THRESHOLD) {
         try {
           await api.separateContent(savedNoteId)
         } catch {
-          toast.warning('筆記已儲存，但長文自動分離失敗，完整內容仍保留在筆記內')
+          toast.warning(t('editor.form.separationFailed'))
         }
       }
       fetchNotes(true)
       onClose()
     } catch {
-      toast.error('儲存失敗，請重試')
+      toast.error(t('editor.form.saveFailed'))
     } finally {
       setIsSaving(false)
     }

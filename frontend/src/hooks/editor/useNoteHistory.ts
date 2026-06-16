@@ -3,6 +3,7 @@ import { api, Note } from '../../services/api'
 import { confirm } from '../../components/ui/ConfirmDialog'
 import { toast } from '../../components/ui/Toast'
 import { useAppStore } from '../../stores/appStore'
+import { t } from '../../i18n'
 
 export interface HistoryVersion {
   id: number
@@ -28,7 +29,7 @@ export function useNoteHistory(
       setHistoryVersions(result.history)
       setShowHistory(true)
     } catch {
-      toast.error('載入歷史版本失敗')
+      toast.error(t('editor.historyToast.loadFailed'))
     } finally {
       setIsLoadingHistory(false)
     }
@@ -37,20 +38,20 @@ export function useNoteHistory(
   const restoreVersion = async (historyId: number) => {
     if (!note) return
     const ok = await confirm({
-      title: '還原版本',
-      message: '確定要還原到此版本嗎？目前的內容會被覆蓋。',
+      title: t('editor.historyToast.restoreTitle'),
+      message: t('editor.historyToast.restoreMessage'),
       variant: 'warning',
     })
     if (!ok) return
     try {
       await api.restoreNoteVersion(note.id, historyId)
-      toast.success('已還原到指定版本')
+      toast.success(t('editor.historyToast.restored'))
       const updatedNote = await api.getNote(note.id)
       setContent(updatedNote.content)
       setShowHistory(false)
       fetchNotes(true)
     } catch {
-      toast.error('還原失敗')
+      toast.error(t('editor.historyToast.restoreFailed'))
     }
   }
 

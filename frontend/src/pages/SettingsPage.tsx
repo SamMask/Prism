@@ -12,6 +12,7 @@ import { DangerZoneSection } from '../components/settings/DangerZoneSection';
 import { SystemStatsSection } from '../components/settings/SystemStatsSection';
 import { SecuritySection } from '../components/settings/SecuritySection';
 import { ServerDashboardSection } from '../components/settings/ServerDashboardSection';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface SystemStats {
   version?: string;
@@ -27,16 +28,17 @@ type SettingsTab = 'appearance' | 'organization' | 'backup' | 'maintenance' | 'a
 interface SettingsTabConfig {
   id: SettingsTab;
   label: string;
+  labelKey: string;
   icon: ReactNode;
 }
 
 const SETTINGS_TABS: SettingsTabConfig[] = [
-  { id: 'appearance', label: '外觀', icon: <Palette size={16} /> },
-  { id: 'organization', label: '組織', icon: <FolderOpen size={16} /> },
-  { id: 'backup', label: '備份與還原', icon: <ArchiveRestore size={16} /> },
-  { id: 'maintenance', label: '維護與健康', icon: <Wrench size={16} /> },
-  { id: 'access', label: '存取與系統', icon: <Shield size={16} /> },
-  { id: 'about', label: '關於', icon: <Info size={16} /> },
+  { id: 'appearance', label: '外觀', labelKey: 'settings.tabs.appearance', icon: <Palette size={16} /> },
+  { id: 'organization', label: '組織', labelKey: 'settings.tabs.organization', icon: <FolderOpen size={16} /> },
+  { id: 'backup', label: '備份與還原', labelKey: 'settings.tabs.backup', icon: <ArchiveRestore size={16} /> },
+  { id: 'maintenance', label: '維護與健康', labelKey: 'settings.tabs.maintenance', icon: <Wrench size={16} /> },
+  { id: 'access', label: '存取與系統', labelKey: 'settings.tabs.access', icon: <Shield size={16} /> },
+  { id: 'about', label: '關於', labelKey: 'settings.tabs.about', icon: <Info size={16} /> },
 ];
 
 const SETTINGS_TAB_IDS = SETTINGS_TABS.map((tab) => tab.id);
@@ -69,6 +71,7 @@ function SectionPanel({
 
 export function SettingsPage() {
   const { categories } = useAppStore();
+  const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -113,13 +116,13 @@ export function SettingsPage() {
       <div className="mx-auto max-w-5xl space-y-5" data-testid="settings-page">
         {/* Header */}
         <div className="glass rounded-lg p-5">
-          <h1 className="text-2xl font-bold gradient-text mb-2">設定</h1>
+          <h1 className="text-2xl font-bold gradient-text mb-2">{t('settings.title')}</h1>
           <p className="text-text-secondary">
-            管理應用程式偏好設定與資料
+            {t('settings.subtitle')}
           </p>
         </div>
 
-        <div className="flex gap-2 overflow-x-auto border-b border-border-subtle pb-2" role="tablist" aria-label="設定分類" data-testid="settings-tabs">
+        <div className="flex gap-2 overflow-x-auto border-b border-border-subtle pb-2" role="tablist" aria-label={t('settings.title')} data-testid="settings-tabs">
           {SETTINGS_TABS.map((tab) => (
             <button
               key={tab.id}
@@ -135,7 +138,7 @@ export function SettingsPage() {
               }`}
             >
               {tab.icon}
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -146,7 +149,7 @@ export function SettingsPage() {
           )}
 
           {activeTab === 'organization' && (
-            <SectionPanel title="分類與標籤管理" icon={<FolderOpen size={20} className="text-primary" />} testId="settings-organization-taxonomy">
+            <SectionPanel title={t('settings.organization.title')} icon={<FolderOpen size={20} className="text-primary" />} testId="settings-organization-taxonomy">
               <DataManager />
             </SectionPanel>
           )}
@@ -157,7 +160,7 @@ export function SettingsPage() {
 
           {activeTab === 'maintenance' && (
             <>
-              <SectionPanel title="維護與健康檢查" icon={<Database size={20} className="text-warning" />} testId="settings-maintenance-health">
+              <SectionPanel title={t('settings.maintenance.title')} icon={<Database size={20} className="text-warning" />} testId="settings-maintenance-health">
                 <SystemMaintenance />
               </SectionPanel>
               <SystemStatsSection
@@ -180,17 +183,17 @@ export function SettingsPage() {
           )}
 
           {activeTab === 'about' && (
-            <SectionPanel title="關於" icon={<Info size={20} className="text-primary" />} testId="settings-about">
+            <SectionPanel title={t('settings.about.title')} icon={<Info size={20} className="text-primary" />} testId="settings-about">
               <div className="space-y-2 text-text-secondary">
                 <p><strong className="text-text-primary">Prism</strong></p>
-                <p>版本: {stats?.version || '2.4.9'}</p>
-                <p>前端: Vite + React + TypeScript + Tailwind CSS</p>
-                <p>後端: Go primary runtime + SQLite FTS5</p>
+                <p>{t('settings.about.version', { version: stats?.version || '2.4.9' })}</p>
+                <p>{t('settings.about.frontend')}</p>
+                <p>{t('settings.about.backend')}</p>
                 <p className="text-text-muted text-sm pt-2">
-                  本地優先的知識管理系統；目前穩定使用路徑是 Go primary runtime、SQLite FTS5 純關鍵字搜尋與 Raspberry Pi `prism-go-primary.service` 部署。
+                  {t('settings.about.summary')}
                 </p>
                 <p className="text-text-muted text-sm">
-                  使用者資料保存在 `knowledge.db`、`static/uploads` 與 `docs/attachments`；本機更新程式時不應覆蓋這些資料目錄。
+                  {t('settings.about.data')}
                 </p>
               </div>
             </SectionPanel>

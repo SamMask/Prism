@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { api } from '../../services/api'
 import { toast } from '../../components/ui/Toast'
+import { t } from '../../i18n'
 
 // ---- HTML → Markdown conversion (pure function, no deps) ----
 const BLOCK_TAGS = new Set(['p','div','br','h1','h2','h3','h4','h5','h6','li','tr'])
@@ -64,9 +65,12 @@ async function downloadAndReplaceImages(
       }
       return updated
     })
-    toast.success(`已下載 ${successCount} 張圖片${failCount > 0 ? ` (${failCount} 張失敗)` : ''}`)
+    toast.success(t('editor.uploadToast.downloadedImages', {
+      success: successCount,
+      failed: failCount > 0 ? t('editor.uploadToast.downloadFailedSuffix', { count: failCount }) : '',
+    }))
   } else if (failCount > 0) {
-    toast.warning(`圖片下載失敗 ${failCount} 張，保留原始 URL`)
+    toast.warning(t('editor.uploadToast.downloadImagesFailed', { count: failCount }))
   }
 }
 
@@ -85,12 +89,12 @@ export function usePasteHandler(
       const file = item.getAsFile()
       if (!file) continue
       try {
-        toast.info('上傳圖片中...')
+        toast.info(t('editor.uploadToast.imageUploading'))
         const result = await api.uploadImage(file)
         setContent((prev) => prev + '\n' + `![image](${result.url})`)
-        toast.success('圖片已上傳')
+        toast.success(t('editor.uploadToast.imageUploaded'))
       } catch {
-        toast.error('圖片上傳失敗')
+        toast.error(t('editor.uploadToast.imageUploadFailed'))
       }
       return
     }
@@ -110,7 +114,7 @@ export function usePasteHandler(
         }
       } catch {
         setContent((prev) => prev + '\n' + textData)
-        toast.error('處理 HTML 內容時發生錯誤')
+        toast.error(t('editor.uploadToast.htmlParseFailed'))
       }
       return
     }

@@ -5,9 +5,11 @@ import { useAppStore } from '../stores/appStore'
 import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
+import { useTranslation } from '../hooks/useTranslation'
 
 export function Header() {
   const location = useLocation()
+  const { t } = useTranslation()
   const {
     searchQuery,
     setSearchQuery,
@@ -66,26 +68,30 @@ export function Header() {
   const handleDeleteSelected = async () => {
     if (selectedNoteIds.length === 0) return
 
-    if (await confirm({ title: '批次刪除', message: `確定要刪除 ${selectedNoteIds.length} 個筆記嗎？此操作無法復原。`, variant: 'danger' })) {
+    if (await confirm({
+      title: t('header.batchDeleteTitle'),
+      message: t('header.batchDeleteMessage', { count: selectedNoteIds.length }),
+      variant: 'danger',
+    })) {
       try {
         await deleteSelectedNotes()
-        toast.success(`已刪除 ${selectedNoteIds.length} 個筆記`)
+        toast.success(t('header.batchDeleteSuccess', { count: selectedNoteIds.length }))
       } catch {
-        toast.error('刪除失敗')
+        toast.error(t('header.deleteFailed'))
       }
     }
   }
 
   // Sort options matching backend
   const sortOptions = [
-    { value: 'updated' as const, label: '更新時間 (新→舊)' },
-    { value: 'created' as const, label: '建立時間 (新→舊)' },
-    { value: 'custom' as const, label: '自訂順序' },
+    { value: 'updated' as const, label: t('header.sortUpdated') },
+    { value: 'created' as const, label: t('header.sortCreated') },
+    { value: 'custom' as const, label: t('header.sortCustom') },
   ]
   const viewOptions = [
-    { value: 'grid' as const, label: '網格', icon: LayoutGrid },
-    { value: 'list' as const, label: '列表', icon: List },
-    { value: 'compact' as const, label: '精簡列表', icon: AlignJustify },
+    { value: 'grid' as const, label: t('header.viewGrid'), icon: LayoutGrid },
+    { value: 'list' as const, label: t('header.viewList'), icon: List },
+    { value: 'compact' as const, label: t('header.viewCompact'), icon: AlignJustify },
   ]
 
   const isSelectionMode = selectedNoteIds.length > 0
@@ -95,15 +101,15 @@ export function Header() {
   const pageTitle = location.pathname === '/prompt-builder'
     ? 'Prompt Builder'
     : location.pathname === '/settings'
-      ? '設定'
+      ? t('header.settings')
       : showArchived
-        ? '封存'
-        : activeCategory?.name || (activeTag ? `#${activeTag.name}` : '全部')
+        ? t('header.archive')
+        : activeCategory?.name || (activeTag ? `#${activeTag.name}` : t('header.all'))
   const pageMeta = isHomeRoute
-    ? `${totalNotes.toLocaleString()} 筆內容`
+    ? t('header.homeMeta', { count: totalNotes.toLocaleString() })
     : location.pathname === '/prompt-builder'
-      ? '結構化提示工具'
-      : '系統與資料維護'
+      ? t('header.promptBuilderMeta')
+      : t('header.settingsMeta')
 
   return (
     <header className="h-[60px] shrink-0 bg-bg-base border-b border-border-subtle px-4 lg:px-6 flex items-center gap-3" data-testid="header">
@@ -111,11 +117,11 @@ export function Header() {
         // Selection Mode Header
         <>
           <div className="flex items-center gap-3">
-            <IconButton onClick={clearSelection} aria-label="取消選取">
+            <IconButton onClick={clearSelection} aria-label={t('header.cancelSelection')}>
               <X size={20} />
             </IconButton>
             <span className="text-text-primary font-medium">
-              已選擇 {selectedNoteIds.length} 項
+              {t('header.selectedCount', { count: selectedNoteIds.length })}
             </span>
           </div>
 
@@ -136,7 +142,7 @@ export function Header() {
             ) : (
               <Square size={18} />
             )}
-            全選
+            {t('header.selectAll')}
           </button>
 
           <Button
@@ -146,7 +152,7 @@ export function Header() {
             disabled={isDeleting}
           >
             <Trash2 size={18} />
-            刪除
+            {t('common.delete')}
           </Button>
         </>
       ) : (
@@ -179,7 +185,7 @@ export function Header() {
                   value={inputValue}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder="搜尋筆記... (按 Enter)"
+                  placeholder={t('header.searchPlaceholder')}
                   data-testid="search-input"
                   className="w-full pl-10 pr-10 py-2 rounded-md text-sm
                              bg-bg-elevated border border-border-default
@@ -247,7 +253,7 @@ export function Header() {
 
           {/* View Mode Toggle */}
           {isHomeRoute && (
-          <div className="flex items-center gap-0.5 p-1 rounded-md bg-bg-elevated" aria-label="顯示模式">
+          <div className="flex items-center gap-0.5 p-1 rounded-md bg-bg-elevated" aria-label={t('header.viewMode')}>
             {viewOptions.map(({ value, label, icon: Icon }) => (
               <button
                 key={value}
@@ -274,8 +280,8 @@ export function Header() {
             onClick={openCommandPalette}
             className="hidden items-center gap-2 rounded-md bg-bg-elevated px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary lg:flex"
             data-testid="command-palette-button"
-            aria-label="開啟命令面板"
-            title="開啟命令面板"
+            aria-label={t('header.commandPalette')}
+            title={t('header.commandPalette')}
           >
             <Command size={16} />
             <span className="font-mono text-xs">Ctrl K</span>
@@ -284,7 +290,7 @@ export function Header() {
           {/* New Note Button */}
           <Button onClick={() => openEditor(null)} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button">
             <Plus size={18} />
-            <span className="hidden sm:inline">新增</span>
+            <span className="hidden sm:inline">{t('header.addNote')}</span>
           </Button>
         </>
       )}

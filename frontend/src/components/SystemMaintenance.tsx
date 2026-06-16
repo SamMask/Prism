@@ -3,6 +3,7 @@ import { HardDrive, CheckCircle, AlertTriangle, XCircle, Loader2, Activity } fro
 import { api } from '../services/api'
 import { Button } from './ui/Button'
 import { toast } from './ui/Toast'
+import { useTranslation } from '../hooks/useTranslation'
 
 interface ConsistencyData {
   orphan_note_tags: number
@@ -13,6 +14,7 @@ interface ConsistencyData {
 }
 
 export function SystemMaintenance() {
+  const { t } = useTranslation()
   const [isWalRunning, setIsWalRunning] = useState(false)
   const [isCheckRunning, setIsCheckRunning] = useState(false)
   const [walResult, setWalResult] = useState<{ wal_size_before: number; pages_checkpointed: number } | null>(null)
@@ -23,9 +25,9 @@ export function SystemMaintenance() {
     try {
       const result = await api.walCheckpoint()
       setWalResult(result)
-      toast.success(`WAL 合併完成，已處理 ${result.pages_checkpointed} 頁`)
+      toast.success(t('settings.maintenance.walComplete', { count: result.pages_checkpointed }))
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '整理資料庫暫存日誌失敗')
+      toast.error(error?.response?.data?.message || t('settings.maintenance.walFailed'))
     } finally {
       setIsWalRunning(false)
     }
@@ -37,14 +39,14 @@ export function SystemMaintenance() {
       const result = await api.checkConsistency()
       setConsistencyResult(result)
       if (result.health === 'healthy') {
-        toast.success('資料一致性檢查通過！')
+        toast.success(t('settings.maintenance.consistencyHealthyToast'))
       } else if (result.health === 'warning') {
-        toast.warning('發現一些小問題，建議檢查')
+        toast.warning(t('settings.maintenance.consistencyWarningToast'))
       } else {
-        toast.error('發現嚴重問題，需要處理')
+        toast.error(t('settings.maintenance.consistencyCriticalToast'))
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '檢查失敗')
+      toast.error(error?.response?.data?.message || t('settings.maintenance.checkFailed'))
     } finally {
       setIsCheckRunning(false)
     }
@@ -66,20 +68,20 @@ export function SystemMaintenance() {
   const getHealthText = (health: string) => {
     switch (health) {
       case 'healthy':
-        return '健康'
+        return t('settings.maintenance.healthHealthy')
       case 'warning':
-        return '警告'
+        return t('settings.maintenance.healthWarning')
       case 'critical':
-        return '危險'
+        return t('settings.maintenance.healthCritical')
       default:
-        return '未知'
+        return t('settings.maintenance.healthUnknown')
     }
   }
 
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-border-subtle bg-bg-elevated/60 p-3 text-xs text-text-muted">
-        這區是資料健康檢查與進階維護工具；日常使用不需要手動執行，匯出資料庫副本前或懷疑資料異常時再使用即可。
+        {t('settings.maintenance.description')}
       </div>
 
       {/* WAL Checkpoint */}
@@ -87,7 +89,7 @@ export function SystemMaintenance() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <HardDrive size={18} className="text-primary" />
-            <span className="font-medium text-text-primary">整理資料庫暫存日誌</span>
+            <span className="font-medium text-text-primary">{t('settings.maintenance.walTitle')}</span>
           </div>
           <Button
             size="sm"
@@ -98,19 +100,22 @@ export function SystemMaintenance() {
             {isWalRunning ? (
               <>
                 <Loader2 size={14} className="animate-spin mr-1" />
-                執行中...
+                {t('settings.maintenance.running')}
               </>
             ) : (
-              '執行'
+              t('settings.maintenance.run')
             )}
           </Button>
         </div>
         <p className="text-xs text-text-muted mb-2">
-          將 SQLite WAL / checkpoint 暫存內容寫回主資料庫檔；通常只需在下載 .db 副本前手動執行。
+          {t('settings.maintenance.walDescription')}
         </p>
         {walResult && (
           <div className="text-xs text-text-secondary bg-bg-surface rounded p-2 mt-2">
-            ✅ 暫存日誌大小: {(walResult.wal_size_before / 1024).toFixed(1)} KB → 已處理 {walResult.pages_checkpointed} 頁
+            {t('settings.maintenance.walResult', {
+              size: (walResult.wal_size_before / 1024).toFixed(1),
+              count: walResult.pages_checkpointed,
+            })}
           </div>
         )}
       </div>
@@ -120,7 +125,7 @@ export function SystemMaintenance() {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Activity size={18} className="text-accent" />
-            <span className="font-medium text-text-primary">資料一致性檢查</span>
+            <span className="font-medium text-text-primary">{t('settings.maintenance.consistencyTitle')}</span>
           </div>
           <Button
             size="sm"
@@ -131,40 +136,40 @@ export function SystemMaintenance() {
             {isCheckRunning ? (
               <>
                 <Loader2 size={14} className="animate-spin mr-1" />
-                檢查中...
+                {t('settings.maintenance.checking')}
               </>
             ) : (
-              '檢查'
+              t('settings.maintenance.check')
             )}
           </Button>
         </div>
         <p className="text-xs text-text-muted mb-2">
-          檢查標籤關聯、分類與外鍵狀態；這只會回報狀態，不會自動修改資料。
+          {t('settings.maintenance.consistencyDescription')}
         </p>
         {consistencyResult && (
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-2 text-sm">
               {getHealthIcon(consistencyResult.health)}
               <span className="text-text-primary font-medium">
-                狀態: {getHealthText(consistencyResult.health)}
+                {t('settings.maintenance.status', { status: getHealthText(consistencyResult.health) })}
               </span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="flex justify-between bg-bg-surface rounded p-2">
-                <span className="text-text-muted">孤兒標籤關聯</span>
+                <span className="text-text-muted">{t('settings.maintenance.orphanTagLinks')}</span>
                 <span className={consistencyResult.orphan_note_tags > 0 ? 'text-warning' : 'text-success'}>
                   {consistencyResult.orphan_note_tags}
                 </span>
               </div>
               <div className="flex justify-between bg-bg-surface rounded p-2">
-                <span className="text-text-muted">未使用標籤</span>
+                <span className="text-text-muted">{t('settings.maintenance.unusedTags')}</span>
                 <span className="text-text-secondary">{consistencyResult.unused_tags}</span>
               </div>
 
               <div className="flex justify-between bg-bg-surface rounded p-2">
-                <span className="text-text-muted">外鍵檢查</span>
+                <span className="text-text-muted">{t('settings.maintenance.foreignKeys')}</span>
                 <span className={consistencyResult.fk_enabled ? 'text-success' : 'text-warning'}>
-                  {consistencyResult.fk_enabled ? '啟用' : '停用'}
+                  {consistencyResult.fk_enabled ? t('settings.maintenance.enabled') : t('settings.maintenance.disabled')}
                 </span>
               </div>
             </div>

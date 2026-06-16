@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom'
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react'
 import { useToastStore } from '../../stores/toastStore'
 import { IconButton } from './IconButton'
+import { t as translate } from '../../i18n'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -33,7 +34,7 @@ export function ToastContainer() {
   }
 
   return createPortal(
-    <div className="fixed bottom-4 right-4 z-[100] space-y-2" role="region" aria-label="通知">
+    <div className="fixed bottom-4 right-4 z-[100] space-y-2" role="region" aria-label={translate('ui.toast.region')}>
       {toasts.map((t) => {
         const Icon = icons[t.type]
         return (
@@ -53,7 +54,7 @@ export function ToastContainer() {
             <IconButton
               size="xs"
               onClick={() => dismiss(t.id)}
-              aria-label="關閉通知"
+              aria-label={translate('ui.toast.close')}
               className="ml-2"
             >
               <X size={14} />

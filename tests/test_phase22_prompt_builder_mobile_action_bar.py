@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPT_BUILDER_PATH = ROOT / "frontend" / "src" / "pages" / "PromptBuilder.tsx"
+I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 
 
@@ -18,12 +19,15 @@ def test_prompt_builder_has_mobile_first_action_bar_and_preserves_desktop_bar():
 
 def test_prompt_builder_action_buttons_reuse_existing_save_and_reset_handlers():
     prompt_builder = PROMPT_BUILDER_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
 
     assert "const renderActionButtons = () =>" in prompt_builder
     assert "onClick={saveToLibrary}" in prompt_builder
     assert "onClick={resetForm}" in prompt_builder
-    assert "儲存至筆記庫" in prompt_builder
-    assert "重置" in prompt_builder
+    assert "t('promptBuilder.actions.saveToLibrary')" in prompt_builder
+    assert "t('promptBuilder.actions.reset')" in prompt_builder
+    assert "saveToLibrary: '儲存至筆記庫'" in i18n
+    assert "reset: '重置'" in i18n
 
 
 def test_todo_records_prompt_builder_mobile_action_bar_as_p1_completion():

@@ -3,12 +3,14 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Download, Upload, Loader2, RotateCcw, Database } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { api, type BackupItem } from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface BackupImportSectionProps {
   onStatsUpdate: () => void;
 }
 
 export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps) {
+  const { t } = useTranslation();
   // Import State
   const [isImporting, setIsImporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -49,7 +51,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       await api.restoreBackup(filename);
     } catch {
       setIsRestarting(false);
-      toast.error('還原啟動失敗，資料庫未變更');
+      toast.error(t('settings.backup.restoreStartFailed'));
       return;
     }
     const healthy = await api.waitForHealthy(40000);
@@ -57,7 +59,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       window.location.reload();
     } else {
       setIsRestarting(false);
-      toast.error('等待程式重新啟動逾時，請手動重新開啟 Prism');
+      toast.error(t('settings.backup.restoreRestartTimeout'));
     }
   };
 
@@ -67,7 +69,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
     if (!file) return;
 
     if (!file.name.endsWith('.json')) {
-      toast.error('請選擇 JSON 檔案');
+      toast.error(t('settings.backup.selectJsonFile'));
       return;
     }
 
@@ -76,13 +78,13 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       try {
         const data = JSON.parse(event.target?.result as string);
         if (!data.notes || !Array.isArray(data.notes)) {
-          toast.error('無效的匯入檔案格式');
+          toast.error(t('settings.backup.invalidImportFile'));
           return;
         }
         setImportData(data);
         setShowImportModal(true);
       } catch {
-        toast.error('解析 JSON 檔案失敗');
+        toast.error(t('settings.backup.parseJsonFailed'));
       }
     };
     reader.readAsText(file);
@@ -103,10 +105,10 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       
       if (result.skipped > 0 && importMode === 'skip') {
         toast.success(
-          `匯入完成：新增 ${result.imported} 筆，略過 ${result.skipped} 筆重複`
+          t('settings.backup.importSkipped', { imported: result.imported, skipped: result.skipped })
         );
       } else {
-        toast.success(`成功匯入 ${result.imported} 筆筆記`);
+        toast.success(t('settings.backup.importSuccess', { count: result.imported }));
       }
       
       setShowImportModal(false);
@@ -114,8 +116,8 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       
       // Refresh stats
       onStatsUpdate();
-    } catch (error) {
-      toast.error('匯入失敗');
+    } catch {
+      toast.error(t('settings.backup.importFailed'));
     } finally {
       setIsImporting(false);
     }
@@ -127,64 +129,64 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       <div className="glass rounded-xl p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
           <Download size={20} className="text-success" />
-          匯出副本
+          {t('settings.backup.exportTitle')}
         </h2>
         <p className="text-text-muted text-sm mb-4">
-          下載一份可自行保存或帶到其他工具使用的資料副本；這不會建立 Prism 內建還原點。
+          {t('settings.backup.exportDescription')}
         </p>
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-text-primary">下載 JSON 副本</p>
+              <p className="text-text-primary">{t('settings.backup.jsonCopyTitle')}</p>
               <p className="text-text-muted text-sm">
-                下載所有筆記、分類、標籤，之後可用「匯入資料」帶回 Prism
+                {t('settings.backup.jsonCopyDescription')}
               </p>
             </div>
             <Button
               variant="secondary"
               onClick={() => {
                 api.exportJSON();
-                toast.success('開始下載 JSON 副本');
+                toast.success(t('settings.backup.jsonDownloadStarted'));
               }}
             >
-              下載 JSON
+              {t('settings.backup.downloadJson')}
             </Button>
           </div>
           <div className="border-t border-border-subtle pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-text-primary">下載資料庫副本</p>
+                <p className="text-text-primary">{t('settings.backup.dbCopyTitle')}</p>
                 <p className="text-text-muted text-sm">
-                  下載完整 SQLite .db 檔，適合離線保存或人工檢查
+                  {t('settings.backup.dbCopyDescription')}
                 </p>
               </div>
               <Button
                 variant="secondary"
                 onClick={() => {
                   api.exportDB();
-                  toast.success('開始下載資料庫副本');
+                  toast.success(t('settings.backup.dbDownloadStarted'));
                 }}
               >
-                下載 .db
+                {t('settings.backup.downloadDb')}
               </Button>
             </div>
           </div>
           <div className="border-t border-border-subtle pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-text-primary">匯出 Markdown</p>
+                <p className="text-text-primary">{t('settings.backup.markdownTitle')}</p>
                 <p className="text-text-muted text-sm">
-                  每筆記一個 .md 檔，並把本機圖片打包到 zip 內（Obsidian / VSCode 可讀）
+                  {t('settings.backup.markdownDescription')}
                 </p>
               </div>
               <Button
                 variant="secondary"
                 onClick={() => {
                   api.exportMarkdown();
-                  toast.success('開始下載 Markdown zip');
+                  toast.success(t('settings.backup.markdownDownloadStarted'));
                 }}
               >
-                下載 .zip
+                {t('settings.backup.downloadZip')}
               </Button>
             </div>
           </div>
@@ -195,13 +197,13 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       <div className="glass rounded-xl p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
           <Upload size={20} className="text-accent" />
-          匯入資料
+          {t('settings.backup.importTitle')}
         </h2>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-text-primary">從 JSON 匯入</p>
+            <p className="text-text-primary">{t('settings.backup.importJsonTitle')}</p>
             <p className="text-text-muted text-sm">
-              匯入先前下載的 JSON 副本；這會新增或建立副本，不會覆蓋整個資料庫
+              {t('settings.backup.importJsonDescription')}
             </p>
           </div>
           <div>
@@ -216,7 +218,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
               variant="secondary"
               onClick={() => fileInputRef.current?.click()}
             >
-              選擇檔案
+              {t('settings.backup.chooseFile')}
             </Button>
           </div>
         </div>
@@ -226,20 +228,21 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       <div className="glass rounded-xl p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
           <Database size={20} className="text-warning" />
-          還原資料庫
+          {t('settings.backup.restoreTitle')}
         </h2>
         <p className="text-text-muted text-sm mb-4">
-          選一個 Prism 內建還原點。點「還原」後，Prism 會<strong className="text-text-primary">自動關閉並重新開啟</strong>，
-          用你選的還原點覆蓋目前資料庫。還原前會先把目前資料庫另存一份。
+          {t('settings.backup.restoreDescriptionPrefix')}
+          <strong className="text-text-primary">{t('settings.backup.restoreRestartEmphasis')}</strong>
+          {t('settings.backup.restoreDescriptionSuffix')}
         </p>
 
         {loadingBackups ? (
           <div className="flex items-center gap-2 text-text-muted text-sm">
             <Loader2 size={16} className="animate-spin" />
-            讀取還原點清單…
+            {t('settings.backup.loadingRestorePoints')}
           </div>
         ) : backups.length === 0 ? (
-          <p className="text-text-muted text-sm">目前沒有可還原的 Prism 內建還原點。</p>
+          <p className="text-text-muted text-sm">{t('settings.backup.noRestorePoints')}</p>
         ) : (
           <div className="space-y-2">
             {backups.map((b) => (
@@ -259,7 +262,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
                   disabled={isRestarting}
                 >
                   <RotateCcw size={16} />
-                  還原
+                  {t('settings.backup.restoreAction')}
                 </Button>
               </div>
             ))}
@@ -273,25 +276,24 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <div className="bg-bg-elevated rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
               <Database size={20} className="text-warning" />
-              確認還原資料庫
+              {t('settings.backup.confirmRestoreTitle')}
             </h3>
             <p className="text-text-secondary mb-2">
-              將用這個 Prism 內建還原點覆蓋目前的資料庫：
+              {t('settings.backup.confirmRestoreMessage')}
             </p>
             <p className="text-text-primary text-sm mb-4">
               {restoreTarget.created_at}
               <span className="text-text-muted"> · {restoreTarget.size_mb} MB</span>
             </p>
             <p className="text-text-muted text-sm mb-6">
-              點「確認還原」後 Prism 會自動重新開啟，畫面會短暫中斷幾秒，回來後就是還原好的內容。
-              目前的資料庫會先自動備份一份。
+              {t('settings.backup.confirmRestoreWarning')}
             </p>
             <div className="flex justify-end gap-3">
               <Button variant="secondary" onClick={() => setRestoreTarget(null)}>
-                取消
+                {t('common.cancel')}
               </Button>
               <Button variant="primary" onClick={handleRestore}>
-                確認還原
+                {t('settings.backup.confirmRestoreAction')}
               </Button>
             </div>
           </div>
@@ -304,10 +306,10 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <div className="bg-bg-elevated rounded-xl p-8 max-w-sm w-full mx-4 shadow-2xl text-center">
             <Loader2 size={32} className="animate-spin text-accent mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-text-primary mb-2">
-              正在重新啟動 Prism…
+              {t('settings.backup.restartingTitle')}
             </h3>
             <p className="text-text-muted text-sm">
-              正在用備份還原資料庫，程式重新開啟後會自動回到這個畫面，請稍候。
+              {t('settings.backup.restartingDescription')}
             </p>
           </div>
         </div>
@@ -318,17 +320,17 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-bg-elevated rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-text-primary mb-4">
-              確認匯入
+              {t('settings.backup.confirmImportTitle')}
             </h3>
             
             <p className="text-text-secondary mb-4">
-              檔案包含 <strong className="text-text-primary">
+              {t('settings.backup.fileContainsPrefix')} <strong className="text-text-primary">
                 {(importData as { notes?: unknown[] }).notes?.length || 0}
-              </strong> 筆筆記
+              </strong> {t('settings.backup.fileContainsSuffix')}
             </p>
 
             <div className="mb-6">
-              <p className="text-sm text-text-muted mb-2">遇到重複筆記時：</p>
+              <p className="text-sm text-text-muted mb-2">{t('settings.backup.duplicateStrategy')}</p>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -339,7 +341,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
                     onChange={() => setImportMode('skip')}
                     className="accent-primary"
                   />
-                  <span className="text-text-secondary">略過（不匯入重複的筆記）</span>
+                  <span className="text-text-secondary">{t('settings.backup.skipDuplicates')}</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -350,7 +352,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
                     onChange={() => setImportMode('duplicate')}
                     className="accent-primary"
                   />
-                  <span className="text-text-secondary">建立副本（加上 Import 後綴）</span>
+                  <span className="text-text-secondary">{t('settings.backup.makeCopies')}</span>
                 </label>
               </div>
             </div>
@@ -363,7 +365,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
                   setImportData(null);
                 }}
               >
-                取消
+                {t('common.cancel')}
               </Button>
               <Button
                 variant="primary"
@@ -373,10 +375,10 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
                 {isImporting ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    匯入中...
+                    {t('settings.backup.importing')}
                   </>
                 ) : (
-                  '開始匯入'
+                  t('settings.backup.startImport')
                 )}
               </Button>
             </div>

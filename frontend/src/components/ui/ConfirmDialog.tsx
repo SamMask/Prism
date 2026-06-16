@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { createPortal } from 'react-dom'
+import { t } from '../../i18n'
 
 interface ConfirmOptions {
   title: string
@@ -15,7 +16,7 @@ let showConfirm: ((options: ConfirmOptions) => Promise<boolean>) | null = null
 
 /**
  * Imperative confirm() replacement.
- * Usage: const ok = await confirm({ title: '刪除', message: '確定？' })
+ * Usage: const ok = await confirm({ title: 'Delete note', message: 'Delete this note?' })
  */
 export const confirm = (options: ConfirmOptions): Promise<boolean> => {
   if (!showConfirm) {
@@ -98,7 +99,7 @@ export function ConfirmDialogProvider() {
                        text-text-secondary hover:text-text-primary
                        hover:bg-bg-hover transition-colors"
           >
-            {options.cancelText || '取消'}
+            {options.cancelText || t('ui.confirm.cancel')}
           </button>
           <button
             ref={confirmBtnRef}
@@ -109,7 +110,7 @@ export function ConfirmDialogProvider() {
                 : 'bg-warning text-white hover:bg-warning/80'
               }`}
           >
-            {options.confirmText || '確定'}
+            {options.confirmText || t('ui.confirm.confirm')}
           </button>
         </div>
       </div>

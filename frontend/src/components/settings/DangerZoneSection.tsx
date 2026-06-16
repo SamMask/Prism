@@ -4,6 +4,7 @@ import { Trash2, Image, Loader2, AlertCircle } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { confirm } from '../ui/ConfirmDialog';
 import { api } from '../../services/api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface OrphanImage {
   filename: string;
@@ -26,6 +27,7 @@ function countOrphanImageGroups(images: OrphanImage[]): number {
 }
 
 export function DangerZoneSection() {
+  const { t } = useTranslation();
   // Orphan Image Cleanup
   const [orphanImages, setOrphanImages] = useState<OrphanImage[]>([]);
   const [orphanTotalSize, setOrphanTotalSize] = useState(0);
@@ -52,13 +54,17 @@ export function DangerZoneSection() {
       setOrphanImages(result.orphan_images);
       setOrphanTotalSize(result.total_size_mb);
       if (result.total_count === 0) {
-        toast.success('沒有發現孤兒圖片！');
+        toast.success(t('settings.dangerZone.noOrphanImages'));
       } else {
         const groupCount = countOrphanImageGroups(result.orphan_images);
-        toast.info(`發現 ${groupCount} 組未使用圖片（${result.total_count} 個檔案），共 ${result.total_size_mb} MB`);
+        toast.info(t('settings.dangerZone.orphanImagesFoundToast', {
+          groups: groupCount,
+          files: result.total_count,
+          size: result.total_size_mb,
+        }));
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '掃描失敗');
+      toast.error(error?.response?.data?.message || t('settings.dangerZone.scanFailed'));
     } finally {
       setIsScanning(false);
     }
@@ -67,11 +73,15 @@ export function DangerZoneSection() {
   // Delete all orphan images
   const deleteAllOrphanImages = async () => {
     if (orphanImages.length === 0) {
-      toast.warning('請先掃描孤兒圖片');
+      toast.warning(t('settings.dangerZone.scanOrphanFirst'));
       return;
     }
 
-    if (!await confirm({ title: '刪除孤兒圖片', message: `確定要刪除 ${orphanGroupCount} 組未使用圖片（${orphanFileCount} 個檔案）嗎？此操作無法復原！`, variant: 'danger' })) {
+    if (!await confirm({
+      title: t('settings.dangerZone.deleteOrphanTitle'),
+      message: t('settings.dangerZone.deleteOrphanMessage', { groups: orphanGroupCount, files: orphanFileCount }),
+      variant: 'danger',
+    })) {
       return;
     }
 
@@ -79,12 +89,12 @@ export function DangerZoneSection() {
     try {
       const filenames = orphanImages.map(img => img.filename);
       const result = await api.deleteOrphanImages(filenames);
-      toast.success(`已刪除 ${result.deleted_count} 個圖片檔`);
+      toast.success(t('settings.dangerZone.deletedImages', { count: result.deleted_count }));
       // Reset state
       setOrphanImages([]);
       setOrphanTotalSize(0);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '刪除失敗');
+      toast.error(error?.response?.data?.message || t('settings.dangerZone.deleteFailed'));
     } finally {
       setIsDeleting(false);
     }
@@ -97,12 +107,15 @@ export function DangerZoneSection() {
       const result = await api.getOriginalImages();
       setOriginalStats({ count: result.original_count, size: result.original_size_mb });
       if (result.original_count === 0) {
-        toast.success('沒有發現可刪除的原圖！');
+        toast.success(t('settings.dangerZone.noOriginalImages'));
       } else {
-        toast.info(`發現 ${result.original_count} 張原圖，共 ${result.original_size_mb} MB`);
+        toast.info(t('settings.dangerZone.originalImagesFoundToast', {
+          count: result.original_count,
+          size: result.original_size_mb,
+        }));
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '掃描失敗');
+      toast.error(error?.response?.data?.message || t('settings.dangerZone.scanFailed'));
     } finally {
       setIsScanningOriginals(false);
     }
@@ -111,21 +124,28 @@ export function DangerZoneSection() {
   // Delete all original images
   const deleteAllOriginals = async () => {
     if (!originalStats || originalStats.count === 0) {
-      toast.warning('請先掃描原圖');
+      toast.warning(t('settings.dangerZone.scanOriginalFirst'));
       return;
     }
 
-    if (!await confirm({ title: '刪除原圖', message: `確定要刪除 ${originalStats.count} 張原圖嗎？\n\n筆記中的圖片路徑會自動替換為縮圖路徑。此操作無法復原！`, variant: 'danger' })) {
+    if (!await confirm({
+      title: t('settings.dangerZone.deleteOriginalTitle'),
+      message: t('settings.dangerZone.deleteOriginalMessage', { count: originalStats.count }),
+      variant: 'danger',
+    })) {
       return;
     }
 
     setIsDeletingOriginals(true);
     try {
       const result = await api.deleteOriginalImages();
-      toast.success(`已刪除 ${result.deleted_count} 張原圖，節省 ${result.saved_mb} MB`);
+      toast.success(t('settings.dangerZone.deletedOriginals', {
+        count: result.deleted_count,
+        size: result.saved_mb,
+      }));
       setOriginalStats(null);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '刪除失敗');
+      toast.error(error?.response?.data?.message || t('settings.dangerZone.deleteFailed'));
     } finally {
       setIsDeletingOriginals(false);
     }
@@ -138,12 +158,15 @@ export function DangerZoneSection() {
       const result = await api.getBrokenImages();
       setBrokenPaths({ total: result.total_count, fixable: result.fixable_count });
       if (result.total_count === 0) {
-        toast.success('沒有發現失效的圖片路徑！');
+        toast.success(t('settings.dangerZone.noBrokenPaths'));
       } else {
-        toast.info(`發現 ${result.total_count} 個失效路徑，其中 ${result.fixable_count} 個可修復`);
+        toast.info(t('settings.dangerZone.brokenPathsFoundToast', {
+          total: result.total_count,
+          fixable: result.fixable_count,
+        }));
       }
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '掃描失敗');
+      toast.error(error?.response?.data?.message || t('settings.dangerZone.scanFailed'));
     } finally {
       setIsScanningBroken(false);
     }
@@ -152,17 +175,20 @@ export function DangerZoneSection() {
   // Fix broken image paths
   const fixAllBrokenPaths = async () => {
     if (!brokenPaths || brokenPaths.fixable === 0) {
-      toast.warning('沒有可修復的失效路徑');
+      toast.warning(t('settings.dangerZone.noFixablePaths'));
       return;
     }
 
     setIsFixingBroken(true);
     try {
       const result = await api.fixBrokenImages();
-      toast.success(`已修復 ${result.fixed_count} 個路徑，更新 ${result.updated_notes} 筆筆記`);
+      toast.success(t('settings.dangerZone.fixedBrokenPaths', {
+        fixed: result.fixed_count,
+        notes: result.updated_notes,
+      }));
       setBrokenPaths(null);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || '修復失敗');
+      toast.error(error?.response?.data?.message || t('settings.dangerZone.fixFailed'));
     } finally {
       setIsFixingBroken(false);
     }
@@ -172,7 +198,7 @@ export function DangerZoneSection() {
     <div className="glass rounded-xl p-6 border border-error/30">
       <h2 className="text-lg font-semibold text-error mb-4 flex items-center gap-2">
         <Trash2 size={20} />
-        危險區域
+        {t('settings.dangerZone.title')}
       </h2>
       
       {/* Orphan Image Cleanup */}
@@ -181,9 +207,9 @@ export function DangerZoneSection() {
           <div className="flex items-center gap-3">
             <Image size={20} className="text-text-muted" />
             <div>
-              <p className="text-text-primary">清理未使用的圖片</p>
+              <p className="text-text-primary">{t('settings.dangerZone.orphanTitle')}</p>
               <p className="text-text-muted text-sm">
-                掃描並刪除未被任何筆記引用的孤兒圖片
+                {t('settings.dangerZone.orphanDescription')}
               </p>
             </div>
           </div>
@@ -196,10 +222,10 @@ export function DangerZoneSection() {
             {isScanning ? (
               <>
                 <Loader2 size={16} className="animate-spin mr-1" />
-                掃描中...
+                {t('settings.dangerZone.scanning')}
               </>
             ) : (
-              '掃描'
+              t('settings.dangerZone.scan')
             )}
           </Button>
         </div>
@@ -210,10 +236,10 @@ export function DangerZoneSection() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-primary font-medium">
-                  發現 {orphanGroupCount} 組未使用圖片
+                  {t('settings.dangerZone.orphanImagesFound', { groups: orphanGroupCount })}
                 </p>
                 <p className="text-text-muted text-sm">
-                  {orphanFileCount} 個檔案，佔用空間：{orphanTotalSize} MB
+                  {t('settings.dangerZone.fileSizeSummary', { files: orphanFileCount, size: orphanTotalSize })}
                 </p>
               </div>
               <Button
@@ -225,10 +251,10 @@ export function DangerZoneSection() {
                 {isDeleting ? (
                   <>
                     <Loader2 size={16} className="animate-spin mr-1" />
-                    刪除中...
+                    {t('settings.dangerZone.deleting')}
                   </>
                 ) : (
-                  '全部刪除'
+                  t('settings.dangerZone.deleteAll')
                 )}
               </Button>
             </div>
@@ -247,7 +273,7 @@ export function DangerZoneSection() {
                 ))}
                 {orphanImages.length > 10 && (
                   <span className="text-xs px-2 py-0.5 text-text-muted">
-                    還有 {orphanImages.length - 10} 個檔案...
+                    {t('settings.dangerZone.moreFiles', { count: orphanImages.length - 10 })}
                   </span>
                 )}
               </div>
@@ -263,9 +289,9 @@ export function DangerZoneSection() {
           <div className="flex items-center gap-3">
             <Image size={20} className="text-text-muted" />
             <div>
-              <p className="text-text-primary">刪除原圖（保留縮圖）</p>
+              <p className="text-text-primary">{t('settings.dangerZone.originalTitle')}</p>
               <p className="text-text-muted text-sm">
-                刪除有縮圖的原圖，筆記中的路徑會自動替換
+                {t('settings.dangerZone.originalDescription')}
               </p>
             </div>
           </div>
@@ -278,10 +304,10 @@ export function DangerZoneSection() {
             {isScanningOriginals ? (
               <>
                 <Loader2 size={16} className="animate-spin mr-1" />
-                掃描中...
+                {t('settings.dangerZone.scanning')}
               </>
             ) : (
-              '掃描'
+              t('settings.dangerZone.scan')
             )}
           </Button>
         </div>
@@ -292,10 +318,10 @@ export function DangerZoneSection() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-primary font-medium">
-                  發現 {originalStats.count} 張原圖
+                  {t('settings.dangerZone.originalImagesFound', { count: originalStats.count })}
                 </p>
                 <p className="text-text-muted text-sm">
-                  可節省 {originalStats.size} MB 空間
+                  {t('settings.dangerZone.saveSpaceSummary', { size: originalStats.size })}
                 </p>
               </div>
               <Button
@@ -307,10 +333,10 @@ export function DangerZoneSection() {
                 {isDeletingOriginals ? (
                   <>
                     <Loader2 size={16} className="animate-spin mr-1" />
-                    刪除中...
+                    {t('settings.dangerZone.deleting')}
                   </>
                 ) : (
-                  '全部刪除'
+                  t('settings.dangerZone.deleteAll')
                 )}
               </Button>
             </div>
@@ -325,9 +351,9 @@ export function DangerZoneSection() {
           <div className="flex items-center gap-3">
             <AlertCircle size={20} className="text-warning" />
             <div>
-              <p className="text-text-primary">修復失效圖片路徑</p>
+              <p className="text-text-primary">{t('settings.dangerZone.brokenTitle')}</p>
               <p className="text-text-muted text-sm">
-                掃描並修復指向不存在檔案的圖片引用
+                {t('settings.dangerZone.brokenDescription')}
               </p>
             </div>
           </div>
@@ -340,10 +366,10 @@ export function DangerZoneSection() {
             {isScanningBroken ? (
               <>
                 <Loader2 size={16} className="animate-spin mr-1" />
-                掃描中...
+                {t('settings.dangerZone.scanning')}
               </>
             ) : (
-              '掃描'
+              t('settings.dangerZone.scan')
             )}
           </Button>
         </div>
@@ -354,10 +380,10 @@ export function DangerZoneSection() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-text-primary font-medium">
-                  發現 {brokenPaths.total} 個失效路徑
+                  {t('settings.dangerZone.brokenPathsFound', { count: brokenPaths.total })}
                 </p>
                 <p className="text-text-muted text-sm">
-                  其中 {brokenPaths.fixable} 個可自動修復
+                  {t('settings.dangerZone.fixableSummary', { count: brokenPaths.fixable })}
                 </p>
               </div>
               {brokenPaths.fixable > 0 && (
@@ -370,10 +396,10 @@ export function DangerZoneSection() {
                   {isFixingBroken ? (
                     <>
                       <Loader2 size={16} className="animate-spin mr-1" />
-                      修復中...
+                      {t('settings.dangerZone.fixing')}
                     </>
                   ) : (
-                    '自動修復'
+                    t('settings.dangerZone.autoFix')
                   )}
                 </Button>
               )}

@@ -5,6 +5,7 @@ import { Note, api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { Modal, Button } from './ui'
 import { toast } from './ui/Toast'
+import { useTranslation } from '../hooks/useTranslation'
 
 interface ReadingViewProps {
   note: Note
@@ -19,8 +20,8 @@ function extractFirstImage(content: string): string | null {
   return htmlMatch?.[1] ?? null
 }
 
-function renderMarkdown(markdown: string): string {
-  if (!markdown.trim()) return '<p class="text-text-muted">沒有內容</p>'
+function renderMarkdown(markdown: string, emptyContent: string): string {
+  if (!markdown.trim()) return `<p class="text-text-muted">${emptyContent}</p>`
   try {
     marked.setOptions({ breaks: true, gfm: true })
     return marked(markdown) as string
@@ -31,10 +32,11 @@ function renderMarkdown(markdown: string): string {
 
 export function ReadingView({ note, onClose }: ReadingViewProps) {
   const { openEditor, fetchNotes } = useAppStore()
+  const { locale, t } = useTranslation()
   const [localNote, setLocalNote] = useState(note)
   const coverImage = localNote.cover_image || extractFirstImage(localNote.content || '')
-  const renderedContent = useMemo(() => renderMarkdown(localNote.content || ''), [localNote.content])
-  const updatedAt = new Date(localNote.updated_at).toLocaleString('zh-TW')
+  const renderedContent = useMemo(() => renderMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
+  const updatedAt = new Date(localNote.updated_at).toLocaleString(locale)
 
   useEffect(() => {
     let isMounted = true
@@ -43,7 +45,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
         if (isMounted) setLocalNote(detail)
       })
       .catch(() => {
-        toast.error('讀取筆記內容失敗')
+        toast.error(t('reading.loadFailed'))
       })
 
     return () => {
@@ -59,9 +61,9 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(localNote.content || '')
-      toast.success('內容已複製')
+      toast.success(t('noteCard.copied'))
     } catch {
-      toast.error('複製失敗')
+      toast.error(t('noteCard.copyFailed'))
     }
   }
 
@@ -70,9 +72,9 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
       const result = await api.togglePin(localNote.id)
       setLocalNote({ ...localNote, is_pinned: result.is_pinned })
       fetchNotes(true)
-      toast.success(result.is_pinned ? '已置頂' : '已取消置頂')
+      toast.success(result.is_pinned ? t('noteCard.pinned') : t('noteCard.unpinned'))
     } catch {
-      toast.error('切換置頂失敗')
+      toast.error(t('noteCard.togglePinFailed'))
     }
   }
 
@@ -81,9 +83,9 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
       const result = await api.toggleArchive(localNote.id)
       setLocalNote({ ...localNote, is_archived: result.is_archived })
       fetchNotes(true)
-      toast.success(result.is_archived ? '已封存' : '已取消封存')
+      toast.success(result.is_archived ? t('noteCard.archived') : t('noteCard.unarchived'))
     } catch {
-      toast.error('切換封存失敗')
+      toast.error(t('noteCard.toggleArchiveFailed'))
     }
   }
 
@@ -96,16 +98,16 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               {localNote.is_pinned && (
                 <span className="inline-flex items-center gap-1 rounded-md bg-warning/10 px-2 py-1 text-warning">
                   <Pin size={12} />
-                  置頂
+                  {t('reading.pinnedBadge')}
                 </span>
               )}
               {localNote.is_archived && (
                 <span className="inline-flex items-center gap-1 rounded-md bg-bg-elevated px-2 py-1 text-text-secondary">
                   <Archive size={12} />
-                  封存
+                  {t('reading.archivedBadge')}
                 </span>
               )}
-              <span>{localNote.category_name || localNote.type || '未分類'}</span>
+              <span>{localNote.category_name || localNote.type || t('reading.uncategorized')}</span>
               <span>·</span>
               <span>{updatedAt}</span>
               {localNote.parent_title && (
@@ -119,7 +121,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               )}
             </div>
             <h1 className="truncate text-2xl font-semibold leading-tight text-text-primary lg:text-3xl">
-              {localNote.title || '無標題'}
+              {localNote.title || t('reading.untitled')}
             </h1>
             {localNote.tags?.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -136,7 +138,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
             type="button"
             onClick={onClose}
             className="rounded-md p-2 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
-            aria-label="關閉閱讀面板"
+            aria-label={t('reading.closePanel')}
           >
             <X size={20} />
           </button>
@@ -158,7 +160,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
             />
             {localNote.remarks && (
               <aside className="mt-8 rounded-lg border border-border-subtle bg-bg-elevated/40 p-4">
-                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">備註</div>
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">{t('reading.remarks')}</div>
                 <p className="whitespace-pre-wrap text-sm text-text-secondary">{localNote.remarks}</p>
               </aside>
             )}
@@ -167,7 +169,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
           <aside className="flex shrink-0 flex-col gap-3 border-t border-border-subtle bg-bg-elevated/25 p-4 lg:border-l lg:border-t-0">
             <Button onClick={handleEdit} variant="primary" className="justify-center">
               <Edit2 size={16} />
-              編輯
+              {t('reading.edit')}
             </Button>
             <button
               type="button"
@@ -175,7 +177,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               className="flex items-center justify-center gap-2 rounded-md border border-border-default px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
             >
               <Copy size={16} />
-              複製內容
+              {t('reading.copyContent')}
             </button>
             <button
               type="button"
@@ -183,7 +185,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               className="flex items-center justify-center gap-2 rounded-md border border-border-default px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
             >
               <Pin size={16} />
-              {localNote.is_pinned ? '取消置頂' : '置頂'}
+              {localNote.is_pinned ? t('reading.unpin') : t('reading.pin')}
             </button>
             <button
               type="button"
@@ -191,7 +193,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               className="flex items-center justify-center gap-2 rounded-md border border-border-default px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
             >
               <Archive size={16} />
-              {localNote.is_archived ? '取消封存' : '封存'}
+              {localNote.is_archived ? t('reading.unarchive') : t('reading.archive')}
             </button>
           </aside>
         </div>

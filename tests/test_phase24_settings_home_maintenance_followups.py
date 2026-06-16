@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS_PATH = ROOT / "frontend" / "src" / "pages" / "SettingsPage.tsx"
+I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 HOME_PATH = ROOT / "frontend" / "src" / "pages" / "HomePage.tsx"
 DATA_MANAGER_PATH = ROOT / "frontend" / "src" / "components" / "DataManager.tsx"
 PORT_CONFIG_PATH = ROOT / "frontend" / "src" / "components" / "settings" / "PortConfigSection.tsx"
@@ -15,17 +16,22 @@ TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary
 
 def test_settings_home_followups_are_recorded_in_ui_copy_and_layout():
     settings = SETTINGS_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
     home = HOME_PATH.read_text(encoding="utf-8")
     maintenance = SYSTEM_MAINTENANCE_PATH.read_text(encoding="utf-8")
 
-    assert "維護與健康檢查" in settings
-    assert "後端: Go primary runtime + SQLite FTS5" in settings
-    assert "目前穩定使用路徑是 Go primary runtime、SQLite FTS5 純關鍵字搜尋與 Raspberry Pi `prism-go-primary.service` 部署" in settings
-    assert "本機更新程式時不應覆蓋這些資料目錄" in settings
-    assert "資料健康檢查與進階維護工具" in maintenance
-    assert "整理資料庫暫存日誌" in maintenance
-    assert "SQLite WAL / checkpoint" in maintenance
-    assert "這只會回報狀態，不會自動修改資料" in maintenance
+    assert "t('settings.maintenance.title')" in settings
+    assert "t('settings.about.backend')" in settings
+    assert "維護與健康檢查" in i18n
+    assert "後端: Go primary runtime + SQLite FTS5" in i18n
+    assert "目前穩定使用路徑是 Go primary runtime、SQLite FTS5 純關鍵字搜尋與 Raspberry Pi `prism-go-primary.service` 部署" in i18n
+    assert "本機更新程式時不應覆蓋這些資料目錄" in i18n
+    assert "資料健康檢查與進階維護工具" in i18n
+    assert "整理資料庫暫存日誌" in i18n
+    assert "SQLite WAL / checkpoint" in i18n
+    assert "這只會回報狀態，不會自動修改資料" in i18n
+    assert "t('settings.maintenance.description')" in maintenance
+    assert "t('settings.maintenance.consistencyDescription')" in maintenance
     assert "flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1" in home
 
 
@@ -48,13 +54,16 @@ def test_category_counts_and_backup_delete_controls_are_locked():
     data_manager = DATA_MANAGER_PATH.read_text(encoding="utf-8")
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
     api = API_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
 
     assert 'data-testid="category-count"' in data_manager
     assert "w-12 shrink-0 rounded bg-bg-elevated px-2 py-0.5 text-right text-xs tabular-nums" in data_manager
     assert 'data-testid="category-actions"' in data_manager
     assert "flex w-16 shrink-0 justify-end gap-1" in data_manager
-    assert "Prism 內建還原點" in server_dashboard
-    assert "下載目前資料庫是一次性副本；建立還原點會保留最近 3 份供資料庫還原使用" in server_dashboard
+    assert "Prism 內建還原點" in i18n
+    assert "下載目前資料庫是一次性副本；建立還原點會保留最近 3 份供資料庫還原使用" in i18n
+    assert "t('settings.serverDashboard.restorePoints')" in server_dashboard
+    assert "t('settings.serverDashboard.restorePointDescription')" in server_dashboard
     assert "handleDeleteBackup" in server_dashboard
     assert "api.deleteBackup(backup.filename)" in server_dashboard
     assert "deleteBackup: async (filename: string)" in api
@@ -64,17 +73,22 @@ def test_core_ux_settings_tabs_and_backup_restore_copy_are_locked():
     settings = SETTINGS_PATH.read_text(encoding="utf-8")
     backup_import = (ROOT / "frontend" / "src" / "components" / "settings" / "BackupImportSection.tsx").read_text(encoding="utf-8")
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
 
     for label in ["外觀", "組織", "備份與還原", "維護與健康", "存取與系統", "關於"]:
         assert f"label: '{label}'" in settings
 
     assert "Flask + SQLite" not in settings
-    assert "下載一份可自行保存或帶到其他工具使用的資料副本；這不會建立 Prism 內建還原點" in backup_import
-    assert "匯入先前下載的 JSON 副本；這會新增或建立副本，不會覆蓋整個資料庫" in backup_import
-    assert "選一個 Prism 內建還原點" in backup_import
-    assert "還原前會先把目前資料庫另存一份" in backup_import
-    assert "資料庫副本下載失敗" in server_dashboard
-    assert "建立還原點失敗" in server_dashboard
+    assert "下載一份可自行保存或帶到其他工具使用的資料副本；這不會建立 Prism 內建還原點" in i18n
+    assert "匯入先前下載的 JSON 副本；這會新增或建立副本，不會覆蓋整個資料庫" in i18n
+    assert "選一個 Prism 內建還原點" in i18n
+    assert "還原前會先把目前資料庫另存一份" in i18n
+    assert "資料庫副本下載失敗" in i18n
+    assert "建立還原點失敗" in i18n
+    assert "t('settings.backup.exportDescription')" in backup_import
+    assert "t('settings.backup.importJsonDescription')" in backup_import
+    assert "t('settings.serverDashboard.dbDownloadFailed'" in server_dashboard
+    assert "t('settings.serverDashboard.createRestorePointFailed'" in server_dashboard
 
 
 def test_todo_records_phase24_settings_home_followup_scope():

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react'
 import { IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
+import { useTranslation } from '../hooks/useTranslation'
 
 interface NoteCardProps {
   note: Note
@@ -13,6 +14,7 @@ interface NoteCardProps {
 
 export function NoteCard({ note, viewMode }: NoteCardProps) {
   const { openEditor, openReading, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
+  const { locale, t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -75,14 +77,18 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
   // Handle delete
   const handleDelete = async () => {
-    if (!await confirm({ title: '刪除筆記', message: '確定要刪除此筆記嗎？此操作無法復原。', variant: 'danger' })) return
+    if (!await confirm({
+      title: t('noteCard.deleteTitle'),
+      message: t('noteCard.deleteMessage'),
+      variant: 'danger',
+    })) return
     
     setIsDeleting(true)
     try {
       await deleteNote(note.id)
-      toast.success('筆記已刪除')
+      toast.success(t('noteCard.deleted'))
     } catch {
-      toast.error('刪除失敗')
+      toast.error(t('noteCard.deleteFailed'))
     } finally {
       setIsDeleting(false)
       setShowMenu(false)
@@ -93,9 +99,9 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(note.content)
-      toast.success('內容已複製')
+      toast.success(t('noteCard.copied'))
     } catch {
-      toast.error('複製失敗')
+      toast.error(t('noteCard.copyFailed'))
     }
     setShowMenu(false)
   }
@@ -104,12 +110,12 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const handleCreateVariant = async () => {
     try {
       const result = await api.duplicateNote(note.id, { as_variant: true })
-      toast.success('變體已建立，ID: ' + result.note_id)
+      toast.success(t('noteCard.variantCreated', { id: result.note_id }))
       // Refresh notes list
       const { fetchNotes } = useAppStore.getState()
       fetchNotes(true)
     } catch {
-      toast.error('建立變體失敗')
+      toast.error(t('noteCard.variantFailed'))
     }
     setShowMenu(false)
   }
@@ -118,12 +124,12 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const handleTogglePin = async () => {
     try {
       const result = await api.togglePin(note.id)
-      toast.success(result.is_pinned ? '已置頂' : '已取消置頂')
+      toast.success(result.is_pinned ? t('noteCard.pinned') : t('noteCard.unpinned'))
       // Refresh notes list
       const { fetchNotes } = useAppStore.getState()
       fetchNotes(true)
     } catch {
-      toast.error('切換置頂失敗')
+      toast.error(t('noteCard.togglePinFailed'))
     }
     setShowMenu(false)
   }
@@ -143,16 +149,16 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     const uniqueImages = [...new Set(matches)]
     
     if (uniqueImages.length === 0) {
-      toast.warning('此筆記沒有圖片可匯出')
+      toast.warning(t('noteCard.noImagesToExport'))
       setShowMenu(false)
       return
     }
     
     try {
-      await api.exportImages(uniqueImages, note.title || '無標題')
-      toast.success(`已匯出 ${uniqueImages.length} 張圖片`)
+      await api.exportImages(uniqueImages, note.title || t('noteCard.untitled'))
+      toast.success(t('noteCard.exportedImages', { count: uniqueImages.length }))
     } catch {
-      toast.error('匯出圖片失敗')
+      toast.error(t('noteCard.exportImagesFailed'))
     }
     setShowMenu(false)
   }
@@ -161,12 +167,12 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const handleToggleArchive = async () => {
     try {
       const result = await api.toggleArchive(note.id)
-      toast.success(result.is_archived ? '已封存' : '已取消封存')
+      toast.success(result.is_archived ? t('noteCard.archived') : t('noteCard.unarchived'))
       // Refresh notes list
       const { fetchNotes } = useAppStore.getState()
       fetchNotes(true)
     } catch {
-      toast.error('切換封存失敗')
+      toast.error(t('noteCard.toggleArchiveFailed'))
     }
     setShowMenu(false)
   }
@@ -195,7 +201,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {note.is_pinned && <Pin size={13} className="shrink-0 text-warning" />}
           <h3 className="truncate text-sm font-medium text-text-primary">
-            {note.title || '無標題'}
+            {note.title || t('noteCard.untitled')}
           </h3>
           <span className="hidden min-w-0 flex-1 truncate text-xs text-text-muted md:block">
             {getPreview(note.content, 96)}
@@ -204,8 +210,8 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
         <div className="hidden shrink-0 items-center gap-2 text-xs text-text-muted sm:flex">
           <span className="max-w-[140px] truncate">{note.category_name || note.type}</span>
-          <span>{note.content?.length?.toLocaleString() || 0}字</span>
-          <span>{new Date(note.updated_at).toLocaleDateString('zh-TW')}</span>
+          <span>{t('noteCard.wordCount', { count: note.content?.length?.toLocaleString() || 0 })}</span>
+          <span>{new Date(note.updated_at).toLocaleDateString(locale)}</span>
         </div>
       </div>
     )
@@ -249,7 +255,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           <div className="flex items-center gap-2">
             {note.is_pinned && <Pin size={14} className="text-warning" />}
             <h3 className="font-medium text-text-primary truncate">
-              {note.title || '無標題'}
+              {note.title || t('noteCard.untitled')}
             </h3>
           </div>
           <p className="text-sm text-text-secondary mt-1 line-clamp-1">
@@ -259,7 +265,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
         {/* Meta */}
         <div className="text-xs text-text-muted">
-          {new Date(note.updated_at).toLocaleDateString('zh-TW')}
+          {new Date(note.updated_at).toLocaleDateString(locale)}
         </div>
       </div>
     )
@@ -317,7 +323,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
               <Pin size={14} className="text-warning flex-shrink-0" />
             )}
             <h3 className="font-medium text-text-primary truncate">
-              {note.title || '無標題'}
+              {note.title || t('noteCard.untitled')}
             </h3>
           </div>
 
@@ -329,7 +335,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
               setShowMenu(!showMenu)
             }}
             className="opacity-0 group-hover:opacity-100"
-            aria-label="更多操作"
+            aria-label={t('noteCard.moreActions')}
           >
             <MoreHorizontal size={16} />
           </IconButton>
@@ -364,8 +370,8 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         {note.parent_id && note.parent_title && (
           <div className="flex items-center gap-1.5 mt-2 text-xs text-accent">
             <GitBranch size={12} />
-            <span className="truncate" title={`來自: ${note.parent_title}`}>
-              來自: {note.parent_title.substring(0, 20)}
+            <span className="truncate" title={t('noteCard.lineageFrom', { title: note.parent_title })}>
+              {t('noteCard.lineageFrom', { title: note.parent_title.substring(0, 20) })}
               {note.parent_title.length > 20 ? '...' : ''}
             </span>
           </div>
@@ -378,11 +384,11 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
               {note.category_name || note.type}
             </span>
             <span className="text-xs text-text-muted">
-              {note.content?.length?.toLocaleString() || 0}字
+              {t('noteCard.wordCount', { count: note.content?.length?.toLocaleString() || 0 })}
             </span>
           </div>
           <span className="text-xs text-text-muted">
-            {new Date(note.updated_at).toLocaleDateString('zh-TW')}
+            {new Date(note.updated_at).toLocaleDateString(locale)}
           </span>
         </div>
       </div>
@@ -405,7 +411,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm text-text-secondary
                        hover:bg-bg-hover hover:text-text-primary"
           >
-            <Edit2 size={14} /> 編輯
+            <Edit2 size={14} /> {t('common.edit')}
           </button>
           <button 
             onClick={handleTogglePin}
@@ -413,7 +419,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm ${note.is_pinned ? 'text-warning' : 'text-text-secondary'}
                        hover:bg-bg-hover hover:text-text-primary`}
           >
-            <Pin size={14} /> {note.is_pinned ? '取消置頂' : '置頂'}
+            <Pin size={14} /> {note.is_pinned ? t('noteCard.unpin') : t('noteCard.pin')}
           </button>
           <button 
             onClick={handleCopy}
@@ -421,7 +427,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm text-text-secondary
                        hover:bg-bg-hover hover:text-text-primary"
           >
-            <Copy size={14} /> 複製內容
+            <Copy size={14} /> {t('noteCard.copyContent')}
           </button>
           <button 
             onClick={handleCreateVariant}
@@ -429,7 +435,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm text-accent
                        hover:bg-accent/10"
           >
-            <GitBranch size={14} /> 建立變體
+            <GitBranch size={14} /> {t('noteCard.createVariant')}
           </button>
           <button 
             onClick={handleToggleArchive}
@@ -437,7 +443,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm ${note.is_archived ? 'text-warning' : 'text-text-secondary'}
                        hover:bg-bg-hover hover:text-text-primary`}
           >
-            <Archive size={14} /> {note.is_archived ? '取消封存' : '封存'}
+            <Archive size={14} /> {note.is_archived ? t('noteCard.unarchive') : t('noteCard.archive')}
           </button>
           <button 
             onClick={handleExportImages}
@@ -445,7 +451,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm text-text-secondary
                        hover:bg-bg-hover hover:text-text-primary"
           >
-            <Download size={14} /> 匯出圖片
+            <Download size={14} /> {t('noteCard.exportImages')}
           </button>
           <div className="border-t border-border-subtle my-1" />
           <button 
@@ -455,7 +461,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        text-sm text-danger
                        hover:bg-danger/10 disabled:opacity-50"
           >
-            <Trash2 size={14} /> {isDeleting ? '刪除中...' : '刪除'}
+            <Trash2 size={14} /> {isDeleting ? t('noteCard.deleting') : t('common.delete')}
           </button>
         </div>
       )}

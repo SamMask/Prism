@@ -3,6 +3,7 @@
  */
 import { Copy, Check, FileJson, AlignLeft, BookOpen, Wand2 } from 'lucide-react'
 import { Button } from '../ui/Button'
+import { useTranslation } from '../../hooks/useTranslation'
 
 interface OutputPreviewProps {
   textOutput: string
@@ -27,6 +28,8 @@ export function OutputPreview({
   onOptimize,
   copySuccess
 }: OutputPreviewProps) {
+  const { t } = useTranslation()
+
   const getCurrentOutput = () => {
     switch (outputMode) {
       case 'narrative':
@@ -39,8 +42,8 @@ export function OutputPreview({
   }
 
   const modes = [
-    { key: 'text' as const, icon: AlignLeft, label: '標籤式' },
-    { key: 'narrative' as const, icon: BookOpen, label: '敘事式' },
+    { key: 'text' as const, icon: AlignLeft, label: t('promptBuilder.output.textMode') },
+    { key: 'narrative' as const, icon: BookOpen, label: t('promptBuilder.output.narrativeMode') },
     { key: 'json' as const, icon: FileJson, label: 'JSON' },
   ]
 
@@ -48,7 +51,7 @@ export function OutputPreview({
     <div className="glass rounded-lg p-4 sm:p-5 h-full flex flex-col">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <h2 className="text-lg font-semibold text-text-primary">輸出預覽</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{t('promptBuilder.output.title')}</h2>
         
         {/* Mode Tabs */}
         <div className="flex gap-1 bg-bg-elevated rounded-lg p-1">
@@ -72,11 +75,11 @@ export function OutputPreview({
       <div className="flex-1 min-h-[18rem] bg-bg-elevated rounded-lg p-4 overflow-auto mb-4" data-testid="prompt-output-preview">
         {outputMode === 'json' ? (
           <pre className="text-sm text-text-primary font-mono whitespace-pre-wrap">
-            {getCurrentOutput() || '// 尚無輸出...'}
+            {getCurrentOutput() || t('promptBuilder.output.emptyJson')}
           </pre>
         ) : (
           <p className="text-text-primary whitespace-pre-wrap leading-relaxed">
-            {getCurrentOutput() || '尚無輸出，請在左側填寫參數...'}
+            {getCurrentOutput() || t('promptBuilder.output.emptyText')}
           </p>
         )}
         
@@ -96,10 +99,10 @@ export function OutputPreview({
           variant="secondary"
           className="flex-1 flex items-center justify-center gap-2"
           disabled={!getCurrentOutput() || outputMode === 'json'}
-          title="複製優化指令 (給 ChatGPT/Claude)"
+          title={t('promptBuilder.output.optimizeTitle')}
         >
           <Wand2 size={18} />
-          AI 優化
+          {t('promptBuilder.output.optimize')}
         </Button>
 
         <Button
@@ -111,12 +114,12 @@ export function OutputPreview({
           {copySuccess ? (
             <>
               <Check size={18} />
-              已複製！
+              {t('promptBuilder.output.copied')}
             </>
           ) : (
             <>
               <Copy size={18} />
-              複製
+              {t('promptBuilder.output.copy')}
             </>
           )}
         </Button>

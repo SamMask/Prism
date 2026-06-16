@@ -2,6 +2,7 @@
  * ParameterSelect - Reusable dropdown for prompt parameters
  */
 import { ChevronDown } from 'lucide-react'
+import { useTranslation } from '../../hooks/useTranslation'
 
 interface PromptOption {
   display: string
@@ -38,8 +39,11 @@ export function ParameterSelect({
   weight = 1.0,
   onWeightChange,
   showWeight = false,
-  placeholder = '選擇...'
+  placeholder
 }: ParameterSelectProps) {
+  const { t } = useTranslation()
+  const effectivePlaceholder = placeholder ?? t('promptBuilder.selectPlaceholder')
+
   return (
     <div className="space-y-1">
       <label className="text-sm font-medium text-text-secondary">{label}</label>
@@ -53,7 +57,7 @@ export function ParameterSelect({
                        focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary
                        transition-colors"
           >
-            <option value="">{placeholder}</option>
+            <option value="">{effectivePlaceholder}</option>
             {options.map((opt, idx) => (
               <option key={idx} value={getOptOutput(opt)}>
                 {getOptDisplay(opt)}
@@ -77,7 +81,7 @@ export function ParameterSelect({
             className="w-16 bg-bg-elevated border border-border-subtle rounded-lg px-2 py-2 
                        text-text-primary text-center text-sm
                        focus:outline-none focus:ring-2 focus:ring-primary/50"
-            title="權重 (0.1 - 2.0)"
+            title={t('promptBuilder.weightTitle')}
           />
         )}
       </div>

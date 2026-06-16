@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useRef } from 'react'
 import { X } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { IconButton } from './IconButton'
+import { t } from '../../i18n'
 
 interface ModalProps {
   isOpen: boolean
@@ -66,7 +67,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         {title && (
           <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
             <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
-            <IconButton size="sm" onClick={onClose} aria-label="關閉">
+            <IconButton size="sm" onClick={onClose} aria-label={t('ui.modal.close')}>
               <X size={20} />
             </IconButton>
           </div>

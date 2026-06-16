@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { api, Note, Category, Tag } from '../services/api'
+import { type Locale, readStoredLocale, setLocale as persistLocale } from '../i18n'
 
 export type ViewMode = 'grid' | 'list' | 'compact'
 
@@ -21,6 +22,7 @@ interface AppState {
   hasMore: boolean
 
   // UI State
+  locale: Locale
   viewMode: ViewMode
   selectedNoteIds: number[]
   isEditorOpen: boolean
@@ -46,6 +48,7 @@ interface AppState {
   fetchNotes: (reset?: boolean) => Promise<void>
   fetchCategories: () => Promise<void>
   fetchTags: () => Promise<void>
+  setLocale: (locale: Locale) => void
   setViewMode: (mode: ViewMode) => void
   openEditor: (note: Note | null, options?: { preview?: boolean }) => void
   closeEditor: () => void
@@ -74,6 +77,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentPage: 1,
   hasMore: true,
 
+  locale: readStoredLocale(),
   viewMode: readSavedViewMode(),
   selectedNoteIds: [],
   isEditorOpen: false,
@@ -159,6 +163,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch tags:', error)
     }
+  },
+
+  setLocale: (locale) => {
+    persistLocale(locale)
+    set({ locale })
   },
 
   setViewMode: (mode) => {

@@ -2,6 +2,7 @@
 
 import { Loader2, Clipboard, History, Edit3, Eye, Save, X } from 'lucide-react';
 import { Button, IconButton } from '../ui';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface EditorToolbarProps {
   // Title
@@ -39,10 +40,12 @@ export function EditorToolbar({
   onSave,
   onClose,
 }: EditorToolbarProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
       <h2 className="text-lg font-semibold text-text-primary">
-        {isEditing ? "編輯筆記" : "新增筆記"}
+        {isEditing ? t('editor.toolbar.editNote') : t('editor.toolbar.newNote')}
       </h2>
       <div className="flex items-center gap-2">
         {/* Extract Prompt Button */}
@@ -57,7 +60,7 @@ export function EditorToolbar({
                            ? "bg-bg-elevated text-text-muted cursor-wait"
                            : "bg-bg-elevated text-text-muted hover:text-text-primary hover:bg-bg-hover"
                      }`}
-          title={hasAIPrompt ? "複製 AI 提示詞" : "提取圖片提示詞"}
+          title={hasAIPrompt ? t('editor.toolbar.copyAiPrompt') : t('editor.toolbar.extractImagePrompt')}
         >
           {isCheckingPrompt ? (
             <Loader2 size={16} className="animate-spin" />
@@ -81,14 +84,14 @@ export function EditorToolbar({
                            ? "bg-warning/20 text-warning cursor-wait"
                            : "bg-warning/10 text-warning hover:bg-warning/20"
                        }`}
-            title="歷史版本"
+            title={t('editor.toolbar.historyVersions')}
           >
             {isLoadingHistory ? (
               <Loader2 size={16} className="animate-spin" />
             ) : (
               <History size={16} />
             )}
-            歷史
+            {t('editor.toolbar.history')}
           </button>
         )}
 
@@ -100,7 +103,7 @@ export function EditorToolbar({
               ? "bg-primary text-white"
               : "text-text-muted hover:bg-bg-hover"
           }`}
-          title={isPreview ? "編輯模式" : "預覽模式"}
+          title={isPreview ? t('editor.toolbar.editMode') : t('editor.toolbar.previewMode')}
         >
           {isPreview ? <Edit3 size={18} /> : <Eye size={18} />}
         </button>
@@ -108,11 +111,11 @@ export function EditorToolbar({
         {/* Save Button */}
         <Button onClick={onSave} variant="primary" disabled={isSaving}>
           <Save size={16} />
-          {isSaving ? "儲存中..." : "儲存"}
+          {isSaving ? t('editor.toolbar.saving') : t('common.save')}
         </Button>
 
         {/* Close Button */}
-        <IconButton onClick={onClose} aria-label="關閉">
+        <IconButton onClick={onClose} aria-label={t('editor.toolbar.close')}>
           <X size={18} />
         </IconButton>
       </div>

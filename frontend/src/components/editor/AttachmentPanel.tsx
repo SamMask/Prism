@@ -1,5 +1,6 @@
 import React from "react";
 import { Paperclip, FileText, Trash2, Plus } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 
 export interface Attachment {
@@ -26,6 +27,7 @@ export function AttachmentPanel({
   onUpload,
 }: AttachmentPanelProps) {
   const attachmentInputRef = React.useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   // Wrapper to clean up input after selection (if needed by parent, handled here)
   const handleUploadWrapper = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,7 +40,7 @@ export function AttachmentPanel({
   return (
     <div data-testid="attachment-panel">
       <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-        <Paperclip size={14} /> 附件
+        <Paperclip size={14} /> {t('editor.attachment.title')}
         {attachments.length > 0 && (
           <span className="text-xs bg-bg-elevated px-1.5 py-0.5 rounded">
             {attachments.length}
@@ -63,7 +65,7 @@ export function AttachmentPanel({
                          }`}
               onClick={() => onLoadAttachment(att.id, att.is_auto_extracted)}
               title={
-                att.is_auto_extracted ? "點擊還原完整內容" : "點擊查看附件"
+                att.is_auto_extracted ? t('editor.attachment.restoreFullContent') : t('editor.attachment.viewAttachment')
               }
             >
               <FileText
@@ -75,7 +77,7 @@ export function AttachmentPanel({
               <span className="truncate flex-1" title={att.title}>
                 {att.title}
                 {att.is_auto_extracted && (
-                  <span className="text-accent ml-1">(完整內容)</span>
+                  <span className="text-accent ml-1">({t('editor.attachment.fullContent')})</span>
                 )}
               </span>
               <span className="text-text-muted">
@@ -88,7 +90,7 @@ export function AttachmentPanel({
                 }}
                 className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger
                            transition-opacity"
-                title="刪除附件"
+                title={t('editor.attachment.delete')}
               >
                 <Trash2 size={12} />
               </button>
@@ -115,7 +117,7 @@ export function AttachmentPanel({
                    transition-colors"
       >
         <Plus size={14} />
-        新增 .md 附件
+        {t('editor.attachment.uploadMd')}
       </button>
     </div>
   );

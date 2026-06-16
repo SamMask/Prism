@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { marked } from 'marked'
 import { Edit3, Trash2 } from 'lucide-react'
 import { removeImageReferences } from './imageReferences'
+import { useTranslation } from '../../hooks/useTranslation'
 
 interface EditablePreviewProps {
   content: string
@@ -24,6 +25,7 @@ export function EditablePreview({
   onContentChange,
   onSetCover,
 }: EditablePreviewProps) {
+  const { t } = useTranslation()
   const [activeBlockStart, setActiveBlockStart] = useState<number | null>(null)
   const blocks = useMemo(() => splitPreviewBlocks(content), [content])
 
@@ -41,7 +43,7 @@ export function EditablePreview({
       <textarea
         value={content}
         onChange={(event) => onContentChange(event.target.value)}
-        placeholder="開始輸入內容..."
+        placeholder={t('editor.preview.contentPlaceholder')}
         className="flex-1 min-h-[16rem] bg-transparent border-none outline-none resize-none text-text-primary placeholder-text-muted font-mono text-sm leading-relaxed"
       />
     )
@@ -68,7 +70,7 @@ export function EditablePreview({
                 onClick={() => removeImage(block.imageUrl as string)}
                 data-testid="preview-remove-image"
                 className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-danger/90 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                title="移除圖片引用"
+                title={t('editor.preview.removeImageReference')}
               >
                 <Trash2 size={16} />
               </button>
@@ -101,7 +103,7 @@ export function EditablePreview({
               onClick={() => setActiveBlockStart(block.start)}
               data-testid="preview-edit-block"
               className="absolute top-2 right-2 p-1.5 rounded-md bg-bg-elevated text-text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-text-primary transition-all"
-              title="編輯此段"
+              title={t('editor.preview.editBlock')}
             >
               <Edit3 size={14} />
             </button>

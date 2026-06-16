@@ -12,6 +12,7 @@ import { useDragDrop } from '../hooks/editor/useDragDrop'
 import { useNoteAttachments } from '../hooks/editor/useNoteAttachments'
 import { useNoteHistory } from '../hooks/editor/useNoteHistory'
 import { usePromptExtraction } from '../hooks/editor/usePromptExtraction'
+import { useTranslation } from '../hooks/useTranslation'
 
 interface NoteEditorProps {
   note: Note | null
@@ -20,6 +21,7 @@ interface NoteEditorProps {
 }
 
 export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditorProps) {
+  const { locale, t } = useTranslation()
   const form = useNoteForm(note, onClose, initialPreview)
   const { handlePaste } = usePasteHandler(form.setContent)
   const { hasAIPrompt, isCheckingPrompt, handleCopyPrompt } = usePromptExtraction(form.content)
@@ -69,12 +71,12 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
               <div className="hidden w-56 flex-shrink-0 overflow-auto border-r border-border-subtle bg-bg-elevated/30 p-3 lg:block">
                 <h4 className="text-sm font-medium text-text-secondary mb-3 flex items-center gap-2">
                   <Image size={14} />
-                  圖片預覽
+                  {t('editor.noteEditor.imagePreview')}
                 </h4>
                 {galleryImages.length === 0 ? (
                   <div className="text-center text-text-muted text-sm py-8">
                     <Image size={32} className="mx-auto mb-2 opacity-30" />
-                    <p>尚無圖片</p>
+                    <p>{t('editor.noteEditor.noImages')}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -82,7 +84,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                       <div key={idx} className="relative group">
                         <img
                           src={src}
-                          alt={`圖片 ${idx + 1}`}
+                          alt={t('editor.noteEditor.imageAlt', { index: idx + 1 })}
                           className="w-full rounded-lg border border-border-subtle cursor-pointer hover:border-primary transition-colors"
                           onClick={() => window.open(src, '_blank')}
                         />
@@ -111,7 +113,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                 <div className="absolute inset-0 flex items-center justify-center bg-bg-surface/80 z-10 pointer-events-none">
                   <div className="text-center">
                     <Image size={48} className="mx-auto text-primary mb-2" />
-                    <p className="text-text-primary font-medium">拖放圖片或 .md 檔案至此上傳</p>
+                    <p className="text-text-primary font-medium">{t('editor.noteEditor.dropUpload')}</p>
                   </div>
                 </div>
               )}
@@ -120,7 +122,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                 type="text"
                 value={form.title}
                 onChange={(e) => form.setTitle(e.target.value)}
-                placeholder="標題"
+                placeholder={t('editor.noteEditor.titlePlaceholder')}
                 autoFocus
                 className="mb-4 w-full bg-transparent text-2xl font-semibold leading-tight text-text-primary placeholder-text-muted outline-none"
               />
@@ -146,7 +148,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                   value={form.content}
                   onChange={(e) => form.setContent(e.target.value)}
                   onPaste={handlePaste}
-                  placeholder="開始輸入內容... (支援 Markdown，可直接貼上或拖曳圖片，Ctrl+B 粗體、Ctrl+I 斜體)"
+                  placeholder={t('editor.noteEditor.contentPlaceholder')}
                   className="min-h-[26rem] flex-1 resize-none border-none bg-transparent font-mono text-sm leading-relaxed text-text-primary outline-none placeholder-text-muted"
                 />
               )}
@@ -209,7 +211,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-text-primary flex items-center gap-2">
                 <History size={20} className="text-warning" />
-                歷史版本
+                {t('editor.toolbar.historyVersions')}
               </h3>
               <button
                 onClick={() => history.setShowHistory(false)}
@@ -220,16 +222,16 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
             </div>
 
             {history.historyVersions.length === 0 ? (
-              <p className="text-text-muted text-center py-8">沒有歷史版本記錄</p>
+              <p className="text-text-muted text-center py-8">{t('editor.noteEditor.noHistory')}</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {history.historyVersions.map((version) => (
                   <div key={version.id} className="p-4 rounded-lg bg-bg-elevated border border-border-subtle">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-text-primary">{version.diff_summary || '內容變更'}</p>
+                        <p className="text-sm text-text-primary">{version.diff_summary || t('editor.noteEditor.contentChanged')}</p>
                         <p className="text-xs text-text-muted mt-1">
-                          {new Date(version.created_at).toLocaleString('zh-TW')}
+                          {new Date(version.created_at).toLocaleString(locale)}
                         </p>
                       </div>
                       <button
@@ -237,7 +239,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                       >
                         <RotateCcw size={14} />
-                        還原
+                        {t('editor.noteEditor.restore')}
                       </button>
                     </div>
                   </div>

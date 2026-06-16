@@ -6,6 +6,7 @@ import { Tag } from '../../services/api';
 import { AttachmentPanel, Attachment } from './AttachmentPanel';
 import { ImageManagementPanel } from './ImageManagementPanel';
 import { useAppStore } from '../../stores/appStore';
+import { useTranslation } from '../../hooks/useTranslation';
 
 interface EditorSidebarProps {
   // Category
@@ -65,6 +66,7 @@ function TagAutocomplete({
   selectedTags: Tag[];
   onRemoveTag: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const { tags: allTags } = useAppStore();
   const [showDropdown, setShowDropdown] = useState(false);
   const [highlightIndex, setHighlightIndex] = useState(-1);
@@ -139,7 +141,7 @@ function TagAutocomplete({
   return (
     <div ref={containerRef}>
       <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-        <TagIcon size={14} /> 標籤
+        <TagIcon size={14} /> {t('editor.sidebar.tags')}
       </label>
       <div className="relative">
         <input
@@ -149,7 +151,7 @@ function TagAutocomplete({
           onChange={(e) => onTagInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => { if (suggestions.length > 0) setShowDropdown(true); }}
-          placeholder="輸入標籤後按 Enter"
+          placeholder={t('editor.sidebar.tagPlaceholder')}
           className="w-full px-3 py-2 rounded-lg
                      bg-bg-elevated border border-border-default
                      text-text-primary text-sm
@@ -231,6 +233,7 @@ export function EditorSidebar({
   onContentChange,
 }: EditorSidebarProps) {
   const { categories } = useAppStore();
+  const { t } = useTranslation();
   const [showImagePanel, setShowImagePanel] = useState(false);
 
   return (
@@ -238,7 +241,7 @@ export function EditorSidebar({
       {/* Category */}
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-          <FolderOpen size={14} /> 分類
+          <FolderOpen size={14} /> {t('editor.sidebar.category')}
         </label>
         <select
           value={categoryId || ""}
@@ -252,7 +255,7 @@ export function EditorSidebar({
                      text-text-primary text-sm
                      focus:outline-none focus:border-primary"
         >
-          <option value="">選擇分類</option>
+          <option value="">{t('editor.sidebar.chooseCategory')}</option>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>
               {cat.icon} {cat.name}
@@ -273,7 +276,7 @@ export function EditorSidebar({
       {/* Source URLs */}
       <div>
         <label className="flex items-center gap-2 text-sm font-medium text-text-secondary mb-2">
-          <Link2 size={14} /> 來源連結
+          <Link2 size={14} /> {t('editor.sidebar.sourceUrls')}
         </label>
         <div className="flex gap-2">
           <input
@@ -282,7 +285,7 @@ export function EditorSidebar({
             onChange={(e) => onUrlInputChange(e.target.value)}
             onKeyDown={onUrlInputKeyDown}
             onBlur={onUrlInputBlur}
-            placeholder="輸入 URL 後按 Enter"
+            placeholder={t('editor.sidebar.urlPlaceholder')}
             className="flex-1 px-3 py-2 rounded-lg
                        bg-bg-elevated border border-border-default
                        text-text-primary text-sm
@@ -309,7 +312,7 @@ export function EditorSidebar({
                   variant="danger"
                   onClick={() => onRemoveUrl(index)}
                   className="opacity-0 group-hover:opacity-100"
-                  aria-label="移除連結"
+                  aria-label={t('editor.sidebar.removeUrl')}
                 >
                   <X size={12} />
                 </IconButton>
@@ -322,12 +325,12 @@ export function EditorSidebar({
       {/* Remarks */}
       <div>
         <label className="text-sm font-medium text-text-secondary mb-2 block">
-          備註
+          {t('editor.sidebar.remarks')}
         </label>
         <textarea
           value={remarks}
           onChange={(e) => onChangeRemarks(e.target.value)}
-          placeholder="簡短備註..."
+          placeholder={t('editor.sidebar.remarksPlaceholder')}
           rows={3}
           className="w-full px-3 py-2 rounded-lg
                      bg-bg-elevated border border-border-default
@@ -339,13 +342,13 @@ export function EditorSidebar({
       {/* Cover Position */}
       <div>
         <label className="text-sm font-medium text-text-secondary mb-2 block">
-          封面位置
+          {t('editor.sidebar.coverPosition')}
         </label>
         <div className="flex gap-2">
           {([
-            { value: "top", label: "頂部" },
-            { value: "center", label: "中間" },
-            { value: "bottom", label: "底部" },
+            { value: "top", label: t('editor.sidebar.coverTop') },
+            { value: "center", label: t('editor.sidebar.coverCenter') },
+            { value: "bottom", label: t('editor.sidebar.coverBottom') },
           ] as const).map((option) => (
             <button
               key={option.value}
@@ -366,12 +369,12 @@ export function EditorSidebar({
       {/* Editor Layout */}
       <div>
         <label className="text-sm font-medium text-text-secondary mb-2 block">
-          編輯版面
+          {t('editor.sidebar.editorLayout')}
         </label>
         <div className="flex gap-2">
           {([
-            { value: "single", label: "單欄" },
-            { value: "dual", label: "雙欄" },
+            { value: "single", label: t('editor.sidebar.singleColumn') },
+            { value: "dual", label: t('editor.sidebar.dualColumn') },
           ] as const).map((option) => (
             <button
               key={option.value}
@@ -398,7 +401,7 @@ export function EditorSidebar({
         >
           {showImagePanel ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           <Image size={14} />
-          🖼️ 圖片管理
+          {t('editor.sidebar.imageManagement')}
         </button>
         {showImagePanel && (
           <ImageManagementPanel

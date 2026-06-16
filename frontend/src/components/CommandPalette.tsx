@@ -14,8 +14,9 @@ import { useNavigate } from 'react-router-dom'
 import { Note } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { toast } from './ui/Toast'
+import { useTranslation } from '../hooks/useTranslation'
 
-type CommandGroup = '導覽' | '最近筆記' | '動作'
+type CommandGroup = 'navigation' | 'recent' | 'actions'
 
 interface CommandItem {
   id: string
@@ -27,24 +28,25 @@ interface CommandItem {
   action: () => void
 }
 
-function formatNoteDate(value: string) {
+function formatNoteDate(value: string, locale: string, fallback: string) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '未知時間'
-  return date.toLocaleDateString('zh-TW')
+  if (Number.isNaN(date.getTime())) return fallback
+  return date.toLocaleDateString(locale)
 }
 
-function getNotePreview(note: Note) {
+function getNotePreview(note: Note, fallback: string) {
   const content = note.content
     ?.replace(/!\[.*?\]\(.*?\)/g, '')
     .replace(/\[.*?\]\(.*?\)/g, '')
     .replace(/#{1,6}\s/g, '')
     .trim()
 
-  return content ? content.slice(0, 72) : '沒有內容預覽'
+  return content ? content.slice(0, 72) : fallback
 }
 
 export function CommandPalette() {
   const navigate = useNavigate()
+  const { locale, t } = useTranslation()
   const inputRef = useRef<HTMLInputElement>(null)
   const {
     notes,
@@ -84,7 +86,9 @@ export function CommandPalette() {
     const nextTheme = currentTheme === 'dark' ? 'light' : 'dark'
     localStorage.setItem('theme', nextTheme)
     document.documentElement.classList.toggle('light', nextTheme === 'light')
-    toast.success(`已切換至${nextTheme === 'dark' ? '深色' : '淺色'}主題`)
+    toast.success(t('commandPalette.themeChanged', {
+      theme: t(nextTheme === 'dark' ? 'commandPalette.themeDark' : 'commandPalette.themeLight'),
+    }))
   }
 
   const recentNotes = useMemo(() => {
@@ -97,37 +101,37 @@ export function CommandPalette() {
     const navigation: CommandItem[] = [
       {
         id: 'nav-home',
-        group: '導覽',
-        title: '全部筆記',
-        subtitle: '回到 Home 並清除分類、標籤與封存篩選',
-        keywords: 'home all notes library 首頁 全部 筆記',
+        group: 'navigation',
+        title: t('commandPalette.commands.allNotes.title'),
+        subtitle: t('commandPalette.commands.allNotes.subtitle'),
+        keywords: t('commandPalette.commands.allNotes.keywords'),
         icon: Home,
         action: goHome,
       },
       {
         id: 'nav-prompt-builder',
-        group: '導覽',
+        group: 'navigation',
         title: 'Prompt Builder',
-        subtitle: '開啟結構化提示工具',
-        keywords: 'prompt builder 提示 工具',
+        subtitle: t('commandPalette.commands.promptBuilder.subtitle'),
+        keywords: t('commandPalette.commands.promptBuilder.keywords'),
         icon: Sparkles,
         action: () => navigate('/prompt-builder'),
       },
       {
         id: 'nav-settings',
-        group: '導覽',
-        title: '設定',
-        subtitle: '開啟系統、外觀與資料維護',
-        keywords: 'settings preferences options 設定 外觀 資料 維護',
+        group: 'navigation',
+        title: t('commandPalette.commands.settings.title'),
+        subtitle: t('commandPalette.commands.settings.subtitle'),
+        keywords: t('commandPalette.commands.settings.keywords'),
         icon: Settings,
         action: () => navigate('/settings'),
       },
       {
         id: 'nav-archive',
-        group: '導覽',
-        title: '封存筆記',
-        subtitle: '回到 Home 並顯示封存內容',
-        keywords: 'archive archived 封存',
+        group: 'navigation',
+        title: t('commandPalette.commands.archive.title'),
+        subtitle: t('commandPalette.commands.archive.subtitle'),
+        keywords: t('commandPalette.commands.archive.keywords'),
         icon: Archive,
         action: () => {
           setSelectedCategory(null)
@@ -140,9 +144,9 @@ export function CommandPalette() {
 
     const noteCommands = recentNotes.map((note) => ({
       id: `note-${note.id}`,
-      group: '最近筆記' as const,
-      title: note.title || '無標題',
-      subtitle: `${formatNoteDate(note.updated_at)} · ${getNotePreview(note)}`,
+      group: 'recent' as const,
+      title: note.title || t('commandPalette.untitled'),
+      subtitle: `${formatNoteDate(note.updated_at, locale, t('commandPalette.unknownTime'))} · ${getNotePreview(note, t('commandPalette.noPreview'))}`,
       keywords: `${note.title || ''} ${note.content || ''} ${note.category_name || note.type || ''} ${note.tags?.map((tag) => tag.name).join(' ') || ''}`,
       icon: FileText,
       action: () => {
@@ -154,28 +158,28 @@ export function CommandPalette() {
     const actions: CommandItem[] = [
       {
         id: 'action-new-note',
-        group: '動作',
-        title: '新增筆記',
-        subtitle: '開啟既有新增筆記編輯器，不直接寫入資料庫',
-        keywords: 'new create note add 新增 筆記',
+        group: 'actions',
+        title: t('commandPalette.commands.newNote.title'),
+        subtitle: t('commandPalette.commands.newNote.subtitle'),
+        keywords: t('commandPalette.commands.newNote.keywords'),
         icon: Plus,
         action: openNewNote,
       },
       {
         id: 'action-toggle-theme',
-        group: '動作',
-        title: '切換明暗主題',
-        subtitle: '套用現有 localStorage 主題設定',
-        keywords: 'theme dark light appearance 主題 深色 淺色 外觀',
+        group: 'actions',
+        title: t('commandPalette.commands.toggleTheme.title'),
+        subtitle: t('commandPalette.commands.toggleTheme.subtitle'),
+        keywords: t('commandPalette.commands.toggleTheme.keywords'),
         icon: ((localStorage.getItem('theme') || 'dark') === 'dark' ? Sun : Moon),
         action: toggleTheme,
       },
       {
         id: 'action-settings',
-        group: '動作',
-        title: '外觀設定',
-        subtitle: '前往 Settings 調整主題色彩與顯示密度',
-        keywords: 'appearance color view mode 外觀 主題色彩 顯示模式',
+        group: 'actions',
+        title: t('commandPalette.commands.appearance.title'),
+        subtitle: t('commandPalette.commands.appearance.subtitle'),
+        keywords: t('commandPalette.commands.appearance.keywords'),
         icon: Settings,
         action: () => navigate('/settings'),
       },
@@ -184,12 +188,14 @@ export function CommandPalette() {
     return [...navigation, ...noteCommands, ...actions]
   }, [
     navigate,
+    locale,
     openEditor,
     recentNotes,
     setSelectedCategory,
     setSelectedTag,
     setShowArchived,
     showArchived,
+    t,
   ])
 
   const filteredCommands = useMemo(() => {
@@ -219,7 +225,7 @@ export function CommandPalette() {
     return filteredCommands.reduce<Record<CommandGroup, CommandItem[]>>((acc, item) => {
       acc[item.group].push(item)
       return acc
-    }, { 導覽: [], 最近筆記: [], 動作: [] })
+    }, { navigation: [], recent: [], actions: [] })
   }, [filteredCommands])
 
   useEffect(() => {
@@ -280,7 +286,7 @@ export function CommandPalette() {
       <button
         type="button"
         className="absolute inset-0 h-full w-full cursor-default"
-        aria-label="關閉命令面板"
+        aria-label={t('commandPalette.close')}
         onClick={closePalette}
       />
 
@@ -292,7 +298,7 @@ export function CommandPalette() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="搜尋命令、最近筆記、設定..."
+            placeholder={t('commandPalette.placeholder')}
             className="h-9 min-w-0 flex-1 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-muted"
             data-testid="command-palette-input"
           />
@@ -304,7 +310,7 @@ export function CommandPalette() {
         <div className="overflow-y-auto p-2" data-testid="command-palette-list">
           {filteredCommands.length === 0 ? (
             <div className="px-4 py-10 text-center text-sm text-text-muted">
-              找不到符合的命令
+              {t('commandPalette.empty')}
             </div>
           ) : (
             (Object.keys(groupedCommands) as CommandGroup[]).map((group) => {
@@ -314,7 +320,7 @@ export function CommandPalette() {
               return (
                 <div key={group} className="py-1">
                   <div className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-wider text-text-muted">
-                    {group}
+                    {t(`commandPalette.groups.${group}`)}
                   </div>
                   <div className="space-y-1">
                     {items.map((item) => {

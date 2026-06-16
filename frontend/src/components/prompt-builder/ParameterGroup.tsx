@@ -3,6 +3,7 @@
  */
 import { useState } from 'react'
 import { ChevronDown, Shuffle } from 'lucide-react'
+import { useTranslation } from '../../hooks/useTranslation'
 
 interface ParameterGroupProps {
   title: string
@@ -20,6 +21,7 @@ export function ParameterGroup({
   defaultOpen = true 
 }: ParameterGroupProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen)
+  const { t } = useTranslation()
 
   return (
     <div className="glass rounded-lg overflow-hidden">
@@ -45,7 +47,7 @@ export function ParameterGroup({
                 onRandomize()
               }}
               className="p-1.5 hover:bg-primary/20 rounded-lg transition-colors"
-              title="隨機填入"
+              title={t('promptBuilder.randomize')}
             >
               <Shuffle size={16} className="text-primary" />
             </button>
@@ -54,7 +56,7 @@ export function ParameterGroup({
             type="button"
             onClick={() => setIsOpen(!isOpen)}
             className="rounded-md p-1 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
-            aria-label={isOpen ? '收合區塊' : '展開區塊'}
+            aria-label={isOpen ? t('promptBuilder.collapseSection') : t('promptBuilder.expandSection')}
           >
             <ChevronDown
               size={18}
