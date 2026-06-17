@@ -205,7 +205,7 @@ func main() {
 	}
 
 	if (*desktopShell || *desktopShellSmoke) && strings.TrimSpace(*dataDir) == "" {
-		defaultDataDir, err := defaultDesktopDataDir()
+		defaultDataDir, err := resolveDesktopDataDir(*desktopShellSmoke)
 		if err != nil {
 			log.Fatal(err)
 		}

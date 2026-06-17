@@ -18,11 +18,26 @@ For diagnostics, run `PrismDesktop-debug.exe` from PowerShell. It keeps a consol
 
 User data is not stored in this package folder.
 
-If no `--data-dir` is provided, Prism Desktop uses:
+Data folder resolution order:
+
+1. `--data-dir` or `PRISM_GO_DATA_DIR`
+2. `PrismPortable.json` next to `Prism.exe`
+3. Existing `PrismData\` next to `Prism.exe`
+4. First-run selector
+
+The first-run selector can use this Windows account:
 
 ```text
 %LOCALAPPDATA%\Prism\DesktopData
 ```
+
+It can also create a portable folder next to `Prism.exe`:
+
+```text
+<Prism.exe folder>\PrismData
+```
+
+Or it can use a custom folder path. The selected folder is persisted to `PrismPortable.json`. Portable mode stores `PrismData` as a relative path so the package folder can move with its data.
 
 The data directory contains the desktop database (`prism_desktop_dev.db`), uploads, attachments, config, backups, and logs. Desktop shell logs are written to:
 

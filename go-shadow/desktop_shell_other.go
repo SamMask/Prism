@@ -25,6 +25,6 @@ func runDesktopShellSmoke(cfg runtimeConfig, opts desktopShellOptions) error {
 	return errors.New("desktop shell smoke is Windows-only")
 }
 
-func defaultDesktopDataDir() (string, error) {
+func resolveDesktopDataDir(smoke bool) (string, error) {
 	return "", errors.New("desktop shell default data directory is Windows-only")
 }

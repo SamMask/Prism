@@ -137,6 +137,17 @@ type desktopShellApp struct {
 	releaseLog func()
 }
 
+type desktopPortableConfig struct {
+	Version int    `json:"version"`
+	Mode    string `json:"mode"`
+	DataDir string `json:"data_dir"`
+}
+
+type desktopDataDirChoice struct {
+	Mode    string
+	DataDir string
+}
+
 func runDesktopShellWebViewOnly(opts desktopShellOptions) error {
 	releaseLog, err := configureDesktopLog("", opts.logPath)
 	if err != nil {
@@ -227,6 +238,41 @@ func runDesktopShellSmoke(cfg runtimeConfig, opts desktopShellOptions) error {
 	}
 }
 
+func resolveDesktopDataDir(smoke bool) (string, error) {
+	localDir, err := defaultDesktopDataDir()
+	if err != nil {
+		return "", err
+	}
+	if smoke {
+		return localDir, nil
+	}
+	exeDir, err := desktopExecutableDir()
+	if err != nil {
+		return "", err
+	}
+	configPath := filepath.Join(exeDir, "PrismPortable.json")
+	if dir, ok := readDesktopPortableConfig(configPath, exeDir, localDir); ok {
+		return dir, nil
+	}
+	portableDir := filepath.Join(exeDir, "PrismData")
+	if desktopDirExists(portableDir) {
+		choice := desktopDataDirChoice{Mode: "portable", DataDir: portableDir}
+		_ = persistDesktopPortableConfig(configPath, exeDir, choice)
+		return portableDir, nil
+	}
+	choice, err := runDesktopDataDirPicker(localDir, portableDir)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(choice.DataDir, 0o755); err != nil {
+		return "", err
+	}
+	if err := persistDesktopPortableConfig(configPath, exeDir, choice); err != nil {
+		log.Printf("desktop data-dir selection could not be persisted: %v", err)
+	}
+	return choice.DataDir, nil
+}
+
 func defaultDesktopDataDir() (string, error) {
 	root := strings.TrimSpace(os.Getenv("LOCALAPPDATA"))
 	if root == "" {
@@ -240,6 +286,201 @@ func defaultDesktopDataDir() (string, error) {
 		return "", errors.New("could not resolve a default desktop data directory")
 	}
 	return filepath.Join(root, "Prism", "DesktopData"), nil
+}
+
+func desktopExecutableDir() (string, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(exe), nil
+}
+
+func desktopDirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+func readDesktopPortableConfig(configPath, exeDir, localDir string) (string, bool) {
+	content, err := os.ReadFile(configPath)
+	if err != nil {
+		return "", false
+	}
+	var cfg desktopPortableConfig
+	if err := json.Unmarshal(content, &cfg); err != nil {
+		return "", false
+	}
+	dir := strings.TrimSpace(cfg.DataDir)
+	switch strings.ToLower(strings.TrimSpace(cfg.Mode)) {
+	case "local":
+		if dir == "" {
+			dir = localDir
+		}
+	case "portable":
+		if dir == "" {
+			dir = "PrismData"
+		}
+		if !filepath.IsAbs(dir) {
+			dir = filepath.Join(exeDir, dir)
+		}
+	case "custom":
+		if dir == "" {
+			return "", false
+		}
+	default:
+		return "", false
+	}
+	if !filepath.IsAbs(dir) {
+		dir = filepath.Join(exeDir, dir)
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", false
+	}
+	return filepath.Clean(abs), true
+}
+
+func persistDesktopPortableConfig(configPath, exeDir string, choice desktopDataDirChoice) error {
+	mode := strings.ToLower(strings.TrimSpace(choice.Mode))
+	dataDir := filepath.Clean(strings.TrimSpace(choice.DataDir))
+	if mode == "portable" {
+		if rel, err := filepath.Rel(exeDir, dataDir); err == nil && rel != "." && !strings.HasPrefix(rel, "..") && !filepath.IsAbs(rel) {
+			dataDir = rel
+		}
+	}
+	cfg := desktopPortableConfig{
+		Version: 1,
+		Mode:    mode,
+		DataDir: dataDir,
+	}
+	content, err := json.MarshalIndent(cfg, "", "  ")
+	if err != nil {
+		return err
+	}
+	content = append(content, '\n')
+	return os.WriteFile(configPath, content, 0o644)
+}
+
+func runDesktopDataDirPicker(localDir, portableDir string) (desktopDataDirChoice, error) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	result := make(chan desktopDataDirChoice, 1)
+	w := webview2.NewWithOptions(webview2.WebViewOptions{
+		Debug: false,
+		WindowOptions: webview2.WindowOptions{
+			Title:  "Prism data folder",
+			Width:  720,
+			Height: 520,
+			Center: true,
+		},
+	})
+	if w == nil {
+		return desktopDataDirChoice{}, errors.New("WebView2 initialization failed")
+	}
+	defer w.Destroy()
+	if err := w.Bind("selectDataDir", func(mode, customPath string) string {
+		choice, err := normalizeDesktopDataDirChoice(mode, customPath, localDir, portableDir)
+		if err != nil {
+			return err.Error()
+		}
+		select {
+		case result <- choice:
+		default:
+		}
+		w.Dispatch(func() {
+			w.Terminate()
+		})
+		return ""
+	}); err != nil {
+		return desktopDataDirChoice{}, err
+	}
+	w.SetHtml(desktopDataDirPickerHTML(localDir, portableDir))
+	w.Run()
+	select {
+	case choice := <-result:
+		return choice, nil
+	default:
+		return desktopDataDirChoice{}, errors.New("desktop data directory selection was canceled")
+	}
+}
+
+func normalizeDesktopDataDirChoice(mode, customPath, localDir, portableDir string) (desktopDataDirChoice, error) {
+	mode = strings.ToLower(strings.TrimSpace(mode))
+	switch mode {
+	case "local":
+		return desktopDataDirChoice{Mode: "local", DataDir: localDir}, nil
+	case "portable":
+		return desktopDataDirChoice{Mode: "portable", DataDir: portableDir}, nil
+	case "custom":
+		dir := strings.TrimSpace(customPath)
+		if dir == "" {
+			return desktopDataDirChoice{}, errors.New("custom data folder is required")
+		}
+		abs, err := filepath.Abs(dir)
+		if err != nil {
+			return desktopDataDirChoice{}, err
+		}
+		return desktopDataDirChoice{Mode: "custom", DataDir: filepath.Clean(abs)}, nil
+	default:
+		return desktopDataDirChoice{}, errors.New("unsupported data folder choice")
+	}
+}
+
+func desktopDataDirPickerHTML(localDir, portableDir string) string {
+	localJSON, _ := json.Marshal(localDir)
+	portableJSON, _ := json.Marshal(portableDir)
+	return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Prism data folder</title>
+<style>
+body{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#f8fafc;color:#111827}
+main{max-width:620px;margin:38px auto;padding:0 24px}
+h1{font-size:24px;margin:0 0 10px}
+p{line-height:1.5;color:#4b5563}
+.option{border:1px solid #d1d5db;background:#fff;border-radius:8px;padding:16px;margin:14px 0}
+.path{font-family:Consolas,monospace;font-size:12px;color:#374151;word-break:break-all;margin:8px 0}
+button{background:#2563eb;color:#fff;border:0;border-radius:6px;padding:9px 14px;font-size:14px;cursor:pointer}
+button.secondary{background:#374151}
+input{box-sizing:border-box;width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:6px;margin:8px 0 10px}
+#error{color:#b91c1c;min-height:20px}
+</style>
+</head>
+<body>
+<main>
+<h1>Choose Prism data folder</h1>
+<p>Prism stores the database, uploads, attachments, backups, config, and logs in one data folder.</p>
+<section class="option">
+<strong>Use this Windows account</strong>
+<div class="path" id="local"></div>
+<button onclick="choose('local')">Use local data folder</button>
+</section>
+<section class="option">
+<strong>Keep data next to Prism.exe</strong>
+<div class="path" id="portable"></div>
+<button class="secondary" onclick="choose('portable')">Use portable folder</button>
+</section>
+<section class="option">
+<strong>Use another folder</strong>
+<input id="custom" placeholder="D:\PrismData">
+<button class="secondary" onclick="choose('custom')">Use custom folder</button>
+</section>
+<div id="error"></div>
+</main>
+<script>
+const localPath=` + string(localJSON) + `;
+const portablePath=` + string(portableJSON) + `;
+document.getElementById('local').textContent=localPath;
+document.getElementById('portable').textContent=portablePath;
+async function choose(mode){
+  const custom=document.getElementById('custom').value;
+  const err=await window.selectDataDir(mode, custom);
+  document.getElementById('error').textContent=err || '';
+}
+</script>
+</body>
+</html>`
 }
 
 func runDesktopSmokeNoteWorkflow(addr string) error {

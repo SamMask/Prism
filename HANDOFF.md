@@ -12,7 +12,7 @@
 - `.exe` 桌面化已定方向：Windows 視窗程式、WebView2、tray、單一實例、同一行程內 Go server goroutine；關閉行為預設直接結束，close-to-tray 是進階選項。
 - Desktop Shell Phase 0 完成：`desktop-spike/` 已建立 isolated Win32 message-loop spike，空視窗 + tray Show/Quit 共用單一 loop；未接 WebView2、後端、schema/API/runtime、deploy 或 production data。
 - Desktop Shell Phase 1-3 完成：正式桌面入口接到 `go-shadow --desktop-*`，支援 WebView2 placeholder / URL target、tray Show/Quit、同一行程 Go primary runtime goroutine、`/healthz` gate、desktop log、named mutex single-instance、debug console build 與 `-H=windowsgui` GUI build script。
-- Desktop Shell Phase 4-6 完成：`scripts/build_desktop_portable.ps1` 產出 portable zip/folder，`Prism.exe` 以 `-H=windowsgui` + `main.desktopShellDefault=1` 直接進 desktop shell，預設 data-dir 為 `%LOCALAPPDATA%\Prism\DesktopData`；`scripts/smoke_desktop_portable.ps1` 驗證 clean unzip、external data-dir、fresh DB、desktop log 與基本 note create/search workflow。Installer/updater 仍 deferred，Pi deploy 仍是 linux/arm64 Go artifact + systemd + Caddy。
+- Desktop Shell Phase 4-6 完成：`scripts/build_desktop_portable.ps1` 產出 portable zip/folder，`Prism.exe` 以 `-H=windowsgui` + `main.desktopShellDefault=1` 直接進 desktop shell；第一次啟動 data-dir 選擇順序是 `--data-dir` / env、exe 同層 `PrismPortable.json`、既有 `PrismData\`、最後顯示選擇器（AppData / portable `PrismData\` / custom path）。`scripts/smoke_desktop_portable.ps1` 驗證 clean unzip、external data-dir、fresh DB、desktop log 與基本 note create/search workflow。Installer/updater 仍 deferred，Pi deploy 仍是 linux/arm64 Go artifact + systemd + Caddy。
 
 ## Next Entry
 

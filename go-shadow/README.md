@@ -37,7 +37,7 @@ Desktop Shell Phase 4 adds the portable Windows package:
 ..\scripts\smoke_desktop_portable.ps1
 ```
 
-The portable folder/zip contains `Prism.exe`, `PrismDesktop-debug.exe`, and `README-PORTABLE.md`. These desktop artifacts are linked with `main.desktopShellDefault=1`, so `Prism.exe` starts the desktop shell directly when double-clicked. If no `--data-dir` is passed, Windows desktop mode uses `%LOCALAPPDATA%\Prism\DesktopData`; the package folder must not contain user DB/WAL/SHM files. Installer and auto-updater work remains deferred.
+The portable folder/zip contains `Prism.exe`, `PrismDesktop-debug.exe`, and `README-PORTABLE.md`. These desktop artifacts are linked with `main.desktopShellDefault=1`, so `Prism.exe` starts the desktop shell directly when double-clicked. Data-dir resolution is explicit flag/env first, then `PrismPortable.json` next to the executable, then an existing executable-neighbor `PrismData\`, then the first-run selector. The selector can persist local AppData, portable `PrismData`, or a custom folder; the package folder must not contain user DB/WAL/SHM files unless the user deliberately chose portable `PrismData`. Installer and auto-updater work remains deferred.
 
 ## Scope
 

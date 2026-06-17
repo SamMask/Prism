@@ -88,7 +88,8 @@ Contract：`CONTRACT-DESKTOP-SHELL-UX-HARDENING`（見 `docs/CONTRACTS.md`）。
 
 - [x] `scripts/build_desktop_portable.ps1` 產出 portable zip / folder：`Prism.exe`、`PrismDesktop-debug.exe`、`README-PORTABLE.md`。
 - [x] Desktop build 以 `main.desktopShellDefault=1` link-time flag 讓 `Prism.exe` 直接進 Windows desktop shell；一般 `go run` / Pi artifact 不受影響。
-- [x] 第一次啟動使用 external data-dir；未指定時落到 `%LOCALAPPDATA%\Prism\DesktopData`，不得把使用者資料寫進 repo 或 build artifact 內。
+- [x] 第一次啟動使用 external data-dir；`--data-dir` / `PRISM_GO_DATA_DIR` 最高優先，否則讀 exe 同層 `PrismPortable.json`，再採既有 `PrismData\` portable 資料夾，最後顯示第一次啟動選擇器（本機 `%LOCALAPPDATA%\Prism\DesktopData` / 建立 exe 同層 `PrismData\` / 自訂資料夾）。
+- [x] 第一次啟動選擇器會把選擇寫回 `PrismPortable.json`；portable 模式以相對 `PrismData` 保存，讓綠色版資料可跟著資料夾移動。
 - [x] `scripts/smoke_desktop_portable.ps1` 從乾淨 unzip 目錄啟動 debug artifact，使用獨立 external data-dir，建立 fresh DB，跑 desktop runtime health + basic note create/search workflow，確認 DB/log 仍在 data-dir。
 - [x] `docs/desktop/README-PORTABLE.md` 記錄 WebView2 Runtime 前置條件；本 phase 不做 bootstrap installer。
 - [x] 不做 MSI/NSIS/WiX installer、不做 auto updater、不改 Pi deploy。
