@@ -54,6 +54,15 @@ Desktop Shell 目前沒有 active construction item。Phase 0-6、post-package f
 - [x] **SEARCH-INTEGRITY-CANDIDATE-01 Search integrity diagnostics contract**（2026-06-17 完成）：已新增 `GET /api/system/search-integrity` 與 `POST /api/system/search-integrity/rebuild-fts`。第一版只做診斷與手動 FTS rebuild；禁止 VACUUM、改 Notes、改 Attachments、刪檔、自動修復、讓 Agent 自動觸發。
 - [x] **MAINT-OVERVIEW-CANDIDATE-01 Maintenance health overview**（2026-06-17 完成）：Settings 維護頁已新增狀態總覽，只呈現資料一致性、搜尋索引與 WAL 手動狀態；不新增修復行為。
 
+### Supplemental UX Backlog
+
+以下補充功能目前只是 low-priority 候選；先記錄方便日後想做時 promote。不得因列在此處就自動施工、擴 schema、改 API contract 或引入大型 UI 重構。
+
+- [ ] **VARIANT-PANEL-CANDIDATE-01 Variant tracking panel**：在卡片或閱讀頁補一個輕量變體追蹤面板，顯示 parent link 與 children variants，並可直接跳轉到相關 note。第一版優先沿用既有 `parent_id` / `parent_title` / duplicate-as-variant 行為；若 children variants 目前缺少 API 支援，先做 contract / API 最小補點，不新增複雜版本樹、diff engine 或協作語義。
+- [ ] **BULK-MARKDOWN-TXT-IMPORT-CANDIDATE-01 Batch Markdown/txt import**：允許使用者一次匯入多個 `.md` / `.txt` 檔成為 notes。第一版只做本機檔案批量選取、逐檔建立 note、基本標題推導與結果摘要；不做目錄遞迴 watcher、不做自動分類/AI 摘要、不覆蓋既有 notes、不新增同步機制。
+- [ ] **IMAGE-VIEWER-CANDIDATE-01 Unified image lightbox**：在閱讀頁、編輯預覽與可行的卡片封面統一圖片開啟體驗；點擊圖片在 app 內開 lightbox，支援關閉、上一張/下一張、複製路徑、開原圖。第一版不改 upload/storage/cleanup API，不改圖片儲存模式。
+- [ ] **READING-WORKSPACE-CANDIDATE-01 Reading list workspace**：允許使用者把多張卡片加入暫存閱讀清單，閱讀時可在清單內快速切換，不必關閉上一張 note。第一版提供閱讀清單位置設定（上方分頁列 / 右側側欄），支援加入、切換、移除單張、清空全部，並在切換前後保留每張 note 的閱讀捲動位置。狀態先保存在前端 session/localStorage，不新增 DB schema、不改 note API、不做 native 多視窗、不做雙欄比對或 diff engine。
+
 ### Future Branch Candidates
 
 以下是不同產品線或 sidecar 方向，先記錄不施工。Promote 前必須先補 contract / docs，不得直接改 Prism Core runtime。

@@ -1,0 +1,6 @@
+# GitHub Linguist language-stat hygiene.
+# Prism's current product runtime is Go + React; Python here is governance/test
+# harness code and archived migration snippets, not runtime ownership.
+tests/**/*.py linguist-vendored
+e2e/**/*.py linguist-vendored
+docs/development-history/*.py linguist-documentation
