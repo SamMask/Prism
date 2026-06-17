@@ -1,7 +1,7 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.4.9
-> **更新日期**: 2026-06-13
+> **更新日期**: 2026-06-17
 > **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
@@ -10,12 +10,13 @@
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
-| [TODO.md](./TODO.md) | 原子化 active roadmap、backlog/icebox、近期更新摘要；長版歷史移至 development-history | ✅ 持續更新 |
+| [README.md](./README.md) | 文檔中心入口、快速開始、文件治理與近期歸檔入口 | ✅ 持續更新 |
+| [TODO.md](./TODO.md) | Active roadmap、候選 backlog、下一步入口；完成紀錄與長版歷史移至 development-history | ✅ 持續更新 |
 | [SCHEMA.md](./SCHEMA.md) | **現行 DB 綱要** — 所有資料表欄位定義（唯一真實來源），附 Migration 歷程 | ✅ 持續更新 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | C4 Container Diagram、模組邊界、資料流向 | ✅ 持續更新 |
 | [Prism.md](./Prism.md) | V2 架構決策記錄與歷史路線圖（V1→V2 重構背景、AI 拔除決策脈絡） | 🗄️ 歷史參考，不再更新 |
 
-> **注意**: `CLAUDE.md`（開發規範）位於專案根目錄，不在此資料夾。
+> **注意**: `CLAUDE.md` / `AGENTS.md` 與 `HANDOFF.md` 位於專案根目錄，不在此資料夾。`HANDOFF.md` 只保留最短接手狀態；長版快照在 `development-history/`。
 
 ---
 
@@ -75,8 +76,9 @@
 
 | 文件 | 說明 | 狀態 |
 |------|------|------|
-| [README.md](./README.md) | 舊版文檔索引 (v1.4.1, 2025-12-15) | 🗄️ 已由本文件取代 |
 | [development-history/README.md](./development-history/README.md) | 從 TODO 拆出的完成階段與完整 Changelog 保存區 | 🗄️ 歷史保存，按需更新 |
+| [development-history/go-primary-runtime-completion-20260617.md](./development-history/go-primary-runtime-completion-20260617.md) | T001-T053 Go primary migration 完成敘事、artifact 與完整任務表 | 🗄️ 歷史保存 |
+| [development-history/desktop-backup-i18n-handoff-20260617.md](./development-history/desktop-backup-i18n-handoff-20260617.md) | 2026-06-14 local desktop / backup / dashboard handoff、2026-06-17 Core UX 與 i18n 詳細完成記錄 | 🗄️ 歷史保存 |
 | [development-history/Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | 2026-06-13 Go 收尾審查原文；T046-T052 已處理，T053 前只作 guardrail 參考 | 🗄️ 歷史保存 |
 | [hypothetical_modern_prism.md](./hypothetical_modern_prism.md) | 現代化架構評估報告（前後端分離 Vite/React 方案探討）| 🗄️ 已完成實作，僅供歷史參考 |
 | [future_possibilities_heavy_local.md](./future_possibilities_heavy_local.md) | 本地 AI 重度依賴方案探索（PyTorch / Ollama / HuggingFace）| 🗄️ 已廢棄 — AI 功能於 v2.3.0 全面移除 |

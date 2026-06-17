@@ -1,8 +1,8 @@
 # Prism 文檔中心
 
 > **版本**: v2.4.9 / Go primary runtime
-> **更新日期**: 2026-06-13
-> **狀態**: Go primary 為唯一 runtime owner；Python backend source 已於 T053 移除
+> **更新日期**: 2026-06-17
+> **狀態**: Go primary 為唯一 runtime owner；Python Flask backend source 已於 T053 移除
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。
 
@@ -10,7 +10,7 @@
 
 ## 快速開始
 
-### 目前推薦：Go primary runtime
+### Go primary runtime
 
 ```powershell
 cd D:/AI/Prism
@@ -42,15 +42,21 @@ npm run dev
 pytest tests/ -v
 ```
 
-Python backend source 與 `requirements*.txt` 只保留為 legacy source / dev / test context；T045 後不再是產品啟動必要條件，T052 已清掉 tracked embedded Python / Pillow package 殘留。T053 會決定 source 最終刪除或封存。
+Go runtime / contracts 有變更時另跑：
+
+```bash
+cd go-shadow
+go test ./...
+```
 
 ---
 
-## 測試
+## 文件治理
 
-```bash
-pytest tests/ -v
-```
+- `docs/TODO.md` 只保留 active roadmap、候選 backlog 與下一步入口。
+- `HANDOFF.md` 只保留新對話接手需要的最短 current state / next entry。
+- 長版完成紀錄、handoff 快照、舊 phase 與 changelog 放在 `docs/development-history/`。
+- `AGENTS.md` 與 `CLAUDE.md` 是鏡像；修改任一份必須同步另一份。
 
 ---
 
@@ -58,16 +64,23 @@ pytest tests/ -v
 
 ```
 docs/
-├── INDEX.md            # 文檔索引（主入口）
-├── TODO.md             # Active Go primary roadmap
-├── CONTRACTS.md        # Active task contract index
-├── SCHEMA.md           # DB Schema + Migration 歷程
-├── ARCHITECTURE.md     # C4 架構圖與 Go primary boundary
-├── API_REFERENCE.md    # REST API 完整參考
-├── CONTRIBUTING.md     # 開發者指南
-├── DEPLOYMENT.md       # Go primary deployment
-├── ER-DIAGRAM.md       # 資料表 ER 圖
-├── SEQUENCE-UPLOAD.md  # 上傳流程 Sequence Diagram
-├── development-history/# 舊 TODO / changelog archive
-└── 過期/               # 已封存的分析報告
+├── README.md          # 本文件中心入口
+├── INDEX.md           # 完整文檔索引
+├── TODO.md            # Active roadmap / next entry only
+├── CONTRACTS.md       # Active task contract index
+├── SCHEMA.md          # DB Schema + Migration 歷程
+├── ARCHITECTURE.md    # C4 架構圖與 Go primary boundary
+├── API_REFERENCE.md   # REST API 完整參考
+├── CONTRIBUTING.md    # 開發者指南
+├── DEPLOYMENT.md      # Go primary deployment
+├── ER-DIAGRAM.md      # 資料表 ER 圖
+├── SEQUENCE-UPLOAD.md # 上傳流程 Sequence Diagram
+├── contracts/         # Contract artifacts
+├── development-history/# 舊 TODO / handoff / changelog archive
+└── 過期/              # 已封存的分析報告
 ```
+
+近期歸檔：
+
+- `development-history/go-primary-runtime-completion-20260617.md`
+- `development-history/desktop-backup-i18n-handoff-20260617.md`

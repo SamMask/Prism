@@ -1,10 +1,11 @@
 # Prism Contracts
 
-本檔是 active TODO 的契約索引。每個 active TODO 任務都必須指向本檔中的一個契約名稱；契約名稱只描述必須守住的 runtime 邊界，不代表該功能已完成。
+本檔是 active TODO 的契約索引。每個 active construction task 都必須指向本檔中的一個契約名稱；候選 backlog 可先不施工，promote 前必須補 contract。契約名稱只描述必須守住的 runtime 邊界，不代表該功能已完成。
 
 | Contract | Boundary |
 |---|---|
-| CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | `docs/TODO.md` 只保留 active roadmap；歷史 phase 移入 `docs/development-history/`，active task 必須有依賴、結構依據、驗收標準與狀態。 |
+| CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | `docs/TODO.md` 只保留 active roadmap、候選 backlog、下一步入口與歸檔索引；`HANDOFF.md` 只保留最短 current state / next entry；歷史 phase、完成紀錄與長版交接快照移入 `docs/development-history/`。 |
+| CONTRACT-DESKTOP-SHELL-SPIKE | Desktop Shell Phase 0 只能建立 isolated Windows message-loop spike：空 Win32 視窗 + tray icon + 單一 loop；不得接 WebView2、後端、schema/API/runtime、deploy 或 production data。 |
 | CONTRACT-GO-PRIMARY-ARCHITECTURE | 文件必須以 Go primary 為唯一 current runtime owner；歷史 candidate、sidecar、rollback proof 不得寫成 live owner，retained-Python 主路徑描述不得出現在 current docs。 |
 | CONTRACT-GO-PRIMARY-ROUTE-OWNERSHIP | 所有正式 API route 必須有唯一 production owner；Go 替代 Python 前，manifest 中不得留有 Python-owned request-time surface。 |
 | CONTRACT-GO-PRIMARY-PARITY | Go route promoted 前，必須有 Python-vs-Go parity fixture 證明 status、JSON shape、DB state、file state 與 rollback 行為一致。 |

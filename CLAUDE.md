@@ -7,10 +7,12 @@
 | 文件 | 內容 |
 |---|---|
 | `CLAUDE.md` / `AGENTS.md` | 開發規範（哲學 / 禁止事項 / 專案快查） — 雙份鏡像 |
+| `HANDOFF.md` | 新對話接手用最短 current state / next entry；長版交接快照見 `docs/development-history/` |
+| `docs/README.md` | 文檔中心入口、快速開始、文件治理與近期歸檔入口 |
 | `DEPLOY-PI.md` | 樹莓派 Go primary 更新流程（artifact deploy、systemd、Caddy、rollback/soak） |
 | `docs/ARCHITECTURE.md` | 架構圖（C4 Container Diagram） |
 | `docs/SCHEMA.md` | 現行 DB 綱要（所有資料表欄位定義，改 DB 前必讀） |
-| `docs/TODO.md` | 原子化 active 待辦與近期更新摘要；完整完成項目 / Changelog 見 `docs/development-history/` |
+| `docs/TODO.md` | Active roadmap、候選 backlog 與下一步入口；完整完成項目 / Changelog 見 `docs/development-history/` |
 | `docs/Prism.md` | V2 規劃期歷史記錄（已凍結，不再更新；僅供重構決策脈絡參考） |
 
 ### 重大重構 / Go 收尾 / 前端改版額外必讀
@@ -27,7 +29,8 @@
 
 1. **有未規劃事項** → 先在 `docs/TODO.md` 拆解原子任務，更新後再繼續實作
 2. **完成一個階段** → 回頭更新相關文件：
-   - `docs/TODO.md`（打 `[x]`、更新近期摘要；長版歷程歸檔到 `docs/development-history/`）
+   - `docs/TODO.md`（只保留 active roadmap / next entry；長版完成紀錄歸檔到 `docs/development-history/`）
+   - `HANDOFF.md`（只保留下一輪接手所需的最短狀態；長版交接快照歸檔到 `docs/development-history/`）
    - `docs/ARCHITECTURE.md`（新模組 / 架構變動時）
    - `docs/SCHEMA.md`（有新 DB 欄位或遷移時）
    - `CLAUDE.md` + `AGENTS.md`（開發規範本身要改時，**兩份都要改**）

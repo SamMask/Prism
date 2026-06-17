@@ -1,222 +1,66 @@
 # Prism Active TODO
 
-本檔只保留目前可施工的 active roadmap。舊 TODO 與歷史 phase 已完整歸檔到 `docs/development-history/todo-archive-pre-go-primary-runtime-migration-20260606.md`。
+本檔只保留目前可施工的 active roadmap、候選 backlog 與下一步入口。完成紀錄、舊 phase 與長版 changelog 全部移到 `docs/development-history/`。
 
 ---
 
-## 2026-06-16 討論報告 intake — Core UX 與分支候選
+## Current Truth（2026-06-17）
 
-來源：`docs/development-history/20260616-chatgpt-Prism-虛擬團隊討論會.md`。
+- Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。
+- Go 漸進重構 T001-T053 已完成，完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
+- 2026-06-16 Core UX intake 已吸收；已完成項與 2026-06-14/06-17 handoff 快照見 `docs/development-history/desktop-backup-i18n-handoff-20260617.md`。
+- i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
-本節只吸收報告中值得保留的決策與候選項。Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md` 與實際 source/runtime 為準；不得因為報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
+Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
 
-### 採納：Core UX / 文件治理候選
+---
 
-- [x] **CORE-UX-01 About current-truth wording**（2026-06-17 完成）：`Settings > About` 已改為 Go primary runtime / SQLite FTS5 / local-first current truth；未改 API、schema、runtime、deploy。驗收：前端 About 不再宣稱 Flask backend，`cd frontend && npm run build` 通過。
-- [x] **SETTINGS-IA-01 Settings information architecture refresh**（2026-06-17 完成）：Settings tabs 已重排為「外觀 / 組織 / 備份與還原 / 維護與健康 / 存取與系統 / 關於」。只搬移既有 section 與文案，未新增 endpoint、未恢復已隱藏的 PortConfig / Update / 部署安全邊界、未改 schema。驗收：Chrome headless rendered DOM / screenshot 覆蓋 tab navigation；in-app Browser runtime 本輪不可用，已以 Chrome headless 替代。
-- [x] **MAINT-COPY-01 Maintenance copywriting pass**（2026-06-17 完成）：WAL / checkpoint / consistency 等工程詞已退到補充文字，主標改為「整理資料庫暫存日誌」「資料一致性檢查」等使用者語言；未改維護 API 行為，未新增自動修復。驗收：`cd frontend && npm run build` 通過，危險操作仍需明確確認。
-- [x] **BACKUP-UX-02 Backup / export / restore separation**（2026-06-17 完成）：UI 文案已區分「匯出副本」「匯入資料」「Prism 內建還原點」「還原資料庫」。保留既有 restore restart 協定；未新增本機自動備份排程，未改 Pi 每週備份策略。驗收：備份下載、JSON 匯入、DB restore 入口語義清楚且現有 API 呼叫不變。
-- [x] **CODEX-REVIEW-01 Codex task/review checklist extraction**（2026-06-17 完成）：已新增 `docs/CODEX-TASK-REVIEW-CHECKLIST.md`，把報告中的任務 prompt 契約、allowed files、forbidden scope、verification、Not Changed 回報格式、review checklist 與硬退回條件收斂成 docs-only checklist。驗收：`tests/test_codex_task_review_checklist.py` 鎖定 checklist 內容與 TODO closure；不改 agent runtime、不改 `AGENTS.md` / `CLAUDE.md`，未新增 schema/API/AI/semantic/runtime/deploy scope。
-- [ ] **Desktop Shell Phase 0**：已在下方「產品方向：桌面化」追蹤；本次 intake 確認其優先級仍成立，不另開重複項。
+## 下一個可施工入口
 
-### 備選：先記錄，待 Core UX 收斂後再挑一項 promote
+### Desktop Shell Phase 0 — message loop spike
+
+目標：先驗證 Windows desktop shell 的單一 Win32 message loop，可同時服務空視窗與 tray icon，再決定是否接 WebView2 / 後端。
+
+Contract：`CONTRACT-DESKTOP-SHELL-SPIKE`（見 `docs/CONTRACTS.md`）。
+
+- [ ] 建立獨立 `desktop-spike/`（自己的 `go.mod`）。
+- [ ] 僅使用 `golang.org/x/sys/windows` syscall；Phase 0 不引 WebView2、不接後端、不改 schema/API/runtime。
+- [ ] 空 Win32 視窗 + tray icon，右鍵選單至少有 Show / Quit。
+- [ ] 關閉視窗預設直接結束行程；close-to-tray 仍是後續正式封裝的進階選項。
+- [ ] 驗收：tray 選單有反應、關視窗正常退出、message loop 不卡住；普通 console build 保留除錯 log。
+
+已定桌面化產品決策：
+
+- `.exe` 是視窗程式，不是 `.bat` 或純 console。
+- 技術方向是內嵌 WebView2，傾向 `jchv/go-webview2`（純 syscall、可保 `CGO_ENABLED=0`），不採 `webview/webview_go`（需要 cgo）。
+- 單一 `.exe` 後續目標：同一行程內啟動 Go server goroutine、WebView2 視窗指向 `127.0.0.1:<port>`、tray icon、named mutex 單一實例。
+- 正式封裝才切 `-ldflags="-H=windowsgui"` 並改為檔案 log。
+
+---
+
+## Active Candidates
+
+### Core UX / Maintenance
 
 - [ ] **SEARCH-UX-CANDIDATE-01 Search explainability UX**：Search Context Bar、Empty State Recovery、Search Scope Hint、Recent Searches（localStorage 最多 5 筆、不進 DB）、Mobile Search Entry。禁止範圍：relevance ranking、semantic search、attachment body snippets、SearchHistory DB、advanced query language、每鍵即時搜尋。
 - [ ] **SEARCH-INTEGRITY-CANDIDATE-01 Search integrity diagnostics contract**：未來可規劃 `GET /api/system/search-integrity` 與 `POST /api/system/search-integrity/rebuild-fts`。第一版只做診斷與 FTS rebuild；禁止 VACUUM、改 Notes、改 Attachments、刪檔、自動修復、讓 Agent 自動觸發。
 - [ ] **MAINT-OVERVIEW-CANDIDATE-01 Maintenance health overview**：在 Settings IA 與 MAINT-COPY-01 完成後，才考慮做維護狀態總覽。第一版只呈現狀態，不新增修復行為。
 
-### 未來分支升級候選：不同產品線，先記錄不施工
+### Future Branch Candidates
 
-- [ ] **BRANCH-CANDIDATE-CRR-LITE**：Cerberus Research Radar Lite。定位是 sidecar / branch，不是 Prism Core。只可先做 docs/schema：Research Signal Card、Normalized Paper Candidate、Paper Source Query Contract、Dedup Contract、LLM Extraction Contract、Prism/Cerberus mapping。第一版不接 API、不接 LLM、不寫 Prism、不寫 CerberusCoin repo；paper 只能變成可測假設，不能變成策略結論。
+以下是不同產品線或 sidecar 方向，先記錄不施工。Promote 前必須先補 contract / docs，不得直接改 Prism Core runtime。
+
+- [ ] **BRANCH-CANDIDATE-CRR-LITE**：Cerberus Research Radar Lite。第一版只可先做 docs/schema：Research Signal Card、Normalized Paper Candidate、Paper Source Query Contract、Dedup Contract、LLM Extraction Contract、Prism/Cerberus mapping。不接 API、不接 LLM、不寫 Prism、不寫 CerberusCoin repo；paper 只能變成可測假設，不能變成策略結論。
 - [ ] **BRANCH-CANDIDATE-AI-BRIDGE**：外部 Agent 安全讀取 Prism 的 read-only bridge。不得內建 AI chat、embedding、semantic search、GraphRAG 或 agent runner；若未來啟動，先做 read-only contract 與安全邊界文件。
 - [ ] **BRANCH-CANDIDATE-WATCH-LITE**：RSS / arXiv / GitHub / blog / URL tracking sidecar。只收集候選到 pending queue，不自動寫 permanent Prism note；等 Core UX 與備份/還原語義穩定後再評估。
 - [ ] **BRANCH-CANDIDATE-ARCHIVE-INTAKE**：web / PDF / markdown / source intake sidecar。先記錄為匯入輔助方向，不得把 crawler、summarizer 或大量自動寫入帶進 Core。
 
 ---
 
-## 產品方向：桌面化（.exe 視窗程式）— 決策與待辦（2026-06-14）
+## Archive Index
 
-Go 重構的目標之一是把本機產品封裝成**獨立 .exe 視窗程式**（非 .bat 啟動、非純 console）。本節記錄相關決策與待辦，供後續開發接續。
-
-**已定決策**
-- **桌面模型 = 視窗程式**，需有「關閉視窗時：連背景一起關 / 只關視窗、背景常駐（close-to-tray）」設定。tray 常駐主要服務「仍想用 API」的使用者。**關閉行為預設 = 直接結束行程**（2026-06-14 拍板）；close-to-tray 常駐為進階選項，使用者主動開啟。
-- **Windowing 技術 = 內嵌 WebView2，純 Go syscall（2026-06-14 拍板）**：
-  - 單一 .exe = 在同一行程內啟動現有 Go server（goroutine，沿用 `go-shadow/main.go`）+ 主執行緒開 WebView2 視窗指向 `127.0.0.1:<port>` + tray icon + named mutex 單一實例。後端零改動。
-  - 套件走 **`jchv/go-webview2`（純 syscall，可保 `CGO_ENABLED=0`）**，**不用** `webview/webview_go`（要 cgo，會毀掉純 Go build 與 linux/arm64 交叉編譯）。
-  - **無 console 視窗**：正式 build 用 `-ldflags="-H=windowsgui"`（GUI subsystem，從不配給 console，非事後隱藏）。代價：stdout/stderr 無處顯示，log 必須寫檔。
-  - **無孤兒行程**：server 是同行程 goroutine，非 spawn 子行程；關視窗 → 行程結束 → server 隨之消失，不會殘留背景。
-  - **唯一真風險**：WebView2 與 tray 都要主執行緒 Win32 message pump，會互搶。解法 = 自寫薄層 `Shell_NotifyIcon` 共用單一 message loop。**故先 spike 驗證事件迴圈，再接後端。**
-- **資料庫還原 = 重啟式（已實作，2026-06-14）**：`POST /api/server/backup/restore` 寫 pending-restore 標記 → 程序重啟 → 開機時於 `openDB` 前 swap（覆蓋前自動存 `prism_pre_restore_*.db`）。重啟協定：supervised（systemd，靠 `INVOCATION_ID` 偵測）走 `os.Exit(42)`；獨立 .exe 走自我 re-exec。**「重啟」僅 Prism 程序重開，非 PC/Pi 重開機。**
-- **備份策略**：**Pi 維持每週自動備份（keep 3）**；**.exe 本機不做自動排程**，使用者自行手動按備份即可。→ 不新增本機 scheduler。
-- **下載備份不留 server-side 記錄（已實作）**：`/backup/download` 改吐暫存快照、傳完即刪；server-side 留存交給 `/backup/rotate`。
-- **設定精簡（hidden sections，已實作）**：`設定 > 部署` 移除「部署安全邊界」「端口設定（PortConfigSection）」「版本更新（UpdateSection）」三區，封裝 .exe 後對使用者無用、在 Pi 上也僅資訊性。**元件檔仍保留**於 `frontend/src/components/settings/`，僅未 render。**復原方式**：在 `SettingsPage.tsx` deploy tab 重新 import 並加回 `<PortConfigSection />` / `<UpdateSection />` 與「部署安全邊界」SectionPanel 即可。部署 tab 現只剩 `ServerDashboardSection`。
-
-**待辦（未施工，待後續設計）**
-- [ ] **.exe 桌面外殼（windowing 技術已拍板，見上方「已定決策」）** — 分階段施工：
-  - [ ] **階段 0：message loop spike**（下一步，進行中）。獨立 `desktop-spike/`（自己的 go.mod，僅 `golang.org/x/sys/windows` syscall，零第三方）：空 Win32 視窗 + tray icon（右鍵 Show / Quit）+ **單一 message loop** 同餵視窗與 tray。驗收：tray 選單有反應、關視窗正常退出、loop 不卡。spike 階段先用普通 console build（看得到 log 好除錯），不引 WebView2。
-  - [ ] **階段 1：接 WebView2**。spike 綠後引 `jchv/go-webview2`，視窗指向 `127.0.0.1:<port>`，沿用同一 message loop。
-  - [ ] **階段 2：接後端 + 單一實例**。同行程 goroutine 起 Go server、named mutex 單一實例（第二次啟動喚醒既有視窗）。
-  - [ ] **階段 3：正式封裝**。切 `-ldflags="-H=windowsgui"`、log 寫檔、關閉=直接結束、close-to-tray 進階選項、開機自啟（registry Run key）。重啟協定（exit 42 / re-exec）在此串接驗證。
-- [x] **本機儀表板硬體讀值修正（Windows）（2026-06-14 完成）**：新增 `go-shadow/hardware_windows.go`，以 kernel32（GetDiskFreeSpaceExW / GlobalMemoryStatusEx / GetTickCount64）讀真實磁碟/記憶體/uptime；`hardware_other.go` build tag 改為 `!linux && !windows`。CPU 溫度在 Windows 維持 N/A（無第三方驅動無可靠 API，誠實回 nil）。regression：`hardware_windows_test.go`。native build/test + linux/arm64 cross-build 皆綠。
-- [ ] **語系（i18n）還原** → 獨立大工，細項見下方專節。與桌面化無關，可獨立排程。
-
----
-
-## i18n（多語系）還原 — 進行中（2026-06-17 更新）
-
-**目標**：中(zh-TW)/英(en)/日(ja)/韓(ko) 四語，於 `設定 > 外觀` 即時切換、localStorage 持久化。
-
-**現況盤點**（`frontend/src/i18n/index.ts`）
-- 2026-06-17 已把 locale 接入 `useAppStore` reactive state；`useTranslation()` 會訂閱 locale 變更並觸發 React 重繪。
-- 2026-06-17 已擴成 zh-TW、en、ja、ko 四語，並在 `設定 > 外觀` 加入語言下拉；語系沿用 `localStorage` key `locale` 持久化。
-- 2026-06-17 已完成 Settings shell / tabs / About 與 AppearanceSection 的第一批 key 化，並移除舊 i18n 字典中的過期 `ai` 區塊。
-- 2026-06-17 已完成第二批 Home shell / Header / Sidebar / FilterStrip / HomePage / NoteCard 字串抽取，並同步補 zh-TW/en/ja/ko 字典；使用者資料（分類、標籤、筆記內容）不翻譯。
-- 2026-06-17 已完成第三批 ReadingView / NoteEditor / editor 子元件與 hooks 字串抽取，包含閱讀面板、編輯器 toolbar/sidebar、附件、圖片管理、history、drag/drop/paste/prompt extraction toast/confirm；使用者內容、分類、標籤、附件標題與筆記標題不翻譯。
-- 2026-06-17 已完成第四批 Prompt Builder 字串抽取，包含頁面 chrome、參數群組、輸出預覽、Wizard、alert/error 與 LLM optimization copy；Prompt Builder 產出的 prompt 內容、API options/templates、分類匹配資料仍保留原文不翻譯。
-- 2026-06-17 已完成第五批 Settings 維護深層 section / server dashboard / backup-restore 字串抽取，包含匯出/匯入/還原資料庫、還原點管理、硬體/日誌/服務管理、維護檢查與資料庫統計；備份檔名、API log line、version/changelog 資料與使用者內容不翻譯。
-- 2026-06-17 已完成第六批 Settings 組織管理（DataManager）字串抽取，包含分類新增/編輯/刪除、標籤 rename/delete/merge、confirm/toast/placeholder/aria-label；使用者自訂分類名稱與標籤名稱不翻譯，刪除分類遷移目標顯示實際 default category 名稱。
-- 2026-06-17 已完成第七批 global API/toast error adapter 字串抽取；axios interceptor 的 network / 5xx fallback toast 走 `apiErrors` 四語 key，後端回傳的 `message` / `error` 仍保留原文優先顯示。
-- 2026-06-17 已完成第八批 remaining hardcoded UI string audit / hidden legacy settings triage。Active UI 待抽：`CommandPalette.tsx`（命令面板群組、命令標題/副標/placeholder/toast/empty）、`SecuritySection.tsx`（CSRF 說明與 toast）、`DangerZoneSection.tsx`（危險區域三組清理 workflow）、shared UI fallback（`ConfirmDialog.tsx` 預設按鈕、`Toast.tsx` / `Modal.tsx` aria label）。Deferred/hidden：`PortConfigSection.tsx`、`UpdateSection.tsx` 仍保留但未由 `SettingsPage` render；`TagInput.tsx` 目前未掛載，先列 legacy/deferred，不阻塞 active i18n 收尾。Allowed non-UI/data literals：Settings tab fallback `label`、Appearance option `name` metadata、Prompt Builder 分類匹配字串、註解與 API/server 動態內容。
-- 2026-06-17 已完成第九批 active UI final 字串抽取，包含 `CommandPalette.tsx`、`SecuritySection.tsx`、`DangerZoneSection.tsx`、shared UI fallback（`ConfirmDialog.tsx` / `Toast.tsx` / `Modal.tsx`）；以上 active UI surface 均已補 zh-TW/en/ja/ko key。Deferred/hidden 與 allowed non-UI/data literals 仍照第八批分類，不阻塞階段 3 active UI 收尾。驗證：`npm run build`、`pytest tests/test_frontend_i18n_settings.py -q`（19 passed）、`pytest tests/ -v`（303 passed）、active UI hardcoded scan 無命中、Chrome rendered smoke（CommandPalette + Settings access，zh-TW/en/ja/ko，0 app console/page errors）、`git diff --check`（僅既有 LF→CRLF warning）。
-- 2026-06-17 已完成階段 5 收尾：缺漏 key 先回 zh-TW fallback，四語都沒有該 key 才回 key 字串並 `console.warn`；`{count} 參數替換` 保留並改成 nullish fallback；新增 namespace-level `TranslationKey` / `TranslationParams` 型別與 `useTranslation()` typed function surface，作為後續固定 key 逐步收斂的 typed guard。全量 deep key union 曾評估但目前字典規模會讓 TypeScript 報 `Type instantiation is excessively deep`，故本輪不採用；動態 key 仍可明確傳入 string。未新增大型 UI 抽字串批次，未改後端/schema/runtime。
-- 2026-06-17 已補預設分類顯示 i18n：只對 DB 名稱完全符合原始 seed 的 5 個分類（`提示詞 | Prompt`、`筆記 | Note`、`教學 | Tutorial`、`資料 | Data`、`靈感 | Inspiration`）做顯示層翻譯；英文顯示純英文。若預設分類名稱已被使用者改過，或是後續新增的自訂分類（例如 `美食 | Gourmet`），語系切換時保留 DB 原文，不自動改字。此規則只改前端 display helper，不改 DB/schema/API。
-- 後續建議：i18n active UI 可以先視為完成；若要繼續產品主線，優先進「Desktop Shell Phase 0 / message loop spike」，而不是再追 hidden legacy i18n。
-
-**施工順序（建議分階段，避免一次全改）**
-- [x] **階段 1 — 修反應式根**（2026-06-17 完成）：locale 已移入 `useAppStore`，新增 `useTranslation()` hook；`t()` / `translate(locale, key)` 保留給非元件與測試場景。
-- [x] **階段 2 — 切換器 + 持久化**（2026-06-17 完成）：`AppearanceSection`（設定 > 外觀）已有四語下拉，沿用 localStorage，切換後 Settings / Appearance 已 key 化區塊即時重繪。
-- [x] **階段 3 — 字串抽取**（2026-06-17 active UI 完成）：已完成第一批 Settings shell / tabs / About / AppearanceSection、第二批 Home shell / Header / Sidebar / FilterStrip / HomePage / NoteCard、第三批 ReadingView / NoteEditor / editor 子元件與 hooks、第四批 Prompt Builder、第五批 Settings 維護深層 section / server dashboard / backup-restore、第六批 Settings 組織管理（DataManager）、第七批 global API/toast error adapter、第八批 remaining hardcoded UI string audit / hidden legacy settings triage、第九批 CommandPalette / Security / DangerZone / shared UI fallback。Hidden/deferred 檔案（PortConfigSection / UpdateSection / TagInput）不阻塞 active UI completion。
-- [x] **階段 4 — 補 ja/ko 字典**（2026-06-17 active UI 完成）：已補第一批 Settings / Appearance key、第二批 Home shell / NoteCard key、第三批 editor / reading key、第四批 promptBuilder key、第五批 Settings 維護/備份/Server Dashboard key、第六批 DataManager key、第七批 API error fallback key、第九批 active UI final key 的 ja/ko；後續若恢復 hidden/deferred UI，再於該 gate 同步補四語。
-- [x] **階段 5 — 收尾**（2026-06-17 完成）：缺漏 key 先回 zh-TW fallback，四語都沒有該 key 才回 key 字串 + `console.warn`；`{count} 參數替換` 已保留；新增 namespace-level `TranslationKey` / `TranslationParams` 型別與 typed `useTranslation()` surface，作為後續固定 key 逐步收斂的 typed guard；全量 deep key union 因 TypeScript 深度限制暫不採用。Hidden/deferred UI 若日後恢復 render，需在該 gate 同步補四語 key。
-
-**注意**：純前端、不動後端/schema。字串抽取會碰大量元件檔，務必分批小 PR，不要一次 mega-diff。
-
----
-
-目前結論：Pi live/default runtime 已切為 Go primary。T045 已移除 Python packaged runtime dependency 與產品啟動路徑；T046-T050 已補齊 2026-06-13 Go 收尾審查列出的 frontend 實際呼叫漏接 surface；T051/T052 已完成 current-truth docs refresh 與 stale tracked artifact cleanup。**T053 已完成 Python backend source 物理刪除與 docs/API/release wording 收斂**：`app.py`/`routes/`/`utils/`/`db.py`/`config.py`/`migrations/`/`templates/` 皆已移除，Go primary 為唯一 runtime，repo 內無 retained-Python 主路徑描述，驗收鏈未斷（純 Go 驗收網 + `go-shadow/main_test.go` + GO-ONLY runtime 測試 + 文件治理）。Go 漸進重構（T001-T053）全數完成；新的工作入口是上方 2026-06-16 Core UX intake、桌面化與 i18n 區塊。
-
-近期完成（2026-06-13 更新）：
-- 2026-06-17 Core UX / Settings wording cleanup 完成：`Settings > About` 對齊 Go primary / SQLite FTS5 current truth；Settings IA 重排為「外觀 / 組織 / 備份與還原 / 維護與健康 / 存取與系統 / 關於」；維護、匯出、匯入、Prism 內建還原點與還原資料庫文案分流。未改 API、schema、runtime、deploy，未恢復 hidden PortConfig / Update / 部署安全邊界。
-- 2026-06-17 CODEX-REVIEW-01 完成：新增 `docs/CODEX-TASK-REVIEW-CHECKLIST.md`，固定 Codex 任務 prompt 欄位、allowed files、forbidden scope、verification、Not Changed 回報格式與硬退回條件；這是 docs-only checklist，不改 agent runtime、API、schema、backend、deploy 或 Pi service。
-- T053 前置 ③ 完成：`tests/test_schema_regression.py` 已就地 REWIRE，schema 真相從 Python（`migrations.run_migrations` / `app.init_db` / conftest `temp_db`）轉為 **Go runtime 自建 DB**，並以 no-Python-backend guard 鎖死；新覆蓋 v15→v16 `editor_layout` normalization（先前無 Go-only 測試覆蓋）。6 passed、pytest 基準維持 527。**T053 前置紅線全部解除**，剩餘僅物理刪除 Python source（待明確 greenlight）＋ ④ 文案。詳見 `docs/T053-test-disposition-plan.md`。
-- T053 前置補強（審查衍生，非新 roadmap）：純 Go 端對端驗收網（`tests/test_go_primary_e2e_pure_go_acceptance.py`）、source/dependency deletion-boundary 與 test-disposition 計畫（`docs/T053-*.md`）已建立；清掉零相依 A 級死碼（`services/`＋7 個一次性腳本）；補齊 5 類 Go unit 覆蓋缺口（notes actions/batch、tags merge、history、CSRF）。CSRF 已由 Python 移植到 Go runtime（`csrfGate` middleware）並新增 **設定 > 資料 > CSRF 防護** 即時開關（`GET/POST /api/system/csrf-protection`，預設開啟，`.csrf_disabled` marker 持久化）。`go test ./...` 55 tests、`pytest` 527 passed。
-- T051/T052 Go primary current-truth refresh 與 stale artifact cleanup 已完成：`docs/contracts/go-primary-route-ownership-manifest.json` 的 production owner 已刷新為 Go primary；API reference / SCHEMA / DEPLOYMENT / DEPLOY-PI / ARCHITECTURE / docs index 明確標示 Python Flask 只剩 legacy source/dev/test context，`/api/system/go-read-routing` 保留為 legacy Flask source-only Phase 19 proof endpoint、不是 Go primary product API。
-- 2026-06-13 Go 收尾審查報告（三份）已全部歸檔到 `docs/development-history/`：`Go重構審查報告-20260613-codex.md`、`Go重構審查報告-20260613-clude-1.md`、`Go重構審查報告-20260613-codex-2.md`。三份的 T046-T052 findings 已掃過並收斂；T053 前只把它們當 Python backend source 封存/刪除 guardrail，current truth 以本檔、contracts 與 API docs 為準。
-- clude-1 / codex-2 兩份的 reconciliation（2026-06-13）：兩份的核心缺口（「本輪沒跑測試、不能拿文件歷史數字當驗收」）已用本輪實跑關閉 —— `pytest tests/ -q` = **527 passed**、`cd go-shadow && go test ./...` = **ok（55 tests）**。其餘 findings 分流：(1) 已完成於本 session（README 過期 fixture 警語、純 Go 端對端驗收網、CSRF parity、A 級死碼）；(2) 已被 T053 plan 接住（Python source 刪除、`go_read_routing` 殘留、schema_regression REWIRE、治理測試 vs 功能測試數量標示）。下列三個 P3 殘留歸入 T053 ④ 文案/清理，避免歸檔後遺失：`tests/test_simple.py`（`assert True` 無 contract 意義，④ 時 DELETE）、`README.md` 專案結構 `upload.py # ... AI metadata 提取`（AI 已 v2.3.0 拔除，應改為 EXIF/PNG prompt metadata 提取）、`docs/contracts/go-primary-route-ownership-manifest.json` 的歷史 `go_candidate` 欄位（production owner 已 Go primary，歷史欄位閱讀上仍易誤判，④ 時降噪或明確標示為歷史 provenance）。
-- 已移除 T052 點名的 tracked stale artifacts：`resources/python-embed.zip`、`resources/wheels/pillow-12.0.0-cp312-cp312-win_amd64.whl`、root `package-lock.json`。目前未發現 tracked Reddit HTML 殘留；未刪 `knowledge.db`、WAL/SHM、`static/uploads`、`docs/attachments`、`docs/notes`、`backups` 或個人歸檔資料。
-- 新增 regression：`tests/test_go_primary_t051_t052_current_truth_cleanup.py` 鎖定 manifest owner refresh、API docs/go-read-routing 決策、SCHEMA/DEPLOYMENT wording、T052 artifact absence 與 TODO handoff。T051/T052 未刪 Python backend source、未改 schema/migration、未動 Pi live data、未擴 public exposure。
-- T046-T050 frontend → Go primary route coverage closure 已完成：新增 `docs/contracts/go-primary-frontend-route-coverage.json`，鎖定 frontend `api.ts` 與 direct `fetch()` 目前呼叫面；Go primary 補 `POST /api/upload/extract-prompt`、長文 `check_separation` / `separate` / separation `restore`、`GET /api/system/check-update`；PromptBuilder 改用 `/api/wizard-options`，且 Go `/static/config/*` 不再 fallback 成 SPA HTML。
-- 新增 regression：`go-shadow/main_test.go` 覆蓋 prompt extraction、long-content separation/restore、check-update controlled response、static config JSON 404；`tests/test_go_primary_t046_t050_frontend_route_coverage.py` 鎖 frontend route coverage、silent catch removal、wizard options API path 與 docs closure。T046-T050 未新增 schema/migration、未擴 public exposure、未清 stale packaging artifacts、未刪 Python backend source。
-- T045 Python packaged runtime deletion gate 已完成：刪除 tracked embedded `python/` runtime、`scripts/start_portable.bat`、`scripts/pack_portable.bat`、`scripts/build_release.py`、舊 Program Files deploy script 與舊日常使用版 packager；`scripts/start_go_primary.ps1` 成為本機 Go primary 啟動入口，`scripts/start.bat`、`start_v2.bat`、`scripts/install.*`、`scripts/pack.bat`、`deploy_to_pi.bat`、`deploy/raspberry_pi/setup.sh` 均改為 Go primary / artifact path，不再安裝 requirements、建立 venv、跑 Flask 或使用 PyInstaller。
-- 新增 artifact：`docs/contracts/go-primary-python-packaged-runtime-deletion.json`。
-- 邊界：T045 沒有刪 `app.py`、`routes/`、`services/`、`utils/`、`workers/`、`migrations/` 或 `requirements*.txt`；這些只保留為 legacy source/dev/test context。2026-06-13 Go 收尾審查後，下一步改為 T046 frontend → Go route coverage；最終 Python source 封存/刪除延後到 T053。
-- 2026-06-13 Go 收尾審查確認並排入 active queue：`POST /api/upload/extract-prompt`、長文 `check_separation` / `separate` / separation `restore`、`GET /api/system/check-update`、PromptBuilder `/static/config/wizard_options.json` legacy load path、Go route ownership manifest/API docs current truth、tracked stale packaging artifacts cleanup。舊 `Prism_Go_模組逐步重構計劃報告.md` 已移入 `docs/development-history/`，只保留歷史脈絡。
-- T042-T044 Go primary live cutover / rollback / soak gates 已完成：新增 `scripts/go_primary_pi_live_ops.ps1`，在 `PI5Mask24` 建立 `prism-go-primary.service`，綁定 `127.0.0.1:5004`，Caddy `https://prism.local` 全量 route 到 Go primary 並以 `X-Prism-Go-Primary: hit` 留證；T042 live full workflow smoke 覆蓋 read/write/upload/import/export/server/migration，Python `prism.service` 在 cutover 後 inactive、不接 Caddy 流量。
-- T043 rollback drill 已完成：從 T042 backup 還原 DB/files，Caddy 暫切 Python rollback route `localhost:5000` 並以 `X-Prism-Python-Rollback: hit` 留證；`scripts/python_live_workflow_smoke.py` 驗證 Python runtime 的 stats/version/create/upload/update/search/export/backup/migration/delete workflow。SQLite online backup 以 backup artifact hash 作 restore 證據，`db_matches_backup=true`，uploads/attachments data hash 回到 pre-cutover。
-- T044 soak window 已完成：T044 second cutover 後重跑 Go full workflow，restore smoke mutation，再跑 5 samples / 10 秒 bounded soak；Go/Caddy error logs 為空，migration pending 為空，Go primary max RSS 19584 KB 低於 retained-Python baseline 44688 KB。final live state：`prism-go-primary.service` active/enabled、`prism.service` inactive、Caddy route 指向 `localhost:5004`。
-- 新增 artifact：`docs/contracts/go-primary-live-cutover.json`、`docs/contracts/go-primary-rollback-drill.json`、`docs/contracts/go-primary-soak-window.json`。
-- 邊界：T042-T044 沒有刪 Python packaged runtime、沒有刪 Python backend source、沒有擴 public bind / public internet exposure；T045 已處理 packaged runtime/startup path，T053 才是 source/docs 最終封存或刪除。
-- T039-T041 Go package/Pi staging gates 已完成：新增 `scripts/go_primary_full_workflow_smoke.py` 作為 HTTP-only full workflow smoke harness，`scripts/smoke_go_primary_package.ps1` 可用 fresh Go-created DB 驗證 Windows package artifact，`scripts/stage_go_primary_pi.ps1` 可將 linux/arm64 artifact 部署到 `PI5Mask24` 的 `prism-go-primary-staging.service`，使用 copied production DB/data 在 `127.0.0.1:5003` 跑 full workflow smoke。
-- 新增 artifact：`docs/contracts/go-primary-windows-package-smoke.json`、`docs/contracts/go-primary-linux-arm64-package-smoke.json`、`docs/contracts/go-primary-pi-staging-unit.json`。
-- 邊界：T039 不讀 production DB；T040/T041 只使用 copied production DB/data 與 staging systemd unit，live DB SHA256 與 Caddyfile SHA256 必須前後不變；T042-T044 已另行完成 live cutover/rollback/soak。
-- T036-T038 Go static/security/full workflow gates 已完成：Go local/copied runtime 現在明確分流 embedded SPA、`/static/uploads` safe serving 與 unknown `/api/*` JSON 404；`/healthz` 宣告無內建 auth/token layer，非 local bind 預設拒絕，upload-url / bad MIME failure fixtures 證明不突變 copied files；full workflow fixture 在 Python 與 Go 跑 create、upload、search、export、import、delete、cleanup、backup、migration 並比對核心 DB/files invariant。
-- 新增 artifact：`docs/contracts/go-primary-static-serving-boundary.json`、`docs/contracts/go-primary-security-parity.json`、`docs/contracts/go-primary-full-workflow-e2e.json`。
-- 邊界：T036-T038 當時未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T039-T041 已另行完成 package/staging proof，T042-T044 已完成 live cutover/rollback/soak；Python packaged runtime deletion 仍需 T045。
-- T032-T035 Go server/system gates 已完成：Go `GET /api/server/version`、`GET /api/system/stats`、`GET /api/server/hardware`、`GET /api/server/logs`、server backup list/download/rotate/delete、port/startup config、safe restart acknowledgement、prompt options CRUD、wizard options CRUD 在 `--enable-server-system` local/copied-DB-and-data 模式下支援本機候選實作。
-- 新增 artifact：`docs/contracts/go-primary-server-status-parity.json`、`docs/contracts/go-primary-backup-management-parity.json`、`docs/contracts/go-primary-port-config-service-parity.json`、`docs/contracts/go-primary-prompt-wizard-options-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T032-T035 不宣告 live/default server/system ownership，也不實際執行 host service restart。
-- T028-T031 Go import/export gates 已完成：Go `POST /api/notes/import/md`、`POST /api/import/json`、`GET /api/export/json`、`GET /api/export/markdown`、`GET /api/export/db`、`POST /api/export/images`、`POST /api/notes/export/batch` 在 `--enable-import-export` local/copied-DB-and-data 模式下支援 Markdown/JSON import、JSON/Markdown export、DB download、images bundle 與 batch markdown/assets zip。
-- 新增 artifact：`docs/contracts/go-primary-markdown-import-parity.json`、`docs/contracts/go-primary-json-import-parity.json`、`docs/contracts/go-primary-json-markdown-export-parity.json`、`docs/contracts/go-primary-db-images-export-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T028-T031 不宣告 live/default import/export ownership，也不涵蓋 server/system、backup management、full workflow E2E 或 Python 刪除。
-- T024-T027 Go upload delete/media cleanup gates 已完成：Go `POST /api/upload/delete` 在 `--enable-upload-delete` local/copied-data 模式下會先檢查 Notes / cover / attachments 引用，避免刪除仍被引用的 original 或 `_thumb.webp` companion；Go `/api/cleanup/orphan-images`、`/api/cleanup/originals`、`/api/cleanup/broken-images` 在 `--enable-media-cleanup` local/copied-DB-and-data 模式下支援 orphan dry-run/delete、originals rewrite/delete、broken image report/fix。
-- 新增 artifact：`docs/contracts/go-primary-upload-delete-parity.json`、`docs/contracts/go-primary-orphan-images-cleanup-parity.json`、`docs/contracts/go-primary-originals-cleanup-parity.json`、`docs/contracts/go-primary-broken-images-cleanup-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T024-T027 不宣告 live/default uploads/media cleanup ownership，也不涵蓋 import/export、server/system 或 Python 刪除。
-- T020-T023 Go files/uploads gates 已完成：Go `GET /api/attachments/<id>?raw=true` 在 `--enable-attachment-raw-read` local/copied-files 模式下支援 text/binary raw serving、MIME 與 Range 邊界；Go `POST /api/upload` 在 `--enable-upload-write` / `--enable-thumbnail-write` local/copied-data 模式下支援原圖寫入、檔名安全、size/magic validation、`_thumb.webp` 與 `thumbnail_only`；Go `POST /api/upload/url` 在 `--enable-upload-url-write` local/copied-data 模式下支援 SSRF/redirect/timeout/Content-Type/magic/stream cap 與 filename hash fallback。
-- 新增 artifact：`docs/contracts/go-primary-attachment-raw-serving-parity.json`、`docs/contracts/go-primary-upload-parity.json`、`docs/contracts/go-primary-thumbnail-generation-parity.json`、`docs/contracts/go-primary-upload-url-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T020-T023 不宣告 live/default files/uploads ownership，也不涵蓋 upload delete、cleanup、import/export、server/system 或 Python 刪除。
-- T019 Go attachments metadata gate 已完成：Go `GET /api/notes/<id>/attachments`、`POST /api/notes/<id>/attachments`、`DELETE /api/attachments/<id>` 在 `--enable-attachment-write` local/copied-DB-and-files 模式下對齊 Python response、Note_Attachments DB state、`docs/attachments` copied file write/delete 與 missing-file delete behavior；`PUT/PATCH /api/attachments/<id>` 目前不是 Python API route，本輪不新增 Go-only update route。
-- 新增 artifact：`docs/contracts/go-primary-attachments-metadata-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T019 不宣告 live/default files ownership，也不涵蓋 raw/binary attachment serving、long-content separate/restore、uploads、import/export、server/system 或 cleanup ownership。
-- T018 Go tags parity gate 已完成：Go `PUT /api/tags/<id>`、`DELETE /api/tags/<id>`、`POST /api/tags/merge` 在 `--enable-tag-write` local/copied-DB 模式下對齊 Python response 與 Tags / Note_Tags DB state；tag creation 不新增 `POST /api/tags`，而是維持現有 notes create/update/batch tags 路徑，並以 route-level `COLLATE NOCASE` 防止 copied/legacy DB 產生大小寫變體重複 tag。
-- 新增 artifact：`docs/contracts/go-primary-tags-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T018 不宣告 live/default taxonomy write ownership，也不涵蓋 attachments、uploads、import/export、server/system 或 cleanup ownership。
-- T016/T017 Go notes history and categories parity gate 已完成：Go `GET /api/notes/<id>/history`、`POST /api/notes/<id>/restore/<history_id>`、`DELETE /api/notes/<id>/history` 在 `--enable-notes-write` local/copied-DB 模式下對齊 Python response 與 Note_History/Notes.content DB state；`POST /api/categories`、`PUT /api/categories/<id>`、`DELETE /api/categories/<id>` 在 `--enable-category-write` local/copied-DB 模式下對齊 Python category create/update/delete/default-delete guard/sort_order/in-use migration behavior。
-- 新增 artifact：`docs/contracts/go-primary-notes-history-parity.json`、`docs/contracts/go-primary-categories-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T016/T017 不宣告 live/default notes 或 taxonomy write ownership，也不涵蓋 tags write/merge、attachments、uploads、import/export、server/system 或 cleanup ownership。
-- T014/T015 Go notes actions and batch type/tags parity gate 已完成：Go `POST /api/notes/<id>/pin`、`POST /api/notes/<id>/archive`、`POST /api/notes/<id>/duplicate`、`PUT /api/notes/reorder`、`POST /api/notes/batch/type`、`POST /api/notes/batch/tags` 在 `--enable-notes-write` local/copied-DB 模式下對齊 Python response、Notes / Note_Tags / Source_Urls DB state、sort_order、variant parent linkage、missing-note、invalid note_ids、invalid category rollback 與 invalid mode validation。
-- 新增 artifact：`docs/contracts/go-primary-notes-actions-parity.json`、`docs/contracts/go-primary-notes-batch-actions-parity.json`。
-- 邊界：`POST /api/notes/batch/archive` 目前不是 Python API route，Python 與 Go 都維持 404；本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T014/T015 不宣告 live/default notes write ownership，也不涵蓋 history restore/delete、upload delete 或 general cleanup ownership。
-- T013 Go notes delete parity gate 已完成：Go `DELETE /api/notes/<id>` 與 `POST /api/notes/batch/delete` 在 `--enable-notes-write` local/copied-DB-and-data 模式下對齊 Python response、Notes/FTS/Note_Tags/Source_Urls/Note_History/Note_Attachments 刪除結果、not-found / empty-list validation、referenced image preserve、original + `_thumb.webp` companion cleanup 與 `_thumb.webp` reference 的 original candidate cleanup。
-- 新增 artifact：`docs/contracts/go-primary-notes-delete-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T013 不宣告 live/default notes write ownership，也不涵蓋 pin/archive/duplicate/reorder、remaining batch type/tags/archive parity closure、history restore/delete、upload delete 或 general cleanup ownership。
-- T011/T012 Go notes read/search/create/update parity gate 已完成：Go `GET /api/notes` 對齊 Python tokenized FTS、remarks、tags、attachment metadata、文字附件 body search、category/tag filters 與 pagination；`POST /api/notes` / `PUT /api/notes/<id>` 在 `--enable-notes-write` local/copied-DB 模式下對齊 default category、tags、source_urls、prompt_params、FTS trigger、history 與 failed update rollback。
-- 新增 artifact：`docs/contracts/go-primary-notes-read-search-parity.json`、`docs/contracts/go-primary-notes-create-update-parity.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；T012 不宣告 live/default notes write ownership，也不涵蓋 delete、actions、batch、history restore/delete 或 media cleanup side effects。
-- T009/T010 Go migration runner safety gate 已完成：Go runtime 可對 local/copied existing DB 依 Python migration order 1→16 升級，支援 duplicate-column / no-such-column idempotent skip、更新 `Schema_Meta`、成功後 pending migrations 為空，並在有 pending migration 前於 data-dir `backups/` 建立 pre-migrate backup。
-- 新增 artifact：`docs/contracts/go-primary-existing-db-migration-runner.json`、`docs/contracts/go-primary-migration-backup-rollback.json`。
-- 邊界：本輪未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，未移除 Python；live/normal migration owner 仍保留 Python，Go migration runner 僅作 local/copied DB proof。
-- T008 Go fresh DB init 已完成：Go runtime 在明確 `--data-dir` 內指定缺檔 dev DB 時，會建立 Prism v16 current schema、必要索引、`Notes_FTS` + triggers、預設分類、歡迎筆記與 `Schema_Meta schema_version=16`，完成後預設回到 SQLite `query_only`。
-- 新增 artifact：`docs/contracts/go-primary-fresh-db-init.json`。
-- 邊界：本輪未實作 existing DB migration runner / failed migration rollback / backup-before-migrate，未部署 Pi，未改 Caddy / systemd / frontend default routing，未碰 production DB/files，Python 仍是正式 runtime。
-- T007 SQLite connection owner gate 已完成：Go runtime 透過 `openSQLiteOwner` 與 modernc `_pragma` DSN 為每條 SQLite connection 設定 WAL、5000ms busy timeout、預設 read-only `query_only` 與 write-mode transaction helper。
-- 新增 artifact：`docs/contracts/go-primary-sqlite-connection-owner.json`。
-- 邊界：本輪未實作 fresh DB init / migration runner，未 promoted live Go route ownership，未改 Pi / Caddy / systemd / frontend default routing，未碰 production DB/files，Python 仍是正式 runtime。
-- T004-T006 foundation gates 已完成：route ownership manifest、可重用 Python-vs-Go route parity fixture harness、以及 Go external data-dir/config root parity。
-- 新增 artifact：`docs/contracts/go-primary-route-ownership-manifest.json`、`docs/contracts/go-primary-parity-fixture-harness.json`、`docs/contracts/go-primary-runtime-config-data-dir.json`。
-- 邊界：本輪未 promoted 任何 route 成 live Go owner，未改 Pi / Caddy / systemd / frontend default routing，未碰 production DB/files，Python 仍是正式 runtime。
-
-| ID | 任務 | 依賴 | 契約 | 結構依據 | 驗收標準 | 狀態 |
-|---|---|---|---|---|---|---|
-| T001 | 將舊 `docs/TODO.md` 完整歸檔到 development-history，active TODO 只保留目前 roadmap | - | CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | ARCH-GO-PRIMARY-00 / development-history README | 歸檔檔存在且包含原 phase 歷史；active TODO 不再混入舊 phase 長文 | Done |
-| T002 | 建立 Go primary runtime 契約索引 `docs/CONTRACTS.md` | T001 | CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | ARCH-GO-PRIMARY-00 | TODO 中每個契約名稱都能在 `docs/CONTRACTS.md` 找到 | Done |
-| T003 | 在 `docs/ARCHITECTURE.md` 補 Go primary runtime 目標拓樸與切換邊界 | T002 | CONTRACT-GO-PRIMARY-ARCHITECTURE | ARCH-GO-PRIMARY-00 / ARCH-GO-PRIMARY-09 | 架構文件明確區分 current retained-Python 與 target Go-primary runtime | Done |
-| T004 | 建立 Flask route ownership manifest，列出所有正式 API route、HTTP method、Python handler、資料庫與檔案副作用 | T003 | CONTRACT-GO-PRIMARY-ROUTE-OWNERSHIP | ARCH-GO-PRIMARY-01 | manifest 覆蓋 Flask `url_map` 全部 route；缺 Go owner 的 route 標示 Python-owned；見 `docs/contracts/go-primary-route-ownership-manifest.json` | Done |
-| T005 | 建立 Python-vs-Go route parity fixture harness，固定 status code、JSON shape、DB mutation 與檔案 mutation 比對格式 | T004 | CONTRACT-GO-PRIMARY-PARITY | ARCH-GO-PRIMARY-01 / ARCH-GO-PRIMARY-02 | 可對任一 route 宣告 fixture，測試能同時跑 Python 與 Go 並輸出差異；見 `docs/contracts/go-primary-parity-fixture-harness.json` | Done |
-| T006 | 實作 Go runtime config 與 external data dir parity，統一 DB、uploads、attachments、logs、backups 路徑解析 | T005 | CONTRACT-GO-PRIMARY-CONFIG | ARCH-GO-PRIMARY-02 | Go 在 copied data dir 可讀寫所有必要路徑；拒絕未指定或逃逸路徑；見 `docs/contracts/go-primary-runtime-config-data-dir.json` | Done |
-| T007 | 實作 Go SQLite connection owner，支援 WAL、busy timeout、transaction helper 與 write-mode 開關 | T006 | CONTRACT-GO-PRIMARY-DB | ARCH-GO-PRIMARY-02 / SCHEMA: SQLite WAL | Go write-mode 測試證明 transaction commit/rollback 與 Python 行為一致；見 `docs/contracts/go-primary-sqlite-connection-owner.json` | Done |
-| T008 | 實作 Go fresh DB init，建立全新 Prism DB schema 與必要初始資料 | T007 | CONTRACT-GO-PRIMARY-MIGRATIONS | SCHEMA: 全資料表 / ARCH-GO-PRIMARY-03 | 空 data dir 啟動後可建立 DB；Schema_Meta current version 正確；見 `docs/contracts/go-primary-fresh-db-init.json` | Done |
-| T009 | 實作 Go existing DB migration runner，對齊 Python migration order、idempotent skip 與 Schema_Meta 更新 | T008 | CONTRACT-GO-PRIMARY-MIGRATIONS | SCHEMA: Schema_Meta / ARCH-GO-PRIMARY-03 | 從舊版 fixture 升級到 latest；pending migrations 為空；重跑不重複套用；見 `docs/contracts/go-primary-existing-db-migration-runner.json` | Done |
-| T010 | 實作 Go failed migration rollback 與 backup-before-migrate | T009 | CONTRACT-GO-PRIMARY-MIGRATIONS | ARCH-GO-PRIMARY-03 / DEPLOY-PI backup flow | 故意失敗 migration 會保留 pre-migrate backup，DB 不留下半套 schema；見 `docs/contracts/go-primary-migration-backup-rollback.json` | Done |
-| T011 | 實作 Go `GET /api/notes` 完整 read/search parity，包含 FTS、關聯欄位、文字附件搜尋與 pagination | T007 | CONTRACT-GO-PRIMARY-NOTES | SCHEMA: Notes / Notes_FTS / Note_Tags / Source_Urls | Python-vs-Go fixture 覆蓋空查詢、關鍵字、tag/category/filter、pagination，結果一致；見 `docs/contracts/go-primary-notes-read-search-parity.json` | Done |
-| T012 | 實作 Go notes create/update，包含 category、tags、source_urls、content、timestamps 與 validation | T011 | CONTRACT-GO-PRIMARY-NOTES | SCHEMA: Notes / Note_Tags / Source_Urls | 建立與更新後 DB state、response JSON、FTS 更新與 rollback 測試一致；見 `docs/contracts/go-primary-notes-create-update-parity.json` | Done |
-| T013 | 實作 Go notes delete，包含單筆刪除、batch delete 與 referenced image cleanup decision | T012 | CONTRACT-GO-PRIMARY-NOTES | ARCH-GO-PRIMARY-04 / SCHEMA: Notes | 刪除 note 後 DB 關聯、FTS、history、圖片引用計數與 companion `_thumb.webp` 處理一致；見 `docs/contracts/go-primary-notes-delete-parity.json` | Done |
-| T014 | 實作 Go notes actions：pin、archive、duplicate、reorder | T012 | CONTRACT-GO-PRIMARY-NOTES | SCHEMA: Notes | 每個 action 的 response、排序欄位、時間欄位與 DB mutation parity 通過；見 `docs/contracts/go-primary-notes-actions-parity.json` | Done |
-| T015 | 實作 Go notes batch actions：type、tags（batch delete 已由 T013 覆蓋；batch archive 目前不是 Python API route） | T013 | CONTRACT-GO-PRIMARY-NOTES | SCHEMA: Notes / Note_Tags | 批次成功、部分失敗、空 id、rollback/no partial write fixtures 通過；見 `docs/contracts/go-primary-notes-batch-actions-parity.json` | Done |
-| T016 | 實作 Go notes history list、restore、delete-history | T012 | CONTRACT-GO-PRIMARY-NOTES | SCHEMA: Notes history tables | history 讀取、還原、刪除與原 Python response/DB state 一致；見 `docs/contracts/go-primary-notes-history-parity.json` | Done |
-| T017 | 實作 Go categories create/update/delete/default/sort ownership | T007 | CONTRACT-GO-PRIMARY-TAXONOMY | SCHEMA: Categories / Notes.category_id | category CUD、default fallback、duplicate、in-use delete、sort fixtures 通過；見 `docs/contracts/go-primary-categories-parity.json` | Done |
-| T018 | 實作 Go tags create/update/delete/merge ownership，包含 NOCASE 與 Note_Tags 關聯維護 | T017 | CONTRACT-GO-PRIMARY-TAXONOMY | SCHEMA: Tags / Note_Tags | tag CUD/merge fixtures 覆蓋大小寫重複、in-use delete、merge rollback，結果一致；見 `docs/contracts/go-primary-tags-parity.json` | Done |
-| T019 | 實作 Go attachments metadata list/create/update/delete ownership | T007 | CONTRACT-GO-PRIMARY-FILES | SCHEMA: Attachments / ARCH-GO-PRIMARY-04 | attachment metadata DB mutation 與檔案存在性 validation parity 通過；update route 目前不是 Python API，見 `docs/contracts/go-primary-attachments-metadata-parity.json` | Done |
-| T020 | 實作 Go attachment raw/text/binary serving，包含 MIME、range 或 download 行為邊界 | T019 | CONTRACT-GO-PRIMARY-FILES | ARCH-GO-PRIMARY-04 | text、binary、missing、unsafe path、unsupported type fixtures 與 Python 行為一致；見 `docs/contracts/go-primary-attachment-raw-serving-parity.json` | Done |
-| T021 | 實作 Go multipart `POST /api/upload` live-owner candidate，包含原圖寫入、檔名安全、size limit、MIME/magic validation | T020 | CONTRACT-GO-PRIMARY-UPLOADS | ARCH-GO-PRIMARY-04 | jpg/png/webp/gif、bad MIME、oversize、path traversal、rollback/no orphan file fixtures 通過；見 `docs/contracts/go-primary-upload-parity.json` | Done |
-| T022 | 實作 Go thumbnail generation live-owner candidate，取代 helper-only 模式並覆蓋 `_thumb.webp`、max width、quality、thumbnail_only | T021 | CONTRACT-GO-PRIMARY-UPLOADS | ARCH-GO-PRIMARY-04 | upload/upload-url/import 產生 thumbnail 的 output 與現行契約一致，不依賴 Pillow；見 `docs/contracts/go-primary-thumbnail-generation-parity.json` | Done |
-| T023 | 實作 Go `POST /api/upload/url`，包含 SSRF、redirect、timeout、Content-Type、magic、stream cap 與 filename hash fallback | T022 | CONTRACT-GO-PRIMARY-UPLOADS | ARCH-GO-PRIMARY-04 / ARCH-GO-PRIMARY-08 | local/remote fixture 覆蓋 private IP、redirect、oversize、bad MIME、thumbnail_only，無未清檔案；見 `docs/contracts/go-primary-upload-url-parity.json` | Done |
-| T024 | 實作 Go upload delete，包含 original、thumbnail companion 與 DB/reference 檢查 | T023 | CONTRACT-GO-PRIMARY-UPLOADS | ARCH-GO-PRIMARY-04 | referenced file 不誤刪；unreferenced original 與 `_thumb.webp` 清理一致；見 `docs/contracts/go-primary-upload-delete-parity.json` | Done |
-| T025 | 實作 Go orphan images scan/delete cleanup | T024 | CONTRACT-GO-PRIMARY-MEDIA-CLEANUP | ARCH-GO-PRIMARY-04 | 掃描 uploads 後只刪真正 orphan；dry-run 與 delete mode fixture 通過；見 `docs/contracts/go-primary-orphan-images-cleanup-parity.json` | Done |
-| T026 | 實作 Go originals cleanup，處理 thumbnail-only 與原圖保留/刪除規則 | T025 | CONTRACT-GO-PRIMARY-MEDIA-CLEANUP | ARCH-GO-PRIMARY-04 | originals cleanup 對 referenced、unreferenced、thumbnail_only 檔案結果一致；見 `docs/contracts/go-primary-originals-cleanup-parity.json` | Done |
-| T027 | 實作 Go broken images scan/fix cleanup | T026 | CONTRACT-GO-PRIMARY-MEDIA-CLEANUP | ARCH-GO-PRIMARY-04 / SCHEMA: Notes.content | broken image 報告、修復後 Markdown/DB state 與 Python 行為一致；見 `docs/contracts/go-primary-broken-images-cleanup-parity.json` | Done |
-| T028 | 實作 Go Markdown import，包含 local image bundling、remote image download、source URLs、tags/categories mapping | T023 | CONTRACT-GO-PRIMARY-IMPORT-EXPORT | ARCH-GO-PRIMARY-05 / SCHEMA: Notes | Markdown import fixture 覆蓋文字、metadata、本機圖、遠端圖、rollback，結果一致；見 `docs/contracts/go-primary-markdown-import-parity.json` | Done |
-| T029 | 實作 Go JSON import，包含 existing id、duplicate、attachments/uploads restore 與 rollback | T028 | CONTRACT-GO-PRIMARY-IMPORT-EXPORT | ARCH-GO-PRIMARY-05 / SCHEMA: 全資料表 | JSON import fixture 覆蓋完整備份還原、衝突、失敗 no partial write；見 `docs/contracts/go-primary-json-import-parity.json` | Done |
-| T030 | 實作 Go JSON/Markdown export，包含 notes、tags、categories、attachments、uploads references | T029 | CONTRACT-GO-PRIMARY-IMPORT-EXPORT | ARCH-GO-PRIMARY-05 | export 內容、檔名、metadata、排序與 Python output fixture 一致；見 `docs/contracts/go-primary-json-markdown-export-parity.json` | Done |
-| T031 | 實作 Go DB/images export，產出可還原的 DB backup 與 images bundle | T030 | CONTRACT-GO-PRIMARY-IMPORT-EXPORT | ARCH-GO-PRIMARY-05 / DEPLOY-PI backup flow | 匯出的 DB/images 可在 fresh data dir restore 並通過 smoke；見 `docs/contracts/go-primary-db-images-export-parity.json` | Done |
-| T032 | 實作 Go server version/status/hardware/logs API | T007 | CONTRACT-GO-PRIMARY-SERVER-SYSTEM | ARCH-GO-PRIMARY-06 | `/api/server/version`、status、hardware、logs response shape 與 local/copied fixture 通過；見 `docs/contracts/go-primary-server-status-parity.json` | Done |
-| T033 | 實作 Go backup list/create/download/delete/rotate API | T031 | CONTRACT-GO-PRIMARY-SERVER-SYSTEM | ARCH-GO-PRIMARY-06 / DEPLOY-PI backup flow | backup 建立、下載、刪除、保留數、路徑安全 fixtures 通過；見 `docs/contracts/go-primary-backup-management-parity.json` | Done |
-| T034 | 實作 Go port/config/service availability API，取代 Python server ops surface | T032 | CONTRACT-GO-PRIMARY-SERVER-SYSTEM | ARCH-GO-PRIMARY-06 | local/copied fixture 證明 port/config/status 行為一致且不需 Python service；見 `docs/contracts/go-primary-port-config-service-parity.json` | Done |
-| T035 | 實作 Go prompt/wizard/options runtime surface，若仍有 Python-owned 設定 route 則全部補齊 | T034 | CONTRACT-GO-PRIMARY-SERVER-SYSTEM | ARCH-GO-PRIMARY-06 / SCHEMA: App settings | route ownership manifest 中 prompt/wizard/options 類 route 有 Go local candidate 標記；見 `docs/contracts/go-primary-prompt-wizard-options-parity.json` | Done |
-| T036 | 實作 Go embedded SPA 與 static/uploads serving 邊界，Caddy 可只代理 Go 或由 Caddy serve static/uploads | T006 | CONTRACT-GO-PRIMARY-STATIC-SERVING | ARCH-GO-PRIMARY-07 | fresh artifact 可載入 SPA、API fallback 不混淆、uploads static 路徑安全；見 `docs/contracts/go-primary-static-serving-boundary.json` | Done |
-| T037 | 補 Go security parity：localhost/public exposure policy、path traversal、SSRF、MIME、size、auth absence warning | T023 | CONTRACT-GO-PRIMARY-SECURITY | ARCH-GO-PRIMARY-08 | security fixtures 與 docs 明確鎖住 public exposure 邊界；危險輸入不突變 DB/files；見 `docs/contracts/go-primary-security-parity.json` | Done |
-| T038 | 建立 full workflow E2E：create、upload、search、export、import、delete、cleanup、backup、migration | T035 | CONTRACT-GO-PRIMARY-PARITY | ARCH-GO-PRIMARY-09 | Python 與 Go 對同一 fixture 跑完整工作流，核心 response、DB、files invariant 一致；見 `docs/contracts/go-primary-full-workflow-e2e.json` | Done |
-| T039 | 建立 Go primary Windows package smoke，不含 Python/venv/Flask/PyInstaller runtime 依賴 | T038 | CONTRACT-GO-PRIMARY-PACKAGING | ARCH-GO-PRIMARY-09 | fresh checkout/build artifact 在沒有 Python venv 的環境通過 local smoke；見 `docs/contracts/go-primary-windows-package-smoke.json` | Done |
-| T040 | 建立 Go primary linux/arm64 package smoke，不含 Python/venv runtime 依賴 | T039 | CONTRACT-GO-PRIMARY-PACKAGING | ARCH-GO-PRIMARY-09 | linux/arm64 artifact 可在 copied data dir 啟動並通過 full workflow smoke；見 `docs/contracts/go-primary-linux-arm64-package-smoke.json` | Done |
-| T041 | 建立 Pi staging Go primary unit，使用 copied production DB/data，不改 live Caddy default | T040 | CONTRACT-GO-PRIMARY-DEPLOY-CUTOVER | ARCH-GO-PRIMARY-09 / DEPLOY-PI | Pi staging service active；copied DB/data full smoke 通過；live DB SHA256 不變；見 `docs/contracts/go-primary-pi-staging-unit.json` | Done |
-| T042 | 執行 Pi live Go primary cutover：backup、systemd primary switch、Caddy route switch、frontend default API 驗證 | T041 | CONTRACT-GO-PRIMARY-DEPLOY-CUTOVER | ARCH-GO-PRIMARY-09 / DEPLOY-PI | live smoke 覆蓋 read/write/upload/import/export/server/migration；Python service 不接流量；見 `docs/contracts/go-primary-live-cutover.json` | Done |
-| T043 | 執行 rollback drill：從 Go primary 還原 Python runtime、Caddy、systemd、DB/files backup | T042 | CONTRACT-GO-PRIMARY-ROLLBACK | ARCH-GO-PRIMARY-09 / DEPLOY-PI | rollback 後 live smoke 通過；DB/files hash 或 restore evidence 完整；見 `docs/contracts/go-primary-rollback-drill.json` | Done |
-| T044 | 完成 Go primary soak window，監看 logs、memory、DB WAL、uploads、backup、cleanup 無回歸 | T042 | CONTRACT-GO-PRIMARY-DEPLOY-CUTOVER | ARCH-GO-PRIMARY-09 | soak 期間無新 error；核心 workflow 重跑通過；memory 不高於 retained-Python baseline；見 `docs/contracts/go-primary-soak-window.json` | Done |
-| T045 | 刪除 Python packaged runtime 依賴與啟動路徑，保留 Python source 僅作 legacy 或完全移除 | T044, T043 | CONTRACT-GO-PRIMARY-PYTHON-DELETION | ARCH-GO-PRIMARY-10 | `python/` embedded runtime 與 Python portable/PyInstaller/startup scripts 已移除；product start/deploy/package path 改走 Go primary；見 `docs/contracts/go-primary-python-packaged-runtime-deletion.json` | Done |
-| T046 | 建立 frontend → Go primary route coverage 與漏接 surface contract，鎖定所有前端實際呼叫 | T045 | CONTRACT-GO-PRIMARY-ROUTE-OWNERSHIP | ARCH-GO-PRIMARY-01 / ARCH-GO-PRIMARY-09 | 已掃描 `frontend/src/services/api.ts` 與 direct `fetch()` 的 `/api` / `/static/config` 呼叫；`docs/contracts/go-primary-frontend-route-coverage.json` 鎖住 T047-T050 closure，regression 防止 Go primary API/static fallback 藏漏接 | Done |
-| T047 | 補 Go primary `POST /api/upload/extract-prompt` 或明確前端降級，避免 Prompt metadata detection 靜默失效 | T046 | CONTRACT-GO-PRIMARY-UPLOADS | ARCH-GO-PRIMARY-04 / ARCH-GO-PRIMARY-09 | Go primary 新增 `POST /api/upload/extract-prompt`，支援 bounded upload-root metadata read 與 PNG prompt text extraction；missing/disabled route 回 controlled JSON；`go-shadow/main_test.go` 覆蓋 | Done |
-| T048 | 補 Go primary 長文自動分離/還原 surface，或在 UI 明確標示不支援，避免儲存後 silent fail | T046 | CONTRACT-GO-PRIMARY-NOTES | ARCH-GO-PRIMARY-04 / ARCH-GO-PRIMARY-09 | Go primary 新增 `check_separation` / `separate` / separation `restore`，使用 `PRISM_GO_DATA_DIR/docs/notes`；auto-extracted attachment text reader 支援 `docs/notes`；`useNoteForm` 分離失敗改 toast warning | Done |
-| T049 | 補 Go primary `GET /api/system/check-update` 或移除/改寫 Settings 更新檢查入口與錯誤文案 | T046 | CONTRACT-GO-PRIMARY-SERVER-SYSTEM | ARCH-GO-PRIMARY-06 / ARCH-GO-PRIMARY-09 | Go primary 新增 `GET /api/system/check-update` controlled no-source response；Settings 404 會顯示 API 尚未支援而非 network failure；regression 覆蓋 | Done |
-| T050 | 將 PromptBuilder wizard options 從 legacy `/static/config/wizard_options.json` 收斂到 Go primary 支援路徑 | T046 | CONTRACT-GO-PRIMARY-STATIC-SERVING | ARCH-GO-PRIMARY-07 / ARCH-GO-PRIMARY-09 | PromptBuilder 改用 `/api/wizard-options`；Go `/static/config/*` 回 JSON 404 不 fallback SPA HTML；unknown `/api/*` 仍 JSON 404 | Done |
-| T051 | 刷新 route ownership manifest、API reference、SCHEMA/DEPLOYMENT wording，對齊 Go primary current truth | T047, T048, T049, T050 | CONTRACT-GO-PRIMARY-ROUTE-OWNERSHIP | ARCH-GO-PRIMARY-01 / ARCH-GO-PRIMARY-10 | `docs/contracts/go-primary-route-ownership-manifest.json` 不再把已 Go-primary live/default 的 surface 標成 current Python production owner；API docs 將 Go shadow/Python-owner 舊語句降為 historical/source context；`go-read-routing` 舊狀態端點明確決議為 legacy Flask source-only，留到 T053 處理 | Done |
-| T052 | 確認並清理 tracked stale packaging/root artifacts，避免與 T045 no-Python-package truth 衝突 | T051 | CONTRACT-GO-PRIMARY-PACKAGING | ARCH-GO-PRIMARY-09 / ARCH-GO-PRIMARY-10 | 已移除 `resources/python-embed.zip`、`resources/wheels/pillow-12.0.0-*.whl`、root `package-lock.json`；未發現 tracked Reddit HTML 殘留；未刪 `knowledge.db`、`static/uploads`、`docs/attachments`、`docs/notes`、`backups` 或個人歸檔資料 | Done |
-| T053 | 最終刪除或封存 Python backend source，更新 docs/API、deploy、release wording 為 Go primary runtime | T047, T048, T049, T050, T051, T052 | CONTRACT-GO-PRIMARY-PYTHON-DELETION | ARCH-GO-PRIMARY-10 | repo 搜尋不再有 production startup 依賴 Python backend；文件沒有 retained-Python 主路徑描述；Python source/dev/test context 已移除或封存且不破壞驗證鏈 | Done |
+- `docs/development-history/go-primary-runtime-completion-20260617.md`：T001-T053 Go primary migration 完成敘事、artifact 與完整任務表。
+- `docs/development-history/desktop-backup-i18n-handoff-20260617.md`：2026-06-14 local desktop / backup / dashboard handoff、2026-06-17 Core UX 與 i18n 詳細完成記錄。
+- `docs/development-history/todo-archive-pre-go-primary-runtime-migration-20260606.md`：Go primary runtime migration active roadmap 前的完整 `docs/TODO.md` 原文歸檔。
+- `docs/development-history/todo-changelog.md`：長版版本歷程。
+- `docs/development-history/todo-completed-phases.md`：更早期完成 phase 與歷史工作清單。
