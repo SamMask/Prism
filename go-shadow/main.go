@@ -85,6 +85,7 @@ var (
 	encodeUploadThumbnail                          = encodeThumbnailWebP
 	uploadNow                                      = time.Now
 	staticUploadReferencePattern                   = regexp.MustCompile(`/static/uploads/([^[:space:])\]"'>]+)`)
+	desktopShellDefault                            = "0"
 )
 
 type server struct {
@@ -170,7 +171,7 @@ func main() {
 	enableServerSystem := flag.Bool("enable-server-system", envBool("PRISM_GO_ENABLE_SERVER_SYSTEM"), "enable local/copied-DB-and-data server/system/config parity candidate")
 	thumbnailInput := flag.String("thumbnail-input", "", "encode this local image file as a Prism WebP thumbnail and exit")
 	thumbnailOutput := flag.String("thumbnail-output", "", "thumbnail output path for --thumbnail-input")
-	desktopShell := flag.Bool("desktop-shell", false, "run Prism as a Windows desktop shell with WebView2, tray, and an in-process Go runtime")
+	desktopShell := flag.Bool("desktop-shell", desktopShellDefaultEnabled(), "run Prism as a Windows desktop shell with WebView2, tray, and an in-process Go runtime")
 	desktopWebViewOnly := flag.Bool("desktop-webview-only", false, "run only the Windows WebView2/tray shell with a placeholder page")
 	desktopShellSmoke := flag.Bool("desktop-shell-smoke", false, "start the desktop runtime host, wait for /healthz, then shut it down without opening WebView2")
 	desktopSelfTest := flag.Bool("desktop-self-test", false, "close the desktop shell automatically after a bounded message-loop self-test")
@@ -203,6 +204,13 @@ func main() {
 		return
 	}
 
+	if (*desktopShell || *desktopShellSmoke) && strings.TrimSpace(*dataDir) == "" {
+		defaultDataDir, err := defaultDesktopDataDir()
+		if err != nil {
+			log.Fatal(err)
+		}
+		*dataDir = defaultDataDir
+	}
 	if (*desktopShell || *desktopShellSmoke) && strings.TrimSpace(*dbPath) == "" && strings.TrimSpace(*dataDir) != "" {
 		*dbPath = filepath.Join(*dataDir, "prism_desktop_dev.db")
 	}
@@ -256,6 +264,10 @@ func main() {
 	// termination (os.Exit with the restart code, or re-exec). Block here so main
 	// does not fall through and exit 0 first, which would suppress the restart.
 	select {}
+}
+
+func desktopShellDefaultEnabled() bool {
+	return strings.TrimSpace(desktopShellDefault) == "1" || envBool("PRISM_DESKTOP_SHELL_DEFAULT")
 }
 
 func newRuntimeServer(cfg runtimeConfig) (*server, func(), error) {

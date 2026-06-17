@@ -30,6 +30,15 @@ go run . --desktop-shell --data-dir D:\PrismData --addr 127.0.0.1:5015
 
 `--desktop-shell` starts the Go primary runtime in the same process, waits for `/healthz`, then opens WebView2 at the local runtime URL. The default fresh desktop DB is `prism_desktop_dev.db` under the data dir so the production-like `knowledge.db` guard remains intact. Use `scripts/build_desktop_shell.ps1` to build `PrismDesktop-debug.exe` and `Prism.exe` (`-H=windowsgui`).
 
+Desktop Shell Phase 4 adds the portable Windows package:
+
+```powershell
+..\scripts\build_desktop_portable.ps1
+..\scripts\smoke_desktop_portable.ps1
+```
+
+The portable folder/zip contains `Prism.exe`, `PrismDesktop-debug.exe`, and `README-PORTABLE.md`. These desktop artifacts are linked with `main.desktopShellDefault=1`, so `Prism.exe` starts the desktop shell directly when double-clicked. If no `--data-dir` is passed, Windows desktop mode uses `%LOCALAPPDATA%\Prism\DesktopData`; the package folder must not contain user DB/WAL/SHM files. Installer and auto-updater work remains deferred.
+
 ## Scope
 
 Included endpoints:

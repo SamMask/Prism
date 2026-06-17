@@ -11,6 +11,7 @@
 - 2026-06-16 Core UX intake 已吸收；已完成項與 2026-06-14/06-17 handoff 快照見 `docs/development-history/desktop-backup-i18n-handoff-20260617.md`。
 - 2026-06-17 Core UX / Maintenance 三個 candidate 已完成：搜尋可解釋性 UX、search integrity diagnostics + 手動 FTS rebuild、maintenance health overview。未新增 semantic search、SearchHistory DB、自動修復、schema/API exposure boundary 或 Pi deploy 變更。
 - 2026-06-17 Server Dashboard Windows 硬體顯示已收斂：Windows 不顯示 CPU 溫度 N/A 卡，改以系統運行卡補位；Pi/Linux 有溫度讀值時仍顯示 CPU 溫度。
+- 2026-06-17 Desktop Shell Phase 0-6 已完成：Windows desktop shell、direct `Prism.exe` GUI artifact、portable zip/folder、clean-unzip smoke、installer/updater deferred、Pi deployment boundary unchanged。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
 Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
@@ -23,7 +24,7 @@ Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/A
 
 本路線只處理 Windows 桌面殼與封裝體驗；Pi 部署仍維持 Go primary artifact + systemd + Caddy，不引入 WebView2、tray、installer 或 Windows GUI 假設。
 
-下一個可施工入口是 Phase 4。Phase 0-3 是已完成證據；Phase 4+ 先是規劃候選，promote 前必須補或更新 `docs/CONTRACTS.md` contract、targeted tests 與 handoff。
+下一個可施工入口是 Desktop Shell post-package manual acceptance。Phase 0-6 是已完成證據；後續若要做 installer / updater，必須另開決策 gate，不得直接引入 installer stack。
 
 已定桌面化產品決策：
 
@@ -81,34 +82,39 @@ Contract：`CONTRACT-DESKTOP-SHELL-UX-HARDENING`（見 `docs/CONTRACTS.md`）。
 - [x] Windows CPU 溫度維持隱藏策略；Dashboard 空位由系統運行 / uptime 類資訊補位，不新增 Windows-only sensor dependency。
 - [x] 驗收：`scripts/build_desktop_shell.ps1 -Mode Both` 通過，bounded WebView2/tray self-test 通過，runtime smoke 會建立 desktop log。
 
-#### Phase 4 — Portable Windows package（下一個可施工）
+#### Phase 4 — Portable Windows package（2026-06-17 完成）
 
 目標：產出不需安裝的 portable Windows release artifact，先滿足「直接執行檔」需求。
 
-- [ ] build script 產出 portable zip / folder：`Prism.exe`、必要靜態資源、README、預設 config / data-dir 說明。
-- [ ] 第一次啟動可建立或選用 external data-dir；不得把使用者資料寫進 repo 或 build artifact 內。
-- [ ] package smoke 必須從乾淨目錄啟動、建立 fresh DB、進入 WebView2、完成基本 note workflow、退出後資料仍在 data-dir。
-- [ ] 明確記錄 WebView2 Runtime 前置條件：若系統缺 WebView2 Runtime，顯示可診斷錯誤；不在本 phase 內做 bootstrap installer。
-- [ ] 不做 MSI/NSIS/WiX installer、不做 auto updater、不改 Pi deploy。
-- [ ] 驗收：clean unzip run、無終端機、可建立資料、重開資料仍存在、log 可定位、artifact 不包含本機 production DB。
+- [x] `scripts/build_desktop_portable.ps1` 產出 portable zip / folder：`Prism.exe`、`PrismDesktop-debug.exe`、`README-PORTABLE.md`。
+- [x] Desktop build 以 `main.desktopShellDefault=1` link-time flag 讓 `Prism.exe` 直接進 Windows desktop shell；一般 `go run` / Pi artifact 不受影響。
+- [x] 第一次啟動使用 external data-dir；未指定時落到 `%LOCALAPPDATA%\Prism\DesktopData`，不得把使用者資料寫進 repo 或 build artifact 內。
+- [x] `scripts/smoke_desktop_portable.ps1` 從乾淨 unzip 目錄啟動 debug artifact，使用獨立 external data-dir，建立 fresh DB，跑 desktop runtime health + basic note create/search workflow，確認 DB/log 仍在 data-dir。
+- [x] `docs/desktop/README-PORTABLE.md` 記錄 WebView2 Runtime 前置條件；本 phase 不做 bootstrap installer。
+- [x] 不做 MSI/NSIS/WiX installer、不做 auto updater、不改 Pi deploy。
+- [x] 驗收：portable smoke、GUI `-H=windowsgui` build flag、artifact 無 bundled DB、desktop log 可定位。
 
-#### Phase 5 — Installer / updater decision gate（deferred）
+#### Phase 5 — Installer / updater decision gate（2026-06-17 完成）
 
 目標：只在 portable artifact 已穩定後，再決定是否值得做安裝包。預設不做，除非後續需求明確。
 
-- [ ] 先列出 installer 必要性：Start Menu、檔案關聯、自動安裝 WebView2 Runtime、移除程式、更新流程。
-- [ ] 若需要 installer，再比較 NSIS / WiX / MSIX；不得未經決策直接引入 installer stack。
-- [ ] Auto updater 另開 security / rollback gate；不得與 installer 第一版混做。
-- [ ] 驗收：產出決策文件與最小 installer contract；沒有通過前，portable zip 是 Windows release 主路徑。
+- [x] Installer 必要性只在需要 Start Menu、檔案關聯、自動安裝 WebView2 Runtime、移除程式或更新流程時成立。
+- [x] 目前決策：不引入 NSIS / WiX / MSIX；portable zip 是 Windows release 主路徑。
+- [x] Auto updater 另開 security / rollback gate；不得與 installer 第一版混做。
+- [x] 驗收：`CONTRACT-DESKTOP-SHELL-INSTALLER-DECISION` 鎖定 installer deferred，build/smoke scripts 不含 installer stack。
 
-#### Phase 6 — Pi deployment boundary check（候選）
+#### Phase 6 — Pi deployment boundary check（2026-06-17 完成）
 
 目標：確認 Windows desktop 化沒有污染 Pi / headless deployment。
 
-- [ ] Pi 仍使用 linux/arm64 Go primary artifact、`prism-go-primary.service`、Caddy reverse proxy、`DEPLOY-PI.md` 流程。
-- [ ] Pi 不包含 WebView2、Win32 tray、Windows mutex、Windows GUI build flag、installer/updater。
-- [ ] Desktop shell code 必須透過 build tags / module boundary 與 Pi runtime 分離。
-- [ ] 驗收：Windows desktop package smoke 通過；Pi artifact build / deploy docs 不引用 desktop-only path。
+- [x] Pi 仍使用 linux/arm64 Go primary artifact、`prism-go-primary.service`、Caddy reverse proxy、`DEPLOY-PI.md` 流程。
+- [x] Pi 不包含 WebView2、Win32 tray、Windows mutex、Windows GUI build flag、installer/updater。
+- [x] Desktop shell code 透過 `desktop_shell_windows.go` / `desktop_shell_other.go` build tags 與 Pi runtime 分離；portable scripts 只建 Windows artifact。
+- [x] 驗收：Windows desktop package smoke 通過；Pi artifact build / deploy docs 不引用 desktop-only path。
+
+#### Desktop Shell post-package manual acceptance（候選）
+
+建議下一步只做人工接受度 smoke，不擴 scope：把 portable zip 放到乾淨 Windows 使用者環境，雙擊 `Prism.exe`，確認 WebView2 可開、資料落到預期 external data-dir、重開後資料仍存在。只有這個手動驗收顯示 portable zip 不夠用時，才重新評估 installer / updater。
 
 ### Windows Desktop vs Pi Deployment 差異表
 

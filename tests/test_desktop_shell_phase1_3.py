@@ -62,11 +62,12 @@ def test_desktop_shell_phase1_3_docs_are_closed_without_package_scope():
     assert "#### Phase 1 — WebView2 spike（2026-06-17 完成）" in todo
     assert "#### Phase 2 — Local runtime host integration（2026-06-17 完成）" in todo
     assert "#### Phase 3 — Windows desktop UX hardening（2026-06-17 完成）" in todo
-    assert "下一個可施工入口是 Phase 4" in todo
-    assert "Phase 4 — Portable Windows package（下一個可施工）" in todo
-    assert "Phase 5 — Installer / updater decision gate（deferred）" in todo
+    assert "下一個可施工入口是 Desktop Shell post-package manual acceptance" in todo
+    assert "Phase 4 — Portable Windows package（2026-06-17 完成）" in todo
+    assert "Phase 5 — Installer / updater decision gate（2026-06-17 完成）" in todo
     assert "不做 MSI/NSIS/WiX installer" in todo
     assert "Phase 1-3 完成" in handoff
+    assert "Phase 4-6 完成" in handoff
     assert "CONTRACT-DESKTOP-SHELL-RUNTIME-HOST" in contracts
     assert "CONTRACT-DESKTOP-SHELL-UX-HARDENING" in contracts
 

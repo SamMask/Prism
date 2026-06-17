@@ -3,15 +3,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -210,6 +214,10 @@ func runDesktopShellSmoke(cfg runtimeConfig, opts desktopShellOptions) error {
 		shutdownDesktopServer(srv)
 		return err
 	}
+	if err := runDesktopSmokeNoteWorkflow(cfg.addr); err != nil {
+		shutdownDesktopServer(srv)
+		return err
+	}
 	shutdownDesktopServer(srv)
 	select {
 	case err := <-serverErr:
@@ -217,6 +225,60 @@ func runDesktopShellSmoke(cfg runtimeConfig, opts desktopShellOptions) error {
 	case <-time.After(2 * time.Second):
 		return errors.New("desktop shell smoke server shutdown timed out")
 	}
+}
+
+func defaultDesktopDataDir() (string, error) {
+	root := strings.TrimSpace(os.Getenv("LOCALAPPDATA"))
+	if root == "" {
+		userConfig, err := os.UserConfigDir()
+		if err != nil {
+			return "", err
+		}
+		root = userConfig
+	}
+	if root == "" {
+		return "", errors.New("could not resolve a default desktop data directory")
+	}
+	return filepath.Join(root, "Prism", "DesktopData"), nil
+}
+
+func runDesktopSmokeNoteWorkflow(addr string) error {
+	client := http.Client{Timeout: 2 * time.Second}
+	marker := "portable-smoke-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	body, err := json.Marshal(map[string]any{
+		"title":   "Portable smoke note",
+		"content": "Prism desktop portable smoke " + marker,
+	})
+	if err != nil {
+		return err
+	}
+	postURL := "http://" + addr + "/api/notes"
+	resp, err := client.Post(postURL, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	_ = resp.Body.Close()
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return fmt.Errorf("desktop smoke note create failed: %s", resp.Status)
+	}
+
+	getURL := "http://" + addr + "/api/notes?q=" + url.QueryEscape(marker) + "&per_page=10"
+	resp, err = client.Get(getURL)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("desktop smoke note search failed: %s", resp.Status)
+	}
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	if !bytes.Contains(content, []byte(marker)) {
+		return errors.New("desktop smoke note workflow did not find created note")
+	}
+	return nil
 }
 
 func runDesktopWebView(opts desktopShellOptions, releaseLog func()) error {

@@ -33,11 +33,11 @@ function Build-DesktopShell {
 }
 
 if ($Mode -eq "Debug" -or $Mode -eq "Both") {
-    Build-DesktopShell -Name "PrismDesktop-debug.exe" -LdFlags @()
+    Build-DesktopShell -Name "PrismDesktop-debug.exe" -LdFlags @("-X", "main.desktopShellDefault=1")
 }
 
 if ($Mode -eq "GUI" -or $Mode -eq "Both") {
-    Build-DesktopShell -Name "Prism.exe" -LdFlags @("-H=windowsgui")
+    Build-DesktopShell -Name "Prism.exe" -LdFlags @("-H=windowsgui", "-X", "main.desktopShellDefault=1")
 }
 
 Write-Host "Desktop shell build output: $outRoot"
