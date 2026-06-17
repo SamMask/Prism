@@ -33,10 +33,8 @@ This archive preserves completed desktop-shell and release-governance details th
 ## Language and First-Run Behavior
 
 - Active UI i18n is implemented for `zh-TW`, `en`, `ja`, and `ko`.
-- Current first-run behavior reads `localStorage["locale"]` first; if missing, it detects OS/browser languages for `zh`, `en`, `ja`, and `ko`.
-- Both Simplified and Traditional Chinese browser locales resolve to Traditional Chinese (`zh-TW`).
-- Unsupported browser languages default to English (`en`).
-- Users can switch language in Settings > Appearance, and that explicit selection persists in `localStorage`.
+- Current first-run behavior reads `localStorage["locale"]` first; if missing, it defaults to English (`en`) without OS/browser language detection.
+- Users can manually switch Traditional Chinese (`zh-TW`), English (`en`), Japanese (`ja`), or Korean (`ko`) in Settings > Appearance; the choice persists in `localStorage`.
 
 ## Release Documentation Decisions
 

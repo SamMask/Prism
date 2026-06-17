@@ -74,19 +74,16 @@ def test_locale_is_reactive_zustand_state_for_component_rerender():
     assert "TranslationKey" in hook
 
 
-def test_first_run_locale_detects_supported_browser_languages_and_defaults_to_english():
+def test_first_run_locale_defaults_to_english_until_user_changes_setting():
     i18n = I18N_PATH.read_text(encoding="utf-8")
 
     assert "export const DEFAULT_LOCALE: Locale = 'en'" in i18n
-    assert "export function detectBrowserLocale" in i18n
-    assert "normalized.startsWith('zh')" in i18n
-    assert "return 'zh-TW'" in i18n
-    assert "normalized.startsWith('ja')" in i18n
-    assert "normalized.startsWith('ko')" in i18n
-    assert "normalized.startsWith('en')" in i18n
-    assert "navigator.languages" in i18n
-    assert "navigator.language" in i18n
-    assert "return isLocale(saved) ? saved : detectBrowserLocale()" in i18n
+    assert "export function detectBrowserLocale" not in i18n
+    assert "export function detectFirstRunLocale" not in i18n
+    assert "navigator.languages" not in i18n
+    assert "navigator.language" not in i18n
+    assert "window.__PRISM_OS_LOCALE" not in i18n
+    assert "return isLocale(saved) ? saved : DEFAULT_LOCALE" in i18n
 
 
 def test_settings_appearance_renders_language_switcher_and_translated_tabs():

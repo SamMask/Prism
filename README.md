@@ -18,7 +18,7 @@ Prism stores your notes, prompts, attachments, tags, and history in a local SQLi
 - **Windows desktop**: `Prism.exe` is the primary Windows portable entry. It starts the Go runtime in the same process and opens the UI in WebView2.
 - **Portable data**: the Windows portable package stores user data next to the executable in `PrismData\` by default.
 - **Raspberry Pi**: Pi deployment remains a separate headless Go artifact path using `prism-go-primary.service`, Caddy, and `DEPLOY-PI.md`.
-- **Language**: a fresh browser follows the OS/browser language for Traditional/Simplified Chinese, English, Japanese, and Korean; both Simplified and Traditional Chinese resolve to Traditional Chinese (`zh-TW`). Other languages default to English. Manual changes in Settings > Appearance are persisted in `localStorage`.
+- **Language**: new users start in English. Manual changes in Settings > Appearance are persisted in `localStorage`; Traditional Chinese, English, Japanese, and Korean are available.
 
 ## Download
 
