@@ -6,6 +6,7 @@ import { Category } from '../../services/api';
 import { useAppStore, type ViewMode } from '../../stores/appStore';
 import { useTranslation } from '../../hooks/useTranslation';
 import { type Locale, translate } from '../../i18n';
+import { getCategoryDisplayName, getCategoryOptionLabel } from '../../utils/categoryDisplay';
 
 interface AppearanceSectionProps {
   categories: Category[];
@@ -409,7 +410,12 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
             value={localStorage.getItem('quickAddDefaultCategory') || ''}
             onChange={(e) => {
               localStorage.setItem('quickAddDefaultCategory', e.target.value);
-              const categoryName = categories.find(c => c.id === Number(e.target.value))?.name || t('settings.appearance.quickAdd.uncategorized');
+              const selectedCategory = categories.find(c => c.id === Number(e.target.value));
+              const categoryName = getCategoryDisplayName(
+                selectedCategory?.name,
+                t,
+                t('settings.appearance.quickAdd.uncategorized'),
+              );
               toast.success(t('settings.appearance.quickAdd.changed', { category: categoryName }));
             }}
             className="px-4 py-2 rounded-lg
@@ -421,7 +427,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
             <option value="">{t('settings.appearance.quickAdd.empty')}</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
-                {cat.icon} {cat.name}
+                {getCategoryOptionLabel(cat, t)}
               </option>
             ))}
           </select>

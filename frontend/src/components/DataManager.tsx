@@ -6,6 +6,7 @@ import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 interface CategoryManagerProps {
   categories: Category[]
@@ -73,7 +74,11 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
     }
     if (!await confirm({
       title: t('settings.organization.deleteCategoryTitle'),
-      message: t('settings.organization.deleteCategoryMessage', { name: cat.name, count: cat.count || 0, target: targetCategory.name }),
+      message: t('settings.organization.deleteCategoryMessage', {
+        name: getCategoryDisplayName(cat.name, t),
+        count: cat.count || 0,
+        target: getCategoryDisplayName(targetCategory.name, t),
+      }),
       variant: 'danger',
     })) {
       return
@@ -81,7 +86,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
     setIsLoading(true)
     try {
       await api.deleteCategory(cat.id, targetCategory.id)
-      toast.success(t('settings.organization.categoryDeleted', { name: cat.name }))
+      toast.success(t('settings.organization.categoryDeleted', { name: getCategoryDisplayName(cat.name, t) }))
       onRefresh()
     } catch (error: any) {
       toast.error(error?.response?.data?.message || t('settings.organization.deleteFailed'))
@@ -143,7 +148,9 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
       )}
 
       <div className="space-y-1">
-        {categories.map((cat) => (
+        {categories.map((cat) => {
+          const categoryName = getCategoryDisplayName(cat.name, t)
+          return (
           <div key={cat.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-bg-elevated group">
             {editingId === cat.id ? (
               <>
@@ -171,7 +178,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
             ) : (
               <>
                 <span className="text-lg">{cat.icon || '📁'}</span>
-                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{cat.name}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-text-primary">{categoryName}</span>
                 <span
                   className="w-12 shrink-0 rounded bg-bg-elevated px-2 py-0.5 text-right text-xs tabular-nums text-text-muted"
                   data-testid="category-count"
@@ -193,7 +200,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
               </>
             )}
           </div>
-        ))}
+        )})}
       </div>
     </div>
   )

@@ -15,6 +15,7 @@ import {
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 export function Sidebar() {
   const location = useLocation()
@@ -183,24 +184,27 @@ export function Sidebar() {
               {t('sidebar.categories')}
             </h3>
             <div className="space-y-1">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`w-full flex items-center justify-center sm:justify-start gap-2.5 px-2.5 py-2 rounded-md
-                           transition-colors duration-150 text-left text-[13.5px]
-                           ${selectedCategoryId === cat.id
-                             ? 'bg-primary/15 text-primary-light'
-                             : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
-                           }`}
-                >
-                  <span className="text-[15px]">{cat.icon || '📁'}</span>
-                  <span className="hidden truncate flex-1 sm:block">{cat.name}</span>
-                  <span className="hidden font-mono text-[11px] text-text-muted sm:inline">
-                    {cat.count || 0}
-                  </span>
-                </button>
-              ))}
+              {categories.map((cat) => {
+                const categoryName = getCategoryDisplayName(cat.name, t)
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => handleCategoryClick(cat.id)}
+                    className={`w-full flex items-center justify-center sm:justify-start gap-2.5 px-2.5 py-2 rounded-md
+                             transition-colors duration-150 text-left text-[13.5px]
+                             ${selectedCategoryId === cat.id
+                               ? 'bg-primary/15 text-primary-light'
+                               : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'
+                             }`}
+                  >
+                    <span className="text-[15px]">{cat.icon || '📁'}</span>
+                    <span className="hidden truncate flex-1 sm:block">{categoryName}</span>
+                    <span className="hidden font-mono text-[11px] text-text-muted sm:inline">
+                      {cat.count || 0}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

@@ -7,6 +7,7 @@ import { AttachmentPanel, Attachment } from './AttachmentPanel';
 import { ImageManagementPanel } from './ImageManagementPanel';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../hooks/useTranslation';
+import { getCategoryOptionLabel } from '../../utils/categoryDisplay';
 
 interface EditorSidebarProps {
   // Category
@@ -258,7 +259,7 @@ export function EditorSidebar({
           <option value="">{t('editor.sidebar.chooseCategory')}</option>
           {categories.map((cat) => (
             <option key={cat.id} value={cat.id}>
-              {cat.icon} {cat.name}
+              {getCategoryOptionLabel(cat, t)}
             </option>
           ))}
         </select>

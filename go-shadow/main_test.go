@@ -2577,6 +2577,38 @@ func TestNotesPinArchiveDuplicateReorderHandlers(t *testing.T) {
 		t.Fatalf("duplicate title should carry copy suffix, got %q", dupTitle)
 	}
 
+	// variant duplicates keep parent lineage visible in the notes list response
+	variantRec := httptest.NewRecorder()
+	srv.handleNoteDetail(variantRec, httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/duplicate", firstID), strings.NewReader(`{"as_variant":true}`)))
+	if variantRec.Code != http.StatusCreated {
+		t.Fatalf("expected variant duplicate 201, got %d body=%s", variantRec.Code, variantRec.Body.String())
+	}
+	variantID := noteIDFromResponse(t, variantRec.Body.Bytes())
+	listRec := httptest.NewRecorder()
+	srv.handleNotes(listRec, httptest.NewRequest(http.MethodGet, "/api/notes?per_page=100", nil))
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected notes list 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+	var listResp struct {
+		Data []struct {
+			ID          int     `json:"id"`
+			ParentID    *int    `json:"parent_id"`
+			ParentTitle *string `json:"parent_title"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &listResp); err != nil {
+		t.Fatal(err)
+	}
+	foundVariantLineage := false
+	for _, item := range listResp.Data {
+		if item.ID == variantID && item.ParentID != nil && *item.ParentID == firstID && item.ParentTitle != nil && *item.ParentTitle == "Pin Fixture" {
+			foundVariantLineage = true
+		}
+	}
+	if !foundVariantLineage {
+		t.Fatalf("variant %d should include parent_id=%d and parent_title in notes list, body=%s", variantID, firstID, listRec.Body.String())
+	}
+
 	// reorder [second, first] sets sort_order second=0, first=1
 	reorderRec := httptest.NewRecorder()
 	reorderBody := fmt.Sprintf(`{"note_ids":[%d,%d]}`, secondID, firstID)

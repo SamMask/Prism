@@ -6,6 +6,7 @@ import { IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 interface NoteCardProps {
   note: Note
@@ -41,6 +42,9 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   }
 
   const coverImage = note.cover_image || extractFirstImage(note.content)
+  const parentTitle = note.parent_title?.trim()
+  const lineageLabel = parentTitle ? t('noteCard.lineageFrom', { title: parentTitle }) : ''
+  const categoryName = getCategoryDisplayName(note.category_name || note.type, t)
 
   // Truncate content for preview
   const getPreview = (content: string, maxLength = 120): string => {
@@ -203,13 +207,19 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           <h3 className="truncate text-sm font-medium text-text-primary">
             {note.title || t('noteCard.untitled')}
           </h3>
+          {parentTitle && (
+            <span className="hidden shrink-0 items-center gap-1 text-xs text-accent sm:inline-flex" title={lineageLabel}>
+              <GitBranch size={12} />
+              <span className="max-w-[120px] truncate">{parentTitle}</span>
+            </span>
+          )}
           <span className="hidden min-w-0 flex-1 truncate text-xs text-text-muted md:block">
             {getPreview(note.content, 96)}
           </span>
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 text-xs text-text-muted sm:flex">
-          <span className="max-w-[140px] truncate">{note.category_name || note.type}</span>
+          <span className="max-w-[140px] truncate">{categoryName}</span>
           <span>{t('noteCard.wordCount', { count: note.content?.length?.toLocaleString() || 0 })}</span>
           <span>{new Date(note.updated_at).toLocaleDateString(locale)}</span>
         </div>
@@ -261,6 +271,12 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           <p className="text-sm text-text-secondary mt-1 line-clamp-1">
             {getPreview(note.content, 80)}
           </p>
+          {parentTitle && (
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-accent" title={lineageLabel}>
+              <GitBranch size={12} />
+              <span className="truncate">{lineageLabel}</span>
+            </div>
+          )}
         </div>
 
         {/* Meta */}
@@ -367,12 +383,12 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         )}
 
         {/* Parent Lineage Badge (Phase 3.7) */}
-        {note.parent_id && note.parent_title && (
+        {parentTitle && (
           <div className="flex items-center gap-1.5 mt-2 text-xs text-accent">
             <GitBranch size={12} />
-            <span className="truncate" title={t('noteCard.lineageFrom', { title: note.parent_title })}>
-              {t('noteCard.lineageFrom', { title: note.parent_title.substring(0, 20) })}
-              {note.parent_title.length > 20 ? '...' : ''}
+            <span className="truncate" title={lineageLabel}>
+              {t('noteCard.lineageFrom', { title: parentTitle.substring(0, 20) })}
+              {parentTitle.length > 20 ? '...' : ''}
             </span>
           </div>
         )}
@@ -381,7 +397,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-subtle">
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-muted">
-              {note.category_name || note.type}
+              {categoryName}
             </span>
             <span className="text-xs text-text-muted">
               {t('noteCard.wordCount', { count: note.content?.length?.toLocaleString() || 0 })}
@@ -432,8 +448,8 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           <button 
             onClick={handleCreateVariant}
             className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-accent
-                       hover:bg-accent/10"
+                       text-sm text-text-secondary
+                       hover:bg-bg-hover hover:text-text-primary"
           >
             <GitBranch size={14} /> {t('noteCard.createVariant')}
           </button>

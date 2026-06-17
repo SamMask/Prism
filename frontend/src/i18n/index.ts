@@ -4,9 +4,11 @@ type TranslationDict = {
   [key: string]: string | TranslationDict;
 };
 
+export type TranslationParams = Record<string, string | number>;
+
 export const LOCALE_STORAGE_KEY = 'locale';
 
-const enCommon: TranslationDict = {
+const enCommon = {
   save: 'Save',
   cancel: 'Cancel',
   delete: 'Delete',
@@ -20,9 +22,9 @@ const enCommon: TranslationDict = {
   close: 'Close',
   back: 'Back',
   none: 'None',
-};
+} satisfies TranslationDict;
 
-const zhTW: TranslationDict = {
+const zhTW = {
   common: {
     save: '儲存',
     cancel: '取消',
@@ -37,6 +39,13 @@ const zhTW: TranslationDict = {
     close: '關閉',
     back: '返回',
     none: '無',
+  },
+  categoryDefaults: {
+    prompt: '提示詞',
+    note: '筆記',
+    tutorial: '教學',
+    data: '資料',
+    inspiration: '靈感',
   },
   apiErrors: {
     networkUnavailable: '無法連線到伺服器，請檢查網路或服務狀態。',
@@ -758,10 +767,20 @@ const zhTW: TranslationDict = {
       data: '使用者資料保存在 `knowledge.db`、`static/uploads` 與 `docs/attachments`；本機更新程式時不應覆蓋這些資料目錄。',
     },
   },
-};
+} satisfies TranslationDict;
+
+type TranslationNamespace = Extract<keyof typeof zhTW, string>;
+export type TranslationKey = TranslationNamespace | `${TranslationNamespace}.${string}`;
 
 const en: TranslationDict = {
   common: enCommon,
+  categoryDefaults: {
+    prompt: 'Prompt',
+    note: 'Note',
+    tutorial: 'Tutorial',
+    data: 'Data',
+    inspiration: 'Inspiration',
+  },
   apiErrors: {
     networkUnavailable: 'Could not connect to the server. Check the network or service status.',
     serverError: 'Server error ({status})',
@@ -1486,6 +1505,13 @@ const en: TranslationDict = {
 
 const ja: TranslationDict = {
   common: { ...enCommon, none: 'なし' },
+  categoryDefaults: {
+    prompt: 'プロンプト',
+    note: 'ノート',
+    tutorial: 'チュートリアル',
+    data: 'データ',
+    inspiration: 'インスピレーション',
+  },
   apiErrors: {
     networkUnavailable: 'サーバーに接続できません。ネットワークまたはサービス状態を確認してください。',
     serverError: 'サーバーエラー ({status})',
@@ -2210,6 +2236,13 @@ const ja: TranslationDict = {
 
 const ko: TranslationDict = {
   common: { ...enCommon, none: '없음' },
+  categoryDefaults: {
+    prompt: '프롬프트',
+    note: '노트',
+    tutorial: '튜토리얼',
+    data: '데이터',
+    inspiration: '영감',
+  },
   apiErrors: {
     networkUnavailable: '서버에 연결할 수 없습니다. 네트워크 또는 서비스 상태를 확인하세요.',
     serverError: '서버 오류 ({status})',
@@ -2976,32 +3009,50 @@ export function initLocale(): void {
 
 export function translate(
   locale: Locale,
+  key: TranslationKey,
+  params?: TranslationParams,
+): string;
+export function translate(
+  locale: Locale,
   key: string,
-  params?: Record<string, string | number>,
+  params?: TranslationParams,
+): string;
+export function translate(
+  locale: Locale,
+  key: string,
+  params?: TranslationParams,
 ): string {
+  const result = readTranslation(translations[locale], key);
+  const fallback = result ?? (locale === 'zh-TW' ? undefined : readTranslation(translations['zh-TW'], key));
+
+  if (!fallback) {
+    console.warn(`[i18n] Missing translation: ${locale}.${key}`);
+    return key;
+  }
+
+  if (!params) return fallback;
+
+  return fallback.replace(/\{(\w+)\}/g, (_, name) => params[name]?.toString() ?? '');
+}
+
+function readTranslation(dict: TranslationDict, key: string): string | undefined {
   const keys = key.split('.');
-  let result: string | TranslationDict = translations[locale];
+  let result: string | TranslationDict = dict;
 
   for (const item of keys) {
     if (typeof result === 'object' && item in result) {
       result = result[item];
     } else {
-      console.warn(`[i18n] Missing translation: ${locale}.${key}`);
-      return key;
+      return undefined;
     }
   }
 
-  if (typeof result !== 'string') {
-    console.warn(`[i18n] Invalid translation key: ${locale}.${key}`);
-    return key;
-  }
-
-  if (!params) return result;
-
-  return result.replace(/\{(\w+)\}/g, (_, name) => params[name]?.toString() || '');
+  return typeof result === 'string' ? result : undefined;
 }
 
-export function t(key: string, params?: Record<string, string | number>): string {
+export function t(key: TranslationKey, params?: TranslationParams): string;
+export function t(key: string, params?: TranslationParams): string;
+export function t(key: string, params?: TranslationParams): string {
   return translate(currentLocale, key, params);
 }
 

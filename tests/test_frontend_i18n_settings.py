@@ -39,10 +39,15 @@ def test_i18n_exposes_four_locales_and_pure_translate_api():
     i18n = I18N_PATH.read_text(encoding="utf-8")
 
     assert "export type Locale = 'zh-TW' | 'en' | 'ja' | 'ko'" in i18n
+    assert "type TranslationNamespace = Extract<keyof typeof zhTW, string>" in i18n
+    assert "export type TranslationKey = TranslationNamespace | `${TranslationNamespace}.${string}`" in i18n
+    assert "export type TranslationParams = Record<string, string | number>" in i18n
     for locale in ["'zh-TW'", "'en'", "'ja'", "'ko'"]:
         assert f"code: {locale}" in i18n
     assert "export function translate(" in i18n
     assert "export function t(" in i18n
+    assert "readTranslation(translations['zh-TW'], key)" in i18n
+    assert "params[name]?.toString() ?? ''" in i18n
     assert "settings.appearance.language.changed" not in i18n
     assert "language: {" in i18n
 
@@ -59,6 +64,8 @@ def test_locale_is_reactive_zustand_state_for_component_rerender():
     assert "useAppStore((state) => state.locale)" in hook
     assert "useCallback(" in hook
     assert "translate(locale, key, params)" in hook
+    assert "type TranslateFunction" in hook
+    assert "TranslationKey" in hook
 
 
 def test_settings_appearance_renders_language_switcher_and_translated_tabs():
@@ -445,3 +452,7 @@ def test_todo_records_i18n_scope_and_frontend_only_boundary():
     assert "Settings 組織管理（DataManager）" in todo
     assert "global API/toast error adapter" in todo
     assert "remaining hardcoded UI string audit / hidden legacy settings triage" in todo
+    assert "階段 5 — 收尾" in todo
+    assert "缺漏 key 先回 zh-TW fallback" in todo
+    assert "TranslationKey" in todo
+    assert "{count} 參數替換" in todo

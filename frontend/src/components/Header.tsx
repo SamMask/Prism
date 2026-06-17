@@ -6,6 +6,7 @@ import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 export function Header() {
   const location = useLocation()
@@ -97,14 +98,15 @@ export function Header() {
   const isSelectionMode = selectedNoteIds.length > 0
   const isHomeRoute = location.pathname === '/'
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
+  const activeCategoryName = getCategoryDisplayName(activeCategory?.name, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
   const pageTitle = location.pathname === '/prompt-builder'
     ? 'Prompt Builder'
     : location.pathname === '/settings'
       ? t('header.settings')
       : showArchived
-        ? t('header.archive')
-        : activeCategory?.name || (activeTag ? `#${activeTag.name}` : t('header.all'))
+      ? t('header.archive')
+        : activeCategoryName || (activeTag ? `#${activeTag.name}` : t('header.all'))
   const pageMeta = isHomeRoute
     ? t('header.homeMeta', { count: totalNotes.toLocaleString() })
     : location.pathname === '/prompt-builder'

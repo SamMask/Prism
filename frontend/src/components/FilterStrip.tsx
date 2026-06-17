@@ -2,6 +2,7 @@ import { Archive, Hash, Home, Tag } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 export function FilterStrip() {
   const location = useLocation()
@@ -90,6 +91,7 @@ export function FilterStrip() {
 
         {categories.map((category) => {
           const isActive = selectedCategoryId === category.id
+          const categoryName = getCategoryDisplayName(category.name, t)
 
           return (
             <button
@@ -99,10 +101,10 @@ export function FilterStrip() {
               className={`${chipBase} ${isActive ? chipActive : chipIdle}`}
               aria-pressed={isActive}
               data-testid={`filter-category-${category.id}`}
-              title={category.name}
+              title={categoryName}
             >
               <span className="text-[14px]" aria-hidden="true">{category.icon || '📁'}</span>
-              <span className="max-w-[120px] truncate">{category.name}</span>
+              <span className="max-w-[120px] truncate">{categoryName}</span>
               <span className="font-mono text-[11px] text-text-muted">{category.count || 0}</span>
             </button>
           )

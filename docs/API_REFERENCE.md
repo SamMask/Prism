@@ -113,7 +113,9 @@
       ],
       "urls": [
         "https://example.com"
-      ]
+      ],
+      "parent_id": null,
+      "parent_title": null
     }
   ],
   "pagination": {
@@ -129,7 +131,7 @@
 
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
-- 列表回應目前不包含 `parent_id`。
+- 列表回應包含 `parent_id` / `parent_title`，供 Home 卡片直接顯示 variant 上一代來源；非 variant 為 `null`。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。
 
 ### GET `/api/notes/<note_id>`

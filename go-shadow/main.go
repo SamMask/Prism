@@ -6856,9 +6856,10 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 		       n.remarks, n.cover_image, COALESCE(n.cover_position, 'top') AS cover_position,
 		       COALESCE(n.editor_layout, 'single') AS editor_layout,
 		       COALESCE(n.is_pinned, 0) AS is_pinned, COALESCE(n.is_archived, 0) AS is_archived,
-		       n.category_id, n.created_at, n.updated_at
+		       n.category_id, n.created_at, n.updated_at, n.parent_id, p.title AS parent_title
 		FROM Notes n
 		LEFT JOIN Categories c ON n.category_id = c.id
+		LEFT JOIN Notes p ON n.parent_id = p.id
 		`+where+`
 		ORDER BY COALESCE(n.is_pinned, 0) DESC, `+sortClause+`
 		LIMIT ? OFFSET ?`, queryArgs...)
@@ -7442,9 +7443,9 @@ type noteScanner interface {
 func (s *server) scanNoteRow(row noteScanner) (response, error) {
 	var id, isPinned, isArchived int
 	var title, content, categoryName, coverPosition, editorLayout, createdAt, updatedAt sql.NullString
-	var remarks, coverImage sql.NullString
-	var categoryID sql.NullInt64
-	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt); err != nil {
+	var remarks, coverImage, parentTitle sql.NullString
+	var categoryID, parentID sql.NullInt64
+	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt, &parentID, &parentTitle); err != nil {
 		return nil, err
 	}
 	tags, err := s.noteTags(id)
@@ -7463,6 +7464,7 @@ func (s *server) scanNoteRow(row noteScanner) (response, error) {
 		"is_pinned": isPinned != 0, "is_archived": isArchived != 0,
 		"category_id": nullableIntOrNil(categoryID), "created_at": nullableString(createdAt),
 		"updated_at": nullableString(updatedAt), "tags": tags, "urls": urls,
+		"parent_id": nullableIntOrNil(parentID), "parent_title": nullableStringOrNil(parentTitle),
 	}
 	return note, nil
 }

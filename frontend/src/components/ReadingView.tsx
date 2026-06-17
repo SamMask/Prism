@@ -6,6 +6,7 @@ import { useAppStore } from '../stores/appStore'
 import { Modal, Button } from './ui'
 import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 interface ReadingViewProps {
   note: Note
@@ -37,6 +38,11 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   const coverImage = localNote.cover_image || extractFirstImage(localNote.content || '')
   const renderedContent = useMemo(() => renderMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
   const updatedAt = new Date(localNote.updated_at).toLocaleString(locale)
+  const categoryName = getCategoryDisplayName(
+    localNote.category_name || localNote.type,
+    t,
+    t('reading.uncategorized'),
+  )
 
   useEffect(() => {
     let isMounted = true
@@ -107,7 +113,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
                   {t('reading.archivedBadge')}
                 </span>
               )}
-              <span>{localNote.category_name || localNote.type || t('reading.uncategorized')}</span>
+              <span>{categoryName}</span>
               <span>·</span>
               <span>{updatedAt}</span>
               {localNote.parent_title && (

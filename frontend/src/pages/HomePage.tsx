@@ -24,6 +24,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Note, api } from '../services/api'
+import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 // Sortable NoteCard wrapper
 function SortableNoteCard({ note, viewMode }: { note: Note; viewMode: ViewMode }) {
@@ -162,12 +163,13 @@ export function HomePage() {
   // Only enable drag when sortBy is 'custom'
   const isDragEnabled = sortBy === 'custom'
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
+  const activeCategoryName = getCategoryDisplayName(activeCategory?.name, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
   const sectionTitle = searchQuery
     ? t('home.searchResults')
     : showArchived
       ? t('home.archive')
-      : activeCategory?.name || (activeTag ? `#${activeTag.name}` : t('home.all'))
+      : activeCategoryName || (activeTag ? `#${activeTag.name}` : t('home.all'))
   const sectionSub = searchQuery
     ? t('home.searchMeta', { query: searchQuery, count: totalNotes.toLocaleString() })
     : showArchived
