@@ -283,6 +283,8 @@ export function ServerDashboardSection() {
   }, [fetchHardware, fetchVersion, fetchBackups]);
 
   const canManageService = hardware?.service_management?.available === true;
+  const hasCpuTemperature = hardware?.cpu_temp != null;
+  const platformSystem = hardware?.platform?.system || '-';
 
   return (
     <div className="glass rounded-lg p-5" data-testid="server-dashboard-section">
@@ -405,27 +407,46 @@ export function ServerDashboardSection() {
           )}
         </div>
 
-        {/* CPU Temp (only for Linux/Pi) */}
-        <div className="bg-bg-elevated rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <Thermometer size={16} className="text-orange-400" />
-            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.cpuTemperature')}</span>
+        {hasCpuTemperature ? (
+          <div className="bg-bg-elevated rounded-lg p-4" data-testid="cpu-temperature-card">
+            <div className="flex items-center gap-2 mb-3">
+              <Thermometer size={16} className="text-orange-400" />
+              <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.cpuTemperature')}</span>
+            </div>
+            <div className={`text-2xl font-bold ${getTempColor(hardware?.cpu_temp ?? null)}`}>
+              {hardware?.cpu_temp != null ? `${hardware.cpu_temp}°C` : 'N/A'}
+            </div>
+            <div className="text-xs text-text-muted mt-1">
+              {hardware.cpu_temp! < 50 ? t('settings.serverDashboard.tempNormal') :
+               hardware.cpu_temp! < 70 ? t('settings.serverDashboard.tempHigh') : t('settings.serverDashboard.tempCritical')}
+            </div>
           </div>
-          <div className={`text-2xl font-bold ${getTempColor(hardware?.cpu_temp ?? null)}`}>
-            {hardware?.cpu_temp != null ? `${hardware.cpu_temp}°C` : 'N/A'}
+        ) : (
+          <div className="bg-bg-elevated rounded-lg p-4" data-testid="runtime-uptime-card">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={16} className="text-cyan-400" />
+              <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.uptime')}</span>
+            </div>
+            <div className="text-2xl font-bold text-text-primary">
+              {formatUptime(hardware?.uptime_seconds ?? null, t)}
+            </div>
+            <div className="text-xs text-text-muted mt-1">
+              {t('settings.serverDashboard.localRuntimeStatus', { system: platformSystem })}
+            </div>
           </div>
-          <div className="text-xs text-text-muted mt-1">
-            {hardware?.cpu_temp == null ? t('settings.serverDashboard.linuxPiOnly') :
-             hardware.cpu_temp < 50 ? t('settings.serverDashboard.tempNormal') :
-             hardware.cpu_temp < 70 ? t('settings.serverDashboard.tempHigh') : t('settings.serverDashboard.tempCritical')}
-          </div>
-        </div>
+        )}
 
         {/* Database & Uptime */}
         <div className="bg-bg-elevated rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
-            <Cpu size={16} className="text-cyan-400" />
-            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.systemInfo')}</span>
+            {hasCpuTemperature ? (
+              <Cpu size={16} className="text-cyan-400" />
+            ) : (
+              <FileText size={16} className="text-cyan-400" />
+            )}
+            <span className="text-text-secondary text-sm font-medium">
+              {hasCpuTemperature ? t('settings.serverDashboard.systemInfo') : t('settings.serverDashboard.databaseStatus')}
+            </span>
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
@@ -434,7 +455,7 @@ export function ServerDashboardSection() {
                 {hardware?.database?.size_mb ?? '-'} MB
               </span>
             </div>
-            {hardware?.database?.wal_size_mb != null && hardware.database.wal_size_mb > 0 && (
+            {hardware?.database?.wal_size_mb != null && (!hasCpuTemperature || hardware.database.wal_size_mb > 0) && (
               <div className="flex justify-between">
                 <span className="text-text-muted">{t('settings.serverDashboard.walLog')}</span>
                 <span className="text-text-primary font-mono">
@@ -442,13 +463,15 @@ export function ServerDashboardSection() {
                 </span>
               </div>
             )}
-            <div className="flex justify-between">
-              <span className="text-text-muted">{t('settings.serverDashboard.uptime')}</span>
-              <span className="text-text-primary">
-                <Clock size={12} className="inline mr-1" />
-                {formatUptime(hardware?.uptime_seconds ?? null, t)}
-              </span>
-            </div>
+            {hasCpuTemperature && (
+              <div className="flex justify-between">
+                <span className="text-text-muted">{t('settings.serverDashboard.uptime')}</span>
+                <span className="text-text-primary">
+                  <Clock size={12} className="inline mr-1" />
+                  {formatUptime(hardware?.uptime_seconds ?? null, t)}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

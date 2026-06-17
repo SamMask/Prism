@@ -64,6 +64,7 @@ def test_settings_deploy_controls_explain_port_update_and_hide_local_service_man
     update = UPDATE_PATH.read_text(encoding="utf-8")
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
     api = API_PATH.read_text(encoding="utf-8")
+    i18n = I18N_PATH.read_text(encoding="utf-8")
 
     assert "目前可用網址" in port_config
     assert "若頁面已完全連不上" in port_config
@@ -72,6 +73,14 @@ def test_settings_deploy_controls_explain_port_update_and_hide_local_service_man
     assert "不需要另外選補丁檔" in update
     assert "service_management" in api
     assert "const canManageService = hardware?.service_management?.available === true" in server_dashboard
+    assert "const hasCpuTemperature = hardware?.cpu_temp != null" in server_dashboard
+    assert 'data-testid="cpu-temperature-card"' in server_dashboard
+    assert 'data-testid="runtime-uptime-card"' in server_dashboard
+    assert "hasCpuTemperature ? t('settings.serverDashboard.systemInfo') : t('settings.serverDashboard.databaseStatus')" in server_dashboard
+    assert "settings.serverDashboard.localRuntimeStatus" in server_dashboard
+    assert "Windows 本機執行中" not in server_dashboard
+    assert "資料庫狀態" in i18n
+    assert "{system} 本機執行中" in i18n
 
 
 def test_category_counts_and_backup_delete_controls_are_locked():
