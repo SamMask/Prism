@@ -1,7 +1,7 @@
 # Prism 文檔中心
 
 > **版本**: v2.4.9 / Go primary runtime
-> **更新日期**: 2026-06-17
+> **更新日期**: 2026-06-18
 > **狀態**: Go primary 為唯一 runtime owner；Python Flask backend source 已於 T053 移除
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。
@@ -57,6 +57,7 @@ go test ./...
 - `HANDOFF.md` 只保留新對話接手需要的最短 current state / next entry。
 - 長版完成紀錄、handoff 快照、舊 phase 與 changelog 放在 `docs/development-history/`。
 - `AGENTS.md` 與 `CLAUDE.md` 是鏡像；修改任一份必須同步另一份。
+- GitHub 預設首頁是英文 `README.md`；繁中首頁是 `README.zh-TW.md`，兩者頂端互相連結。
 
 ---
 
@@ -84,3 +85,4 @@ docs/
 
 - `development-history/go-primary-runtime-completion-20260617.md`
 - `development-history/desktop-backup-i18n-handoff-20260617.md`
+- `development-history/desktop-portable-release-handoff-20260618.md`

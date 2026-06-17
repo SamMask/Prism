@@ -68,7 +68,7 @@ D:/AI/Prism/
 | 層 | 規範 |
 |----|------|
 | **Go** | 小函式、明確錯誤處理、維持 data-dir / path safety |
-| **Python** | Legacy source/test 修改仍用 PEP 8，`snake_case`，縮排 ≤ 3 層 |
+| **Python** | Dev/test tooling only；repo 內沒有 Python backend source |
 | **TypeScript / React** | `camelCase` 變數，`PascalCase` 組件，Composition 優先 |
 | **CSS** | Tailwind Utility Class 為主；CSS 變數 `--color-*` 定義於 `index.css` |
 
@@ -76,7 +76,7 @@ D:/AI/Prism/
 
 - **函式單一職責** — 只做一件事，長度 < 50 行為佳
 - **不破壞現有 API 契約** — 新增端點可以，修改現有簽名需建 Migration
-- **不直接操作 DB** — 統一使用 `db.py` 的 `get_db()`
+- **不繞過 DB owner/helper** — Go runtime 走既有 SQLite connection owner / transaction helper
 - **不引入 AI/ML 依賴** — numpy、torch、sentence-transformers 等已全面移除
 - **不使用 CDN** — 所有前端資源必須本地化（離線優先）
 
@@ -125,17 +125,17 @@ npx tsc --noEmit
 
 ## 打包發布 (Packaging)
 
-> **狀態說明**: v2.4.9+ 的穩定主線是 Go primary runtime artifact 與 Raspberry Pi `prism-go-primary.service` 部署。PyInstaller / embedded Python portable path 已由 T045 移除。
+> **狀態說明**: v2.4.9+ 的穩定主線是 Go primary runtime artifact、Raspberry Pi `prism-go-primary.service` 部署，以及 Windows desktop portable zip。PyInstaller / embedded Python portable path 已由 T045 移除。
 > T052 後，repo 不再追蹤 embedded Python zip、Pillow wheel 或 root empty `package-lock.json`；前端 lockfile 只在 `frontend/package-lock.json`。
 
 ### 版本號 (Single Source of Truth)
 
-```python
-# config.py
-PRISM_VERSION = "2.4.5"
+```go
+// go-shadow/main.go
+return "2.4.9"
 ```
 
-> ⚠️ **發版前必檢**：`config.py` 的 `PRISM_VERSION` 必須與 `docs/TODO.md` Changelog 最新一列、`README.md` 開頭 badge 三處同步。
+> ⚠️ **發版前必檢**：Go runtime fallback version、root `README.md` / `README.zh-TW.md` badge、release tag 與 release asset 命名必須同步。
 > 過去曾發生 `config.py` 卡在 `2.0.0-alpha.1` 而 Changelog 已到 `v2.4.1` 的長期 desync，詳見 [`docs/過期/20260412-cco-綜合分析報告.md`](./過期/20260412-cco-綜合分析報告.md) §3 P2-10.7。
 
 ### 建置流程
@@ -145,22 +145,23 @@ PRISM_VERSION = "2.4.5"
 cd frontend
 npm run build
 
-# 2. 建置 Go primary package
-scripts\pack.bat
+# 2. 建置 Windows desktop portable package
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.4.9
 ```
 
 | 產出 | 說明 |
 |------|------|
-| `Prism_v2.4.9-go-primary_*.zip` | Go primary artifact package；不包含 embedded Python runtime |
+| `PrismDesktopPortable-v2.4.9.zip` | Windows desktop portable package；不包含 DB、uploads、attachments 或 embedded Python runtime |
 
 ### Release Checklist（每次發版前必確認）
 
-- [ ] `config.py` 的 `PRISM_VERSION` 與 `docs/TODO.md` Changelog 最新版本一致
-- [ ] `docs/TODO.md` Changelog 已新增本版條目（版本號、日期、摘要）
-- [ ] `README.md` 開頭的版本 badge 已同步
+- [ ] Go runtime fallback version、release tag、release asset 與 README badge 已同步
+- [ ] `docs/TODO.md` Current Truth / Archive Index 已對齊本版；長版完成紀錄已歸檔到 `docs/development-history/`
+- [ ] `README.md`（英文預設）與 `README.zh-TW.md`（繁中）頂端互相連結，且內容 current truth 一致
 - [ ] `pytest tests/ -v` 全部通過（含 `test_schema_regression.py`）
 - [ ] `cd frontend && npx tsc --noEmit` 零錯誤
 - [ ] `cd frontend && npm run build` 成功，`frontend/dist/` 已更新
+- [ ] `scripts/smoke_desktop_portable.ps1` 或等效 portable smoke 通過，且 zip 不含 DB/WAL/SHM
 - [ ] 若有新 Migration：確認版本號遞增，且遷移為冪等操作
-- [ ] `docs/INDEX.md`、`docs/Prism.md`、`docs/SEQUENCE-UPLOAD.md`、`docs/CONTRIBUTING.md`、`docs/DEPLOYMENT.md` 的版本 / 日期 / 「最後更新」標記已同步本版
+- [ ] `docs/README.md`、`docs/INDEX.md`、`docs/CONTRIBUTING.md`、`docs/DEPLOYMENT.md` 的版本 / 日期 / 「最後更新」標記已同步本版
 - [ ] `AGENTS.md` 與 `CLAUDE.md` 內容已同步（兩份互為鏡像，diff 應僅有檔名相關差異）：`diff AGENTS.md CLAUDE.md`

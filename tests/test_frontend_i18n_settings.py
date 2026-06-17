@@ -74,6 +74,21 @@ def test_locale_is_reactive_zustand_state_for_component_rerender():
     assert "TranslationKey" in hook
 
 
+def test_first_run_locale_detects_supported_browser_languages_and_defaults_to_english():
+    i18n = I18N_PATH.read_text(encoding="utf-8")
+
+    assert "export const DEFAULT_LOCALE: Locale = 'en'" in i18n
+    assert "export function detectBrowserLocale" in i18n
+    assert "normalized.startsWith('zh')" in i18n
+    assert "return 'zh-TW'" in i18n
+    assert "normalized.startsWith('ja')" in i18n
+    assert "normalized.startsWith('ko')" in i18n
+    assert "normalized.startsWith('en')" in i18n
+    assert "navigator.languages" in i18n
+    assert "navigator.language" in i18n
+    assert "return isLocale(saved) ? saved : detectBrowserLocale()" in i18n
+
+
 def test_settings_appearance_renders_language_switcher_and_translated_tabs():
     appearance = APPEARANCE_PATH.read_text(encoding="utf-8")
     settings = SETTINGS_PATH.read_text(encoding="utf-8")

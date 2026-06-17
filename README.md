@@ -1,198 +1,158 @@
 # Prism
 
-> 🔒 **本地優先** | 📴 **離線可用** | 🧠 **Headless KMS**
-> 📦 **目前推薦**：Go primary runtime artifact（Node.js / Go 用於建置）
-> 🧪 **純 Go runtime**：Python Flask backend source 已於 T053 移除；測試以純 Go 驗收網 + pytest（dev/test orchestration）為主
+[English](README.md) | [繁體中文](README.zh-TW.md)
+
+> Local-first, offline-capable personal knowledge management and prompt tooling.
+> Current release path: Go primary runtime, Raspberry Pi service deployment, and Windows desktop portable zip.
 
 ![Version](https://img.shields.io/badge/version-2.4.9-blue)
-![Go](https://img.shields.io/badge/runtime-Go%20primary-green)
+![Runtime](https://img.shields.io/badge/runtime-Go%20primary-green)
 ![Frontend](https://img.shields.io/badge/react-18-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
 
-**個人知識中樞與 Prompt 管理工具。一個 SQLite 檔案就是你的全部資料。**
+Prism stores your notes, prompts, attachments, tags, and history in a local SQLite database. It deliberately avoids built-in AI, cloud sync, telemetry, and public-internet assumptions. External agents can talk to Prism through a clean REST API; Prism focuses on durable storage, fast keyword search, and predictable local operations.
 
-> v2.3.0 (2026-04-04) 起，Prism 拔除所有本機 AI / Embedding 功能，正式轉型為 **Headless KMS**：
-> 一個專注、極速、可被外部 Agent (Claude / MCP / 自訂腳本) 呼叫的純筆記 API。
-> AI 智慧由外部代理負責，Prism 只做最擅長的事——**穩定的儲存、極速的全文檢索、乾淨的 REST API**。
+## Current Status
 
----
+- **Runtime**: Go primary is the only product runtime. The Python Flask backend source was removed in T053.
+- **Windows desktop**: `Prism.exe` is the primary Windows portable entry. It starts the Go runtime in the same process and opens the UI in WebView2.
+- **Portable data**: the Windows portable package stores user data next to the executable in `PrismData\` by default.
+- **Raspberry Pi**: Pi deployment remains a separate headless Go artifact path using `prism-go-primary.service`, Caddy, and `DEPLOY-PI.md`.
+- **Language**: a fresh browser follows the OS/browser language for Traditional/Simplified Chinese, English, Japanese, and Korean; both Simplified and Traditional Chinese resolve to Traditional Chinese (`zh-TW`). Other languages default to English. Manual changes in Settings > Appearance are persisted in `localStorage`.
 
-## 📚 文件導覽
+## Download
 
-| 想做的事 | 看這份 |
-|---|---|
-| 第一次使用 | 本檔 §快速開始 |
-| 開發 / 改 code | [`CLAUDE.md`](CLAUDE.md) — 開發規範與哲學 |
-| 了解架構 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — C4 容器圖 |
-| 改 DB | [`docs/SCHEMA.md`](docs/SCHEMA.md) — 資料表完整定義 |
-| API 串接 | [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) |
-| 看待辦 | [`docs/TODO.md`](docs/TODO.md) — 原子任務 + Changelog |
-| 部署 | [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) — 樹莓派 / Caddy / systemd |
-| 歷史背景參考 | [`docs/Prism.md`](docs/Prism.md) — V2 規劃期歷史記錄（不再更新） |
-| **最新體檢報告** | [`docs/過期/20260412-cco-綜合分析報告.md`](docs/過期/20260412-cco-綜合分析報告.md) |
+Use the latest GitHub Release asset:
 
----
+- `PrismDesktopPortable-v2.4.9.zip` - Windows desktop portable package
 
-## ✨ 核心特色
+The portable package includes:
 
-- **🧠 Headless KMS** — 純 REST API 設計，可被 Claude Code / MCP / 任何 LLM Agent 直接呼叫
-- **🔍 卡片全文檢索** — 標題、內文、備註、附件、標籤皆可查，純關鍵字、零 AI 依賴
-- **🎨 React SPA** — Vite + Zustand + Tailwind，完全離線、無 CDN
-- **🛠️ Prompt Builder** — 結構化參數表單、權重滑桿、亂數靈感
-- **📎 附件系統** — 拖曳上傳、長文自動分離、Markdown 雙向同步
-- **🌳 卡片譜系** — Parent / Variant 關聯，追蹤 Prompt 演化
-- **🔄 時光機** — 每次儲存自動快照，可隨時回滾
-- **🍓 樹莓派友善** — Phase 8 提供 avahi mDNS + Caddy 反向代理 + systemd 一鍵部署；定位為 trusted LAN / VPN 使用，不建議直接對公網開放
-- **🔒 隱私優先** — 所有資料在本機 `knowledge.db` 單檔 (WAL Mode)，無雲端、無遙測
+- `Prism.exe` - GUI desktop app
+- `PrismDesktop-debug.exe` - console build for diagnostics
+- `Prism.ico`
+- `README-PORTABLE.md`
+- seed config under `static/config/`
 
----
+Microsoft Edge WebView2 Runtime must already be installed. The portable package does not install WebView2 and is not an MSI/NSIS/WiX installer.
 
-## 🚀 快速開始
+## Quick Start
 
-### Go primary runtime（目前推薦）
+### Windows Portable
+
+1. Download `PrismDesktopPortable-v2.4.9.zip` from Releases.
+2. Extract it anywhere.
+3. Double-click `Prism.exe`.
+
+Data is created in:
+
+```text
+<Prism.exe folder>\PrismData
+```
+
+For diagnostics:
+
+```powershell
+.\PrismDesktop-debug.exe --data-dir "D:\PrismData" --addr 127.0.0.1:5015
+```
+
+### Go Primary Local Runtime
 
 ```powershell
 cd D:/AI/Prism
 .\scripts\build_go_runtime.ps1
-.\scripts\start_go_primary.ps1    # -> http://127.0.0.1:5004
+.\scripts\start_go_primary.ps1
 ```
 
-熟悉的批次入口也會啟動 Go primary：
+Local service:
 
-```cmd
-start_v2.bat
-scripts\start.bat
+```text
+http://127.0.0.1:5004
 ```
 
-### 開發前端
+### Frontend Development
 
 ```bash
 cd frontend
 npm install
-npm run dev                      # -> http://localhost:5173
+npm run dev
 ```
 
-### Package
+## Core Features
 
-```cmd
-scripts\pack.bat
+- **Headless KMS REST API** - notes, tags, categories, attachments, import/export, maintenance, and server/system surfaces are Go-owned.
+- **Fast keyword search** - SQLite FTS5 plus remarks, tags, attachment metadata, and bounded text attachment body search.
+- **React SPA** - React 18, TypeScript, Vite, Zustand, Tailwind CSS, local assets only.
+- **Prompt Builder** - structured prompt options and wizard config seeded into a fresh data directory.
+- **Attachments** - Markdown/text attachments and local upload handling.
+- **Lineage and history** - note variants, parent relationships, and note history restore.
+- **Maintenance tools** - manual FTS integrity check/rebuild, WAL checkpoint, backup operations, and server dashboard.
+- **Local privacy** - no cloud service, telemetry, embedding pipeline, or bundled AI dependency.
+
+## Architecture
+
+```text
+Browser / WebView2
+        |
+React SPA (Vite)
+        |
+Go Primary REST API
+        |
+SQLite (WAL) + external data directory
+        |
+uploads / attachments / logs / backups / config
 ```
 
-PyInstaller / embedded Python portable path 已在 T045 移除，T052 也清掉 tracked embedded Python zip / Pillow wheel 殘留；T053 進一步刪除整個 Python Flask backend source。Go primary runtime 不依賴 Pillow；thumbnail generation 由 Go helper / Go primary 路徑承接。
+Go primary embeds and serves the built SPA. Windows desktop mode wraps the same local web UI in WebView2 and starts the Go server in the same process. Pi deployment stays headless and uses Caddy as the local reverse proxy.
 
----
+## Safety Boundary
 
-## 🧪 開發與測試
+Prism currently has no built-in user login, bearer token, or public API authentication layer. Run it on localhost, trusted LAN, VPN, SSH tunnel, or behind an authenticated reverse proxy. Do not expose the raw Go runtime or Caddy entrypoint directly to the public internet.
+
+## Documentation
+
+| Need | Document |
+|---|---|
+| Documentation hub | [`docs/README.md`](docs/README.md) |
+| Current roadmap and next entry | [`docs/TODO.md`](docs/TODO.md) |
+| Architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| API reference | [`docs/API_REFERENCE.md`](docs/API_REFERENCE.md) |
+| Database schema | [`docs/SCHEMA.md`](docs/SCHEMA.md) |
+| Raspberry Pi deployment | [`DEPLOY-PI.md`](DEPLOY-PI.md) |
+| Windows portable notes | [`docs/desktop/README-PORTABLE.md`](docs/desktop/README-PORTABLE.md) |
+| Development handoff | [`HANDOFF.md`](HANDOFF.md) |
+
+## Development and Verification
 
 ```bash
-# 跑全部測試
 pytest tests/ -v
-
-# 跑單一檔
-pytest tests/test_notes_crud.py -v
-
-# 前端 type-check + build
-cd frontend && npm run build
-
-# 資料庫一致性檢查（API）
-curl http://127.0.0.1:5004/api/system/check-consistency
 ```
 
-> ✅ **注意**：測試 fixture（`tests/conftest.py`）已改走真實 migration chain
-> （`run_migrations`），schema regression 由 `tests/test_schema_regression.py` 守門。
-> （歷史背景見 [`docs/過期/20260412-cco-綜合分析報告.md`](docs/過期/20260412-cco-綜合分析報告.md) §2.1。）
+```bash
+cd go-shadow
+go test ./...
+```
 
----
+```bash
+cd frontend
+npm run build
+```
 
-## 🏗️ 技術堆疊
+Build the Windows portable package:
 
-| 層 | 技術 |
+```powershell
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.4.9
+```
+
+## Recent Milestones
+
+| Date | Milestone |
 |---|---|
-| Backend | Go primary runtime / SQLite (FTS5, WAL) |
-| Frontend | React 18 / TypeScript / Vite 5 / Zustand / Tailwind CSS |
-| Search | SQLite FTS5（純關鍵字，無向量） |
-| Image | Go WebP thumbnail generation |
-| Deploy | Go primary artifact / Raspberry Pi (`prism-go-primary.service` + Caddy + avahi) |
-| Test | pytest（legacy Python/source regression + Go migration/static gates）/ Playwright（前端 E2E） |
+| 2026-06-18 | Windows desktop portable baseline accepted: `Prism.exe`, local `PrismData\`, startup screen, embedded icon, seed config, no shortcut automation |
+| 2026-06-17 | Desktop Shell Phase 0-6 completed; installer/updater deferred; Pi boundary kept separate |
+| 2026-06-17 | Active UI i18n completed for `zh-TW`, `en`, `ja`, `ko` with Settings > Appearance switch |
+| 2026-06-13 | Go primary runtime became the sole runtime; Python Flask backend source removed in T053 |
 
----
+## License
 
-## 📂 專案結構
-
-```
-Prism/
-├── go-shadow/                # Go primary runtime source（唯一 backend）
-│   ├── main.go               # 所有 API handler + SQLite owner + v16 migration runner + 嵌入式 SPA
-│   └── main_test.go          # Go 單元/整合測試
-├── scripts/start_go_primary.ps1 # 本機 Go primary 啟動入口
-│   # Python Flask backend source（app.py / routes/ / utils/ / db.py / config.py / migrations/）已於 T053 移除
-├── tests/                    # pytest（純 Go 驗收網 + GO-ONLY runtime 測試 + 文件治理；temp_db 由 Go fresh-init DB 提供 seed）
-├── frontend/                 # React SPA
-│   └── src/
-│       ├── components/       # NoteCard / NoteEditor / DataManager / ...
-│       ├── pages/            # HomePage / SettingsPage / PromptBuilder
-│       ├── stores/           # Zustand state
-│       └── services/api.ts   # 統一 API client + axios interceptor
-├── deploy/                   # 樹莓派 Go primary setup templates
-├── docs/                     # 完整文件（含 docs/過期/：歷史審計報告 + 舊 demo UI）
-├── garbage-can/              # 個人歸檔（V1 設計筆記、雜物） — 非開發必讀
-└── knowledge.db              # 你的所有資料 (SQLite, WAL)
-```
-
----
-
-## 🔐 安全與隱私
-
-> ⚠️ **API 暴露邊界**：Prism API / Go runtime 目前沒有內建 API Token / Bearer Token / 使用者認證機制。預設使用場景是 `localhost`、trusted LAN、VPN，或 SSH tunnel / 受認證保護的 reverse proxy（例如 Caddy auth）。不要把 Go runtime 或 Caddy 入口直接暴露到 public internet / 公網。
-
-- ✅ **CSRF 防護**：Go runtime 驗證 Origin / Referer，可在「設定 > 資料 > CSRF 防護」即時開關（預設開啟）
-- ✅ **路徑穿越防護**：圖片 API 三層防禦 (basename + `..` 過濾 + abspath prefix)
-- ✅ **Magic Number 驗證**：上傳圖片必須通過 MIME 真實型別檢查
-- ✅ **FK 強制啟用**：資料庫連線啟動時驗證 `PRAGMA foreign_keys`
-- ✅ **FTS Token 限制**：搜尋 token 上限 20，防 DoS
-- ✅ **SSRF 防護**：`/api/upload/url` 已過濾 loopback / private / link-local 位址（v2.4.2）；詳見 [體檢報告 §2.2](docs/過期/20260412-cco-綜合分析報告.md)
-
----
-
-## 💡 使用小撇步
-
-- **Ctrl + V 貼圖**：在編輯器內直接貼上剪貼簿圖片
-- **拖曳排序**：自訂排序模式可拖曳卡片
-- **時光機**：點筆記右上角 → 「歷史版本」
-- **長文自動分離**：超過閾值的內容會自動轉成 .md 附件
-- **資料庫維護**：設定 → 系統維護 → VACUUM
-- **未儲存防護**：關閉編輯器時若有未儲存變更會攔截
-
----
-
-## 📦 版本歷程（最近）
-
-| 版本 | 日期 | 重點 |
-|---|---|---|
-| v2.4.9 | 2026-05-26 | 非首頁點分類/標籤會回首頁並套用篩選 |
-| v2.4.8 | 2026-05-26 | Preview 模式可就地編輯段落並移除圖片引用 |
-| v2.4.5 | 2026-05-05 | 搜尋覆蓋標題、內文、備註、附件、標籤 |
-| v2.4.4 | 2026-04-24 | 前後端 API 契約修補 |
-| v2.4.3 | 2026-04-24 | 外部 Agent API 對接整理 |
-| v2.4.2 | 2026-04-12 | cco 體檢報告修補 |
-| v2.4.1 | 2026-04-04 | IconButton 統一、tsc 零錯誤 |
-| v2.4.0 | 2026-04-04 | NoteEditor 拆 hooks、Toast → Zustand、api.ts 完整型別 |
-| **v2.3.0** | **2026-04-04** | **AI 全面拔除，轉型 Headless KMS** |
-| v2.2.0 | 2026-03-15 | 全域錯誤攔截 + ConfirmDialog + 標籤自動補全 |
-| v2.1.2 | 2026-03-15 | Pi Server Dashboard |
-| v2.1.1 | 2026-03-15 | Pi 反向代理 + systemd |
-| v2.1.0 | 2026-03-15 | 更新檢查 + 啟動 migration |
-| v1.5.1 | 2026-02-27 | 未儲存變更防護 |
-| v1.5.0 | 2026-02-27 | 圖片管理增強 + 端口自選 |
-
-完整歷程見 [`docs/TODO.md`](docs/TODO.md) Changelog。
-
----
-
-## 📜 授權
-
-MIT License — 見 [`LICENSE`](LICENSE)（若不存在請補上）。
-
----
-
-**Built for personal knowledge management. Designed to outlive its creator's enthusiasm.**
+MIT License. See [`LICENSE`](LICENSE).

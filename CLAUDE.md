@@ -21,6 +21,7 @@
 |---|---|
 | `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` | 已封存的 Python → Go 漸進替換盤點；只供早期 shadow backend / response diff 決策追溯，current truth 以 `docs/TODO.md` 為準 |
 | `docs/development-history/Go重構審查報告-20260613-codex.md` | 2026-06-13 Go primary 收尾審查原文；T046-T052 findings 已掃過並收斂，T053 source 封存/刪除已依其 guardrail 完成，current truth 以 `docs/TODO.md` / contracts / API docs 為準 |
+| `docs/development-history/desktop-portable-release-handoff-20260618.md` | Windows desktop portable / release baseline 完成紀錄；Desktop Shell Phase 0-6、post-package follow-up、manual acceptance、README split 與 release packaging 邊界已歸檔 |
 | `docs/FRONTEND-REDESIGN-PLAN.md` | 新 UI 參考檔與 Go 重構路線的整合規劃；採納 UX 工作流，明確暫緩 collections schema、AI、協作與大規模 scope creep |
 | `docs/contracts/phase19-go-runtime-packaging.md` | Go runtime / packaging proof；single binary、external data dir、SQLite driver spike、Windows/Pi build plan |
 | `docs/New_UI/Prism Redesign - standalone.html` | UI 原型參考；只採工作流與視覺方向，不直接搬 prototype-only code / sample data / tweak panel |

@@ -1,7 +1,7 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.4.9
-> **更新日期**: 2026-06-17
+> **更新日期**: 2026-06-18
 > **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
@@ -79,6 +79,7 @@
 | [development-history/README.md](./development-history/README.md) | 從 TODO 拆出的完成階段與完整 Changelog 保存區 | 🗄️ 歷史保存，按需更新 |
 | [development-history/go-primary-runtime-completion-20260617.md](./development-history/go-primary-runtime-completion-20260617.md) | T001-T053 Go primary migration 完成敘事、artifact 與完整任務表 | 🗄️ 歷史保存 |
 | [development-history/desktop-backup-i18n-handoff-20260617.md](./development-history/desktop-backup-i18n-handoff-20260617.md) | 2026-06-14 local desktop / backup / dashboard handoff、2026-06-17 Core UX 與 i18n 詳細完成記錄 | 🗄️ 歷史保存 |
+| [development-history/desktop-portable-release-handoff-20260618.md](./development-history/desktop-portable-release-handoff-20260618.md) | Desktop Shell Phase 0-6、Windows portable baseline、manual acceptance、README split 與 release packaging 邊界 | 🗄️ 歷史保存 |
 | [development-history/Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | 2026-06-13 Go 收尾審查原文；T046-T052 已處理，T053 前只作 guardrail 參考 | 🗄️ 歷史保存 |
 | [hypothetical_modern_prism.md](./hypothetical_modern_prism.md) | 現代化架構評估報告（前後端分離 Vite/React 方案探討）| 🗄️ 已完成實作，僅供歷史參考 |
 | [future_possibilities_heavy_local.md](./future_possibilities_heavy_local.md) | 本地 AI 重度依賴方案探索（PyTorch / Ollama / HuggingFace）| 🗄️ 已廢棄 — AI 功能於 v2.3.0 全面移除 |

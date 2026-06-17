@@ -7,6 +7,7 @@ type TranslationDict = {
 export type TranslationParams = Record<string, string | number>;
 
 export const LOCALE_STORAGE_KEY = 'locale';
+export const DEFAULT_LOCALE: Locale = 'en';
 
 const enCommon = {
   save: 'Save',
@@ -3113,9 +3114,53 @@ export function isLocale(value: string | null): value is Locale {
   return value === 'zh-TW' || value === 'en' || value === 'ja' || value === 'ko';
 }
 
+function normalizeBrowserLocale(value: string | null | undefined): Locale | null {
+  const normalized = value?.trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  if (normalized.startsWith('zh')) {
+    return 'zh-TW';
+  }
+  if (normalized.startsWith('ja')) {
+    return 'ja';
+  }
+  if (normalized.startsWith('ko')) {
+    return 'ko';
+  }
+  if (normalized.startsWith('en')) {
+    return 'en';
+  }
+
+  return null;
+}
+
+function browserLanguages(): string[] {
+  if (typeof navigator === 'undefined') {
+    return [];
+  }
+
+  return [
+    ...(Array.isArray(navigator.languages) ? navigator.languages : []),
+    navigator.language,
+  ].filter((value): value is string => Boolean(value));
+}
+
+export function detectBrowserLocale(languages: readonly string[] = browserLanguages()): Locale {
+  for (const language of languages) {
+    const locale = normalizeBrowserLocale(language);
+    if (locale) {
+      return locale;
+    }
+  }
+
+  return DEFAULT_LOCALE;
+}
+
 export function readStoredLocale(): Locale {
   const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-  return isLocale(saved) ? saved : 'zh-TW';
+  return isLocale(saved) ? saved : detectBrowserLocale();
 }
 
 export function setRuntimeLocale(locale: Locale): void {

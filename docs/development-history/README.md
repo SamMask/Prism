@@ -9,6 +9,7 @@
 | `todo-archive-pre-go-primary-runtime-migration-20260606.md` | Go primary runtime migration active roadmap 前的完整 `docs/TODO.md` 原文歸檔。 |
 | `go-primary-runtime-completion-20260617.md` | 從 `docs/TODO.md` 瘦身移出的 T001-T053 Go primary migration 完成敘事、artifact 與任務表。 |
 | `desktop-backup-i18n-handoff-20260617.md` | 從 `HANDOFF.md` / `docs/TODO.md` 瘦身移出的 2026-06-14 local desktop / backup / dashboard handoff、2026-06-17 Core UX 與 i18n 完成細節。 |
+| `desktop-portable-release-handoff-20260618.md` | 從 `HANDOFF.md` / `docs/TODO.md` 瘦身移出的 Desktop Shell Phase 0-6、Windows portable baseline、manual acceptance、README split 與 release packaging 邊界。 |
 | `Prism_Go_模組逐步重構計劃報告.md` | 早期 Python → Go 漸進替換盤點與 Phase 19/23 決策脈絡；已由 active `docs/TODO.md` 取代 current roadmap 角色。 |
 | `Go重構審查報告-20260613-codex.md` | 2026-06-13 Go primary 收尾唯讀審查原文；T046-T052 已吸收其 findings，保留作 T053 Python source 封存/刪除 guardrail。 |
 | `20260616-chatgpt-Prism-虛擬團隊討論會.md` | Prism / Cerberus 討論逐字稿與整理稿；已將 Core UX、備選項與未來分支候選吸收到 `docs/TODO.md` 的 2026-06-16 intake。 |

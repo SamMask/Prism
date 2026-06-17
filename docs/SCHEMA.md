@@ -2,8 +2,8 @@
 
 > **用途**: 共享資料綱要 — 所有資料表的現行定義，開發時的唯一真實來源。
 > **版本**: Migration v16 (Headless KMS)
-> **最後更新**: 2026-06-13
-> **改 DB 前必讀**: 新增欄位請在 `migrations/__init__.py` 追加 Migration，並更新本文件。
+> **最後更新**: 2026-06-18
+> **改 DB 前必讀**: Go runtime 是唯一 migration owner；新增欄位請在 `go-shadow/main.go` 的 ordered migration list 追加 migration，並更新本文件與對應 regression tests。
 
 ---
 
@@ -237,12 +237,7 @@ Schema_Meta (獨立，無 FK)
 
 ## 3. 新增欄位流程
 
-1. 在 `migrations/__init__.py` 的 `MIGRATIONS` 列表追加 tuple：
-   ```python
-   (15, "your_migration_name", [
-       "ALTER TABLE Notes ADD COLUMN new_col TEXT",
-   ]),
-   ```
+1. 在 `go-shadow/main.go` 的 ordered migration list 追加下一版 migration。
 2. 遷移必須**冪等**（使用 `IF NOT EXISTS` / `IF EXISTS`）
 3. 更新本文件 Section 1 對應資料表
 4. 更新 `docs/ER-DIAGRAM.md`（若關聯關係有變）

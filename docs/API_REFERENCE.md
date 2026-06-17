@@ -2,7 +2,7 @@
 
 > 用途：提供外部 Agent / 自動化工具（例如 `murmur厭世貓`）直接對接 Prism 的實際 API 契約。
 > 基準：以 Go primary live/default runtime 為準；Python Flask backend source 已於 T053 移除，Go primary 為唯一 runtime。
-> 最後確認：2026-06-13
+> 最後確認：2026-06-18
 
 ---
 
