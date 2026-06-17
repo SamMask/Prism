@@ -144,15 +144,6 @@ Build the Windows portable package:
 .\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.4.9
 ```
 
-## Recent Milestones
-
-| Date | Milestone |
-|---|---|
-| 2026-06-18 | Windows desktop portable baseline accepted: `Prism.exe`, local `PrismData\`, startup screen, embedded icon, seed config, no shortcut automation |
-| 2026-06-17 | Desktop Shell Phase 0-6 completed; installer/updater deferred; Pi boundary kept separate |
-| 2026-06-17 | Active UI i18n completed for `zh-TW`, `en`, `ja`, `ko` with Settings > Appearance switch |
-| 2026-06-13 | Go primary runtime became the sole runtime; Python Flask backend source removed in T053 |
-
 ## License
 
 MIT License. See [`LICENSE`](LICENSE).

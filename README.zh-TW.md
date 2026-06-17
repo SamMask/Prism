@@ -144,15 +144,6 @@ npm run build
 .\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.4.9
 ```
 
-## 最近里程碑
-
-| 日期 | 里程碑 |
-|---|---|
-| 2026-06-18 | Windows desktop portable baseline 已接受：`Prism.exe`、同層 `PrismData\`、startup screen、embedded icon、seed config、無 shortcut automation |
-| 2026-06-17 | Desktop Shell Phase 0-6 完成；installer/updater deferred；Pi boundary 保持分離 |
-| 2026-06-17 | Active UI i18n 完成 `zh-TW`、`en`、`ja`、`ko`，可在「設定 > 外觀」切換 |
-| 2026-06-13 | Go primary 成為唯一 runtime；Python Flask backend source 於 T053 移除 |
-
 ## 授權
 
 MIT License。見 [`LICENSE`](LICENSE)。
