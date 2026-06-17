@@ -1768,6 +1768,76 @@ func TestCheckUpdateReturnsControlledGoPrimaryStatus(t *testing.T) {
 	}
 }
 
+func TestSearchIntegrityDiagnosesAndRebuildsFTSOnly(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("DROP TRIGGER notes_au"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("UPDATE Notes SET title = 'Desynced Search Token' WHERE id = 1"); err != nil {
+		t.Fatal(err)
+	}
+	srv := &server{db: db, runtime: runtimeConfig{enableServerSystem: true}}
+
+	checkRecorder := httptest.NewRecorder()
+	srv.handleSearchIntegrity(checkRecorder, httptest.NewRequest(http.MethodGet, "/api/system/search-integrity", nil))
+	if checkRecorder.Code != http.StatusOK {
+		t.Fatalf("expected search integrity 200, got %d body=%s", checkRecorder.Code, checkRecorder.Body.String())
+	}
+	var checkPayload struct {
+		Data struct {
+			Status         string `json:"status"`
+			IntegrityError string `json:"integrity_error"`
+			AutoRepair     bool   `json:"auto_repair"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(checkRecorder.Body.Bytes(), &checkPayload); err != nil {
+		t.Fatal(err)
+	}
+	if checkPayload.Data.Status != "needs_rebuild" || checkPayload.Data.IntegrityError == "" || checkPayload.Data.AutoRepair {
+		t.Fatalf("unexpected search integrity payload: %#v", checkPayload)
+	}
+	var notesBefore int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Notes").Scan(&notesBefore); err != nil {
+		t.Fatal(err)
+	}
+
+	rebuildRecorder := httptest.NewRecorder()
+	srv.handleSearchIntegrityRebuildFTS(rebuildRecorder, httptest.NewRequest(http.MethodPost, "/api/system/search-integrity/rebuild-fts", strings.NewReader(`{}`)))
+	if rebuildRecorder.Code != http.StatusOK {
+		t.Fatalf("expected rebuild 200, got %d body=%s", rebuildRecorder.Code, rebuildRecorder.Body.String())
+	}
+	var notesAfter int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Notes").Scan(&notesAfter); err != nil {
+		t.Fatal(err)
+	}
+	if notesAfter != notesBefore {
+		t.Fatalf("rebuild must not edit Notes rows: before=%d after=%d", notesBefore, notesAfter)
+	}
+
+	afterRecorder := httptest.NewRecorder()
+	srv.handleSearchIntegrity(afterRecorder, httptest.NewRequest(http.MethodGet, "/api/system/search-integrity", nil))
+	if afterRecorder.Code != http.StatusOK {
+		t.Fatalf("expected post-rebuild check 200, got %d body=%s", afterRecorder.Code, afterRecorder.Body.String())
+	}
+	var afterPayload struct {
+		Data struct {
+			Status         string `json:"status"`
+			IntegrityError string `json:"integrity_error"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(afterRecorder.Body.Bytes(), &afterPayload); err != nil {
+		t.Fatal(err)
+	}
+	if afterPayload.Data.Status != "ok" || afterPayload.Data.IntegrityError != "" {
+		t.Fatalf("expected rebuilt FTS to be healthy, got %#v", afterPayload)
+	}
+}
+
 func TestStaticConfigDoesNotFallBackToSPAHTML(t *testing.T) {
 	srv := &server{}
 	request := httptest.NewRequest(http.MethodGet, "/static/config/wizard_options.json", nil)

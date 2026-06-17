@@ -9,6 +9,7 @@
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。
 - Go 漸進重構 T001-T053 已完成，完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
 - 2026-06-16 Core UX intake 已吸收；已完成項與 2026-06-14/06-17 handoff 快照見 `docs/development-history/desktop-backup-i18n-handoff-20260617.md`。
+- 2026-06-17 Core UX / Maintenance 三個 candidate 已完成：搜尋可解釋性 UX、search integrity diagnostics + 手動 FTS rebuild、maintenance health overview。未新增 semantic search、SearchHistory DB、自動修復、schema/API exposure boundary 或 Pi deploy 變更。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
 Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
@@ -42,9 +43,9 @@ Contract：`CONTRACT-DESKTOP-SHELL-SPIKE`（見 `docs/CONTRACTS.md`）。
 
 ### Core UX / Maintenance
 
-- [ ] **SEARCH-UX-CANDIDATE-01 Search explainability UX**：Search Context Bar、Empty State Recovery、Search Scope Hint、Recent Searches（localStorage 最多 5 筆、不進 DB）、Mobile Search Entry。禁止範圍：relevance ranking、semantic search、attachment body snippets、SearchHistory DB、advanced query language、每鍵即時搜尋。
-- [ ] **SEARCH-INTEGRITY-CANDIDATE-01 Search integrity diagnostics contract**：未來可規劃 `GET /api/system/search-integrity` 與 `POST /api/system/search-integrity/rebuild-fts`。第一版只做診斷與 FTS rebuild；禁止 VACUUM、改 Notes、改 Attachments、刪檔、自動修復、讓 Agent 自動觸發。
-- [ ] **MAINT-OVERVIEW-CANDIDATE-01 Maintenance health overview**：在 Settings IA 與 MAINT-COPY-01 完成後，才考慮做維護狀態總覽。第一版只呈現狀態，不新增修復行為。
+- [x] **SEARCH-UX-CANDIDATE-01 Search explainability UX**（2026-06-17 完成）：Home 已加入 Search Context Bar、Empty State Recovery、Search Scope Hint、Recent Searches（`localStorage` 最多 5 筆、不進 DB）、Mobile Search Entry。未新增 relevance ranking、semantic search、attachment body snippets、SearchHistory DB、advanced query language 或每鍵即時搜尋。
+- [x] **SEARCH-INTEGRITY-CANDIDATE-01 Search integrity diagnostics contract**（2026-06-17 完成）：已新增 `GET /api/system/search-integrity` 與 `POST /api/system/search-integrity/rebuild-fts`。第一版只做診斷與手動 FTS rebuild；禁止 VACUUM、改 Notes、改 Attachments、刪檔、自動修復、讓 Agent 自動觸發。
+- [x] **MAINT-OVERVIEW-CANDIDATE-01 Maintenance health overview**（2026-06-17 完成）：Settings 維護頁已新增狀態總覽，只呈現資料一致性、搜尋索引與 WAL 手動狀態；不新增修復行為。
 
 ### Future Branch Candidates
 

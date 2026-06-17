@@ -33,6 +33,12 @@ TOAST_PATH = ROOT / "frontend" / "src" / "components" / "ui" / "Toast.tsx"
 MODAL_PATH = ROOT / "frontend" / "src" / "components" / "ui" / "Modal.tsx"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
+DESKTOP_I18N_ARCHIVE_PATH = (
+    ROOT
+    / "docs"
+    / "development-history"
+    / "desktop-backup-i18n-handoff-20260617.md"
+)
 
 
 def test_i18n_exposes_four_locales_and_pure_translate_api():
@@ -347,21 +353,21 @@ def test_api_service_global_error_toasts_use_i18n_fallbacks():
 
 
 def test_i18n_remaining_hardcoded_ui_audit_triages_active_hidden_and_allowed_literals():
-    todo = TODO_PATH.read_text(encoding="utf-8")
+    todo = DESKTOP_I18N_ARCHIVE_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
     settings = SETTINGS_PATH.read_text(encoding="utf-8")
 
-    for doc in [todo, handoff]:
-        assert "remaining hardcoded UI string audit / hidden legacy settings triage" in doc
-        assert "CommandPalette" in doc
-        assert "SecuritySection" in doc or "Security" in doc
-        assert "DangerZoneSection" in doc or "DangerZone" in doc
-        assert "ConfirmDialog" in doc or "shared UI fallback" in doc
-        assert "PortConfigSection" in doc
-        assert "UpdateSection" in doc
-        assert "TagInput" in doc
-        assert "Allowed non-UI/data literals" in doc
-        assert "階段 5 收尾" in doc or "進階段 5 收尾" in doc
+    assert "desktop-backup-i18n-handoff-20260617.md" in handoff
+    assert "remaining hardcoded UI string audit / hidden legacy settings triage" in todo
+    assert "CommandPalette" in todo
+    assert "SecuritySection" in todo or "Security" in todo
+    assert "DangerZoneSection" in todo or "DangerZone" in todo
+    assert "ConfirmDialog" in todo or "shared UI fallback" in todo
+    assert "PortConfigSection" in todo
+    assert "UpdateSection" in todo
+    assert "TagInput" in todo
+    assert "Allowed non-UI/data literals" in todo
+    assert "階段 5 收尾" in todo or "進階段 5 收尾" in todo
 
     assert "PortConfigSection" in settings
     assert "UpdateSection" in settings
@@ -439,7 +445,7 @@ def test_active_ui_final_components_use_i18n_for_extracted_strings():
 
 
 def test_todo_records_i18n_scope_and_frontend_only_boundary():
-    todo = TODO_PATH.read_text(encoding="utf-8")
+    todo = DESKTOP_I18N_ARCHIVE_PATH.read_text(encoding="utf-8")
 
     assert "i18n（多語系）還原" in todo
     assert "中(zh-TW)/英(en)/日(ja)/韓(ko) 四語" in todo

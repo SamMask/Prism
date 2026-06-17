@@ -701,6 +701,50 @@ Response 每筆欄位：
 
 - 舊文件中的 `type_category_mismatch` 已移除
 
+### GET `/api/system/search-integrity`
+
+檢查 `Notes` 與 `Notes_FTS` 是否對齊。此端點只回報狀態，不修改資料。
+
+Response：
+
+```json
+{
+  "status": "success",
+  "data": {
+    "status": "ok",
+    "notes_count": 42,
+    "fts_rows": 42,
+    "missing_fts_rows": 0,
+    "orphan_fts_rows": 0,
+    "integrity_error": "",
+    "rebuild_route": "/api/system/search-integrity/rebuild-fts",
+    "auto_repair": false
+  }
+}
+```
+
+`status` 可能為：
+
+- `ok`
+- `needs_rebuild`
+
+### POST `/api/system/search-integrity/rebuild-fts`
+
+手動重建 `Notes_FTS`。此端點只執行 SQLite FTS rebuild；不執行 `VACUUM`、不修改 `Notes` / `Note_Attachments`、不刪檔，也不會由診斷端點自動觸發。
+
+Response：
+
+```json
+{
+  "status": "success",
+  "data": {
+    "notes_count": 42,
+    "fts_rows": 42,
+    "message": "FTS index rebuilt"
+  }
+}
+```
+
 ### GET `/api/system/port-config`
 
 ### POST `/api/system/port-config`

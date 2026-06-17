@@ -9,7 +9,7 @@ SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOYMENT_PATH = ROOT / "docs" / "DEPLOYMENT.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 README_PATH = ROOT / "README.md"
 DOCS_README_PATH = ROOT / "docs" / "README.md"
 CONTRIBUTING_PATH = ROOT / "docs" / "CONTRIBUTING.md"
@@ -80,10 +80,12 @@ def test_t052_stale_tracked_artifacts_are_absent_and_frontend_lockfile_remains()
     assert not (ROOT / "package-lock.json").exists()
     assert (ROOT / "frontend" / "package-lock.json").exists()
 
-    for path in (README_PATH, DOCS_README_PATH, CONTRIBUTING_PATH, DEPLOYMENT_PATH):
-        text = _text(path)
-        assert "embedded Python" in text or "Python zip" in text
-        assert "Pillow" in text
+    completion_archive = _text(TODO_PATH)
+    assert "resources/python-embed.zip" in completion_archive
+    assert "pillow-12.0.0-cp312-cp312-win_amd64.whl" in completion_archive
+    assert "root `package-lock.json`" in completion_archive
+    assert "frontend" in completion_archive
+    assert "package-lock.json" in completion_archive
 
 
 def test_t051_t052_todo_closes_current_items_and_hands_off_to_t053():

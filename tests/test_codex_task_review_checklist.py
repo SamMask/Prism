@@ -3,7 +3,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECKLIST_PATH = ROOT / "docs" / "CODEX-TASK-REVIEW-CHECKLIST.md"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = (
+    ROOT
+    / "docs"
+    / "development-history"
+    / "desktop-backup-i18n-handoff-20260617.md"
+)
 
 
 def _text(path: Path) -> str:

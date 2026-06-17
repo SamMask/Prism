@@ -21,7 +21,7 @@ from tests.go_primary_parity_harness import build_go_shadow_exe
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
 GO_MAIN_PATH = GO_SHADOW_DIR / "main.go"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 GO_README_PATH = GO_SHADOW_DIR / "README.md"

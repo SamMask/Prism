@@ -1012,6 +1012,36 @@
       "current_owner_note": "Promoted to Go primary live/default product surface by T042-T050; legacy Python handler was removed in T053."
     },
     {
+      "rule": "/api/system/search-integrity",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.search_integrity",
+      "python_handler": "none; added after T053 in Go primary",
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "go_candidate": "implemented server/system diagnostic route",
+      "db_side_effects": [],
+      "file_side_effects": [],
+      "current_owner_note": "Search integrity diagnostics are read-only. They compare Notes rows with Notes_FTS rows and never auto-repair, VACUUM, edit Notes, edit attachments, or delete files."
+    },
+    {
+      "rule": "/api/system/search-integrity/rebuild-fts",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.search_integrity_rebuild_fts",
+      "python_handler": "none; added after T053 in Go primary",
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "go_candidate": "implemented explicit server/system maintenance route",
+      "db_side_effects": [
+        "rebuild Notes_FTS virtual table content"
+      ],
+      "file_side_effects": [],
+      "current_owner_note": "Manual-only FTS rebuild. It does not run VACUUM, change Notes rows, change attachment rows, delete files, or run automatically from agents/UI diagnostics."
+    },
+    {
       "rule": "/api/system/check-update",
       "methods": [
         "GET"

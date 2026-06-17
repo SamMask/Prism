@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 AGENTS_PATH = ROOT / "AGENTS.md"
 CLAUDE_PATH = ROOT / "CLAUDE.md"
 INDEX_PATH = ROOT / "docs" / "INDEX.md"

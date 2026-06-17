@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-python-packaged-runtime-deletion.json"
-TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"

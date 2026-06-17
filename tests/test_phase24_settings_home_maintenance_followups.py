@@ -35,6 +35,30 @@ def test_settings_home_followups_are_recorded_in_ui_copy_and_layout():
     assert "flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1" in home
 
 
+def test_search_ux_and_maintenance_overview_candidates_are_locked():
+    i18n = I18N_PATH.read_text(encoding="utf-8")
+    home = HOME_PATH.read_text(encoding="utf-8")
+    maintenance = SYSTEM_MAINTENANCE_PATH.read_text(encoding="utf-8")
+    api = API_PATH.read_text(encoding="utf-8")
+
+    assert "prism.recentSearches" in home
+    assert "MAX_RECENT_SEARCHES = 5" in home
+    assert "data-testid=\"mobile-search-form\"" in home
+    assert "data-testid=\"search-context-bar\"" in home
+    assert "searchScopeHint" in home
+    assert "清除搜尋與篩選" in i18n
+    assert "標題、內容、備註、標籤、附件標題 / 路徑與文字附件內容" in i18n
+    assert "SearchHistory" not in home
+
+    assert "data-testid=\"maintenance-health-overview\"" in maintenance
+    assert "data-testid=\"search-integrity-card\"" in maintenance
+    assert "api.getSearchIntegrity()" in maintenance
+    assert "api.rebuildSearchIndex()" in maintenance
+    assert "重建只會重建 FTS，不會 VACUUM、修改筆記或刪檔" in i18n
+    assert "getSearchIntegrity" in api
+    assert "rebuildSearchIndex" in api
+
+
 def test_settings_deploy_controls_explain_port_update_and_hide_local_service_management():
     port_config = PORT_CONFIG_PATH.read_text(encoding="utf-8")
     update = UPDATE_PATH.read_text(encoding="utf-8")

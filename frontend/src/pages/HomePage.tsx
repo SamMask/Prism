@@ -4,7 +4,7 @@ import { NoteCard } from '../components/NoteCard'
 import { NoteEditor } from '../components/NoteEditor'
 import { ReadingView } from '../components/ReadingView'
 import { ToastContainer, toast } from '../components/ui/Toast'
-import { Loader2 } from 'lucide-react'
+import { Clock, Loader2, Search, X } from 'lucide-react'
 import { useTranslation } from '../hooks/useTranslation'
 import {
   DndContext,
@@ -25,6 +25,28 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { Note, api } from '../services/api'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
+
+const RECENT_SEARCHES_STORAGE_KEY = 'prism.recentSearches'
+const MAX_RECENT_SEARCHES = 5
+
+function readRecentSearches(): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(RECENT_SEARCHES_STORAGE_KEY) || '[]')
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '').slice(0, MAX_RECENT_SEARCHES)
+      : []
+  } catch {
+    return []
+  }
+}
+
+function writeRecentSearches(query: string): string[] {
+  const trimmed = query.trim()
+  if (!trimmed) return readRecentSearches()
+  const nextSearches = [trimmed, ...readRecentSearches().filter((item) => item.toLowerCase() !== trimmed.toLowerCase())].slice(0, MAX_RECENT_SEARCHES)
+  localStorage.setItem(RECENT_SEARCHES_STORAGE_KEY, JSON.stringify(nextSearches))
+  return nextSearches
+}
 
 // Sortable NoteCard wrapper
 function SortableNoteCard({ note, viewMode }: { note: Note; viewMode: ViewMode }) {
@@ -70,6 +92,10 @@ export function HomePage() {
     searchQuery,
     selectedCategoryId,
     selectedTagId,
+    setSearchQuery,
+    setSelectedCategory,
+    setSelectedTag,
+    setShowArchived,
     showArchived,
     totalNotes,
     categories,
@@ -77,6 +103,8 @@ export function HomePage() {
   } = useAppStore()
 
   const [localNotes, setLocalNotes] = useState<Note[]>([])
+  const [mobileSearchValue, setMobileSearchValue] = useState(searchQuery)
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches())
   const observerRef = useRef<IntersectionObserver | null>(null)
   
   // Settings State
@@ -90,6 +118,13 @@ export function HomePage() {
   useEffect(() => {
     fetchNotes(true)
   }, [fetchNotes])
+
+  useEffect(() => {
+    setMobileSearchValue(searchQuery)
+    if (searchQuery.trim()) {
+      setRecentSearches(writeRecentSearches(searchQuery))
+    }
+  }, [searchQuery])
 
   // DnD sensors
   const sensors = useSensors(
@@ -165,6 +200,7 @@ export function HomePage() {
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
   const activeCategoryName = getCategoryDisplayName(activeCategory?.name, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
+  const hasActiveFilter = !!selectedCategoryId || !!selectedTagId || showArchived
   const sectionTitle = searchQuery
     ? t('home.searchResults')
     : showArchived
@@ -183,6 +219,22 @@ export function HomePage() {
   const emptyStateDescription = searchQuery
     ? t('home.emptySearchDescription', { query: searchQuery })
     : t('home.emptyDescription')
+
+  const clearSearch = () => setSearchQuery('')
+  const clearSearchAndFilters = () => {
+    setSearchQuery('')
+    if (selectedCategoryId) setSelectedCategory(null)
+    if (selectedTagId) setSelectedTag(null)
+    if (showArchived) setShowArchived(false)
+  }
+  const submitMobileSearch = (event: React.FormEvent) => {
+    event.preventDefault()
+    setSearchQuery(mobileSearchValue.trim())
+  }
+  const runRecentSearch = (query: string) => {
+    setMobileSearchValue(query)
+    setSearchQuery(query)
+  }
 
   // Render notes grid/list content
   const notesContent = (
@@ -209,6 +261,39 @@ export function HomePage() {
 
   return (
     <>
+      <form
+        onSubmit={submitMobileSearch}
+        className="mb-4 md:hidden"
+        data-testid="mobile-search-form"
+      >
+        <label className="sr-only" htmlFor="mobile-search-input">{t('common.search')}</label>
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" />
+          <input
+            id="mobile-search-input"
+            type="text"
+            value={mobileSearchValue}
+            onChange={(event) => setMobileSearchValue(event.target.value)}
+            placeholder={t('header.searchPlaceholder')}
+            className="h-10 w-full rounded-md border border-border-default bg-bg-elevated pl-10 pr-10 text-sm text-text-primary placeholder-text-muted focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/50"
+            data-testid="mobile-search-input"
+          />
+          {mobileSearchValue && (
+            <button
+              type="button"
+              onClick={() => {
+                setMobileSearchValue('')
+                if (searchQuery) clearSearch()
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
+              aria-label={t('home.clearSearch')}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </form>
+
       <div className="mb-5 flex items-end justify-between gap-4 px-1">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -221,6 +306,38 @@ export function HomePage() {
           </div>
         </div>
       </div>
+
+      {searchQuery && (
+        <div className="mb-4 rounded-md border border-border-subtle bg-bg-elevated/70 px-3 py-3" data-testid="search-context-bar">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+            <Search size={14} className="text-primary" />
+            <span className="font-medium text-text-primary">{t('home.searchScopeTitle')}</span>
+            <span>{t('home.searchScopeHint')}</span>
+            {hasActiveFilter && <span className="text-warning">{t('home.searchFilteredHint')}</span>}
+            <button type="button" onClick={clearSearch} className="ml-auto text-primary hover:text-primary-light">
+              {t('home.clearSearch')}
+            </button>
+          </div>
+          {recentSearches.length > 0 && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-xs text-text-muted">
+                <Clock size={13} />
+                {t('home.recentSearches')}
+              </span>
+              {recentSearches.map((query) => (
+                <button
+                  key={query}
+                  type="button"
+                  onClick={() => runRecentSearch(query)}
+                  className="h-7 rounded-md border border-border-subtle bg-bg-base px-2 text-xs text-text-secondary hover:border-border-default hover:bg-bg-hover hover:text-text-primary"
+                >
+                  {query}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Notes Grid/List with optional DnD */}
       {isDragEnabled ? (
@@ -259,6 +376,26 @@ export function HomePage() {
           <p className="text-text-secondary" data-testid="empty-state-description">
             {emptyStateDescription}
           </p>
+          {searchQuery && (
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="rounded-md border border-border-default bg-bg-elevated px-3 py-2 text-sm text-text-primary hover:bg-bg-hover"
+              >
+                {t('home.clearSearch')}
+              </button>
+              {hasActiveFilter && (
+                <button
+                  type="button"
+                  onClick={clearSearchAndFilters}
+                  className="rounded-md border border-primary/40 bg-primary/15 px-3 py-2 text-sm text-primary-light hover:bg-primary/20"
+                >
+                  {t('home.clearSearchAndFilters')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

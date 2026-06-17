@@ -65,6 +65,9 @@
 - [x] **MAINT-COPY-01 Maintenance copywriting pass**（2026-06-17 完成）：WAL / checkpoint / consistency 等工程詞已退到補充文字，主標改為「整理資料庫暫存日誌」「資料一致性檢查」等使用者語言；未改維護 API 行為，未新增自動修復。驗收：`cd frontend && npm run build` 通過，危險操作仍需明確確認。
 - [x] **BACKUP-UX-02 Backup / export / restore separation**（2026-06-17 完成）：UI 文案已區分「匯出副本」「匯入資料」「Prism 內建還原點」「還原資料庫」。保留既有 restore restart 協定；未新增本機自動備份排程，未改 Pi 每週備份策略。驗收：備份下載、JSON 匯入、DB restore 入口語義清楚且現有 API 呼叫不變。
 - [x] **CODEX-REVIEW-01 Codex task/review checklist extraction**（2026-06-17 完成）：已新增 `docs/CODEX-TASK-REVIEW-CHECKLIST.md`，把報告中的任務 prompt 契約、allowed files、forbidden scope、verification、Not Changed 回報格式、review checklist 與硬退回條件收斂成 docs-only checklist。驗收：`tests/test_codex_task_review_checklist.py` 鎖定 checklist 內容與 TODO closure；不改 agent runtime、不改 `AGENTS.md` / `CLAUDE.md`，未新增 schema/API/AI/semantic/runtime/deploy scope。
+- [x] **SEARCH-UX-CANDIDATE-01 Search explainability UX**（2026-06-17 完成）：Home 已加入 Search Context Bar、Search Scope Hint、recent searches（`localStorage` 最多 5 筆、不進 DB）、mobile search entry 與 empty-state recovery。搜尋仍使用既有 `GET /api/notes?q=...`；未新增 ranking、semantic search、attachment body snippets、SearchHistory DB、advanced query language 或 per-keystroke search。
+- [x] **SEARCH-INTEGRITY-CANDIDATE-01 Search integrity diagnostics contract**（2026-06-17 完成）：Go primary 新增 `GET /api/system/search-integrity`（read-only Notes/Notes_FTS 對齊診斷）與 `POST /api/system/search-integrity/rebuild-fts`（手動 FTS rebuild）。禁止 VACUUM、改 Notes、改 Attachments、刪檔、自動修復或 Agent 自動觸發；API reference、route ownership manifest 與 contracts 已同步。
+- [x] **MAINT-OVERVIEW-CANDIDATE-01 Maintenance health overview**（2026-06-17 完成）：Settings 維護頁新增只讀狀態總覽，整合資料一致性、搜尋索引與 WAL 手動狀態；保留既有手動 WAL / consistency 按鈕，新增 search integrity check / rebuild 明確按鈕，不新增自動修復行為。
 - [ ] **Desktop Shell Phase 0**：已在下方「產品方向：桌面化」追蹤；本次 intake 確認其優先級仍成立，不另開重複項。
 
 

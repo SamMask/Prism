@@ -3,6 +3,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 TODO_PATH = ROOT / "docs" / "TODO.md"
+GO_COMPLETION_PATH = (
+    ROOT
+    / "docs"
+    / "development-history"
+    / "go-primary-runtime-completion-20260617.md"
+)
 ARCHIVE_PATH = (
     ROOT
     / "docs"
@@ -19,7 +25,7 @@ ALLOWED_STATUS = {"Todo", "Doing", "Blocked", "Review", "Done"}
 
 def _todo_rows():
     rows = []
-    for line in TODO_PATH.read_text(encoding="utf-8").splitlines():
+    for line in GO_COMPLETION_PATH.read_text(encoding="utf-8").splitlines():
         if line.startswith("| T"):
             cells = [cell.strip() for cell in line.strip("|").split("|")]
             rows.append(cells)
@@ -27,7 +33,7 @@ def _todo_rows():
 
 
 def test_active_todo_uses_required_table_shape():
-    text = TODO_PATH.read_text(encoding="utf-8")
+    text = GO_COMPLETION_PATH.read_text(encoding="utf-8")
 
     assert EXPECTED_HEADER in text
 
@@ -89,7 +95,7 @@ def test_todo_structure_references_exist():
 
 
 def test_go_replacement_plan_covers_python_owned_runtime_surfaces():
-    text = TODO_PATH.read_text(encoding="utf-8")
+    text = GO_COMPLETION_PATH.read_text(encoding="utf-8")
 
     required_terms = [
         "route ownership manifest",

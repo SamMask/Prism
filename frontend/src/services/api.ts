@@ -169,6 +169,22 @@ export interface RestartServiceResponse {
   message: string;
 }
 
+export interface SearchIntegrityResponse {
+  status: 'ok' | 'needs_rebuild';
+  notes_count: number;
+  fts_rows: number;
+  missing_fts_rows: number;
+  orphan_fts_rows: number;
+  rebuild_route: string;
+  auto_repair: boolean;
+}
+
+export interface SearchIntegrityRebuildResponse {
+  notes_count: number;
+  fts_rows: number;
+  message: string;
+}
+
 // Create axios instance
 const API_BASE_URL = "/api";
 const client = axios.create({
@@ -702,6 +718,16 @@ export const api = {
     health: 'healthy' | 'warning' | 'critical';
   }> => {
     const { data } = await client.get("/system/check-consistency");
+    return data.data;
+  },
+
+  getSearchIntegrity: async (): Promise<SearchIntegrityResponse> => {
+    const { data } = await client.get("/system/search-integrity");
+    return data.data;
+  },
+
+  rebuildSearchIndex: async (): Promise<SearchIntegrityRebuildResponse> => {
+    const { data } = await client.post("/system/search-integrity/rebuild-fts", {});
     return data.data;
   },
 

@@ -225,6 +225,8 @@ func main() {
 	mux.HandleFunc("/api/system/csrf-protection", srv.handleCSRFProtection)
 	mux.HandleFunc("/api/system/wal-checkpoint", srv.handleWALCheckpoint)
 	mux.HandleFunc("/api/system/check-consistency", srv.handleCheckConsistency)
+	mux.HandleFunc("/api/system/search-integrity/rebuild-fts", srv.handleSearchIntegrityRebuildFTS)
+	mux.HandleFunc("/api/system/search-integrity", srv.handleSearchIntegrity)
 	mux.HandleFunc("/api/system/port-config", srv.handlePortConfig)
 	mux.HandleFunc("/api/server/hardware", srv.handleServerHardware)
 	mux.HandleFunc("/api/server/logs", srv.handleServerLogs)
@@ -1941,6 +1943,102 @@ func (s *server) handleCheckConsistency(w http.ResponseWriter, r *http.Request) 
 			"fk_status":        fkStatus,
 			"fk_enabled":       fkStatus == 1,
 			"health":           health,
+		},
+	})
+}
+
+func (s *server) handleSearchIntegrity(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !s.requireServerSystem(w, r) {
+		return
+	}
+	notesCount, err := s.scalarInt("SELECT COUNT(*) FROM Notes")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	integrityStatus := "ok"
+	integrityMessage := ""
+	ftsRows, err := s.scalarInt("SELECT COUNT(*) FROM Notes_FTS")
+	if err != nil {
+		ftsRows = -1
+		integrityStatus = "needs_rebuild"
+		integrityMessage = err.Error()
+	}
+	missingFTSRows := -1
+	if integrityMessage == "" {
+		missingFTSRows, err = s.scalarInt(`
+		SELECT COUNT(*) FROM Notes n
+		LEFT JOIN Notes_FTS fts ON fts.rowid = n.id
+		WHERE fts.rowid IS NULL`)
+		if err != nil {
+			integrityStatus = "needs_rebuild"
+			integrityMessage = err.Error()
+		}
+	}
+	orphanFTSRows := -1
+	if integrityMessage == "" {
+		orphanFTSRows, err = s.scalarInt(`
+		SELECT COUNT(*) FROM Notes_FTS fts
+		LEFT JOIN Notes n ON n.id = fts.rowid
+		WHERE n.id IS NULL`)
+		if err != nil {
+			integrityStatus = "needs_rebuild"
+			integrityMessage = err.Error()
+		}
+	}
+	if integrityMessage == "" {
+		err = s.checkNotesFTSIntegrity()
+	}
+	if err != nil {
+		integrityStatus = "needs_rebuild"
+		integrityMessage = err.Error()
+	} else if missingFTSRows > 0 || orphanFTSRows > 0 || notesCount != ftsRows {
+		integrityStatus = "needs_rebuild"
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"status":           integrityStatus,
+			"notes_count":      notesCount,
+			"fts_rows":         ftsRows,
+			"missing_fts_rows": missingFTSRows,
+			"orphan_fts_rows":  orphanFTSRows,
+			"rebuild_route":    "/api/system/search-integrity/rebuild-fts",
+			"auto_repair":      false,
+			"integrity_error":  integrityMessage,
+		},
+	})
+}
+
+func (s *server) checkNotesFTSIntegrity() error {
+	_, err := s.db.Exec("INSERT INTO Notes_FTS(Notes_FTS, rank) VALUES('integrity-check', 1)")
+	return err
+}
+
+func (s *server) handleSearchIntegrityRebuildFTS(w http.ResponseWriter, r *http.Request) {
+	if !requireMethod(w, r, http.MethodPost) || !s.requireServerSystem(w, r) {
+		return
+	}
+	notesCountBefore, err := s.scalarInt("SELECT COUNT(*) FROM Notes")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if _, err := s.db.Exec("INSERT INTO Notes_FTS(Notes_FTS) VALUES('rebuild')"); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	ftsRowsAfter, err := s.scalarInt("SELECT COUNT(*) FROM Notes_FTS")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, response{
+		"status": "success",
+		"data": response{
+			"notes_count": notesCountBefore,
+			"fts_rows":    ftsRowsAfter,
+			"message":     "FTS index rebuilt",
 		},
 	})
 }
