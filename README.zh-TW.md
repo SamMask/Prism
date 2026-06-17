@@ -34,7 +34,7 @@ Portable package 內容：
 - `README-PORTABLE.md`
 - `static/config/` seed config
 
-目標機器需要已安裝 Microsoft Edge WebView2 Runtime。此 portable package 不會安裝 WebView2，也不是 MSI/NSIS/WiX 安裝包。
+目標機器需要已安裝 Microsoft Edge WebView2 Runtime。如果電腦沒有 WebView2，請到 Microsoft 官方 [Download Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/consumer/) 頁面下載安裝。此 portable package 不會安裝 WebView2，也不是 MSI/NSIS/WiX 安裝包。
 
 ## 快速開始
 

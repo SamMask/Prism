@@ -38,7 +38,7 @@ The portable package includes `static\config\prompt_options.json` and `static\co
 
 ## Requirement
 
-Microsoft Edge WebView2 Runtime must be installed on the machine. If WebView2 is missing, the desktop shell exits with a diagnostic error in the debug console or desktop log. This portable package does not install WebView2 Runtime and is not an MSI/NSIS/WiX installer.
+Microsoft Edge WebView2 Runtime must be installed on the machine. If WebView2 is missing, download and install it from Microsoft's official [Download Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/consumer/) page. Without it, the desktop shell exits with a diagnostic error in the debug console or desktop log. This portable package does not install WebView2 Runtime and is not an MSI/NSIS/WiX installer.
 
 ## Deferred Installer Work
 
