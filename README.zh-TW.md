@@ -124,18 +124,24 @@ Prism 目前沒有內建使用者登入、Bearer Token 或 public API auth layer
 
 ## 開發與驗證
 
-```bash
-pytest tests/ -v
-```
+Prism 的產品 runtime 是 Go。Python 只用在 repo 開發測試流程，透過 `pytest`
+執行回歸測試；它不是 backend runtime，也不是 Windows portable 的執行依賴。
 
 ```bash
+# Go runtime tests
 cd go-shadow
 go test ./...
 ```
 
 ```bash
+# Frontend type-check and build
 cd frontend
 npm run build
+```
+
+```bash
+# Python dev/test-only regression suite
+pytest tests/ -v
 ```
 
 建置 Windows portable package：

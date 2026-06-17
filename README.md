@@ -124,18 +124,25 @@ Prism currently has no built-in user login, bearer token, or public API authenti
 
 ## Development and Verification
 
-```bash
-pytest tests/ -v
-```
+Prism's product runtime is Go. Python is used only for repository test
+orchestration through `pytest`; it is not a backend runtime or Windows portable
+runtime dependency.
 
 ```bash
+# Go runtime tests
 cd go-shadow
 go test ./...
 ```
 
 ```bash
+# Frontend type-check and build
 cd frontend
 npm run build
+```
+
+```bash
+# Python dev/test-only regression suite
+pytest tests/ -v
 ```
 
 Build the Windows portable package:
