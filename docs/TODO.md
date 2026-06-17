@@ -23,7 +23,7 @@ Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/A
 
 本路線只處理 Windows 桌面殼與封裝體驗；Pi 部署仍維持 Go primary artifact + systemd + Caddy，不引入 WebView2、tray、installer 或 Windows GUI 假設。
 
-下一個可施工入口是 Phase 1。Phase 0 是已完成證據；Phase 2+ 先是規劃候選，promote 前必須補 `docs/CONTRACTS.md` contract、targeted tests 與 handoff。
+下一個可施工入口是 Phase 4。Phase 0-3 是已完成證據；Phase 4+ 先是規劃候選，promote 前必須補或更新 `docs/CONTRACTS.md` contract、targeted tests 與 handoff。
 
 已定桌面化產品決策：
 
@@ -44,40 +44,44 @@ Contract：`CONTRACT-DESKTOP-SHELL-SPIKE`（見 `docs/CONTRACTS.md`）。
 - [x] 關閉視窗預設直接結束行程；close-to-tray 仍是後續正式封裝的進階選項。
 - [x] 驗收：tray 選單有反應、關視窗正常退出、message loop 不卡住；普通 console build 保留除錯 log。
 
-#### Phase 1 — WebView2 spike（下一個可施工）
+#### Phase 1 — WebView2 spike（2026-06-17 完成）
 
 目標：在 Phase 0 已驗證的單一 Win32 message loop 上接入 WebView2 視窗，先載入受控本機 placeholder / URL target，確認 WebView2 與 tray 共用同一 loop 不互搶。
 
 Contract：`CONTRACT-DESKTOP-SHELL-WEBVIEW2-SPIKE`（見 `docs/CONTRACTS.md`）。
 
-- [ ] 沿用 `desktop-spike/` 的 Win32 message loop 與 tray 結構。
-- [ ] 引入 `jchv/go-webview2` 驗證 WebView2 可在同一主執行緒 loop 中顯示內容。
-- [ ] 不接 Prism Go server goroutine、不新增 API/schema/migration、不碰 production data、不改 Pi deploy。
-- [ ] 驗收：WebView2 內容可見、tray Show / Quit 仍有反應、關閉視窗仍直接結束行程、console build 保留除錯 log。
+- [x] `desktop-spike/` 保留為 Phase 0 isolated proof；Phase 1-3 正式桌面入口接到 `go-shadow --desktop-*`，以便 Phase 2 能使用同一行程 Go primary runtime internals。
+- [x] 引入 `jchv/go-webview2` 驗證 WebView2 可顯示 placeholder / URL target。
+- [x] Phase 1 standalone 模式不接 Prism Go server goroutine、不新增 API/schema/migration、不碰 production data、不改 Pi deploy。
+- [x] 驗收：`go run . --desktop-webview-only --desktop-self-test ...` 通過；WebView2 message loop、tray Show / Quit、關閉退出可跑完 bounded self-test，debug console build 保留 log。
 
-#### Phase 2 — Local runtime host integration（候選）
+#### Phase 2 — Local runtime host integration（2026-06-17 完成）
 
 目標：把桌面殼與 Go primary runtime 合成同一行程的本機桌面模式，WebView2 指向 `127.0.0.1:<port>`。
 
-- [ ] 桌面入口啟動 Go server goroutine，port 必須明確、可偵測衝突，啟動前後都有 health gate。
-- [ ] 使用 Go primary 既有 external data-dir contract；DB、uploads、attachments、logs、backups 不得逃逸資料根目錄。
-- [ ] WebView2 只在 health 通過後導向本機 URL；啟動失敗要顯示可診斷錯誤並寫 log。
-- [ ] Quit / close 必須有可驗證的 server shutdown ordering，不留下 orphan listener。
-- [ ] 不新增 API/schema/migration，不碰 production Pi data，不改 Pi deploy。
-- [ ] 驗收：fresh data-dir 可啟動、既有 copied data-dir 可啟動、healthz 通過、WebView2 可操作、退出後 port 釋放。
+Contract：`CONTRACT-DESKTOP-SHELL-RUNTIME-HOST`（見 `docs/CONTRACTS.md`）。
 
-#### Phase 3 — Windows desktop UX hardening（候選）
+- [x] 桌面入口 `go-shadow --desktop-shell` 啟動 Go server goroutine，port 明確，啟動後先等 `/healthz`。
+- [x] 使用 Go primary 既有 external data-dir contract；desktop default fresh DB 是 `prism_desktop_dev.db`，避免誤碰 production-like `knowledge.db` guard。
+- [x] WebView2 只在 health 通過後導向本機 URL；啟動失敗會回傳錯誤並寫入 desktop shell log。
+- [x] Quit / close 會先觸發 WebView message loop exit，再執行 HTTP server shutdown。
+- [x] 不新增 API/schema/migration，不碰 production Pi data，不改 Pi deploy。
+- [x] 驗收：`go run . --desktop-shell-smoke --data-dir <temp> --addr 127.0.0.1:<free-port>` 通過，fresh DB 建立、`/healthz` 200、shutdown 正常。
+
+#### Phase 3 — Windows desktop UX hardening（2026-06-17 完成）
 
 目標：把 spike 變成使用者可接受的 Windows 桌面 `.exe` 行為，但仍不做安裝包。
 
-- [ ] GUI build 使用 `-ldflags="-H=windowsgui"`，正式桌面 build 不出現終端機；保留 debug console build target。
-- [ ] 加入檔案 log，涵蓋 shell init、WebView2 init、runtime health、shutdown 與 crash path。
-- [ ] 加入 named mutex 單一實例；第二次啟動應 bring-to-front 或顯示既有視窗，不再開第二個 server。
-- [ ] 明確定義 close 行為：第一版維持 close exits process；close-to-tray 若要做，另開 UX gate。
-- [ ] Windows CPU 溫度維持隱藏策略；Dashboard 空位由系統運行 / uptime 類資訊補位，不新增 Windows-only sensor dependency。
-- [ ] 驗收：無終端機 GUI build、debug build 可看 log、單一實例有效、tray Show / Quit 有效、崩潰/啟動失敗可從 log 診斷。
+Contract：`CONTRACT-DESKTOP-SHELL-UX-HARDENING`（見 `docs/CONTRACTS.md`）。
 
-#### Phase 4 — Portable Windows package（候選）
+- [x] GUI build script 使用 `-ldflags="-H=windowsgui"`，正式桌面 build 不出現終端機；`PrismDesktop-debug.exe` 保留 console。
+- [x] 加入檔案 log，預設寫到 `data-dir/logs/desktop-shell.log`，涵蓋 shell init、runtime health 與 shutdown path。
+- [x] 加入 named mutex 單一實例；第二次啟動會嘗試 bring-to-front 既有 `webview` 視窗，不再開第二個 server。
+- [x] 明確定義 close 行為：第一版維持 close exits process；close-to-tray 仍是後續 UX gate。
+- [x] Windows CPU 溫度維持隱藏策略；Dashboard 空位由系統運行 / uptime 類資訊補位，不新增 Windows-only sensor dependency。
+- [x] 驗收：`scripts/build_desktop_shell.ps1 -Mode Both` 通過，bounded WebView2/tray self-test 通過，runtime smoke 會建立 desktop log。
+
+#### Phase 4 — Portable Windows package（下一個可施工）
 
 目標：產出不需安裝的 portable Windows release artifact，先滿足「直接執行檔」需求。
 

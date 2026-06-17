@@ -47,7 +47,11 @@ C4Context
 
 ## Desktop Shell Spike Boundary
 
-`desktop-spike/` is an isolated Windows desktop-shell proof for the future `.exe` wrapper. Phase 0 proves an empty Win32 window, tray icon, and one shared message loop using only `golang.org/x/sys/windows`; it is not part of the Go primary product runtime and does not start WebView2, the Prism API server, migrations, deploy logic, or production data access.
+`desktop-spike/` remains the isolated Windows desktop-shell Phase 0 proof: empty Win32 window, tray icon, and one shared message loop using only `golang.org/x/sys/windows`.
+
+Desktop Shell Phase 1-3 moved the actual Windows desktop entry into `go-shadow --desktop-*`, where it can share Go primary runtime internals without importing a `main` package from the isolated spike. The Windows-only path uses WebView2 (`jchv/go-webview2`), tray Show/Quit, named mutex single-instance, file logging, and an in-process Go primary runtime goroutine that waits for `/healthz` before navigating WebView2 to `127.0.0.1:<port>`. It keeps the existing explicit external data-dir boundary and uses `prism_desktop_dev.db` for fresh desktop smoke to avoid the production-like `knowledge.db` guard.
+
+This is still Windows desktop shell work only. It does not change schema/API contracts, does not touch production Pi data, does not alter Pi systemd/Caddy deployment, and does not implement portable packaging, installer, or updater.
 
 ## Planned Modernization Boundary
 

@@ -170,6 +170,15 @@ func main() {
 	enableServerSystem := flag.Bool("enable-server-system", envBool("PRISM_GO_ENABLE_SERVER_SYSTEM"), "enable local/copied-DB-and-data server/system/config parity candidate")
 	thumbnailInput := flag.String("thumbnail-input", "", "encode this local image file as a Prism WebP thumbnail and exit")
 	thumbnailOutput := flag.String("thumbnail-output", "", "thumbnail output path for --thumbnail-input")
+	desktopShell := flag.Bool("desktop-shell", false, "run Prism as a Windows desktop shell with WebView2, tray, and an in-process Go runtime")
+	desktopWebViewOnly := flag.Bool("desktop-webview-only", false, "run only the Windows WebView2/tray shell with a placeholder page")
+	desktopShellSmoke := flag.Bool("desktop-shell-smoke", false, "start the desktop runtime host, wait for /healthz, then shut it down without opening WebView2")
+	desktopSelfTest := flag.Bool("desktop-self-test", false, "close the desktop shell automatically after a bounded message-loop self-test")
+	desktopDebug := flag.Bool("desktop-debug", false, "enable WebView2 developer tools/context menu for debug builds")
+	desktopTitle := flag.String("desktop-title", "Prism", "desktop shell window title")
+	desktopURL := flag.String("desktop-url", "", "desktop shell URL target; defaults to the in-process Go runtime")
+	desktopLogPath := flag.String("desktop-log", "", "desktop shell log path; defaults to data-dir/logs/desktop-shell.log in --desktop-shell mode")
+	desktopMutexName := flag.String("desktop-mutex", "Global\\PrismDesktopShell", "named mutex used to keep one desktop instance")
 	flag.Parse()
 
 	if *thumbnailInput != "" || *thumbnailOutput != "" {
@@ -179,6 +188,40 @@ func main() {
 		return
 	}
 
+	desktopOpts := desktopShellOptions{
+		title:     *desktopTitle,
+		targetURL: *desktopURL,
+		logPath:   *desktopLogPath,
+		mutexName: *desktopMutexName,
+		debug:     *desktopDebug,
+		selfTest:  *desktopSelfTest,
+	}
+	if *desktopWebViewOnly {
+		if err := runDesktopShellWebViewOnly(desktopOpts); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	if (*desktopShell || *desktopShellSmoke) && strings.TrimSpace(*dbPath) == "" && strings.TrimSpace(*dataDir) != "" {
+		*dbPath = filepath.Join(*dataDir, "prism_desktop_dev.db")
+	}
+	if *desktopShell || *desktopShellSmoke {
+		*enableTagWrite = true
+		*enableCategoryWrite = true
+		*enableNotesWrite = true
+		*enableAttachmentTextRead = true
+		*enableAttachmentRawRead = true
+		*enableAttachmentWrite = true
+		*enableUploadWrite = true
+		*enableThumbnailWrite = true
+		*enableUploadURLWrite = true
+		*enableUploadDelete = true
+		*enableMediaCleanup = true
+		*enableImportExport = true
+		*enableServerSystem = true
+	}
+
 	cfg, err := resolveRuntimeConfig(*addr, *dbPath, *dataDir, *enableTagWrite, *enableCategoryWrite, *enableNotesWrite, *enableAttachmentTextRead, *enableThumbnailWrite, *enableUploadURLWrite, *enableAttachmentWrite, *enableAttachmentRawRead, *enableUploadWrite, *enableUploadDelete, *enableMediaCleanup, *enableImportExport, *enableServerSystem)
 	if err != nil {
 		log.Fatal(err)
@@ -186,21 +229,51 @@ func main() {
 	log.Printf("using data dir %s", cfg.dataDir)
 	log.Printf("using database %s", cfg.dbPath)
 
+	if *desktopShellSmoke {
+		if err := runDesktopShellSmoke(cfg, desktopOpts); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+	if *desktopShell {
+		if err := runDesktopShellRuntime(cfg, desktopOpts); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	srv, cleanup, err := newRuntimeServer(cfg)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer cleanup()
+
+	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
+	if err := srv.listenAndServe(); err != nil {
+		log.Fatal(err)
+	}
+	// A clean return means triggerRestart called Shutdown and now owns process
+	// termination (os.Exit with the restart code, or re-exec). Block here so main
+	// does not fall through and exit 0 first, which would suppress the restart.
+	select {}
+}
+
+func newRuntimeServer(cfg runtimeConfig) (*server, func(), error) {
 	// Apply any pending DB restore BEFORE opening the database. At this point no
 	// connection holds the file, so swapping it in is a plain file copy.
 	if err := applyPendingRestore(cfg); err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
 
 	sqliteOwner, err := openRuntimeSQLite(&cfg)
 	if err != nil {
-		log.Fatal(err)
+		return nil, nil, err
 	}
-	defer sqliteOwner.close()
 	cfg.sqliteQueryOnly = sqliteOwner.queryOnly
 	db := sqliteOwner.db
 	if err := verifySchemaVersion(db, expectedSchemaVersion); err != nil {
-		log.Fatal(err)
+		sqliteOwner.close()
+		return nil, nil, err
 	}
 
 	srv := &server{db: db, runtime: cfg}
@@ -261,14 +334,15 @@ func main() {
 		Addr:    cfg.addr,
 		Handler: logRequests(srv.csrfGate(mux)),
 	}
-	log.Printf("Prism Go runtime proof listening on %s", cfg.addr)
+
+	return srv, func() { _ = sqliteOwner.close() }, nil
+}
+
+func (srv *server) listenAndServe() error {
 	if err := srv.httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+		return err
 	}
-	// A clean return means triggerRestart called Shutdown and now owns process
-	// termination (os.Exit with the restart code, or re-exec). Block here so main
-	// does not fall through and exit 0 first, which would suppress the restart.
-	select {}
+	return nil
 }
 
 func envDefault(key, fallback string) string {

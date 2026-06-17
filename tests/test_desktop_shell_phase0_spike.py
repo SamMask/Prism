@@ -69,7 +69,7 @@ def test_desktop_shell_phase0_docs_close_current_entry_without_expanding_scope()
     assert "[x] 空 Win32 視窗 + tray icon" in todo
     assert "[x] 關閉視窗預設直接結束行程" in todo
     assert "[x] 驗收：tray 選單有反應、關視窗正常退出、message loop 不卡住" in todo
-    assert "Desktop Shell Phase 1 — WebView2 spike" in todo
+    assert "#### Phase 1 — WebView2 spike" in todo
     assert "Phase 0 完成" in handoff
     assert "Phase 1" in handoff
 

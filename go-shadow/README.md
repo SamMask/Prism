@@ -20,6 +20,16 @@ Phase 20.0 is an approved plan-only scope assessment; it does not expand Go owne
 Phase 20.1 is an approved plan-only write surface inventory; it does not select or implement a Go write candidate.
 T042-T044 later moved live/default product traffic to Go primary, T045 removed the Python packaged runtime/startup path, T046-T050 closed frontend-called Go route gaps, and T051/T052 refreshed current-truth docs plus cleaned stale tracked packaging artifacts. Historical sections below keep the evidence chain from earlier gates; current product startup uses `scripts/start_go_primary.ps1` / `prism-go-primary.service` with the route flags enabled.
 
+Desktop Shell Phase 1-3 add Windows-only desktop modes to this same Go primary binary:
+
+```powershell
+go run . --desktop-webview-only --desktop-self-test
+go run . --desktop-shell-smoke --data-dir $env:TEMP\prism-desktop-smoke --addr 127.0.0.1:5015
+go run . --desktop-shell --data-dir D:\PrismData --addr 127.0.0.1:5015
+```
+
+`--desktop-shell` starts the Go primary runtime in the same process, waits for `/healthz`, then opens WebView2 at the local runtime URL. The default fresh desktop DB is `prism_desktop_dev.db` under the data dir so the production-like `knowledge.db` guard remains intact. Use `scripts/build_desktop_shell.ps1` to build `PrismDesktop-debug.exe` and `Prism.exe` (`-H=windowsgui`).
+
 ## Scope
 
 Included endpoints:
