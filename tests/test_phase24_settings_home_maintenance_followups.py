@@ -74,12 +74,20 @@ def test_settings_deploy_controls_explain_port_update_and_hide_local_service_man
     assert "service_management" in api
     assert "const canManageService = hardware?.service_management?.available === true" in server_dashboard
     assert "const hasCpuTemperature = hardware?.cpu_temp != null" in server_dashboard
+    assert "const platformSystem = getPlatformSystem(hardware?.platform)" in server_dashboard
+    assert "const normalizedPlatformSystem = platformSystem.toLowerCase()" in server_dashboard
+    assert "normalizedPlatformSystem === 'windows' || normalizedPlatformSystem.startsWith('windows/')" in server_dashboard
+    assert "const showCpuTemperature = hasCpuTemperature && !isWindowsPlatform" in server_dashboard
     assert 'data-testid="cpu-temperature-card"' in server_dashboard
-    assert 'data-testid="runtime-uptime-card"' in server_dashboard
-    assert "hasCpuTemperature ? t('settings.serverDashboard.systemInfo') : t('settings.serverDashboard.databaseStatus')" in server_dashboard
-    assert "settings.serverDashboard.localRuntimeStatus" in server_dashboard
+    assert 'data-testid="data-location-card"' in server_dashboard
+    assert "settings.serverDashboard.dataLocation" in server_dashboard
+    assert "hardware?.data_dir || '-'" in server_dashboard
+    assert "showCpuTemperature ? t('settings.serverDashboard.systemInfo') : t('settings.serverDashboard.databaseStatus')" in server_dashboard
+    assert "settings.serverDashboard.currentDataFolder" in server_dashboard
     assert "Windows 本機執行中" not in server_dashboard
     assert "資料庫狀態" in i18n
+    assert "資料位置" in i18n
+    assert "目前使用中的 Prism 資料夾" in i18n
     assert "{system} 本機執行中" in i18n
 
 

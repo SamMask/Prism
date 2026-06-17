@@ -13,14 +13,14 @@ const readNumberSetting = (key: string, fallback: number, min: number, max: numb
 
 // Initialize appearance from localStorage
 const savedAccentColor = localStorage.getItem('prism.accentColor') || localStorage.getItem('colorTheme')
-document.documentElement.setAttribute('data-accent', savedAccentColor || 'default')
+document.documentElement.setAttribute('data-accent', savedAccentColor || 'elegant')
 document.documentElement.removeAttribute('data-theme')
 
 const backgroundSchemes = ['neutral', 'black', 'warm', 'green', 'paper'] as const
 const savedBackgroundScheme = localStorage.getItem('prism.backgroundScheme')
 const backgroundScheme = backgroundSchemes.includes(savedBackgroundScheme as typeof backgroundSchemes[number])
   ? (savedBackgroundScheme as typeof backgroundSchemes[number])
-  : 'neutral'
+  : 'warm'
 document.documentElement.setAttribute('data-bg', backgroundScheme)
 
 const normalizeAestheticMode = (value: string | null) => {
@@ -29,7 +29,7 @@ const normalizeAestheticMode = (value: string | null) => {
 }
 document.documentElement.setAttribute('data-aesthetic', normalizeAestheticMode(localStorage.getItem('prism.aestheticMode')))
 
-const savedMode = localStorage.getItem('theme') || 'dark'
+const savedMode = localStorage.getItem('theme') || 'light'
 document.documentElement.classList.toggle('light', savedMode === 'light')
 document.documentElement.setAttribute('data-mode', savedMode)
 

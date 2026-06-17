@@ -82,7 +82,7 @@ export function CommandPalette() {
   }
 
   const toggleTheme = () => {
-    const currentTheme = (localStorage.getItem('theme') as 'dark' | 'light') || 'dark'
+    const currentTheme = (localStorage.getItem('theme') as 'dark' | 'light') || 'light'
     const nextTheme = currentTheme === 'dark' ? 'light' : 'dark'
     localStorage.setItem('theme', nextTheme)
     document.documentElement.classList.toggle('light', nextTheme === 'light')
@@ -171,7 +171,7 @@ export function CommandPalette() {
         title: t('commandPalette.commands.toggleTheme.title'),
         subtitle: t('commandPalette.commands.toggleTheme.subtitle'),
         keywords: t('commandPalette.commands.toggleTheme.keywords'),
-        icon: ((localStorage.getItem('theme') || 'dark') === 'dark' ? Sun : Moon),
+        icon: ((localStorage.getItem('theme') || 'light') === 'dark' ? Sun : Moon),
         action: toggleTheme,
       },
       {

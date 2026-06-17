@@ -14,7 +14,7 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ note, viewMode }: NoteCardProps) {
-  const { openEditor, openReading, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
+  const { openEditor, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
   const { locale, t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -62,13 +62,11 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     if (isSelectionMode) {
       toggleNoteSelection(note.id)
     } else {
-      const cardOpenMode = localStorage.getItem('cardOpenMode') || 'reading'
-      if (cardOpenMode === 'reading') {
-        openReading(note)
-      } else if (cardOpenMode === 'preview') {
-        openEditor(note, { preview: true })
-      } else {
+      const cardOpenMode = localStorage.getItem('cardOpenMode') === 'edit' ? 'edit' : 'preview'
+      if (cardOpenMode === 'edit') {
         openEditor(note)
+      } else {
+        openEditor(note, { preview: true })
       }
     }
   }

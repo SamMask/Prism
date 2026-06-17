@@ -108,7 +108,7 @@ export function HomePage() {
   const observerRef = useRef<IntersectionObserver | null>(null)
   
   // Settings State
-  const [autoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') === 'true')
+  const [autoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') !== 'false')
 
   // Sync local notes with store
   useEffect(() => {

@@ -14,6 +14,7 @@ interface AppearanceSectionProps {
 
 type AccentColor = 'default' | 'cyberpunk' | 'eye-care' | 'elegant' | 'ocean' | 'sunset';
 type BackgroundScheme = 'neutral' | 'black' | 'warm' | 'green' | 'paper';
+type CardOpenMode = 'preview' | 'edit';
 
 const clampNumber = (value: number, min: number, max: number) => {
   return Math.min(Math.max(value, min), max);
@@ -26,6 +27,10 @@ const readNumberSetting = (key: string, fallback: number, min: number, max: numb
 
 const setRootPixelVariable = (name: string, value: number) => {
   document.documentElement.style.setProperty(name, `${value}px`);
+};
+
+const readCardOpenMode = (): CardOpenMode => {
+  return localStorage.getItem('cardOpenMode') === 'edit' ? 'edit' : 'preview';
 };
 
 const accentOptions: Array<{ id: AccentColor; name: string; labelKey: string; color: string }> = [
@@ -49,21 +54,21 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
   const { viewMode, setViewMode } = useAppStore();
   const { locale, setLocale, availableLocales, t } = useTranslation();
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('theme') as 'dark' | 'light') || 'dark';
+    return (localStorage.getItem('theme') as 'dark' | 'light') || 'light';
   });
   const [accentColor, setAccentColor] = useState<AccentColor>(() => {
     const savedAccent =
       (localStorage.getItem('prism.accentColor') || localStorage.getItem('colorTheme')) as AccentColor | null;
-    return savedAccent && accentOptions.some((option) => option.id === savedAccent) ? savedAccent : 'default';
+    return savedAccent && accentOptions.some((option) => option.id === savedAccent) ? savedAccent : 'elegant';
   });
   const [backgroundScheme, setBackgroundScheme] = useState<BackgroundScheme>(() => {
     const savedScheme = localStorage.getItem('prism.backgroundScheme') as BackgroundScheme | null;
-    return savedScheme && backgroundOptions.some((option) => option.id === savedScheme) ? savedScheme : 'neutral';
+    return savedScheme && backgroundOptions.some((option) => option.id === savedScheme) ? savedScheme : 'warm';
   });
   const [cornerRadius, setCornerRadius] = useState(() => readNumberSetting('prism.cornerRadius', 10, 4, 24));
   const [sidebarWidth, setSidebarWidth] = useState(() => readNumberSetting('prism.sidebarWidth', 248, 208, 320));
-
-  const [autoLoadMore, setAutoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') === 'true');
+  const [cardOpenMode, setCardOpenMode] = useState<CardOpenMode>(() => readCardOpenMode());
+  const [autoLoadMore, setAutoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') !== 'false');
 
   // Toggle theme
   const toggleTheme = () => {
@@ -345,14 +350,14 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
             </p>
         </div>
         <select
-          value={localStorage.getItem('cardOpenMode') || 'reading'}
+          value={cardOpenMode}
           onChange={(e) => {
-            localStorage.setItem('cardOpenMode', e.target.value);
-            const modeKey = e.target.value === 'preview'
+            const nextMode = e.target.value === 'edit' ? 'edit' : 'preview';
+            setCardOpenMode(nextMode);
+            localStorage.setItem('cardOpenMode', nextMode);
+            const modeKey = nextMode === 'preview'
               ? 'settings.appearance.cardOpenMode.previewLabel'
-              : e.target.value === 'reading'
-                ? 'settings.appearance.cardOpenMode.readingLabel'
-                : 'settings.appearance.cardOpenMode.editLabel';
+              : 'settings.appearance.cardOpenMode.editLabel';
             toast.success(t('settings.appearance.cardOpenMode.changed', { mode: t(modeKey) }));
           }}
           className="w-full px-4 py-2 rounded-lg
@@ -362,7 +367,6 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
                      transition-colors"
         >
           <option value="preview">{t('settings.appearance.cardOpenMode.preview')}</option>
-          <option value="reading">{t('settings.appearance.cardOpenMode.reading')}</option>
           <option value="edit">{t('settings.appearance.cardOpenMode.edit')}</option>
         </select>
       </div>

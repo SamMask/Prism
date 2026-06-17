@@ -37,7 +37,7 @@ Desktop Shell Phase 4 adds the portable Windows package:
 ..\scripts\smoke_desktop_portable.ps1
 ```
 
-The portable folder/zip contains `Prism.exe`, `PrismDesktop-debug.exe`, and `README-PORTABLE.md`. These desktop artifacts are linked with `main.desktopShellDefault=1`, so `Prism.exe` starts the desktop shell directly when double-clicked. Data-dir resolution is explicit flag/env first, then `PrismPortable.json` next to the executable, then an existing executable-neighbor `PrismData\`, then the first-run selector. The selector can persist local AppData, portable `PrismData`, or a custom folder; the package folder must not contain user DB/WAL/SHM files unless the user deliberately chose portable `PrismData`. Installer and auto-updater work remains deferred.
+The portable folder/zip contains `Prism.exe`, `PrismDesktop-debug.exe`, `Prism.ico`, `README-PORTABLE.md`, and Prompt Builder seed config under `static/config`. These desktop artifacts are linked with `main.desktopShellDefault=1`, so `Prism.exe` starts the desktop shell directly when double-clicked. Build scripts generate the icon programmatically, create a temporary `rsrc` `.syso`, and embed the icon into the Windows executable resource before removing the `.syso`. The double-click portable default data dir is `PrismData\` next to `Prism.exe`; explicit `--data-dir` / `PRISM_GO_DATA_DIR` remains available for advanced/debug launches. The runtime does not show a first-run data-dir selector, write a portable choice file, or create/repair desktop shortcuts. Choosing between portable data, Windows account data, or a custom folder, plus Start Menu / desktop shortcuts and WebView2 bootstrap, is deferred to a future installer gate. Installer and auto-updater work remains deferred.
 
 ## Scope
 

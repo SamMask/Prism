@@ -48,12 +48,13 @@ interface HardwareStatus {
     size_mb: number;
     wal_size_mb: number;
   } | null;
+  data_dir?: string;
   platform: {
     system: string;
     machine: string;
     hostname: string;
     go_version: string;
-  };
+  } | string;
   service_management?: {
     available: boolean;
     reason: string;
@@ -112,6 +113,27 @@ function getTempColor(temp: number | null): string {
   if (temp < 50) return 'text-emerald-400';
   if (temp < 70) return 'text-amber-400';
   return 'text-red-400';
+}
+
+function getPlatformSystem(platform: HardwareStatus['platform'] | undefined): string {
+  if (!platform) return '';
+  if (typeof platform === 'string') return platform;
+  return platform.system || '';
+}
+
+function getPlatformMachine(platform: HardwareStatus['platform'] | undefined): string {
+  if (!platform || typeof platform === 'string') return '';
+  return platform.machine || '';
+}
+
+function getPlatformHostname(platform: HardwareStatus['platform'] | undefined): string {
+  if (!platform || typeof platform === 'string') return '';
+  return platform.hostname || '';
+}
+
+function getPlatformGoVersion(platform: HardwareStatus['platform'] | undefined): string {
+  if (!platform || typeof platform === 'string') return '';
+  return platform.go_version || '';
 }
 
 // ===================================================================
@@ -284,7 +306,13 @@ export function ServerDashboardSection() {
 
   const canManageService = hardware?.service_management?.available === true;
   const hasCpuTemperature = hardware?.cpu_temp != null;
-  const platformSystem = hardware?.platform?.system || '-';
+  const platformSystem = getPlatformSystem(hardware?.platform);
+  const platformMachine = getPlatformMachine(hardware?.platform);
+  const platformHostname = getPlatformHostname(hardware?.platform);
+  const platformGoVersion = getPlatformGoVersion(hardware?.platform);
+  const normalizedPlatformSystem = platformSystem.toLowerCase();
+  const isWindowsPlatform = normalizedPlatformSystem === 'windows' || normalizedPlatformSystem.startsWith('windows/');
+  const showCpuTemperature = hasCpuTemperature && !isWindowsPlatform;
 
   return (
     <div className="glass rounded-lg p-5" data-testid="server-dashboard-section">
@@ -330,14 +358,14 @@ export function ServerDashboardSection() {
           </div>
           <div className="flex items-center gap-2 text-xs text-text-muted">
             <span className="bg-bg-base rounded px-2 py-0.5">
-              {hardware?.platform?.system || '-'} / {hardware?.platform?.machine || '-'}
+              {platformSystem || '-'} / {platformMachine || '-'}
             </span>
             <span className="bg-bg-base rounded px-2 py-0.5">
-              Go {hardware?.platform?.go_version || '-'}
+              Go {platformGoVersion || '-'}
             </span>
-            {hardware?.platform?.hostname && (
+            {platformHostname && (
               <span className="bg-bg-base rounded px-2 py-0.5">
-                {hardware.platform.hostname}
+                {platformHostname}
               </span>
             )}
           </div>
@@ -407,7 +435,7 @@ export function ServerDashboardSection() {
           )}
         </div>
 
-        {hasCpuTemperature ? (
+        {showCpuTemperature ? (
           <div className="bg-bg-elevated rounded-lg p-4" data-testid="cpu-temperature-card">
             <div className="flex items-center gap-2 mb-3">
               <Thermometer size={16} className="text-orange-400" />
@@ -422,30 +450,30 @@ export function ServerDashboardSection() {
             </div>
           </div>
         ) : (
-          <div className="bg-bg-elevated rounded-lg p-4" data-testid="runtime-uptime-card">
+          <div className="bg-bg-elevated rounded-lg p-4" data-testid="data-location-card">
             <div className="flex items-center gap-2 mb-3">
-              <Clock size={16} className="text-cyan-400" />
-              <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.uptime')}</span>
+              <FileText size={16} className="text-cyan-400" />
+              <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.dataLocation')}</span>
             </div>
-            <div className="text-2xl font-bold text-text-primary">
-              {formatUptime(hardware?.uptime_seconds ?? null, t)}
+            <div className="text-sm font-mono text-text-primary break-all" title={hardware?.data_dir || ''}>
+              {hardware?.data_dir || '-'}
             </div>
             <div className="text-xs text-text-muted mt-1">
-              {t('settings.serverDashboard.localRuntimeStatus', { system: platformSystem })}
+              {t('settings.serverDashboard.currentDataFolder')}
             </div>
           </div>
         )}
 
         {/* Database & Uptime */}
         <div className="bg-bg-elevated rounded-lg p-4">
-          <div className="flex items-center gap-2 mb-3">
-            {hasCpuTemperature ? (
+            <div className="flex items-center gap-2 mb-3">
+            {showCpuTemperature ? (
               <Cpu size={16} className="text-cyan-400" />
             ) : (
               <FileText size={16} className="text-cyan-400" />
             )}
             <span className="text-text-secondary text-sm font-medium">
-              {hasCpuTemperature ? t('settings.serverDashboard.systemInfo') : t('settings.serverDashboard.databaseStatus')}
+              {showCpuTemperature ? t('settings.serverDashboard.systemInfo') : t('settings.serverDashboard.databaseStatus')}
             </span>
           </div>
           <div className="space-y-2 text-sm">
@@ -455,7 +483,7 @@ export function ServerDashboardSection() {
                 {hardware?.database?.size_mb ?? '-'} MB
               </span>
             </div>
-            {hardware?.database?.wal_size_mb != null && (!hasCpuTemperature || hardware.database.wal_size_mb > 0) && (
+            {hardware?.database?.wal_size_mb != null && (!showCpuTemperature || hardware.database.wal_size_mb > 0) && (
               <div className="flex justify-between">
                 <span className="text-text-muted">{t('settings.serverDashboard.walLog')}</span>
                 <span className="text-text-primary font-mono">
@@ -463,7 +491,7 @@ export function ServerDashboardSection() {
                 </span>
               </div>
             )}
-            {hasCpuTemperature && (
+            {showCpuTemperature && (
               <div className="flex justify-between">
                 <span className="text-text-muted">{t('settings.serverDashboard.uptime')}</span>
                 <span className="text-text-primary">

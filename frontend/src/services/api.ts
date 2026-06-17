@@ -99,6 +99,7 @@ export interface HardwareStatus {
     size_mb: number;
     wal_size_mb: number;
   };
+  data_dir?: string;
   platform: {
     system: string;
     machine: string;

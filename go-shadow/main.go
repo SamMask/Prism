@@ -2193,6 +2193,7 @@ func (s *server) handleServerHardware(w http.ResponseWriter, r *http.Request) {
 				"size_mb":     roundMB(fileSizeOrZero(s.runtime.dbPath)),
 				"wal_size_mb": roundMB(fileSizeOrZero(s.runtime.dbPath + "-wal")),
 			},
+			"data_dir": s.runtime.dataDir,
 			"platform": response{
 				"system":     runtime.GOOS,
 				"machine":    runtime.GOARCH,
@@ -3249,6 +3250,13 @@ func (s *server) loadOptionConfig(filename string) (map[string]any, error) {
 
 func (s *server) seedOptionConfig(filename, target string) error {
 	sourceCandidates := []string{filepath.Join(s.runtime.dataDir, "static", "config", filename)}
+	if exe, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exe)
+		sourceCandidates = append(sourceCandidates,
+			filepath.Join(exeDir, "static", "config", filename),
+			filepath.Join(exeDir, "config", filename),
+		)
+	}
 	if cwd, err := os.Getwd(); err == nil {
 		sourceCandidates = append(sourceCandidates,
 			filepath.Join(cwd, "static", "config", filename),
