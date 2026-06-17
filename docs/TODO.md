@@ -19,17 +19,11 @@ Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/A
 
 ## 下一個可施工入口
 
-### Desktop Shell Phase 0 — message loop spike
+### Desktop Shell Roadmap（Windows desktop only）
 
-目標：先驗證 Windows desktop shell 的單一 Win32 message loop，可同時服務空視窗與 tray icon，再決定是否接 WebView2 / 後端。
+本路線只處理 Windows 桌面殼與封裝體驗；Pi 部署仍維持 Go primary artifact + systemd + Caddy，不引入 WebView2、tray、installer 或 Windows GUI 假設。
 
-Contract：`CONTRACT-DESKTOP-SHELL-SPIKE`（見 `docs/CONTRACTS.md`）。
-
-- [ ] 建立獨立 `desktop-spike/`（自己的 `go.mod`）。
-- [ ] 僅使用 `golang.org/x/sys/windows` syscall；Phase 0 不引 WebView2、不接後端、不改 schema/API/runtime。
-- [ ] 空 Win32 視窗 + tray icon，右鍵選單至少有 Show / Quit。
-- [ ] 關閉視窗預設直接結束行程；close-to-tray 仍是後續正式封裝的進階選項。
-- [ ] 驗收：tray 選單有反應、關視窗正常退出、message loop 不卡住；普通 console build 保留除錯 log。
+下一個可施工入口是 Phase 1。Phase 0 是已完成證據；Phase 2+ 先是規劃候選，promote 前必須補 `docs/CONTRACTS.md` contract、targeted tests 與 handoff。
 
 已定桌面化產品決策：
 
@@ -37,6 +31,94 @@ Contract：`CONTRACT-DESKTOP-SHELL-SPIKE`（見 `docs/CONTRACTS.md`）。
 - 技術方向是內嵌 WebView2，傾向 `jchv/go-webview2`（純 syscall、可保 `CGO_ENABLED=0`），不採 `webview/webview_go`（需要 cgo）。
 - 單一 `.exe` 後續目標：同一行程內啟動 Go server goroutine、WebView2 視窗指向 `127.0.0.1:<port>`、tray icon、named mutex 單一實例。
 - 正式封裝才切 `-ldflags="-H=windowsgui"` 並改為檔案 log。
+
+#### Phase 0 — message loop spike（2026-06-17 完成）
+
+目標：先驗證 Windows desktop shell 的單一 Win32 message loop，可同時服務空視窗與 tray icon，再決定是否接 WebView2 / 後端。
+
+Contract：`CONTRACT-DESKTOP-SHELL-SPIKE`（見 `docs/CONTRACTS.md`）。
+
+- [x] 建立獨立 `desktop-spike/`（自己的 `go.mod`）。
+- [x] 僅使用 `golang.org/x/sys/windows` syscall；Phase 0 不引 WebView2、不接後端、不改 schema/API/runtime。
+- [x] 空 Win32 視窗 + tray icon，右鍵選單至少有 Show / Quit。
+- [x] 關閉視窗預設直接結束行程；close-to-tray 仍是後續正式封裝的進階選項。
+- [x] 驗收：tray 選單有反應、關視窗正常退出、message loop 不卡住；普通 console build 保留除錯 log。
+
+#### Phase 1 — WebView2 spike（下一個可施工）
+
+目標：在 Phase 0 已驗證的單一 Win32 message loop 上接入 WebView2 視窗，先載入受控本機 placeholder / URL target，確認 WebView2 與 tray 共用同一 loop 不互搶。
+
+Contract：`CONTRACT-DESKTOP-SHELL-WEBVIEW2-SPIKE`（見 `docs/CONTRACTS.md`）。
+
+- [ ] 沿用 `desktop-spike/` 的 Win32 message loop 與 tray 結構。
+- [ ] 引入 `jchv/go-webview2` 驗證 WebView2 可在同一主執行緒 loop 中顯示內容。
+- [ ] 不接 Prism Go server goroutine、不新增 API/schema/migration、不碰 production data、不改 Pi deploy。
+- [ ] 驗收：WebView2 內容可見、tray Show / Quit 仍有反應、關閉視窗仍直接結束行程、console build 保留除錯 log。
+
+#### Phase 2 — Local runtime host integration（候選）
+
+目標：把桌面殼與 Go primary runtime 合成同一行程的本機桌面模式，WebView2 指向 `127.0.0.1:<port>`。
+
+- [ ] 桌面入口啟動 Go server goroutine，port 必須明確、可偵測衝突，啟動前後都有 health gate。
+- [ ] 使用 Go primary 既有 external data-dir contract；DB、uploads、attachments、logs、backups 不得逃逸資料根目錄。
+- [ ] WebView2 只在 health 通過後導向本機 URL；啟動失敗要顯示可診斷錯誤並寫 log。
+- [ ] Quit / close 必須有可驗證的 server shutdown ordering，不留下 orphan listener。
+- [ ] 不新增 API/schema/migration，不碰 production Pi data，不改 Pi deploy。
+- [ ] 驗收：fresh data-dir 可啟動、既有 copied data-dir 可啟動、healthz 通過、WebView2 可操作、退出後 port 釋放。
+
+#### Phase 3 — Windows desktop UX hardening（候選）
+
+目標：把 spike 變成使用者可接受的 Windows 桌面 `.exe` 行為，但仍不做安裝包。
+
+- [ ] GUI build 使用 `-ldflags="-H=windowsgui"`，正式桌面 build 不出現終端機；保留 debug console build target。
+- [ ] 加入檔案 log，涵蓋 shell init、WebView2 init、runtime health、shutdown 與 crash path。
+- [ ] 加入 named mutex 單一實例；第二次啟動應 bring-to-front 或顯示既有視窗，不再開第二個 server。
+- [ ] 明確定義 close 行為：第一版維持 close exits process；close-to-tray 若要做，另開 UX gate。
+- [ ] Windows CPU 溫度維持隱藏策略；Dashboard 空位由系統運行 / uptime 類資訊補位，不新增 Windows-only sensor dependency。
+- [ ] 驗收：無終端機 GUI build、debug build 可看 log、單一實例有效、tray Show / Quit 有效、崩潰/啟動失敗可從 log 診斷。
+
+#### Phase 4 — Portable Windows package（候選）
+
+目標：產出不需安裝的 portable Windows release artifact，先滿足「直接執行檔」需求。
+
+- [ ] build script 產出 portable zip / folder：`Prism.exe`、必要靜態資源、README、預設 config / data-dir 說明。
+- [ ] 第一次啟動可建立或選用 external data-dir；不得把使用者資料寫進 repo 或 build artifact 內。
+- [ ] package smoke 必須從乾淨目錄啟動、建立 fresh DB、進入 WebView2、完成基本 note workflow、退出後資料仍在 data-dir。
+- [ ] 明確記錄 WebView2 Runtime 前置條件：若系統缺 WebView2 Runtime，顯示可診斷錯誤；不在本 phase 內做 bootstrap installer。
+- [ ] 不做 MSI/NSIS/WiX installer、不做 auto updater、不改 Pi deploy。
+- [ ] 驗收：clean unzip run、無終端機、可建立資料、重開資料仍存在、log 可定位、artifact 不包含本機 production DB。
+
+#### Phase 5 — Installer / updater decision gate（deferred）
+
+目標：只在 portable artifact 已穩定後，再決定是否值得做安裝包。預設不做，除非後續需求明確。
+
+- [ ] 先列出 installer 必要性：Start Menu、檔案關聯、自動安裝 WebView2 Runtime、移除程式、更新流程。
+- [ ] 若需要 installer，再比較 NSIS / WiX / MSIX；不得未經決策直接引入 installer stack。
+- [ ] Auto updater 另開 security / rollback gate；不得與 installer 第一版混做。
+- [ ] 驗收：產出決策文件與最小 installer contract；沒有通過前，portable zip 是 Windows release 主路徑。
+
+#### Phase 6 — Pi deployment boundary check（候選）
+
+目標：確認 Windows desktop 化沒有污染 Pi / headless deployment。
+
+- [ ] Pi 仍使用 linux/arm64 Go primary artifact、`prism-go-primary.service`、Caddy reverse proxy、`DEPLOY-PI.md` 流程。
+- [ ] Pi 不包含 WebView2、Win32 tray、Windows mutex、Windows GUI build flag、installer/updater。
+- [ ] Desktop shell code 必須透過 build tags / module boundary 與 Pi runtime 分離。
+- [ ] 驗收：Windows desktop package smoke 通過；Pi artifact build / deploy docs 不引用 desktop-only path。
+
+### Windows Desktop vs Pi Deployment 差異表
+
+| 面向 | Windows desktop | Raspberry Pi |
+|---|---|---|
+| 入口 | `Prism.exe` GUI app；正式 build 不出現終端機 | systemd service 啟動 Go primary binary |
+| UI | WebView2 內嵌本機 Web UI + tray | 使用瀏覽器連 `https://prism.local` / Caddy |
+| Runtime | 同一行程內 desktop shell + Go server goroutine | headless Go primary service |
+| 網路 | 綁 `127.0.0.1:<port>`，只給本機 WebView2 | Caddy reverse proxy 到 local service port |
+| 資料 | Windows external data-dir / portable data-dir | Pi 上既有 production data dir |
+| Log | 檔案 log + debug console build | journald / service log / Go runtime log |
+| 打包 | 先 portable zip / folder；installer deferred | artifact deploy + systemd + rollback / soak |
+| 相依 | WebView2 Runtime、Win32 shell APIs | Linux/arm64、systemd、Caddy |
+| 不共用項 | tray、window、mutex、`-H=windowsgui` | Caddy live routing、systemd enable/restart |
 
 ---
 

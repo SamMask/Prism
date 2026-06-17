@@ -45,6 +45,10 @@ C4Context
 
 此搜尋仍是純關鍵字比對，沒有 AI / embedding / 外部服務依賴。
 
+## Desktop Shell Spike Boundary
+
+`desktop-spike/` is an isolated Windows desktop-shell proof for the future `.exe` wrapper. Phase 0 proves an empty Win32 window, tray icon, and one shared message loop using only `golang.org/x/sys/windows`; it is not part of the Go primary product runtime and does not start WebView2, the Prism API server, migrations, deploy logic, or production data access.
+
 ## Planned Modernization Boundary
 
 > 本節是 2026-05-27 的規劃邊界，不代表目前 runtime 已改成 Go 或新 UI。

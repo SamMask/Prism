@@ -68,7 +68,8 @@
 - [x] **SEARCH-UX-CANDIDATE-01 Search explainability UX**（2026-06-17 完成）：Home 已加入 Search Context Bar、Search Scope Hint、recent searches（`localStorage` 最多 5 筆、不進 DB）、mobile search entry 與 empty-state recovery。搜尋仍使用既有 `GET /api/notes?q=...`；未新增 ranking、semantic search、attachment body snippets、SearchHistory DB、advanced query language 或 per-keystroke search。
 - [x] **SEARCH-INTEGRITY-CANDIDATE-01 Search integrity diagnostics contract**（2026-06-17 完成）：Go primary 新增 `GET /api/system/search-integrity`（read-only Notes/Notes_FTS 對齊診斷）與 `POST /api/system/search-integrity/rebuild-fts`（手動 FTS rebuild）。禁止 VACUUM、改 Notes、改 Attachments、刪檔、自動修復或 Agent 自動觸發；API reference、route ownership manifest 與 contracts 已同步。
 - [x] **MAINT-OVERVIEW-CANDIDATE-01 Maintenance health overview**（2026-06-17 完成）：Settings 維護頁新增只讀狀態總覽，整合資料一致性、搜尋索引與 WAL 手動狀態；保留既有手動 WAL / consistency 按鈕，新增 search integrity check / rebuild 明確按鈕，不新增自動修復行為。
-- [ ] **Desktop Shell Phase 0**：已在下方「產品方向：桌面化」追蹤；本次 intake 確認其優先級仍成立，不另開重複項。
+- [x] **Desktop Shell Phase 0 — message loop spike**（2026-06-17 完成）：新增 isolated `desktop-spike/` module，只用 `golang.org/x/sys/windows` 建立空 Win32 視窗、tray icon、Show / Quit menu 與單一 message loop；`go run . --self-test` 可用 bounded hidden-window flow 驗證 tray add、Show command、Quit command 與 message loop exit。未引 WebView2、未接 Go server goroutine、未改 schema/API/runtime、未碰 production data 或 Pi deploy。
+- [ ] **Desktop Shell Phase 1 — WebView2 spike**：Phase 0 message loop spike 已完成；下一步只接 WebView2 placeholder / URL target 驗證同一 loop，不接 Go server goroutine、不改 schema/API/runtime、不碰 production data 或 Pi deploy。
 
 
 ### Desktop and i18n Details
