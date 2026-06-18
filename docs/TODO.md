@@ -22,7 +22,10 @@
 - 2026-06-18 Image viewer lightbox gate 已完成 local + Pi delivery：`ImageLightbox` 是純前端 shared component，ReadingView cover/markdown images、EditablePreview standalone images、NoteEditor 雙欄 gallery 與 NoteCard cover 明確 icon/button 都走同一 lightbox；Esc/左右鍵在 lightbox capture 階段攔截，不會連同底層 ReadingView/Editor modal 一起關閉。Pi live `https://prism.local` 已驗 card cover、ReadingView cover/markdown、Editor preview lightbox、console error=0，temp validation note/uploads 已清理。未改 upload/delete/cleanup API、DB schema、gallery DB 或 markdown renderer。
 - 2026-06-18 Header starred tag shortcuts gate 已完成 local + Pi delivery：`Settings > Organization > Tag management` 的星號只保存純前端 `localStorage` key `prism.starredTags.v1`，`FilterStrip` 分類右側只顯示 starred tags；沒有 starred tags 時只顯示低存在感提示文字。Pi live `https://prism.local` 已驗星號開關、reload persistence、header 顯示/隱藏、tag filter 點擊與 console error=0，temp validation notes/tags 已清理。未新增 DB 欄位、tags API、server-side preference、跨裝置同步、tag sort/group 或 sidebar redesign。
 - 2026-06-18 Batch Markdown/txt import gate 已完成 local + Pi delivery：`Settings > Backup & Restore` 新增 `.md/.txt` 多檔匯入；前端待匯入清單可多次選擇不同資料夾檔案、同檔去重、單檔移除與清空，匯入後清空待匯入清單但保留結果摘要。`.md` 逐檔走既有單檔 `POST /api/notes/import/md`，`.txt` 由前端讀檔後走既有 `POST /api/notes`，結果逐檔回報 created / skipped / failed。Pi live `https://prism.local` 已驗 Markdown H1 title、frontmatter category/tags、TXT 檔名 title、跨批選檔累加、重複去重、混合 2 created / 1 failed summary、temp note/tag cleanup 與 Go journal evidence。未新增 server-side batch API、schema migration、目錄 watcher、AI 摘要、自動分類、overwrite/sync/background daemon 或批量 DB transaction。
-- `build/` 舊 generated smoke/build artifacts 已清理，只保留最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
+- 2026-06-18 Reading list workspace 已完成 Pi delivery：新增純前端 `localStorage` key `prism.readingWorkspace.v1`，ReadingView 可加入目前 note、顯示暫存閱讀清單、切換、移除單張、清空全部與 scroll restore；NoteCard action menu、NoteEditor toolbar 與 Header 都可加入/開啟閱讀清單，卡片開啟模式維持既有習慣；Appearance sidebar width slider 為 150-320px。Pi live `https://prism.local` 已跑 Go primary cutover，`prism-go-primary.service` active、legacy `prism.service` inactive、migration status v16 clean；live Playwright smoke 已驗 Editor toolbar 加入、Header 開啟、workspace panel、sidebar `V2.5`、HTML title `Prism V2.5`、舊「提取圖片提示詞」入口不存在、console/page/request error=0。未新增 DB schema、note API、server-side persistence、跨裝置同步、native 多視窗、雙欄比對或 diff engine。
+- 2026-06-18 Version 2.5 display gate 已完成：repo 內 current version 已全面改為 `2.5`；左上角 Prism 下方顯示 `V2.5`，HTML title 顯示 `Prism V2.5`。Go primary version fallback 改為 `2.5`，且不再讀 Pi 上 legacy `config.py` 的 stale `PRISM_VERSION`；`PRISM_VERSION` env override 仍保留。
+- 2026-06-18 release checkpoint / repo hygiene gate 已完成：dirty tree 範圍只含 Reading list workspace 功能、測試與文件收尾；ignored `build/` 產物已清到只保留 `build/release` 與 `build/desktop-portable-smoke`，系統 temp 的 reading workspace smoke screenshots 也已清理；tracked runtime/private path sweep 未發現 `.omx`、production DB/WAL/SHM、uploads、attachments、notes、env/key/log 類檔案進入 git，既有 `resources/demo_db/knowledge_demo.db` 仍是 demo fixture。`main` 與 `origin/main` 在未提交工作前為 `0 0`；本 checkpoint 未 commit、未 tag、未重新 package。
+- `build/` 舊 generated smoke/build artifacts 已清理，只保留 `build/release` 與最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
 Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
@@ -39,7 +42,11 @@ Desktop Shell 目前沒有 active construction item。Phase 0-6、post-package f
 
 ### Pi Delivery Follow-up
 
-Variant tracking panel、variant duplicate attachment repair、Note list lightweight、Image viewer lightbox、Header starred tag shortcuts 與 Batch Markdown/txt import 的 Pi delivery 已於 2026-06-18 完成。後續若再有 local verified UX/API gate，仍需另開 Pi delivery gate：先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程部署到 `PI5Mask24`，並驗證 `https://prism.local` 的 service status、migration status、changed API endpoint 與對應前端行為。
+Variant tracking panel、variant duplicate attachment repair、Note list lightweight、Image viewer lightbox、Header starred tag shortcuts、Batch Markdown/txt import、Reading list workspace 與 Version 2.5 display gate 的 Pi delivery 已於 2026-06-18 完成。後續若要把其他 UX/API gate 上 Pi，需另開 Pi delivery gate：先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程部署到 `PI5Mask24`，並驗證 `https://prism.local` 的 service status、migration status、changed API endpoint 與對應前端行為。
+
+### Release Checkpoint / Repo Hygiene
+
+2026-06-18 checkpoint 已完成，沒有未交付的 active construction item。若要發佈，下一步是明確執行 commit / tag / package checklist；若要繼續產品功能，先從 Future Branch Candidates 或新的使用者需求 promote 一個最小 gate，不自動開 AI、semantic search、installer 或 updater 實作。
 
 ### Windows Desktop vs Pi Deployment 差異表
 
@@ -125,21 +132,17 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 
 目標：讓使用者把多張卡片加入暫存閱讀清單，閱讀時快速切換，不必關閉上一張 note。
 
-- [ ] **01A State contract**：先做純前端 state，key 建議 `prism.readingWorkspace.v1`；保存 note ids、active id、layout preference（tabs/sidebar）與每張 note 的 scroll position。狀態限 session/localStorage，不新增 DB schema、不改 note API。
-- [ ] **01B Reading panel switcher**：在 `ReadingView` 加 tabs 或右側清單之一作為第一版預設（先用一種即可，另一種作為 appearance setting 後續再補）；支援加入目前 note、切換、移除單張、清空全部。
-- [ ] **01C Home/card entry points**：在 `NoteCard` action menu 加「加入閱讀清單」；若使用者直接開單張閱讀，維持現有行為，不強迫建立 workspace。
-- [ ] **01D Scroll restore**：切換 note 前記錄目前閱讀容器 scrollTop，切回同 note 後 restore；若 note 內容重新載入失敗，保留清單但顯示可移除狀態。
+- [x] **01A State contract**（2026-06-18 完成）：新增純前端 `useReadingWorkspace` hook，key 為 `prism.readingWorkspace.v1`；保存 note ids、active id、layout preference（tabs/sidebar）與每張 note 的 scroll position。狀態限 `localStorage`，不新增 DB schema、不改 note API。
+- [x] **01B Reading panel switcher**（2026-06-18 完成）：`ReadingView` 右側清單顯示暫存閱讀清單，支援加入目前 note、切換、移除單張、清空全部；reload 後會按 note id 重新抓 detail/title，載入失敗時保留清單並顯示可移除狀態。
+- [x] **01C Home/card entry points**（2026-06-18 完成）：`NoteCard` action menu 新增「加入閱讀清單」，只寫入 frontend workspace state；使用者直接開單張閱讀時仍維持既有 card open mode，不強迫建立 workspace。
+- [x] **01D Scroll restore**（2026-06-18 完成）：閱讀容器 scrollTop 會保存到 workspace state；切換 note 前保存目前位置，切回同 note 後 restore。若 note 內容重新載入失敗，清單保留並可單張移除。
+- [x] **01E Affordance polish + Pi delivery**（2026-06-18 完成）：`NoteEditor` toolbar 將既有「提取圖片提示詞」可見按鈕封存並改為「加入閱讀清單」；Header 顯示閱讀清單入口並可開啟 active/first note workspace；Appearance sidebar width slider 可調 150-320px；左上角 Prism 下方顯示 `V2.5`，HTML title 顯示 `Prism V2.5`。未刪除 dormant prompt-extraction API/hook、未改 DB/API、未新增 server persistence。
 - 不做：native 多視窗、雙欄比對、diff engine、server persistence、跨裝置同步、改 `GET /api/notes` contract。
-- 驗收：加入多張、切換、移除、清空、reload 後 localStorage restore、scroll restore；frontend typecheck/build + browser flow 驗證。
+- 驗收：`pytest tests/test_reading_workspace.py tests/test_frontend_i18n_settings.py tests/test_note_variant_lineage.py -q` 27 passed；`pytest tests/test_go_primary_t032_t035_server_system.py tests/test_reading_workspace.py tests/test_frontend_i18n_settings.py -q` 30 passed；`pytest tests/test_go_primary_t032_t035_server_system.py -q` 4 passed；`cd go-shadow && go test ./...` passed；`npm run build` passed（僅既有 browserslist/chunk-size warning）；`.loop/verify-gate.ps1` 第 2 輪通過（`git diff --check`、AGENTS/CLAUDE mirror、`pytest tests/ -v` 349 passed、`go test ./...` passed）。Pi delivery 已跑 `scripts/go_primary_pi_live_ops.ps1 -Mode Cutover`；live `https://prism.local` 驗 `prism-go-primary.service` active、legacy `prism.service` inactive、`X-Prism-Go-Primary: hit`、version `2.5`、migration v16 clean。Browser plugin `iab` 不可用，rendered 驗證改用 Playwright fallback；live smoke 驗 title `Prism V2.5`、sidebar `V2.5`、Editor toolbar 加入閱讀清單、Header 開啟 `READING LIST (1)`、舊「提取圖片提示詞」入口不存在、console/page/request error=0。
 
 ### Future Branch Candidates
 
-以下是不同產品線或 sidecar 方向，先記錄不施工。Promote 前必須先補 contract / docs，不得直接改 Prism Core runtime。
 
-- [ ] **BRANCH-CANDIDATE-CRR-LITE**：Cerberus Research Radar Lite。第一版只可先做 docs/schema：Research Signal Card、Normalized Paper Candidate、Paper Source Query Contract、Dedup Contract、LLM Extraction Contract、Prism/Cerberus mapping。不接 API、不接 LLM、不寫 Prism、不寫 CerberusCoin repo；paper 只能變成可測假設，不能變成策略結論。
-- [ ] **BRANCH-CANDIDATE-AI-BRIDGE**：外部 Agent 安全讀取 Prism 的 read-only bridge。不得內建 AI chat、embedding、semantic search、GraphRAG 或 agent runner；若未來啟動，先做 read-only contract 與安全邊界文件。
-- [ ] **BRANCH-CANDIDATE-WATCH-LITE**：RSS / arXiv / GitHub / blog / URL tracking sidecar。只收集候選到 pending queue，不自動寫 permanent Prism note；等 Core UX 與備份/還原語義穩定後再評估。
-- [ ] **BRANCH-CANDIDATE-ARCHIVE-INTAKE**：web / PDF / markdown / source intake sidecar。先記錄為匯入輔助方向，不得把 crawler、summarizer 或大量自動寫入帶進 Core。
 
 ---
 

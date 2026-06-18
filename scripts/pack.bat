@@ -2,7 +2,7 @@
 chcp 65001 >nul
 cd /d "%~dp0.."
 
-set VERSION=v2.4.9-go-primary
+set VERSION=v2.5-go-primary
 for /f "tokens=2 delims==" %%I in ('wmic os get localdatetime /value') do set datetime=%%I
 set DATETIME=%datetime:~0,8%_%datetime:~8,4%
 set ARCHIVE_NAME=Prism_%VERSION%_%DATETIME%

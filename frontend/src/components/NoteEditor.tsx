@@ -12,8 +12,9 @@ import { usePasteHandler } from '../hooks/editor/usePasteHandler'
 import { useDragDrop } from '../hooks/editor/useDragDrop'
 import { useNoteAttachments } from '../hooks/editor/useNoteAttachments'
 import { useNoteHistory } from '../hooks/editor/useNoteHistory'
-import { usePromptExtraction } from '../hooks/editor/usePromptExtraction'
 import { useTranslation } from '../hooks/useTranslation'
+import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
+import { toast } from './ui/Toast'
 
 interface NoteEditorProps {
   note: Note | null
@@ -25,11 +26,23 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
   const { locale, t } = useTranslation()
   const form = useNoteForm(note, onClose, initialPreview)
   const { handlePaste } = usePasteHandler(form.setContent)
-  const { hasAIPrompt, isCheckingPrompt, handleCopyPrompt } = usePromptExtraction(form.content)
+  const { workspace, addNote } = useReadingWorkspace()
   const history = useNoteHistory(note, form.setContent)
   const attachments = useNoteAttachments(note, form.setContent, form.updateOriginalContent)
   const drag = useDragDrop(note?.id, form.setContent, attachments.setAttachments)
   const [galleryLightboxIndex, setGalleryLightboxIndex] = useState<number | null>(null)
+  const isInReadingWorkspace = note?.id ? workspace.noteIds.includes(note.id) : false
+
+  const handleAddToReadingWorkspace = () => {
+    if (!note?.id) return
+    const wasInReadingWorkspace = workspace.noteIds.includes(note.id)
+    addNote(note.id)
+    toast.success(
+      wasInReadingWorkspace
+        ? t('noteCard.inReadingWorkspace')
+        : t('noteCard.addedToReadingWorkspace'),
+    )
+  }
 
   // Load attachments on mount (editing mode only)
   useEffect(() => {
@@ -60,9 +73,9 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
           {/* Toolbar */}
           <EditorToolbar
             isEditing={form.isEditing}
-            hasAIPrompt={hasAIPrompt}
-            isCheckingPrompt={isCheckingPrompt}
-            onCopyPrompt={handleCopyPrompt}
+            canAddToReadingWorkspace={!!note?.id}
+            isInReadingWorkspace={isInReadingWorkspace}
+            onAddToReadingWorkspace={handleAddToReadingWorkspace}
             isLoadingHistory={history.isLoadingHistory}
             onLoadHistory={history.loadHistory}
             isPreview={form.isPreview}

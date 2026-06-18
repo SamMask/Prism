@@ -35,7 +35,7 @@ document.documentElement.setAttribute('data-mode', savedMode)
 
 const savedCornerRadius = readNumberSetting('prism.cornerRadius', 10, 4, 24)
 document.documentElement.style.setProperty('--prism-corner-radius', `${savedCornerRadius}px`)
-const savedSidebarWidth = readNumberSetting('prism.sidebarWidth', 248, 208, 320)
+const savedSidebarWidth = readNumberSetting('prism.sidebarWidth', 248, 150, 320)
 document.documentElement.style.setProperty('--prism-sidebar-width', `${savedSidebarWidth}px`)
 document.documentElement.style.setProperty('--sidebar-w', `${savedSidebarWidth}px`)
 

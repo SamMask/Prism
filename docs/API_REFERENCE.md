@@ -781,7 +781,7 @@ Response：
 
 ```json
 {
-  "current_version": "2.4.9",
+  "current_version": "2.5",
   "latest_version": "v2.4.10",
   "has_update": true,
   "release_url": "https://github.com/.../releases/tag/v2.4.10",

@@ -63,7 +63,7 @@ def test_23_10_3_records_local_build_artifact_api_and_browser_stabilization():
     assert local["go_local_artifact_smoke"]["source_db_hash_guard"] == "passed"
     assert local["local_api_smoke"]["api_test"]["status"] == "ok"
     assert local["local_api_smoke"]["server_version"] == {
-        "version": "2.4.9",
+        "version": "2.5",
         "platform": "Windows",
         "v2_mode": True,
     }
@@ -102,7 +102,7 @@ def test_23_10_3_records_pi_backup_sync_restart_and_live_python_ownership():
     assert live["api_test"]["notes_count"] == 198
     assert live["api_test"]["header"] == "no X-Prism-Go-Read-Routing header"
     assert live["server_version"] == {
-        "version": "2.4.9",
+        "version": "2.5",
         "platform": "Linux",
         "v2_mode": True,
     }

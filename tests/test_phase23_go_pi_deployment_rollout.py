@@ -98,7 +98,7 @@ def test_phase23_9_live_verification_keeps_python_primary_and_migrations_clean()
     assert live["api_test"]["status"] == "ok"
     assert live["api_test"]["notes_count"] == 198
     assert live["api_test"]["header"] == "no X-Prism-Go-Read-Routing header"
-    assert live["server_version"]["version"] == "2.4.9"
+    assert live["server_version"]["version"] == "2.5"
     assert live["server_version"]["platform"] == "Linux"
     assert live["server_version"]["v2_mode"] is True
     assert live["migration_status_after_rollout"] == {

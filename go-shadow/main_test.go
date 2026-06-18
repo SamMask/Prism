@@ -1475,8 +1475,12 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 
 	dataDir := t.TempDir()
 	uploadsDir := filepath.Join(dataDir, "static", "uploads")
-	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
-		t.Fatal(err)
+	attachmentsDir := filepath.Join(dataDir, "docs", "attachments")
+	notesDir := filepath.Join(dataDir, "docs", "notes")
+	for _, dir := range []string{uploadsDir, attachmentsDir, notesDir} {
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	for _, name := range []string{
 		"delete.jpg", "delete_thumb.webp", "cover.jpg", "cover_thumb.webp",
@@ -1493,6 +1497,24 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 	sharedKeepID := insertSearchNote(t, db, "Shared Keep", "sharedtoken ![](/static/uploads/shared.jpg)", "", 1)
 	batchAID := insertSearchNote(t, db, "Batch A", "batchatoken ![](/static/uploads/batch-a.jpg)", "", 1)
 	batchBID := insertSearchNote(t, db, "Batch B", "batchbtoken", "", 1)
+	deleteAttachmentPath := filepath.Join(attachmentsDir, "delete.md")
+	deleteAutoAttachmentRel := fmt.Sprintf("docs/notes/note_%d.md", deleteID)
+	deleteAutoAttachmentPath := filepath.Join(dataDir, filepath.FromSlash(deleteAutoAttachmentRel))
+	sharedAttachmentPath := filepath.Join(attachmentsDir, "shared.md")
+	batchAttachmentPath := filepath.Join(attachmentsDir, "batch-a.md")
+	batchAutoAttachmentRel := fmt.Sprintf("docs/notes/note_%d.md", batchBID)
+	batchAutoAttachmentPath := filepath.Join(dataDir, filepath.FromSlash(batchAutoAttachmentRel))
+	for filePath, content := range map[string]string{
+		deleteAttachmentPath:     "delete attachment",
+		deleteAutoAttachmentPath: "delete auto attachment",
+		sharedAttachmentPath:     "shared attachment",
+		batchAttachmentPath:      "batch attachment",
+		batchAutoAttachmentPath:  "batch auto attachment",
+	} {
+		if err := os.WriteFile(filePath, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	if _, err := db.Exec("UPDATE Notes SET cover_image = '/static/uploads/cover.jpg' WHERE id = ?", deleteID); err != nil {
 		t.Fatal(err)
 	}
@@ -1514,11 +1536,26 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title) VALUES (?, 'docs/attachments/delete.md', 'md', 'delete attachment')", deleteID); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title, is_auto_extracted) VALUES (?, ?, 'md', 'delete auto attachment', 1)", deleteID, deleteAutoAttachmentRel); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title) VALUES (?, 'docs/attachments/shared.md', 'md', 'shared attachment')", sharedDeleteID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title) VALUES (?, 'docs/attachments/shared.md', 'md', 'shared attachment')", sharedKeepID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title) VALUES (?, 'docs/attachments/batch-a.md', 'md', 'batch attachment')", batchAID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Note_Attachments (note_id, file_path, file_type, title, is_auto_extracted) VALUES (?, ?, 'md', 'batch auto attachment', 1)", batchBID, batchAutoAttachmentRel); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := db.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, 'batch old content', 'batch history')", batchAID); err != nil {
 		t.Fatal(err)
 	}
 
-	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true, uploadsDir: uploadsDir}}
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true, dataDir: dataDir, uploadsDir: uploadsDir}}
 	deleteRecorder := httptest.NewRecorder()
 	srv.handleNoteDetail(deleteRecorder, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/notes/%d", deleteID), nil))
 	if deleteRecorder.Code != http.StatusOK {
@@ -1527,6 +1564,11 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 	for _, name := range []string{"delete.jpg", "delete_thumb.webp", "cover.jpg", "cover_thumb.webp"} {
 		if _, err := os.Stat(filepath.Join(uploadsDir, name)); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be deleted, stat err=%v", name, err)
+		}
+	}
+	for _, filePath := range []string{deleteAttachmentPath, deleteAutoAttachmentPath} {
+		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+			t.Fatalf("expected attachment file %s to be deleted, stat err=%v", filePath, err)
 		}
 	}
 	assertTableCount(t, db, "Notes", deleteID, 0)
@@ -1546,7 +1588,11 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 			t.Fatalf("expected shared file %s to remain, err=%v", name, err)
 		}
 	}
+	if _, err := os.Stat(sharedAttachmentPath); err != nil {
+		t.Fatalf("expected shared attachment file to remain, err=%v", err)
+	}
 	assertTableCount(t, db, "Notes", sharedKeepID, 1)
+	assertTableCount(t, db, "Note_Attachments", sharedKeepID, 1)
 
 	batchRecorder := httptest.NewRecorder()
 	batchBody := fmt.Sprintf(`{"note_ids":[%d,%d,999999]}`, batchAID, batchBID)
@@ -1570,8 +1616,15 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 			t.Fatalf("expected %s to be deleted by batch cleanup, stat err=%v", name, err)
 		}
 	}
+	for _, filePath := range []string{batchAttachmentPath, batchAutoAttachmentPath} {
+		if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+			t.Fatalf("expected batch attachment file %s to be deleted, stat err=%v", filePath, err)
+		}
+	}
 	assertTableCount(t, db, "Notes", batchAID, 0)
 	assertTableCount(t, db, "Note_History", batchAID, 0)
+	assertTableCount(t, db, "Note_Attachments", batchAID, 0)
+	assertTableCount(t, db, "Note_Attachments", batchBID, 0)
 	assertFTSCount(t, db, "batchatoken", 0)
 	assertFTSCount(t, db, "batchbtoken", 0)
 }
@@ -1845,6 +1898,32 @@ func TestCheckUpdateReturnsControlledGoPrimaryStatus(t *testing.T) {
 	data := payload["data"].(map[string]any)
 	if data["current_version"] == "" || data["has_update"] != false || data["message"] != "未設定更新來源" {
 		t.Fatalf("unexpected check-update payload: %#v", payload)
+	}
+}
+
+func TestPrismVersionIgnoresLegacyConfigPy(t *testing.T) {
+	originalWD, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Chdir(originalWD)
+
+	tmp := t.TempDir()
+	if err := os.WriteFile(filepath.Join(tmp, "config.py"), []byte(`PRISM_VERSION = "0.0-stale"`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(tmp); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("PRISM_VERSION", "")
+	if got := prismVersion(); got != "2.5" {
+		t.Fatalf("expected compiled version to ignore stale config.py, got %q", got)
+	}
+
+	t.Setenv("PRISM_VERSION", "9.9-env")
+	if got := prismVersion(); got != "9.9-env" {
+		t.Fatalf("expected PRISM_VERSION env override, got %q", got)
 	}
 }
 

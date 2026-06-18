@@ -1,11 +1,12 @@
 import { marked } from 'marked'
-import { Archive, Copy, Edit2, GitBranch, Pin, X } from 'lucide-react'
-import { type MouseEvent, useEffect, useMemo, useState } from 'react'
+import { Archive, Copy, Edit2, GitBranch, ListPlus, ListX, Loader2, Pin, X } from 'lucide-react'
+import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Note, api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { Modal, Button } from './ui'
 import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
+import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
 import { extractImageReferences } from './editor/imageReferences'
 import { ImageLightbox, type LightboxImage } from './ImageLightbox'
@@ -52,11 +53,27 @@ function imageSourceMatches(candidate: string, observed: string): boolean {
 export function ReadingView({ note, onClose }: ReadingViewProps) {
   const { openEditor, fetchNotes } = useAppStore()
   const { locale, t } = useTranslation()
+  const {
+    workspace,
+    addNote,
+    removeNote,
+    clearWorkspace,
+    setActiveNote,
+    saveScrollPosition,
+    getScrollPosition,
+  } = useReadingWorkspace()
   const [localNote, setLocalNote] = useState(note)
   const [childVariants, setChildVariants] = useState<Note[]>([])
   const [isVariantsLoading, setIsVariantsLoading] = useState(false)
   const [isAutoContentLoading, setIsAutoContentLoading] = useState(false)
+  const [workspaceNotes, setWorkspaceNotes] = useState<Record<number, Note>>({})
+  const [workspaceUnavailableIds, setWorkspaceUnavailableIds] = useState<number[]>([])
+  const [isWorkspaceSwitching, setIsWorkspaceSwitching] = useState(false)
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const readingScrollRef = useRef<HTMLDivElement>(null)
+  const pendingScrollRestoreIdRef = useRef<number | null>(null)
+  const workspaceIdsKey = workspace.noteIds.join(',')
+  const isCurrentInWorkspace = workspace.noteIds.includes(localNote.id)
   const coverImage = localNote.cover_image || extractFirstImage(localNote.content || '')
   const readingImages = useMemo(
     () => collectReadingImages(coverImage, localNote.content || '', localNote.title || t('reading.untitled')),
@@ -73,9 +90,16 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   useEffect(() => {
     let isMounted = true
     setLocalNote(note)
+    setWorkspaceNotes((current) => ({ ...current, [note.id]: note }))
+    if (workspace.noteIds.includes(note.id)) {
+      setActiveNote(note.id)
+      pendingScrollRestoreIdRef.current = note.id
+    }
     api.getNote(note.id)
       .then((detail) => {
-        if (isMounted) setLocalNote(detail)
+        if (!isMounted) return
+        setLocalNote(detail)
+        setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
       })
       .catch(() => {
         toast.error(t('reading.loadFailed'))
@@ -85,6 +109,50 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
       isMounted = false
     }
   }, [note.id])
+
+  useEffect(() => {
+    setWorkspaceNotes((current) => ({ ...current, [localNote.id]: localNote }))
+  }, [localNote])
+
+  useEffect(() => {
+    let isMounted = true
+    const missingIds = workspace.noteIds.filter((id) => (
+      id !== localNote.id && !workspaceNotes[id] && !workspaceUnavailableIds.includes(id)
+    ))
+
+    missingIds.forEach((noteId) => {
+      api.getNote(noteId)
+        .then((detail) => {
+          if (!isMounted) return
+          setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
+        })
+        .catch(() => {
+          if (!isMounted) return
+          setWorkspaceUnavailableIds((current) => (
+            current.includes(noteId) ? current : [...current, noteId]
+          ))
+        })
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [workspaceIdsKey, localNote.id])
+
+  useEffect(() => {
+    if (pendingScrollRestoreIdRef.current !== localNote.id) return
+    const node = readingScrollRef.current
+    if (!node) return
+
+    const frame = window.requestAnimationFrame(() => {
+      node.scrollTop = getScrollPosition(localNote.id)
+      if (pendingScrollRestoreIdRef.current === localNote.id) {
+        pendingScrollRestoreIdRef.current = null
+      }
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [localNote.id, renderedContent, getScrollPosition])
 
   useEffect(() => {
     let isMounted = true
@@ -135,8 +203,20 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     }
   }, [localNote.id])
 
-  const handleEdit = () => {
+  const persistCurrentScroll = useCallback(() => {
+    const scrollTop = readingScrollRef.current?.scrollTop ?? 0
+    if (workspace.noteIds.includes(localNote.id)) {
+      saveScrollPosition(localNote.id, scrollTop)
+    }
+  }, [localNote.id, saveScrollPosition, workspace.noteIds])
+
+  const handleClose = useCallback(() => {
+    persistCurrentScroll()
     onClose()
+  }, [onClose, persistCurrentScroll])
+
+  const handleEdit = () => {
+    handleClose()
     openEditor(localNote)
   }
 
@@ -149,14 +229,65 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     }
   }
 
+  const handleOpenWorkspaceNote = async (noteId: number) => {
+    if (noteId === localNote.id) return
+    persistCurrentScroll()
+    setIsWorkspaceSwitching(true)
+
+    try {
+      const detail = workspaceNotes[noteId] ?? await api.getNote(noteId)
+      setActiveNote(noteId)
+      pendingScrollRestoreIdRef.current = noteId
+      setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
+      setWorkspaceUnavailableIds((current) => current.filter((id) => id !== noteId))
+      setLocalNote(detail)
+    } catch {
+      setWorkspaceUnavailableIds((current) => (
+        current.includes(noteId) ? current : [...current, noteId]
+      ))
+      toast.error(t('reading.workspaceLoadFailed'))
+    } finally {
+      setIsWorkspaceSwitching(false)
+    }
+  }
+
   const handleOpenRelatedNote = async (noteId: number) => {
     if (noteId === localNote.id) return
+    persistCurrentScroll()
     try {
       const detail = await api.getNote(noteId)
+      if (workspace.noteIds.includes(noteId)) {
+        setActiveNote(noteId)
+        pendingScrollRestoreIdRef.current = noteId
+      }
+      setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
+      setWorkspaceUnavailableIds((current) => current.filter((id) => id !== noteId))
       setLocalNote(detail)
     } catch {
       toast.error(t('reading.openRelatedFailed'))
     }
+  }
+
+  const handleAddCurrentToWorkspace = () => {
+    addNote(localNote.id, { activate: true })
+    setWorkspaceNotes((current) => ({ ...current, [localNote.id]: localNote }))
+    setWorkspaceUnavailableIds((current) => current.filter((id) => id !== localNote.id))
+    toast.success(t('reading.workspaceAdded'))
+  }
+
+  const handleRemoveWorkspaceNote = (noteId: number) => {
+    removeNote(noteId)
+    setWorkspaceUnavailableIds((current) => current.filter((id) => id !== noteId))
+  }
+
+  const handleClearWorkspace = () => {
+    clearWorkspace()
+    setWorkspaceUnavailableIds([])
+  }
+
+  const handleReadingScroll = () => {
+    if (!isCurrentInWorkspace) return
+    saveScrollPosition(localNote.id, readingScrollRef.current?.scrollTop ?? 0)
   }
 
   const openLightboxForSource = (src: string | null | undefined) => {
@@ -193,8 +324,19 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     }
   }
 
+  const workspaceItems = workspace.noteIds.map((noteId) => {
+    const workspaceNote = noteId === localNote.id ? localNote : workspaceNotes[noteId]
+    return {
+      id: noteId,
+      note: workspaceNote,
+      title: workspaceNote?.title || t('reading.untitled'),
+      updatedAt: workspaceNote?.updated_at,
+      isUnavailable: workspaceUnavailableIds.includes(noteId),
+    }
+  })
+
   return (
-    <Modal isOpen onClose={lightboxIndex === null ? onClose : () => setLightboxIndex(null)} size="full">
+    <Modal isOpen onClose={lightboxIndex === null ? handleClose : () => setLightboxIndex(null)} size="full">
       <article className="flex max-h-[88vh] flex-col overflow-hidden" data-testid="reading-view">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 lg:px-6">
           <div className="min-w-0">
@@ -245,7 +387,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
 
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="rounded-md p-2 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
             aria-label={t('reading.closePanel')}
           >
@@ -254,7 +396,12 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
         </header>
 
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_220px]">
-          <div className="overflow-y-auto px-5 py-5 lg:px-8 lg:py-7">
+          <div
+            ref={readingScrollRef}
+            onScroll={handleReadingScroll}
+            className="overflow-y-auto px-5 py-5 lg:px-8 lg:py-7"
+            data-testid="reading-scroll-container"
+          >
             {coverImage && (
               <button
                 type="button"
@@ -287,6 +434,90 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
           </div>
 
           <aside className="flex shrink-0 flex-col gap-3 border-t border-border-subtle bg-bg-elevated/25 p-4 lg:border-l lg:border-t-0">
+            {workspaceItems.length > 0 && (
+              <section
+                className="rounded-md border border-border-subtle bg-bg-base/40 p-3"
+                data-testid="reading-workspace-panel"
+                data-layout={workspace.layout}
+              >
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <div className="min-w-0 text-xs font-medium uppercase tracking-wider text-text-muted">
+                    {t('reading.workspaceTitle', { count: workspaceItems.length })}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleClearWorkspace}
+                    className="rounded-md p-1.5 text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+                    aria-label={t('reading.workspaceClear')}
+                    title={t('reading.workspaceClear')}
+                    data-testid="reading-workspace-clear"
+                  >
+                    <ListX size={14} />
+                  </button>
+                </div>
+                <div className="flex max-h-48 flex-col gap-2 overflow-y-auto">
+                  {workspaceItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`flex min-w-0 items-stretch rounded-md border transition-colors ${
+                        item.id === localNote.id
+                          ? 'border-primary/50 bg-primary/10'
+                          : 'border-border-subtle bg-bg-surface/80 hover:bg-bg-hover'
+                      }`}
+                      data-testid={`reading-workspace-item-${item.id}`}
+                      data-active={item.id === localNote.id}
+                      data-unavailable={item.isUnavailable}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleOpenWorkspaceNote(item.id)}
+                        className="flex min-w-0 flex-1 flex-col px-2.5 py-2 text-left"
+                        disabled={isWorkspaceSwitching && item.id !== localNote.id}
+                      >
+                        <span className="truncate text-sm text-text-primary">
+                          {item.title}
+                        </span>
+                        <span className="mt-0.5 text-xs text-text-muted">
+                          {item.isUnavailable
+                            ? t('reading.workspaceUnavailable')
+                            : item.updatedAt
+                              ? new Date(item.updatedAt).toLocaleDateString(locale)
+                              : t('reading.workspacePending')}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveWorkspaceNote(item.id)}
+                        className="flex w-8 shrink-0 items-center justify-center rounded-r-md text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+                        aria-label={t('reading.workspaceRemove')}
+                        title={t('reading.workspaceRemove')}
+                        data-testid={`reading-workspace-remove-${item.id}`}
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {!isCurrentInWorkspace && (
+              <button
+                type="button"
+                onClick={handleAddCurrentToWorkspace}
+                className="flex items-center justify-center gap-2 rounded-md border border-border-default px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
+                data-testid="reading-workspace-add-current"
+              >
+                <ListPlus size={16} />
+                {t('reading.workspaceAddCurrent')}
+              </button>
+            )}
+            {isWorkspaceSwitching && (
+              <div className="flex items-center justify-center gap-2 rounded-md border border-border-subtle px-3 py-2 text-sm text-text-muted">
+                <Loader2 size={16} className="animate-spin" />
+                {t('reading.workspaceLoading')}
+              </div>
+            )}
             <Button onClick={handleEdit} variant="primary" className="justify-center">
               <Edit2 size={16} />
               {t('reading.edit')}

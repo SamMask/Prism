@@ -20,14 +20,15 @@
     "notes batch type/tags/archive parity closure",
     "notes history restore/delete parity closure",
     "upload delete ownership",
-    "orphan/originals/broken image cleanup ownership",
-    "attachment file delete ownership"
+    "orphan/originals/broken image cleanup ownership"
   ],
   "parity_scope": [
     "single note delete success and not-found response parity",
     "batch delete success, empty-list validation, and nonexistent-id deleted_count parity",
     "Notes_FTS delete trigger result parity",
     "Note_Tags, Source_Urls, Note_History, and Note_Attachments removal",
+    "unshared docs/attachments and docs/notes attachment file deletion",
+    "shared attachment file preservation when another Note_Attachments row still references the path",
     "content and cover_image static/uploads extraction",
     "reference-count protected image preservation",
     "original image plus _thumb.webp companion deletion",
@@ -46,13 +47,18 @@
       ".gif",
       ".webp"
     ],
-    "path_scope": "PRISM_GO_DATA_DIR/static/uploads only"
+    "attachment_file_path_scope": [
+      "PRISM_GO_DATA_DIR/docs/attachments",
+      "PRISM_GO_DATA_DIR/docs/notes"
+    ],
+    "delete_attachment_file_only_when_no_other_attachment_row_references_path": true,
+    "path_scope": "PRISM_GO_DATA_DIR/static/uploads plus unshared note attachment files under docs/attachments and docs/notes"
   },
   "implementation": {
     "go_file": "go-shadow/main.go",
     "single_delete_handler": "deleteNote",
     "batch_delete_handler": "batchDeleteNotes",
-    "cleanup_helper": "cleanupNoteImages",
+    "cleanup_helper": "cleanupNoteImages and noteAttachmentCleanupPaths",
     "transaction_boundary": "single SQLite transaction per delete request; file cleanup is best-effort and mirrors Python non-fatal cleanup behavior",
     "sqlite_pragmas": [
       "foreign_keys(1)",
@@ -88,7 +94,7 @@
     "Public exposure expansion"
   ],
   "verification": {
-    "targeted_pytest": "pytest tests/test_go_primary_t013_notes_delete.py -v",
+    "targeted_go_test": "cd go-shadow && go test ./... -run TestNotesDeleteCleansImagesFTSAndAssociations -count=1",
     "go_tests": "cd go-shadow && go test ./...",
     "full_pytest": "pytest tests/ -v",
     "diff_check": "git diff --check"

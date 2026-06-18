@@ -120,7 +120,7 @@ export function Sidebar() {
         {!isCollapsed && (
           <div className="hidden min-w-0 sm:block">
             <div className="text-[17px] font-semibold leading-tight tracking-tight text-text-primary">Prism</div>
-            <div className="mt-0.5 font-mono text-[11px] text-text-muted">v2 · local</div>
+            <div className="mt-0.5 font-mono text-[11px] text-text-muted">V2.5</div>
           </div>
         )}
       </div>

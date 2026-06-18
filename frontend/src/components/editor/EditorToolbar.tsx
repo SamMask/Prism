@@ -1,6 +1,6 @@
 
 
-import { Loader2, Clipboard, History, Edit3, Eye, Save, X } from 'lucide-react';
+import { Check, ListPlus, Loader2, History, Edit3, Eye, Save, X } from 'lucide-react';
 import { Button, IconButton } from '../ui';
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -8,10 +8,10 @@ interface EditorToolbarProps {
   // Title
   isEditing: boolean;
 
-  // Prompt Extraction
-  hasAIPrompt: boolean;
-  isCheckingPrompt: boolean;
-  onCopyPrompt: () => void;
+  // Reading list
+  canAddToReadingWorkspace: boolean;
+  isInReadingWorkspace: boolean;
+  onAddToReadingWorkspace: () => void;
 
   // History
   isLoadingHistory: boolean;
@@ -29,9 +29,9 @@ interface EditorToolbarProps {
 
 export function EditorToolbar({
   isEditing,
-  hasAIPrompt,
-  isCheckingPrompt,
-  onCopyPrompt,
+  canAddToReadingWorkspace,
+  isInReadingWorkspace,
+  onAddToReadingWorkspace,
   isLoadingHistory,
   onLoadHistory,
   isPreview,
@@ -48,29 +48,22 @@ export function EditorToolbar({
         {isEditing ? t('editor.toolbar.editNote') : t('editor.toolbar.newNote')}
       </h2>
       <div className="flex items-center gap-2">
-        {/* Extract Prompt Button */}
-        <button
-          onClick={onCopyPrompt}
-          disabled={isCheckingPrompt}
-          className={`p-2 rounded-lg transition-all duration-200 relative
-                     ${
-                       hasAIPrompt
-                         ? "bg-success/20 text-success hover:bg-success/30 shadow-lg shadow-success/20"
-                         : isCheckingPrompt
-                           ? "bg-bg-elevated text-text-muted cursor-wait"
-                           : "bg-bg-elevated text-text-muted hover:text-text-primary hover:bg-bg-hover"
-                     }`}
-          title={hasAIPrompt ? t('editor.toolbar.copyAiPrompt') : t('editor.toolbar.extractImagePrompt')}
-        >
-          {isCheckingPrompt ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Clipboard size={16} />
-          )}
-          {hasAIPrompt && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-success rounded-full animate-pulse" />
-          )}
-        </button>
+        {canAddToReadingWorkspace && (
+          <button
+            onClick={onAddToReadingWorkspace}
+            className={`relative rounded-lg p-2 transition-all duration-200 ${
+              isInReadingWorkspace
+                ? 'bg-success/20 text-success hover:bg-success/30'
+                : 'bg-bg-elevated text-text-muted hover:bg-bg-hover hover:text-text-primary'
+            }`}
+            title={isInReadingWorkspace ? t('noteCard.inReadingWorkspace') : t('noteCard.addToReadingWorkspace')}
+            aria-label={isInReadingWorkspace ? t('noteCard.inReadingWorkspace') : t('noteCard.addToReadingWorkspace')}
+            aria-pressed={isInReadingWorkspace}
+            data-testid="editor-add-reading-workspace"
+          >
+            {isInReadingWorkspace ? <Check size={16} /> : <ListPlus size={16} />}
+          </button>
+        )}
 
         {/* History Button (only for existing notes) */}
         {isEditing && (

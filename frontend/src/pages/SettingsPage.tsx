@@ -186,7 +186,7 @@ export function SettingsPage() {
             <SectionPanel title={t('settings.about.title')} icon={<Info size={20} className="text-primary" />} testId="settings-about">
               <div className="space-y-2 text-text-secondary">
                 <p><strong className="text-text-primary">Prism</strong></p>
-                <p>{t('settings.about.version', { version: stats?.version || '2.4.9' })}</p>
+                <p>{t('settings.about.version', { version: stats?.version || '2.5' })}</p>
                 <p>{t('settings.about.frontend')}</p>
                 <p>{t('settings.about.backend')}</p>
                 <p className="text-text-muted text-sm pt-2">

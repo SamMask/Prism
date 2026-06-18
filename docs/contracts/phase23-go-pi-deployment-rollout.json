@@ -117,7 +117,7 @@
       "header": "no X-Prism-Go-Read-Routing header"
     },
     "server_version": {
-      "version": "2.4.9",
+      "version": "2.5",
       "platform": "Linux",
       "v2_mode": true
     },

@@ -15,6 +15,8 @@ interface AppearanceSectionProps {
 type AccentColor = 'default' | 'cyberpunk' | 'eye-care' | 'elegant' | 'ocean' | 'sunset';
 type BackgroundScheme = 'neutral' | 'black' | 'warm' | 'green' | 'paper';
 type CardOpenMode = 'preview' | 'edit';
+const SIDEBAR_WIDTH_MIN = 150;
+const SIDEBAR_WIDTH_MAX = 320;
 
 const clampNumber = (value: number, min: number, max: number) => {
   return Math.min(Math.max(value, min), max);
@@ -66,7 +68,9 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
     return savedScheme && backgroundOptions.some((option) => option.id === savedScheme) ? savedScheme : 'warm';
   });
   const [cornerRadius, setCornerRadius] = useState(() => readNumberSetting('prism.cornerRadius', 10, 4, 24));
-  const [sidebarWidth, setSidebarWidth] = useState(() => readNumberSetting('prism.sidebarWidth', 248, 208, 320));
+  const [sidebarWidth, setSidebarWidth] = useState(() => (
+    readNumberSetting('prism.sidebarWidth', 248, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX)
+  ));
   const [cardOpenMode, setCardOpenMode] = useState<CardOpenMode>(() => readCardOpenMode());
   const [autoLoadMore, setAutoLoadMore] = useState(() => localStorage.getItem('autoLoadMore') !== 'false');
 
@@ -105,7 +109,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
   };
 
   const updateSidebarWidth = (value: number) => {
-    const nextValue = clampNumber(value, 208, 320);
+    const nextValue = clampNumber(value, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX);
     setSidebarWidth(nextValue);
     localStorage.setItem('prism.sidebarWidth', String(nextValue));
     setRootPixelVariable('--prism-sidebar-width', nextValue);
@@ -326,8 +330,8 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
             <div className="flex min-w-[220px] items-center gap-4">
               <input
                 type="range"
-                min={208}
-                max={320}
+                min={SIDEBAR_WIDTH_MIN}
+                max={SIDEBAR_WIDTH_MAX}
                 step={4}
                 value={sidebarWidth}
                 onChange={(event) => updateSidebarWidth(Number(event.target.value))}

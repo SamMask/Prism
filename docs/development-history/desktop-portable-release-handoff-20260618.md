@@ -41,7 +41,7 @@ This archive preserves completed desktop-shell and release-governance details th
 - GitHub default README is now English in root `README.md`.
 - Traditional Chinese README lives in `README.zh-TW.md`.
 - Both files have top language links.
-- Release asset naming target for this line is `PrismDesktopPortable-v2.4.9.zip`.
+- Release asset naming target for this line is `PrismDesktopPortable-v2.5.zip`.
 - Public release wording must not claim an installer, auto updater, WebView2 bootstrap, built-in auth, semantic search, bundled AI, or Python backend runtime.
 
 ## Deferred Gates

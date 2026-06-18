@@ -42,7 +42,7 @@ def test_reading_view_collects_cover_and_markdown_images():
     assert 'data-testid="reading-content"' in reading_view
     assert "prose-img:cursor-zoom-in" in reading_view
     assert "<ImageLightbox" in reading_view
-    assert "lightboxIndex === null ? onClose : () => setLightboxIndex(null)" in reading_view
+    assert "lightboxIndex === null ? handleClose : () => setLightboxIndex(null)" in reading_view
 
 
 def test_editor_preview_and_gallery_use_shared_lightbox():

@@ -1,11 +1,12 @@
 import { Note, api } from '../services/api'
 import { useAppStore, type ViewMode } from '../stores/appStore'
-import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download, BookOpen, Maximize2 } from 'lucide-react'
+import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download, BookOpen, Maximize2, ListPlus } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
+import { addNoteToReadingWorkspace, isNoteInReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
 import { ImageLightbox, type LightboxImage } from './ImageLightbox'
 
@@ -211,6 +212,17 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
   const handleOpenReading = () => {
     openReading(note)
+    setShowMenu(false)
+  }
+
+  const handleAddToReadingWorkspace = () => {
+    const wasInReadingWorkspace = isNoteInReadingWorkspace(note.id)
+    addNoteToReadingWorkspace(note.id)
+    toast.success(
+      wasInReadingWorkspace
+        ? t('noteCard.inReadingWorkspace')
+        : t('noteCard.addedToReadingWorkspace'),
+    )
     setShowMenu(false)
   }
 
@@ -538,6 +550,15 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                        hover:bg-bg-hover hover:text-text-primary"
           >
             <BookOpen size={14} /> {t('noteCard.openReading')}
+          </button>
+          <button
+            onClick={handleAddToReadingWorkspace}
+            className="w-full flex items-center gap-2 px-3 py-2
+                       text-sm text-text-secondary
+                       hover:bg-bg-hover hover:text-text-primary"
+            data-testid={`note-card-add-reading-workspace-${note.id}`}
+          >
+            <ListPlus size={14} /> {t('noteCard.addToReadingWorkspace')}
           </button>
           <button 
             onClick={handleOpenEditorFromMenu}

@@ -1,16 +1,20 @@
-import { Search, Plus, LayoutGrid, List, AlignJustify, X, ArrowUpDown, Trash2, CheckSquare, Square, Command } from 'lucide-react'
+import { Search, Plus, LayoutGrid, List, AlignJustify, X, ArrowUpDown, Trash2, CheckSquare, Square, Command, BookOpen } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
+import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
+import { api } from '../services/api'
 
 export function Header() {
   const location = useLocation()
+  const navigate = useNavigate()
   const { t } = useTranslation()
+  const { workspace } = useReadingWorkspace()
   const {
     searchQuery,
     setSearchQuery,
@@ -32,10 +36,12 @@ export function Header() {
     showArchived,
     totalNotes,
     openCommandPalette,
+    openReading,
   } = useAppStore()
 
   const [inputValue, setInputValue] = useState(searchQuery)
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const [isOpeningReadingWorkspace, setIsOpeningReadingWorkspace] = useState(false)
 
   // Sync input with store when searchQuery changes externally
   useEffect(() => {
@@ -80,6 +86,22 @@ export function Header() {
       } catch {
         toast.error(t('header.deleteFailed'))
       }
+    }
+  }
+
+  const handleOpenReadingWorkspace = async () => {
+    const noteId = workspace.activeId ?? workspace.noteIds[0]
+    if (!noteId) return
+
+    setIsOpeningReadingWorkspace(true)
+    try {
+      const note = await api.getNote(noteId)
+      if (location.pathname !== '/') navigate('/')
+      openReading(note)
+    } catch {
+      toast.error(t('reading.workspaceLoadFailed'))
+    } finally {
+      setIsOpeningReadingWorkspace(false)
     }
   }
 
@@ -288,6 +310,24 @@ export function Header() {
             <Command size={16} />
             <span className="font-mono text-xs">Ctrl K</span>
           </button>
+
+          {workspace.noteIds.length > 0 && (
+            <button
+              type="button"
+              onClick={handleOpenReadingWorkspace}
+              disabled={isOpeningReadingWorkspace}
+              className="inline-flex shrink-0 items-center gap-2 rounded-md bg-bg-elevated px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary disabled:cursor-wait disabled:opacity-60"
+              data-testid="header-open-reading-workspace"
+              aria-label={t('header.openReadingWorkspace', { count: workspace.noteIds.length })}
+              title={t('header.openReadingWorkspace', { count: workspace.noteIds.length })}
+            >
+              <BookOpen size={16} />
+              <span className="hidden xl:inline">{t('header.readingWorkspace')}</span>
+              <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-xs text-primary-light">
+                {workspace.noteIds.length}
+              </span>
+            </button>
+          )}
 
           {/* New Note Button */}
           <Button onClick={() => openEditor(null)} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button">

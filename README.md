@@ -5,7 +5,7 @@
 > Local-first, offline-capable personal knowledge management and prompt tooling.
 > Current release path: Go primary runtime, Raspberry Pi service deployment, and Windows desktop portable zip.
 
-![Version](https://img.shields.io/badge/version-2.4.9-blue)
+![Version](https://img.shields.io/badge/version-2.5-blue)
 ![Runtime](https://img.shields.io/badge/runtime-Go%20primary-green)
 ![Frontend](https://img.shields.io/badge/react-18-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
@@ -24,7 +24,7 @@ Prism stores your notes, prompts, attachments, tags, and history in a local SQLi
 
 Use the latest GitHub Release asset:
 
-- `PrismDesktopPortable-v2.4.9.zip` - Windows desktop portable package
+- `PrismDesktopPortable-v2.5.zip` - Windows desktop portable package
 
 The portable package includes:
 
@@ -40,7 +40,7 @@ Microsoft Edge WebView2 Runtime must already be installed. If the machine does n
 
 ### Windows Portable
 
-1. Download `PrismDesktopPortable-v2.4.9.zip` from Releases.
+1. Download `PrismDesktopPortable-v2.5.zip` from Releases.
 2. Extract it anywhere.
 3. Double-click `Prism.exe`.
 
@@ -148,7 +148,7 @@ pytest tests/ -v
 Build the Windows portable package:
 
 ```powershell
-.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.4.9
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.5
 ```
 
 ## License
