@@ -1595,7 +1595,11 @@ func logRequests(next http.Handler) http.Handler {
 		started := time.Now()
 		recorder := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next.ServeHTTP(recorder, r)
-		log.Printf("request method=%s path=%s status=%d duration_ms=%d", r.Method, r.URL.RequestURI(), recorder.status, time.Since(started).Milliseconds())
+		logPath := r.URL.EscapedPath()
+		if logPath == "" {
+			logPath = r.URL.Path
+		}
+		log.Printf("request method=%s path=%s status=%d duration_ms=%d", r.Method, logPath, recorder.status, time.Since(started).Milliseconds())
 	})
 }
 
@@ -1617,7 +1621,7 @@ func csrfProtect(next http.Handler) http.Handler {
 				break
 			}
 			allowed := csrfAllowedOrigins(r.Host)
-			if !originPrefixAllowed(origin, allowed) && !originPrefixAllowed(referer, allowed) {
+			if !originAllowed(origin, allowed) && !originAllowed(referer, allowed) {
 				writeError(w, http.StatusForbidden, "CSRF validation failed: Origin mismatch")
 				return
 			}
@@ -1644,12 +1648,17 @@ func csrfAllowedOrigins(host string) []string {
 	)
 }
 
-func originPrefixAllowed(value string, allowed []string) bool {
+func originAllowed(value string, allowed []string) bool {
 	if value == "" {
 		return false
 	}
+	parsed, err := url.Parse(value)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return false
+	}
+	origin := parsed.Scheme + "://" + parsed.Host
 	for _, a := range allowed {
-		if strings.HasPrefix(value, a) {
+		if origin == a {
 			return true
 		}
 	}
@@ -7527,9 +7536,7 @@ func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
 		}
 	}
 	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
-		if len(q) > 200 {
-			q = q[:200]
-		}
+		q = truncateRunes(q, 200)
 		searchClause, searchArgs := s.buildNotesSearchClause(q)
 		if searchClause != "" {
 			clauses = append(clauses, searchClause)
@@ -7537,6 +7544,20 @@ func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
 		}
 	}
 	return "WHERE " + strings.Join(clauses, " AND "), args
+}
+
+func truncateRunes(value string, maxRunes int) string {
+	if maxRunes <= 0 {
+		return ""
+	}
+	count := 0
+	for index := range value {
+		if count == maxRunes {
+			return value[:index]
+		}
+		count++
+	}
+	return value
 }
 
 func (s *server) buildNotesSearchClause(keyword string) (string, []any) {

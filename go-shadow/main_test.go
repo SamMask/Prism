@@ -14,6 +14,7 @@ import (
 	"image/color"
 	"image/png"
 	"io"
+	"log"
 	"mime/multipart"
 	"net"
 	"net/http"
@@ -23,6 +24,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	_ "modernc.org/sqlite"
 )
@@ -3343,6 +3345,8 @@ func TestCSRFProtectMiddleware(t *testing.T) {
 		{"same-origin referer DELETE", http.MethodDelete, "prism.local", "", "https://prism.local/app", http.StatusOK, true},
 		{"cross-origin referer DELETE blocked", http.MethodDelete, "prism.local", "", "https://evil.example/x", http.StatusForbidden, false},
 		{"vite dev origin", http.MethodPost, "127.0.0.1:5004", "http://localhost:5173", "", http.StatusOK, true},
+		{"vite dev port prefix blocked", http.MethodPost, "127.0.0.1:5004", "http://localhost:51730", "", http.StatusForbidden, false},
+		{"same-host prefix domain blocked", http.MethodPost, "prism.local", "https://prism.local.evil.example", "", http.StatusForbidden, false},
 	}
 	for _, tc := range cases {
 		rec := do(tc.method, tc.host, tc.origin, tc.referer)
@@ -3352,6 +3356,45 @@ func TestCSRFProtectMiddleware(t *testing.T) {
 		if called != tc.wantHandlerCalled {
 			t.Fatalf("%s: handler called=%v want %v", tc.name, called, tc.wantHandlerCalled)
 		}
+	}
+}
+
+func TestLogRequestsOmitsQueryString(t *testing.T) {
+	var buf bytes.Buffer
+	originalWriter := log.Writer()
+	originalFlags := log.Flags()
+	log.SetOutput(&buf)
+	log.SetFlags(0)
+	t.Cleanup(func() {
+		log.SetOutput(originalWriter)
+		log.SetFlags(originalFlags)
+	})
+
+	handler := logRequests(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	handler.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/api/notes?q=private-search-token", nil))
+
+	output := buf.String()
+	if strings.Contains(output, "private-search-token") || strings.Contains(output, "?q=") {
+		t.Fatalf("request log leaked query string: %s", output)
+	}
+	if !strings.Contains(output, "path=/api/notes") {
+		t.Fatalf("request log should keep path without query, got: %s", output)
+	}
+}
+
+func TestTruncateRunesKeepsUTF8Boundary(t *testing.T) {
+	input := strings.Repeat("分類", 150) + "tail"
+	truncated := truncateRunes(input, 200)
+	if !utf8.ValidString(truncated) {
+		t.Fatalf("truncateRunes returned invalid UTF-8: %q", truncated)
+	}
+	if got := utf8.RuneCountInString(truncated); got != 200 {
+		t.Fatalf("truncateRunes length = %d runes, want 200", got)
+	}
+	if strings.Contains(truncated, "tail") {
+		t.Fatalf("truncateRunes did not truncate beyond the rune limit: %q", truncated)
 	}
 }
 

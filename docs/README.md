@@ -1,7 +1,7 @@
 # Prism 文檔中心
 
 > **版本**: v2.5 / Go primary runtime
-> **更新日期**: 2026-06-18
+> **更新日期**: 2026-06-19
 > **狀態**: Go primary 為唯一 runtime owner；Python Flask backend source 已於 T053 移除
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。
@@ -86,3 +86,8 @@ docs/
 - `development-history/go-primary-runtime-completion-20260617.md`
 - `development-history/desktop-backup-i18n-handoff-20260617.md`
 - `development-history/desktop-portable-release-handoff-20260618.md`
+
+近期 current-truth 更新：
+
+- 2026-06-19：Default category identity split 已完成，schema 為 migration v17；`Categories.system_key` / `name_override` 是系統分類身份與改名的 current contract。
+- 2026-06-19：深度掃描報告見 repo root `20260619_Prism_深度掃描報告.md`；最高優先未修項為 markdown rendering sanitization。

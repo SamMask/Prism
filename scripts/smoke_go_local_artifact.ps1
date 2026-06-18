@@ -297,7 +297,7 @@ try {
     if ($migration.StatusCode -ne 200) {
         throw "Migration-status smoke failed with HTTP $($migration.StatusCode): $($migration.Raw)"
     }
-    if ($migration.Body.data.current_version -ne 16 -or $migration.Body.data.latest_version -ne 16 -or @($migration.Body.data.pending).Count -ne 0) {
+    if ($migration.Body.data.current_version -ne $migration.Body.data.latest_version -or @($migration.Body.data.pending).Count -ne 0) {
         throw "Migration-status smoke drifted: $($migration.Raw)"
     }
 

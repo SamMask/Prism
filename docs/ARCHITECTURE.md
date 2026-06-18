@@ -57,7 +57,7 @@ This remains Windows desktop shell work only. `desktop_shell_windows.go` is Wind
 
 ## Planned Modernization Boundary
 
-> 本節是 2026-05-27 的規劃邊界，不代表目前 runtime 已改成 Go 或新 UI。
+> 本節是 2026-05-27 起的規劃 / 執行歷史保留區，內含多段當時 gate 的 retained-Python / candidate-owner 語氣。不要把本節中較早的 Python owner 描述當成 current truth；目前 current truth 以本文件開頭、`docs/TODO.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md` 與 source 為準：Go primary 是唯一 runtime，Python Flask backend source 已於 T053 移除，schema 目前為 migration v17。
 
 ### Go Shadow Backend
 

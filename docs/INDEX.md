@@ -1,7 +1,7 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.5
-> **更新日期**: 2026-06-18
+> **更新日期**: 2026-06-19
 > **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
@@ -24,7 +24,7 @@
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
-| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-06-13) |
+| [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-06-19) |
 | [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 新 UI 參考檔 + Go shadow backend 路線整合規劃；前端改版與重構前必讀 | 📋 規劃中 |
 | [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
 | [contracts/api-readonly-manifest.json](./contracts/api-readonly-manifest.json) | Phase 18 read-only API manifest；Go shadow backend 與工具 surface 的機器可讀草稿 | ✅ 已建立 |
@@ -58,6 +58,7 @@
 
 | 文件 | 說明 | 狀態 |
 |------|------|------|
+| [20260619_Prism_深度掃描報告.md](../20260619_Prism_深度掃描報告.md) | **深度全面掃描** — API、搜尋、DB、檔案、啟動、安全、測試與可維護性檢查；記錄已修小問題與下一步優先級 | ✅ 已完成 (2026-06-19) |
 | [Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | **Go primary 收尾審查** — 唯讀靜態審查原文；T046-T052 已吸收 findings，T053 前作 Python source 封存/刪除 guardrail | 🗄️ 已歸檔 / 已吸收 |
 | [20260412-cco-綜合分析報告.md](./過期/20260412-cco-綜合分析報告.md) | **體檢報告** — Linus-mode 深度審核，列出 P0/P1/P2 問題與「好品味」段落 | ✅ 已完成 v2.4.2 |
 
@@ -67,7 +68,7 @@
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
-| [ER-DIAGRAM.md](./ER-DIAGRAM.md) | Entity Relationship Diagram (Mermaid) — 已依 v14 更新，與 SCHEMA.md 同步 | ✅ 已更新 |
+| [ER-DIAGRAM.md](./ER-DIAGRAM.md) | Entity Relationship Diagram (Mermaid) — 已依 migration v17 更新，與 SCHEMA.md 同步 | ✅ 已更新 (2026-06-19) |
 | [SEQUENCE-UPLOAD.md](./SEQUENCE-UPLOAD.md) | 圖片上傳流程 Sequence Diagram | ✅ 已更新 |
 
 ---
