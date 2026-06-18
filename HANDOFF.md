@@ -1,4 +1,4 @@
-# HANDOFF — Prism active entry（2026-06-18）
+# HANDOFF — Prism active entry（2026-06-19）
 
 本檔只放新對話接手需要的最短狀態。長版交接與完成紀錄已移到 `docs/development-history/desktop-backup-i18n-handoff-20260617.md` 與 `docs/development-history/desktop-portable-release-handoff-20260618.md`。
 
@@ -18,11 +18,12 @@
 - Version 2.5 display gate 已完成：repo 內 current version 已全面改為 `2.5`；左上角 Prism 下方顯示 `V2.5`，HTML title 顯示 `Prism V2.5`。Go primary version fallback 改為 `2.5`，且不再讀 Pi 上 legacy `config.py` 的 stale `PRISM_VERSION`；`PRISM_VERSION` env override 仍保留。
 - Release checkpoint / repo hygiene gate 已完成：dirty tree 只含 Reading list workspace 功能、測試與文件收尾；ignored `build/` 已清到只保留 `build/release` 與 `build/desktop-portable-smoke`，reading workspace temp screenshots 已清理；tracked runtime/private path sweep 未發現 `.omx`、production DB/WAL/SHM、uploads、attachments、notes、env/key/log 類檔案進入 git。`main` 與 `origin/main` 在未提交工作前為 `0 0`；本 checkpoint 未 commit、未 tag、未重新 package。
 - Pi deploy snapshot retention 已收斂：`go-primary-*/data-files.tar.gz` 是 deploy/cutover 前資料快照，現在預設只保留最新 5 份；每週 `prism_backup_*.db` 是獨立 DB backup，不包含已刪 uploads 圖片檔。
+- Default category identity split 已完成 local + Pi delivery：migration v17 新增 `Categories.system_key` / `name_override` 與 `idx_categories_system_key`；五個系統分類以 `system_key` 作身份，使用者改名只寫 `name_override`，`is_default` 仍只作刪除分類搬移目標。`GET /api/categories` 與 JSON export/import 保留 identity 欄位，frontend 依 `system_key` 做 zh-TW / en / ja / ko 顯示，override 有值時固定顯示使用者文字。Pi live `https://prism.local` 已 cutover：`prism-go-primary.service` active、legacy `prism.service` inactive、migration v17 clean；Playwright smoke 驗四語分類切換、暫時改名跨語系固定顯示、清回 `name_override=null`、console/page/request error=0。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留 `build/release` 與最新 desktop shell / portable smoke 輸出；不要把 DB、attachments、notes、uploads 這類真資料當 build artifact 清理。
 
 ## Next Entry
 
-目前沒有未交付的 active construction item。若要發佈，入口是 commit / tag / package checklist：先確認 commit scope 只含 Reading list workspace + version 2.5 + checkpoint/polish closure，再依 Lore Commit Protocol commit，視需要重建/確認 release package 與 tag。若要繼續產品功能，需先從 `docs/TODO.md` 的 Future Branch Candidates 明確 promote 一個最小 gate；installer / updater 只有在明確需要 Start Menu、桌面捷徑、指定資料夾 UI、WebView2 bootstrap、uninstall 或 update flow 時才另開 decision gate。不要自動開 AI、semantic search、installer 或 updater 實作。
+目前沒有未交付的 active construction item。若要發佈，入口是 commit / tag / package checklist：先確認 commit scope 只含已完成的 Reading list workspace、version 2.5、Pi snapshot retention、Default category identity split 與文件/測試收尾，再依 Lore Commit Protocol commit，視需要重建/確認 release package 與 tag。若要繼續產品功能，需先從 `docs/TODO.md` 的 Future Branch Candidates 明確 promote 一個最小 gate；installer / updater 只有在明確需要 Start Menu、桌面捷徑、指定資料夾 UI、WebView2 bootstrap、uninstall 或 update flow 時才另開 decision gate。不要自動開 AI、semantic search、installer 或 updater 實作。
 
 ## Required Reads
 

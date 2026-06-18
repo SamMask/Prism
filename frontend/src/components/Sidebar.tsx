@@ -185,7 +185,7 @@ export function Sidebar() {
             </h3>
             <div className="space-y-1">
               {categories.map((cat) => {
-                const categoryName = getCategoryDisplayName(cat.name, t)
+                const categoryName = getCategoryDisplayName(cat, t)
                 return (
                   <button
                     key={cat.id}

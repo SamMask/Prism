@@ -198,7 +198,7 @@ export function HomePage() {
   // Only enable drag when sortBy is 'custom'
   const isDragEnabled = sortBy === 'custom'
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
-  const activeCategoryName = getCategoryDisplayName(activeCategory?.name, t)
+  const activeCategoryName = getCategoryDisplayName(activeCategory, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
   const hasActiveFilter = !!selectedCategoryId || !!selectedTagId || showArchived
   const sectionTitle = searchQuery

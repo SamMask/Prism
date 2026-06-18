@@ -45,7 +45,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-const expectedSchemaVersion = 16
+const expectedSchemaVersion = 17
 const sqliteBusyTimeoutMS = 5000
 const sqlitePragmaQueryOnlyOn = "PRAGMA query_only = ON"
 const sqlitePragmaQueryOnlyOff = "PRAGMA query_only = OFF"
@@ -1084,8 +1084,12 @@ var freshSchemaStatements = []string{
 		name TEXT NOT NULL UNIQUE,
 		icon TEXT,
 		sort_order INTEGER NOT NULL DEFAULT 0,
-		is_default BOOLEAN NOT NULL DEFAULT 0
+		is_default BOOLEAN NOT NULL DEFAULT 0,
+		system_key TEXT UNIQUE,
+		name_override TEXT,
+		CHECK (system_key IS NULL OR system_key IN ('prompt', 'note', 'tutorial', 'data', 'inspiration'))
 	)`,
+	`CREATE UNIQUE INDEX idx_categories_system_key ON Categories(system_key) WHERE system_key IS NOT NULL`,
 	`CREATE TABLE Tags (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		name TEXT NOT NULL UNIQUE COLLATE NOCASE
@@ -1130,7 +1134,7 @@ var freshSchemaStatements = []string{
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL
 	)`,
-	`INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '16')`,
+	`INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '17')`,
 	`CREATE VIRTUAL TABLE Notes_FTS USING fts5(
 		title,
 		content,
@@ -1152,16 +1156,45 @@ var freshSchemaStatements = []string{
 type categorySeed struct {
 	name      string
 	icon      string
+	systemKey string
 	sortOrder int
 	isDefault int
 }
 
 var defaultCategorySeeds = []categorySeed{
-	{"提示詞 | Prompt", "🎨", 1, 0},
-	{"筆記 | Note", "📝", 2, 1},
-	{"教學 | Tutorial", "📚", 3, 0},
-	{"資料 | Data", "💾", 4, 0},
-	{"靈感 | Inspiration", "💡", 5, 0},
+	{"提示詞 | Prompt", "🎨", "prompt", 1, 0},
+	{"筆記 | Note", "📝", "note", 2, 1},
+	{"教學 | Tutorial", "📚", "tutorial", 3, 0},
+	{"資料 | Data", "💾", "data", 4, 0},
+	{"靈感 | Inspiration", "💡", "inspiration", 5, 0},
+}
+
+var validCategorySystemKeys = map[string]bool{
+	"prompt":      true,
+	"note":        true,
+	"tutorial":    true,
+	"data":        true,
+	"inspiration": true,
+}
+
+func categorySeedForSystemKey(systemKey string) (categorySeed, bool) {
+	for _, seed := range defaultCategorySeeds {
+		if seed.systemKey == systemKey {
+			return seed, true
+		}
+	}
+	return categorySeed{}, false
+}
+
+func normalizeCategorySystemKey(raw string) (string, bool) {
+	key := strings.TrimSpace(raw)
+	if key == "" {
+		return "", true
+	}
+	if validCategorySystemKeys[key] {
+		return key, true
+	}
+	return "", false
 }
 
 const welcomeNoteTitle = "👋 歡迎使用 Prism"
@@ -1193,9 +1226,10 @@ const welcomeNoteContent = `# 歡迎使用 Prism
 func seedDefaultCategories(tx *sql.Tx) error {
 	for _, seed := range defaultCategorySeeds {
 		if _, err := tx.Exec(
-			`INSERT OR IGNORE INTO Categories (name, icon, sort_order, is_default) VALUES (?, ?, ?, ?)`,
+			`INSERT OR IGNORE INTO Categories (name, icon, system_key, sort_order, is_default, name_override) VALUES (?, ?, ?, ?, ?, NULL)`,
 			seed.name,
 			seed.icon,
+			seed.systemKey,
 			seed.sortOrder,
 			seed.isDefault,
 		); err != nil {
@@ -1399,6 +1433,17 @@ var migrationDefinitions = []migrationDefinition{
 	}},
 	{16, "normalize_editor_layout", []string{
 		"UPDATE Notes SET editor_layout = 'single' WHERE editor_layout IS NULL OR editor_layout = 'full'",
+	}},
+	{17, "add_category_identity", []string{
+		"ALTER TABLE Categories ADD COLUMN system_key TEXT",
+		"ALTER TABLE Categories ADD COLUMN name_override TEXT",
+		"UPDATE Categories SET system_key = 'prompt', name_override = NULL WHERE name = '提示詞 | Prompt' AND (system_key IS NULL OR system_key = '')",
+		"UPDATE Categories SET system_key = 'note', name_override = NULL WHERE name = '筆記 | Note' AND (system_key IS NULL OR system_key = '')",
+		"UPDATE Categories SET system_key = 'tutorial', name_override = NULL WHERE name = '教學 | Tutorial' AND (system_key IS NULL OR system_key = '')",
+		"UPDATE Categories SET system_key = 'data', name_override = NULL WHERE name = '資料 | Data' AND (system_key IS NULL OR system_key = '')",
+		"UPDATE Categories SET system_key = 'inspiration', name_override = NULL WHERE name = '靈感 | Inspiration' AND (system_key IS NULL OR system_key = '')",
+		"UPDATE Categories SET name_override = NULL WHERE name_override = ''",
+		"CREATE UNIQUE INDEX IF NOT EXISTS idx_categories_system_key ON Categories(system_key) WHERE system_key IS NOT NULL",
 	}},
 }
 
@@ -3627,6 +3672,10 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback()
 
+	if err := importJSONCategoriesTx(tx, objectArray(importData["categories"])); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
 	defaultCategoryID, _ := defaultCategoryIDTx(tx)
 	idMap := map[int]int{}
 	importedCount := 0
@@ -3689,8 +3738,7 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 			categoryName = strings.TrimSpace(stringValue(note["type"]))
 		}
 		if categoryName != "" {
-			var found int
-			if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? LIMIT 1", categoryName).Scan(&found); err == nil {
+			if found, err := categoryIDForNameTx(tx, categoryName); err == nil && found > 0 {
 				categoryID = found
 			} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				cleanupCreated()
@@ -4021,7 +4069,7 @@ func (s *server) exportJSONNotes() ([]response, error) {
 }
 
 func (s *server) exportJSONCategories() ([]response, error) {
-	rows, err := s.db.Query("SELECT id, name, icon, sort_order, is_default FROM Categories ORDER BY sort_order, id")
+	rows, err := s.db.Query("SELECT id, name, icon, sort_order, is_default, system_key, name_override FROM Categories ORDER BY sort_order, id")
 	if err != nil {
 		return nil, err
 	}
@@ -4029,16 +4077,107 @@ func (s *server) exportJSONCategories() ([]response, error) {
 	categories := []response{}
 	for rows.Next() {
 		var id, sortOrder, isDefault int
-		var name, icon sql.NullString
-		if err := rows.Scan(&id, &name, &icon, &sortOrder, &isDefault); err != nil {
+		var name, icon, systemKey, nameOverride sql.NullString
+		if err := rows.Scan(&id, &name, &icon, &sortOrder, &isDefault, &systemKey, &nameOverride); err != nil {
 			return nil, err
 		}
 		categories = append(categories, response{
 			"id": id, "name": nullableString(name), "icon": nullableStringOrNil(icon),
 			"sort_order": sortOrder, "is_default": isDefault != 0,
+			"system_key": nullableStringOrNil(systemKey), "name_override": nullableStringOrNil(nameOverride),
 		})
 	}
 	return categories, rows.Err()
+}
+
+func importJSONCategoriesTx(tx *sql.Tx, categories []map[string]any) error {
+	for _, category := range categories {
+		name := strings.TrimSpace(stringValue(category["name"]))
+		icon := strings.TrimSpace(stringValue(category["icon"]))
+		systemKey, ok := normalizeCategorySystemKey(stringValue(category["system_key"]))
+		if !ok {
+			return fmt.Errorf("invalid category system_key %q", stringValue(category["system_key"]))
+		}
+		nameOverride := strings.TrimSpace(stringValue(category["name_override"]))
+		var nameOverrideArg any
+		if nameOverride != "" {
+			nameOverrideArg = nameOverride
+		}
+		sortOrder, hasSortOrder := intValue(category["sort_order"])
+		isDefault := boolIntValue(category["is_default"])
+
+		if systemKey != "" {
+			seed, hasSeed := categorySeedForSystemKey(systemKey)
+			if name == "" && hasSeed {
+				name = seed.name
+			}
+			if icon == "" && hasSeed {
+				icon = seed.icon
+			}
+			if !hasSortOrder && hasSeed {
+				sortOrder = seed.sortOrder
+			}
+			if isDefault == 0 && hasSeed {
+				isDefault = seed.isDefault
+			}
+			if name == "" {
+				return errors.New("system category name is required")
+			}
+			if icon == "" {
+				icon = "📁"
+			}
+			if err := upsertImportedSystemCategoryTx(tx, name, icon, systemKey, nameOverrideArg, sortOrder, isDefault); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if name == "" {
+			continue
+		}
+		if icon == "" {
+			icon = "📁"
+		}
+		if !hasSortOrder {
+			if err := tx.QueryRow("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM Categories").Scan(&sortOrder); err != nil {
+				return err
+			}
+		}
+		var existingID int
+		if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? LIMIT 1", name).Scan(&existingID); err == nil {
+			if _, err := tx.Exec("UPDATE Categories SET icon = ?, sort_order = ? WHERE id = ?", icon, sortOrder, existingID); err != nil {
+				return err
+			}
+		} else if errors.Is(err, sql.ErrNoRows) {
+			if _, err := tx.Exec("INSERT INTO Categories (name, icon, sort_order, is_default, system_key, name_override) VALUES (?, ?, ?, 0, NULL, NULL)", name, icon, sortOrder); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+	return nil
+}
+
+func upsertImportedSystemCategoryTx(tx *sql.Tx, name, icon, systemKey string, nameOverrideArg any, sortOrder, isDefault int) error {
+	var existingID int
+	err := tx.QueryRow("SELECT id FROM Categories WHERE system_key = ? LIMIT 1", systemKey).Scan(&existingID)
+	if err == nil {
+		_, err = tx.Exec("UPDATE Categories SET icon = ?, sort_order = ?, is_default = ?, name_override = ? WHERE id = ?", icon, sortOrder, isDefault, nameOverrideArg, existingID)
+		return err
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? LIMIT 1", name).Scan(&existingID); err == nil {
+		_, err = tx.Exec("UPDATE Categories SET icon = ?, sort_order = ?, is_default = ?, system_key = ?, name_override = ? WHERE id = ?", icon, sortOrder, isDefault, systemKey, nameOverrideArg, existingID)
+		return err
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+	_, err = tx.Exec("INSERT INTO Categories (name, icon, sort_order, is_default, system_key, name_override) VALUES (?, ?, ?, ?, ?, ?)", name, icon, sortOrder, isDefault, systemKey, nameOverrideArg)
+	return err
 }
 
 func (s *server) exportJSONTags() ([]response, error) {
@@ -4964,13 +5103,34 @@ func defaultCategoryIDTx(tx *sql.Tx) (int, error) {
 	return id, err
 }
 
+var errCategoryLabelConflict = errors.New("category label conflict")
+
+func categoryLabelConflictTx(tx *sql.Tx, categoryID int, label string) error {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return nil
+	}
+	var duplicateID int
+	err := tx.QueryRow(`
+		SELECT id FROM Categories
+		WHERE id != ? AND (name = ? OR name_override = ?)
+		LIMIT 1`, categoryID, label, label).Scan(&duplicateID)
+	if err == nil {
+		return errCategoryLabelConflict
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil
+	}
+	return err
+}
+
 func categoryIDForNameTx(tx *sql.Tx, name string) (int, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return 0, nil
 	}
 	var id int
-	err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? LIMIT 1", name).Scan(&id)
+	err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? OR name_override = ? LIMIT 1", name, name).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
 	}
@@ -6173,7 +6333,7 @@ func (s *server) handleCategories(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := s.db.Query(`
-		SELECT c.id, c.name, c.icon, c.sort_order, c.is_default,
+		SELECT c.id, c.name, c.icon, c.sort_order, c.is_default, c.system_key, c.name_override,
 		       (SELECT COUNT(*) FROM Notes n WHERE n.category_id = c.id) AS count
 		FROM Categories c
 		ORDER BY c.sort_order ASC`)
@@ -6186,14 +6346,15 @@ func (s *server) handleCategories(w http.ResponseWriter, r *http.Request) {
 	items := []response{}
 	for rows.Next() {
 		var id, sortOrder, isDefault, count int
-		var name, icon string
-		if err := rows.Scan(&id, &name, &icon, &sortOrder, &isDefault, &count); err != nil {
+		var name, icon, systemKey, nameOverride sql.NullString
+		if err := rows.Scan(&id, &name, &icon, &sortOrder, &isDefault, &systemKey, &nameOverride, &count); err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
 		items = append(items, response{
-			"id": id, "name": name, "icon": icon, "sort_order": sortOrder,
-			"is_default": isDefault != 0, "count": count,
+			"id": id, "name": nullableString(name), "icon": nullableString(icon), "sort_order": sortOrder,
+			"is_default": isDefault != 0, "system_key": nullableStringOrNil(systemKey),
+			"name_override": nullableStringOrNil(nameOverride), "count": count,
 		})
 	}
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": items})
@@ -6246,7 +6407,7 @@ func (s *server) createCategory(w http.ResponseWriter, r *http.Request) {
 	defer tx.Rollback()
 
 	var duplicateID int
-	if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ?", name).Scan(&duplicateID); err == nil {
+	if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? OR name_override = ? LIMIT 1", name, name).Scan(&duplicateID); err == nil {
 		writeError(w, http.StatusConflict, "Category name already exists")
 		return
 	} else if !errors.Is(err, sql.ErrNoRows) {
@@ -6264,7 +6425,7 @@ func (s *server) createCategory(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	result, err := tx.Exec("INSERT INTO Categories (name, icon, sort_order, is_default) VALUES (?, ?, ?, 0)", name, icon, sortOrder)
+	result, err := tx.Exec("INSERT INTO Categories (name, icon, sort_order, is_default, system_key, name_override) VALUES (?, ?, ?, 0, NULL, NULL)", name, icon, sortOrder)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -6287,6 +6448,10 @@ func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, category
 		writeError(w, http.StatusBadRequest, "Request body is required")
 		return
 	}
+	if _, ok := payload["system_key"]; ok {
+		writeError(w, http.StatusBadRequest, "Category system_key cannot be changed")
+		return
+	}
 
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -6296,7 +6461,8 @@ func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, category
 	defer tx.Rollback()
 
 	var oldName string
-	if err := tx.QueryRow("SELECT name FROM Categories WHERE id = ?", categoryID).Scan(&oldName); err != nil {
+	var systemKey, oldNameOverride sql.NullString
+	if err := tx.QueryRow("SELECT name, system_key, name_override FROM Categories WHERE id = ?", categoryID).Scan(&oldName, &systemKey, &oldNameOverride); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "Category not found")
 			return
@@ -6306,27 +6472,15 @@ func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, category
 	}
 
 	newName := oldName
+	hasName := false
 	if rawName, ok := payload["name"]; ok {
+		hasName = true
 		name, ok := rawName.(string)
 		if !ok {
 			writeError(w, http.StatusInternalServerError, "category name must be a string")
 			return
 		}
 		newName = strings.TrimSpace(name)
-	}
-	if newName == "" {
-		writeError(w, http.StatusBadRequest, "Category name cannot be empty")
-		return
-	}
-	if newName != oldName {
-		var duplicateID int
-		if err := tx.QueryRow("SELECT id FROM Categories WHERE name = ? AND id != ?", newName, categoryID).Scan(&duplicateID); err == nil {
-			writeError(w, http.StatusConflict, "Category name already exists")
-			return
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
 	}
 
 	icon, hasIcon := payload["icon"]
@@ -6342,15 +6496,87 @@ func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, category
 		hasSortOrder = false
 	}
 
-	if hasIcon && hasSortOrder {
-		_, err = tx.Exec("UPDATE Categories SET name = ?, icon = ?, sort_order = ? WHERE id = ?", newName, icon, sortOrder, categoryID)
-	} else if hasIcon {
-		_, err = tx.Exec("UPDATE Categories SET name = ?, icon = ? WHERE id = ?", newName, icon, categoryID)
-	} else if hasSortOrder {
-		_, err = tx.Exec("UPDATE Categories SET name = ?, sort_order = ? WHERE id = ?", newName, sortOrder, categoryID)
+	assignments := []string{}
+	args := []any{}
+
+	if strings.TrimSpace(systemKey.String) == "" {
+		if hasName {
+			if newName == "" {
+				writeError(w, http.StatusBadRequest, "Category name cannot be empty")
+				return
+			}
+			if newName != oldName {
+				if err := categoryLabelConflictTx(tx, categoryID, newName); err != nil {
+					if errors.Is(err, errCategoryLabelConflict) {
+						writeError(w, http.StatusConflict, "Category name already exists")
+						return
+					}
+					writeError(w, http.StatusInternalServerError, err.Error())
+					return
+				}
+				assignments = append(assignments, "name = ?")
+				args = append(args, newName)
+			}
+		}
 	} else {
-		_, err = tx.Exec("UPDATE Categories SET name = ? WHERE id = ?", newName, categoryID)
+		overrideChanged := false
+		var overrideArg any
+		if rawOverride, ok := payload["name_override"]; ok {
+			overrideChanged = true
+			if rawOverride != nil {
+				overrideText, ok := rawOverride.(string)
+				if !ok {
+					writeError(w, http.StatusInternalServerError, "category name_override must be a string or null")
+					return
+				}
+				overrideText = strings.TrimSpace(overrideText)
+				if overrideText != "" {
+					overrideArg = overrideText
+				}
+			}
+		} else if hasName && newName != oldName {
+			if newName == "" {
+				writeError(w, http.StatusBadRequest, "Category name cannot be empty")
+				return
+			}
+			overrideChanged = true
+			overrideArg = newName
+		}
+		if overrideChanged {
+			if overrideText, ok := overrideArg.(string); ok {
+				if err := categoryLabelConflictTx(tx, categoryID, overrideText); err != nil {
+					if errors.Is(err, errCategoryLabelConflict) {
+						writeError(w, http.StatusConflict, "Category name already exists")
+						return
+					}
+					writeError(w, http.StatusInternalServerError, err.Error())
+					return
+				}
+			}
+			currentOverride := any(nil)
+			if oldNameOverride.Valid && strings.TrimSpace(oldNameOverride.String) != "" {
+				currentOverride = strings.TrimSpace(oldNameOverride.String)
+			}
+			if currentOverride != overrideArg {
+				assignments = append(assignments, "name_override = ?")
+				args = append(args, overrideArg)
+			}
+		}
 	}
+	if hasIcon {
+		assignments = append(assignments, "icon = ?")
+		args = append(args, icon)
+	}
+	if hasSortOrder {
+		assignments = append(assignments, "sort_order = ?")
+		args = append(args, sortOrder)
+	}
+	if len(assignments) == 0 {
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"updated_notes_count": 0}})
+		return
+	}
+	args = append(args, categoryID)
+	_, err = tx.Exec("UPDATE Categories SET "+strings.Join(assignments, ", ")+" WHERE id = ?", args...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -7280,7 +7506,7 @@ func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
 	}
 	if noteType := r.URL.Query().Get("type"); noteType != "" && !strings.EqualFold(noteType, "all") {
 		var categoryID int
-		if err := s.db.QueryRow("SELECT id FROM Categories WHERE name = ? LIMIT 1", noteType).Scan(&categoryID); err == nil {
+		if err := s.db.QueryRow("SELECT id FROM Categories WHERE name = ? OR name_override = ? LIMIT 1", noteType, noteType).Scan(&categoryID); err == nil {
 			clauses = append(clauses, "n.category_id = ?")
 			args = append(args, categoryID)
 		}

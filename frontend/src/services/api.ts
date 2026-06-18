@@ -35,6 +35,8 @@ export interface Category {
   icon?: string;
   sort_order: number;
   is_default: boolean;
+  system_key?: string | null;
+  name_override?: string | null;
   count?: number; // Number of notes in this category
 }
 
@@ -327,7 +329,7 @@ export const api = {
 
   updateCategory: async (
     id: number,
-    updates: { name?: string; icon?: string; sort_order?: number }
+    updates: { name?: string; icon?: string; sort_order?: number; name_override?: string | null }
   ): Promise<{ updated_notes_count: number }> => {
     const { data } = await client.put(`/categories/${id}`, updates);
     return data.data;

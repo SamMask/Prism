@@ -4,7 +4,7 @@
 
 ---
 
-## Current Truth（2026-06-18）
+## Current Truth（2026-06-19）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。
 - Go 漸進重構 T001-T053 已完成，完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
@@ -26,6 +26,7 @@
 - 2026-06-18 Version 2.5 display gate 已完成：repo 內 current version 已全面改為 `2.5`；左上角 Prism 下方顯示 `V2.5`，HTML title 顯示 `Prism V2.5`。Go primary version fallback 改為 `2.5`，且不再讀 Pi 上 legacy `config.py` 的 stale `PRISM_VERSION`；`PRISM_VERSION` env override 仍保留。
 - 2026-06-18 release checkpoint / repo hygiene gate 已完成：dirty tree 範圍只含 Reading list workspace 功能、測試與文件收尾；ignored `build/` 產物已清到只保留 `build/release` 與 `build/desktop-portable-smoke`，系統 temp 的 reading workspace smoke screenshots 也已清理；tracked runtime/private path sweep 未發現 `.omx`、production DB/WAL/SHM、uploads、attachments、notes、env/key/log 類檔案進入 git，既有 `resources/demo_db/knowledge_demo.db` 仍是 demo fixture。`main` 與 `origin/main` 在未提交工作前為 `0 0`；本 checkpoint 未 commit、未 tag、未重新 package。
 - 2026-06-19 Pi deploy snapshot retention 已收斂：`scripts/go_primary_pi_live_ops.ps1` 的 pre-cutover `go-primary-*/data-files.tar.gz` snapshot 預設只保留最新 5 份，cutover smoke 通過後自動清理舊 snapshot；每週 `prism_backup_*.db` 仍是獨立 DB backup/rotate 流程，不能代替 uploads data snapshot。
+- 2026-06-19 Default category identity split 已完成 local + Pi delivery：`Categories` schema 升到 migration v17，新增 `system_key` / `name_override` 與 `idx_categories_system_key`；五個系統分類以 `system_key` 作身份，使用者改名只寫 `name_override`，`is_default` 仍只作刪除分類搬移目標。Pi live `https://prism.local` 已完成 Go primary cutover，`prism-go-primary.service` active、legacy `prism.service` inactive、migration status v17 clean；live API 驗五個系統分類 `system_key` 正確且測試後 `name_override=null`，Playwright smoke 驗 zh-TW / en / ja / ko 分類顯示、暫時改名後跨語系固定顯示、清除 override 後回語系顯示、console/page/request error=0。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留 `build/release` 與最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
@@ -153,14 +154,14 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 - 目前前端以 `Categories.name` 是否等於 `提示詞 | Prompt` / `筆記 | Note` / `教學 | Tutorial` / `資料 | Data` / `靈感 | Inspiration` 來判斷是否顯示語系化名稱。
 - 使用者若把分類實際改成 `提示詞` / `Prompt` 等單一語系文字，前端會把它視為自訂名稱，切換語系不再翻譯；這是 legacy name-based 判斷造成的混淆。
 
-- [ ] **01A Schema contract / migration plan**：新增 nullable `Categories.system_key`（允許值 `prompt` / `note` / `tutorial` / `data` / `inspiration` / `NULL`）與必要唯一約束/索引；確認是否需要獨立 `name_override` 欄位，或保留 `name` 作自訂顯示名。migration 必須能從既有 legacy seed rows 回填 system key，並避免把已自訂的分類誤判回系統分類。
-- [ ] **01B Go API and import/export contract**：`GET /api/categories` 回傳 `system_key`（以及若採用則回傳 `name_override`）；`POST/PUT/DELETE /api/categories` 明確禁止 client 任意改 `system_key`，使用者改名只影響自訂顯示名。JSON export/import、backup restore 與 fresh DB seed 需保留 system key，不把翻譯後名稱當 canonical identity。
-- [ ] **01C Frontend display/edit semantics**：分類顯示改用 `system_key` 判斷；`system_key` 有值且未自訂改名時依語系顯示，使用者改名後固定顯示使用者文字且不再跟語系切換。Settings 編輯框不得再暴露 `提示詞 | Prompt` 這類 legacy seed；儲存未變更的預設顯示名不得意外寫成自訂名稱。
-- [ ] **01D Regression and Pi delivery gate**：補 Go migration/fresh DB/API regression、frontend category display/edit regression、import/export roundtrip regression；本機跑 targeted pytest、`cd go-shadow && go test ./...`、`npm run build`。若 promote 到 delivery，依 `DEPLOY-PI.md` cutover 到 `PI5Mask24`，驗 `https://prism.local` service status、migration status v17 clean、四語分類切換、改名後固定顯示與 console error=0。
+- [x] **01A Schema contract / migration plan**（2026-06-19 完成）：新增 nullable `Categories.system_key`（允許值 `prompt` / `note` / `tutorial` / `data` / `inspiration` / `NULL`）與 `Categories.name_override`；fresh schema 與 v17 migration 建立 `idx_categories_system_key` partial unique index。migration 只回填仍保留完整 legacy seed name 的五個系統分類，避免把已自訂名稱的分類誤判回系統分類。
+- [x] **01B Go API and import/export contract**（2026-06-19 完成）：`GET /api/categories` 回傳 `system_key` / `name_override`；`PUT /api/categories/<id>` 拒絕 client 改 `system_key`，系統分類改名寫入 `name_override`，傳 `null` 可清除 override；一般自訂分類仍更新 `name`。JSON export/import 會保留 categories identity，note category 匯入可匹配 `name` 或 `name_override`。
+- [x] **01C Frontend display/edit semantics**（2026-06-19 完成）：分類顯示改用 `system_key`；`system_key` 有值且未自訂改名時依語系顯示，`name_override` 有值時固定顯示使用者文字且不跟語系切換。Settings 編輯框顯示目前可見名稱；儲存未變更的預設顯示名不會意外寫成自訂名稱，輸入該語系預設名可清除既有 override。
+- [x] **01D Regression and Pi delivery gate**（2026-06-19 完成）：補 Go migration/fresh DB/API regression、frontend category display/edit regression、import/export roundtrip regression；本機驗 `pytest tests/ -q` 352 passed、targeted pytest 24 passed、`cd go-shadow && go test ./...` passed、`npm run build` passed（僅既有 browserslist/chunk-size warning）。Pi delivery 依 `DEPLOY-PI.md` cutover 到 `PI5Mask24`；live 驗 `https://prism.local` service active、migration v17 clean、四語分類切換、改名後固定顯示與 console/page/request error=0。
 
 不做：把 `is_default` 重新定義成系統分類身份、用前端多認 `提示詞` / `Prompt` 等別名當短期 workaround、重排分類 UI、增加多語自訂名稱表、server-side user profile / cross-device preference。
 
-驗收：legacy seed-name mapping 不再是唯一身份來源；五個預設分類在未改名時可依 zh-TW / en / ja / ko 顯示，改名後固定為使用者輸入文字；DB migration 對現有 Pi data 可冪等執行並保留使用者自訂分類語義。
+驗收：legacy seed-name mapping 已不是唯一身份來源；五個預設分類在未改名時可依 zh-TW / en / ja / ko 顯示，改名後固定為使用者輸入文字；DB migration 已在 Pi live data 升到 v17 並保留使用者自訂分類語義。
 
 
 

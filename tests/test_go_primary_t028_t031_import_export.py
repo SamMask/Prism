@@ -297,13 +297,23 @@ def test_t029_json_import_duplicate_skip_and_rollback(temp_db, tmp_path):
             data={
                 "mode": "skip",
                 "data": {
+                    "categories": [
+                        {
+                            "name": "筆記 | Note",
+                            "icon": "📝",
+                            "sort_order": 2,
+                            "is_default": True,
+                            "system_key": "note",
+                            "name_override": "Imported Note",
+                        }
+                    ],
                     "notes": [
                         {"id": 10, "title": seed_note["title"], "content": seed_note["content"]},
                         {
                             "id": 11,
                             "title": "JSON Imported",
                             "content": "json body",
-                            "category": "筆記",
+                            "category": "Imported Note",
                             "tags": ["json-tag"],
                             "urls": ["https://source.example/json"],
                         },
@@ -317,6 +327,16 @@ def test_t029_json_import_duplicate_skip_and_rollback(temp_db, tmp_path):
         assert payload["data"]["duplicates"] == [seed_note["title"]]
         imported = _query_one(go_db, "SELECT id FROM Notes WHERE title = 'JSON Imported'")
         assert imported is not None
+        imported_category = _query_one(
+            go_db,
+            """
+            SELECT c.system_key, c.name_override
+            FROM Notes n JOIN Categories c ON c.id = n.category_id
+            WHERE n.id = ?
+            """,
+            (imported["id"],),
+        )
+        assert imported_category == {"system_key": "note", "name_override": "Imported Note"}
 
         before_count = _query_one(go_db, "SELECT COUNT(*) AS count FROM Notes")["count"]
         status, payload, _ = _request_json(
@@ -358,6 +378,8 @@ def test_t030_t031_export_json_markdown_db_images_and_batch(temp_db, tmp_path):
         export_payload = json.loads(body.decode("utf-8"))
         assert export_payload["export_info"]["notes_count"] >= 1
         assert export_payload["categories"]
+        assert all("system_key" in item and "name_override" in item for item in export_payload["categories"])
+        assert next(item for item in export_payload["categories"] if item["system_key"] == "note")["name_override"] is None
         assert export_payload["attachments"][0]["file_path"] == "docs/attachments/export.md"
         assert any(item["filename"] == "export-image.png" for item in export_payload["uploads"])
 

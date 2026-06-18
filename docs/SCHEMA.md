@@ -1,8 +1,8 @@
 # Prism — 資料庫綱要 (Database Schema)
 
 > **用途**: 共享資料綱要 — 所有資料表的現行定義，開發時的唯一真實來源。
-> **版本**: Migration v16 (Headless KMS)
-> **最後更新**: 2026-06-18
+> **版本**: Migration v17 (Default category identity)
+> **最後更新**: 2026-06-19
 > **改 DB 前必讀**: Go runtime 是唯一 migration owner；新增欄位請在 `go-shadow/main.go` 的 ordered migration list 追加 migration，並更新本文件與對應 regression tests。
 
 ---
@@ -55,23 +55,39 @@ CREATE INDEX idx_notes_parent_id   ON Notes(parent_id);
 
 ```sql
 CREATE TABLE Categories (
-    id         INTEGER PRIMARY KEY AUTOINCREMENT,
-    name       TEXT    NOT NULL UNIQUE,
-    icon       TEXT,
-    sort_order INTEGER NOT NULL DEFAULT 0,
-    is_default BOOLEAN NOT NULL DEFAULT 0  -- 唯一預設分類
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    name          TEXT    NOT NULL UNIQUE,
+    icon          TEXT,
+    sort_order    INTEGER NOT NULL DEFAULT 0,
+    is_default    BOOLEAN NOT NULL DEFAULT 0,
+    system_key    TEXT UNIQUE,
+    name_override TEXT,
+    CHECK (system_key IS NULL OR system_key IN ('prompt', 'note', 'tutorial', 'data', 'inspiration'))
 )
 ```
 
+```sql
+CREATE UNIQUE INDEX idx_categories_system_key
+    ON Categories(system_key)
+    WHERE system_key IS NOT NULL;
+```
+
+| 欄位 | 說明 |
+|------|------|
+| `name` | legacy canonical name；系統分類 seed 仍保留 `提示詞 \| Prompt` 等固定值，作匯入/舊資料相容 |
+| `system_key` | 五個系統分類身份：`prompt` / `note` / `tutorial` / `data` / `inspiration`；一般自訂分類為 `NULL` |
+| `name_override` | 使用者改名後的固定顯示文字；`NULL` / 空值代表依目前語系顯示系統分類預設名 |
+| `is_default` | 只代表刪除分類時的搬移目標；不代表系統分類身份 |
+
 **預設種子資料**（init_db 時建立）:
 
-| name | icon | is_default |
-|------|------|------------|
-| 提示詞 \| Prompt | 🎨 | 0 |
-| 筆記 \| Note | 📝 | **1** |
-| 教學 \| Tutorial | 📚 | 0 |
-| 資料 \| Data | 💾 | 0 |
-| 靈感 \| Inspiration | 💡 | 0 |
+| name | system_key | icon | is_default |
+|------|------------|------|------------|
+| 提示詞 \| Prompt | `prompt` | 🎨 | 0 |
+| 筆記 \| Note | `note` | 📝 | **1** |
+| 教學 \| Tutorial | `tutorial` | 📚 | 0 |
+| 資料 \| Data | `data` | 💾 | 0 |
+| 靈感 \| Inspiration | `inspiration` | 💡 | 0 |
 
 ---
 
@@ -174,7 +190,7 @@ CREATE TABLE Schema_Meta (
     value TEXT NOT NULL
 )
 -- 目前唯一紀錄:
--- key='schema_version', value='16'
+-- key='schema_version', value='17'
 ```
 
 > T042-T044 後，live/default DB migration owner 已是 Go primary runtime。Python migration source 已於 T053 移除；Go runtime 為唯一 migration owner。
@@ -264,6 +280,7 @@ Schema_Meta (獨立，無 FK)
 | v14 | `strip_ai_features` | **拔除 AI** — DROP Embeddings / AI_Tasks 表，DROP 5 個 AI 欄位 |
 | v15 | `add_prompt_params` | 補上 `Notes.prompt_params` 遷移，修正舊 DB 升級漏欄位問題 |
 | v16 | `normalize_editor_layout` | 將既有 `Notes.editor_layout` 的 `NULL` / 舊值 `full` 正規化為 `single` |
-| v17+ | （預留） | 下一次 Schema 變更接續此版本號 |
+| v17 | `add_category_identity` | `Categories` 新增 `system_key` / `name_override` 與 `idx_categories_system_key`；只回填仍保留完整 legacy seed name 的五個系統分類 |
+| v18+ | （預留） | 下一次 Schema 變更接續此版本號 |
 
 > **v14 完整 SQL** 見 `migrations/__init__.py` 的 `strip_ai_features` tuple。

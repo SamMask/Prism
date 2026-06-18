@@ -8,7 +8,7 @@
   "allowed_scope": {
     "existing_db_upgrade": true,
     "copied_or_local_db_only": true,
-    "latest_schema_version": 16,
+    "latest_schema_version": 17,
     "ordered_python_migration_parity": true,
     "schema_meta_updates": true,
     "idempotent_duplicate_column_skip": true,
@@ -47,7 +47,8 @@
       13,
       14,
       15,
-      16
+      16,
+      17
     ]
   },
   "not_in_scope": [
@@ -58,7 +59,7 @@
     "Frontend default API target change",
     "Python migration removal",
     "Python backend removal",
-    "Schema version beyond v16",
+    "Schema version beyond the active roadmap item",
     "Public exposure expansion"
   ],
   "verification": {

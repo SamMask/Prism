@@ -120,7 +120,7 @@ export function Header() {
   const isSelectionMode = selectedNoteIds.length > 0
   const isHomeRoute = location.pathname === '/'
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
-  const activeCategoryName = getCategoryDisplayName(activeCategory?.name, t)
+  const activeCategoryName = getCategoryDisplayName(activeCategory, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
   const pageTitle = location.pathname === '/prompt-builder'
     ? 'Prompt Builder'

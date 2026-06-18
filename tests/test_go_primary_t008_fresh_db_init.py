@@ -52,7 +52,7 @@ def test_t008_contract_records_fresh_init_scope_and_boundaries():
     assert contract["status"] == "completed"
     assert contract["contract"] == "CONTRACT-GO-PRIMARY-MIGRATIONS"
     assert contract["allowed_scope"]["fresh_db_only"] is True
-    assert contract["allowed_scope"]["schema_version"] == 16
+    assert contract["allowed_scope"]["schema_version"] == 17
     assert contract["allowed_scope"]["creates_current_schema"] is True
     assert contract["allowed_scope"]["creates_fts5_table_and_triggers"] is True
     assert contract["allowed_scope"]["returns_to_query_only_after_init"] is True
@@ -73,7 +73,7 @@ def test_t008_go_source_locks_fresh_init_entrypoint_after_later_migration_gates(
         "func initializeFreshDatabase",
         "freshSchemaStatements",
         "CREATE TABLE Schema_Meta",
-        "INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '16')",
+        "INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '17')",
         "CREATE VIRTUAL TABLE Notes_FTS",
         "CREATE TRIGGER notes_ai",
         "seedDefaultCategories",
@@ -126,8 +126,8 @@ def test_t008_fresh_go_runtime_creates_current_schema_from_empty_data_dir(tmp_pa
 
         assert status == 200
         runtime = health["runtime"]
-        assert runtime["schema_version"] == 16
-        assert runtime["expected_schema_version"] == 16
+        assert runtime["schema_version"] == 17
+        assert runtime["expected_schema_version"] == 17
         assert runtime["fresh_db_initialized"] is True
         assert runtime["sqlite_query_only"] is True
         assert Path(runtime["db_path"]) == db_path
@@ -142,6 +142,14 @@ def test_t008_fresh_go_runtime_creates_current_schema_from_empty_data_dir(tmp_pa
             "資料 | Data",
             "靈感 | Inspiration",
         ]
+        assert [item["system_key"] for item in categories["data"]] == [
+            "prompt",
+            "note",
+            "tutorial",
+            "data",
+            "inspiration",
+        ]
+        assert all(item["name_override"] is None for item in categories["data"])
         assert next(item for item in categories["data"] if item["name"] == "筆記 | Note")["is_default"] is True
 
         test_status, test_body = _wait_for_json(base + "/api/test")
@@ -158,13 +166,15 @@ def test_t008_fresh_go_runtime_creates_current_schema_from_empty_data_dir(tmp_pa
 
     with sqlite3.connect(db_path) as conn:
         version = conn.execute("SELECT value FROM Schema_Meta WHERE key = 'schema_version'").fetchone()[0]
-        assert version == "16"
+        assert version == "17"
 
         note_columns = {row[1]: row[4] for row in conn.execute("PRAGMA table_info(Notes)")}
         assert note_columns["editor_layout"] == "'single'"
         assert "parent_id" in note_columns
         assert "prompt_params" in note_columns
         assert "type" not in note_columns
+        category_columns = {row[1] for row in conn.execute("PRAGMA table_info(Categories)")}
+        assert {"system_key", "name_override"} <= category_columns
 
         indexes = {
             row[0]
@@ -182,6 +192,7 @@ def test_t008_fresh_go_runtime_creates_current_schema_from_empty_data_dir(tmp_pa
             "idx_source_urls_note_id",
             "idx_note_history_note_id",
             "idx_attachments_note_id",
+            "idx_categories_system_key",
         } <= indexes
 
         triggers = {

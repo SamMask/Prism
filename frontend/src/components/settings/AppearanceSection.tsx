@@ -420,7 +420,7 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
               localStorage.setItem('quickAddDefaultCategory', e.target.value);
               const selectedCategory = categories.find(c => c.id === Number(e.target.value));
               const categoryName = getCategoryDisplayName(
-                selectedCategory?.name,
+                selectedCategory,
                 t,
                 t('settings.appearance.quickAdd.uncategorized'),
               );

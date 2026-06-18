@@ -12,7 +12,7 @@
   "allowed_scope": {
     "fresh_db_only": true,
     "triggered_when": "The requested DB path is missing and resolves inside the explicit --data-dir / PRISM_GO_DATA_DIR root.",
-    "schema_version": 16,
+    "schema_version": 17,
     "creates_current_schema": true,
     "creates_required_indexes": true,
     "creates_fts5_table_and_triggers": true,

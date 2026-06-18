@@ -139,8 +139,8 @@ def test_pure_go_fresh_runtime_passes_full_workflow_without_python_backend(tmp_p
         assert status == 200
         runtime = payload["runtime"]
         # The runtime built its own schema from scratch — no Python migration.
-        assert runtime["schema_version"] == 16
-        assert runtime["expected_schema_version"] == 16
+        assert runtime["schema_version"] == 17
+        assert runtime["expected_schema_version"] == 17
         assert runtime["fresh_db_initialized"] is True
 
         # Full workflow over Go HTTP only (create/upload/search/export/import/
@@ -157,7 +157,7 @@ def test_pure_go_fresh_runtime_passes_full_workflow_without_python_backend(tmp_p
             version = conn.execute(
                 "SELECT value FROM Schema_Meta WHERE key = 'schema_version'"
             ).fetchone()[0]
-            assert version == "16"
+            assert version == "17"
         finally:
             conn.close()
     finally:

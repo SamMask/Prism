@@ -12,7 +12,7 @@ A guard test below proves this module imports no Flask backend, so the schema
 gate cannot silently regrow a Python dependency.
 
 If a column is accidentally re-added, a DROP COLUMN migration is skipped, or the
-v16 editor_layout normalization regresses, these tests fail against the Go DB
+v16 editor_layout normalization or v17 category identity regresses, these tests fail against the Go DB
 before the regression reaches prod.
 """
 
@@ -44,6 +44,8 @@ STRIPPED_AI_COLUMNS = {
     "text_embedding", "embedding_updated_at", "ai_summary", "ai_tags",
     "embedding_status",
 }
+
+REQUIRED_CATEGORY_COLUMNS = {"system_key", "name_override"}
 
 
 def _free_port():
@@ -103,9 +105,13 @@ def _boot_and_inspect(exe_path, data_dir, db_rel):
             proc.kill()
 
 
-def _columns(db_path):
+def _table_columns(db_path, table):
     with sqlite3.connect(db_path) as conn:
-        return {row[1] for row in conn.execute("PRAGMA table_info(Notes)")}
+        return {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+
+
+def _columns(db_path):
+    return _table_columns(db_path, "Notes")
 
 
 def _column_default(db_path, column):
@@ -129,7 +135,7 @@ def go_runtime(tmp_path_factory):
     data_dir = tmp_path_factory.mktemp("schema_fresh") / "data"
     fresh_db = data_dir / "schema" / "fresh.db"
     runtime = _boot_and_inspect(exe_path, data_dir, "schema/fresh.db")
-    assert runtime["schema_version"] == 16
+    assert runtime["schema_version"] == 17
     assert runtime["fresh_db_initialized"] is True
     # Collapse WAL so the file is self-contained for copy/inspect.
     with sqlite3.connect(fresh_db) as conn:
@@ -156,6 +162,12 @@ def test_notes_required_columns_present(go_runtime):
     """Core columns of the authoritative schema must all be present."""
     missing = REQUIRED_NOTES_COLUMNS - _columns(go_runtime["fresh_db"])
     assert not missing, f"Notes is missing columns: {missing}"
+
+
+def test_categories_identity_columns_present(go_runtime):
+    """System category identity must not depend on translated display names."""
+    missing = REQUIRED_CATEGORY_COLUMNS - _table_columns(go_runtime["fresh_db"], "Categories")
+    assert not missing, f"Categories is missing identity columns: {missing}"
 
 
 def test_ai_columns_stripped(go_runtime):
@@ -186,7 +198,7 @@ def test_existing_v15_db_editor_layout_normalized(go_runtime, tmp_path):
         conn.execute("UPDATE Schema_Meta SET value = '15' WHERE key = 'schema_version'")
 
     runtime = _boot_and_inspect(go_runtime["exe_path"], data_dir, "schema/legacy.db")
-    assert runtime["schema_version"] == 16
+    assert runtime["schema_version"] == 17
     assert runtime["migrations_applied"] > 0
 
     with sqlite3.connect(legacy_db) as conn:
@@ -201,7 +213,7 @@ def test_existing_v15_db_editor_layout_normalized(go_runtime, tmp_path):
         ).fetchone()[0]
 
     assert rows == {"legacy full": "single", "legacy null": "single", "valid dual": "dual"}
-    assert version == "16"
+    assert version == "17"
 
 
 def test_schema_gate_has_no_python_backend_imports():

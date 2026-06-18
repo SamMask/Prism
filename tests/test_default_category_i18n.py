@@ -11,8 +11,17 @@ EDITOR_SIDEBAR = ROOT / "frontend" / "src" / "components" / "editor" / "EditorSi
 APPEARANCE = ROOT / "frontend" / "src" / "components" / "settings" / "AppearanceSection.tsx"
 
 
-def test_default_category_i18n_mapping_is_exact_seed_only():
+def test_default_category_i18n_mapping_uses_system_key_with_legacy_fallback():
     source = CATEGORY_DISPLAY.read_text(encoding="utf-8")
+
+    for system_key, key in {
+        "prompt": "categoryDefaults.prompt",
+        "note": "categoryDefaults.note",
+        "tutorial": "categoryDefaults.tutorial",
+        "data": "categoryDefaults.data",
+        "inspiration": "categoryDefaults.inspiration",
+    }.items():
+        assert f"{system_key}: '{key}'" in source
 
     for seed, key in {
         "提示詞 | Prompt": "categoryDefaults.prompt",
@@ -24,10 +33,14 @@ def test_default_category_i18n_mapping_is_exact_seed_only():
         assert f"'{seed}': '{key}'" in source
 
     assert "美食 | Gourmet" not in source
-    assert "defaultCategoryLabelKeys[name.trim()] ?? null" in source
+    assert "defaultCategoryLabelKeysBySystemKey[systemKey] ?? null" in source
+    assert "defaultCategoryLabelKeysByName[name] ?? null" in source
+    assert "const override = categoryNameOverride(category)" in source
+    assert "if (override) return override" in source
     assert "getCategoryEditName" in source
-    assert "getCategoryUpdateName" in source
-    assert "trimmedName === currentDisplayName" in source
+    assert "getCategoryUpdatePayload" in source
+    assert "return { name_override: null }" in source
+    assert "return { name_override: trimmedName }" in source
 
 
 def test_default_category_labels_are_available_in_all_locales():
@@ -60,8 +73,8 @@ def test_default_category_display_helper_is_used_by_visible_category_surfaces():
         assert "categoryDisplay" in source
 
     data_manager = DATA_MANAGER.read_text(encoding="utf-8")
-    assert "setEditName(getCategoryEditName(cat.name, t))" in data_manager
-    assert "getCategoryDisplayName(cat.name, t)" in data_manager
-    assert "getCategoryUpdateName(cat.name, editName, t)" in data_manager
-    assert "if (nextName !== undefined)" in data_manager
-    assert "updates.name = nextName" in data_manager
+    assert "setEditName(getCategoryEditName(cat, t))" in data_manager
+    assert "getCategoryDisplayName(cat, t)" in data_manager
+    assert "getCategoryUpdatePayload(cat, editName, t)" in data_manager
+    assert "Object.assign(updates, nameUpdate)" in data_manager
+    assert "updates.name_override === undefined" in data_manager

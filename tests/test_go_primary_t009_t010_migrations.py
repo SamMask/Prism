@@ -117,7 +117,7 @@ def test_t009_t010_contracts_record_migration_and_rollback_scope():
     assert t009["allowed_scope"]["ordered_python_migration_parity"] is True
     assert t009["allowed_scope"]["idempotent_duplicate_column_skip"] is True
     assert t009["allowed_scope"]["idempotent_missing_column_skip"] is True
-    assert t009["implementation"]["ordered_versions"] == list(range(1, 17))
+    assert t009["implementation"]["ordered_versions"] == list(range(1, 18))
     assert "Production knowledge.db migration without explicit env override" in t009["not_in_scope"]
 
     assert t010["task_id"] == "T010"
@@ -194,8 +194,8 @@ def test_t009_go_runtime_migrates_existing_legacy_db_and_creates_backup(tmp_path
 
         assert status == 200
         runtime = health["runtime"]
-        assert runtime["schema_version"] == 16
-        assert runtime["expected_schema_version"] == 16
+        assert runtime["schema_version"] == 17
+        assert runtime["expected_schema_version"] == 17
         assert runtime["sqlite_query_only"] is True
         assert runtime["migrations_applied"] > 0
         backup_path = Path(runtime["migration_backup_path"])
@@ -204,8 +204,8 @@ def test_t009_go_runtime_migrates_existing_legacy_db_and_creates_backup(tmp_path
 
         status_code, migration_status = _wait_for_json(base + "/api/system/migration-status")
         assert status_code == 200
-        assert migration_status["data"]["current_version"] == 16
-        assert migration_status["data"]["latest_version"] == 16
+        assert migration_status["data"]["current_version"] == 17
+        assert migration_status["data"]["latest_version"] == 17
         assert migration_status["data"]["pending"] == []
     finally:
         proc.terminate()
@@ -220,8 +220,10 @@ def test_t009_go_runtime_migrates_existing_legacy_db_and_creates_backup(tmp_path
         assert "prompt_params" in note_columns
         assert "parent_id" in note_columns
         assert "text_embedding" not in note_columns
+        category_columns = _columns(conn, "Categories")
+        assert {"system_key", "name_override"} <= category_columns
         version = conn.execute("SELECT value FROM Schema_Meta WHERE key='schema_version'").fetchone()[0]
-        assert version == "16"
+        assert version == "17"
 
     with sqlite3.connect(backup_path) as conn:
         assert "type" in _columns(conn, "Notes")

@@ -37,7 +37,7 @@ func createSpikeDB(t *testing.T) string {
 	defer db.Close()
 	_, err = db.Exec(`
 		CREATE TABLE Schema_Meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-		INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '16');
+		INSERT INTO Schema_Meta (key, value) VALUES ('schema_version', '17');
 		CREATE TABLE Notes (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			title TEXT,
@@ -61,8 +61,11 @@ func createSpikeDB(t *testing.T) string {
 			icon TEXT DEFAULT 'note',
 			sort_order INTEGER DEFAULT 0,
 			is_default INTEGER DEFAULT 0,
+			system_key TEXT UNIQUE,
+			name_override TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+		CREATE UNIQUE INDEX idx_categories_system_key ON Categories(system_key) WHERE system_key IS NOT NULL;
 		CREATE TABLE Tags (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT UNIQUE NOT NULL COLLATE NOCASE
@@ -469,6 +472,8 @@ func TestOpenRuntimeSQLiteInitializesFreshDBAndReturnsReadOnlyOwner(t *testing.T
 	assertSQLiteColumnExists(t, owner.db, "Notes", "editor_layout")
 	assertSQLiteColumnExists(t, owner.db, "Notes", "parent_id")
 	assertSQLiteColumnExists(t, owner.db, "Notes", "prompt_params")
+	assertSQLiteColumnExists(t, owner.db, "Categories", "system_key")
+	assertSQLiteColumnExists(t, owner.db, "Categories", "name_override")
 	assertSQLiteColumnDefault(t, owner.db, "Notes", "editor_layout", "'single'")
 	assertSQLiteIndexExists(t, owner.db, "idx_notes_updated_at")
 	assertSQLiteIndexExists(t, owner.db, "idx_notes_category_id")
@@ -479,15 +484,16 @@ func TestOpenRuntimeSQLiteInitializesFreshDBAndReturnsReadOnlyOwner(t *testing.T
 	assertSQLiteIndexExists(t, owner.db, "idx_source_urls_note_id")
 	assertSQLiteIndexExists(t, owner.db, "idx_note_history_note_id")
 	assertSQLiteIndexExists(t, owner.db, "idx_attachments_note_id")
+	assertSQLiteIndexExists(t, owner.db, "idx_categories_system_key")
 	assertSQLiteTriggerExists(t, owner.db, "notes_ai")
 	assertSQLiteTriggerExists(t, owner.db, "notes_ad")
 	assertSQLiteTriggerExists(t, owner.db, "notes_au")
 
-	assertSeededCategory(t, owner.db, "提示詞 | Prompt", "🎨", 1, 0)
-	assertSeededCategory(t, owner.db, "筆記 | Note", "📝", 2, 1)
-	assertSeededCategory(t, owner.db, "教學 | Tutorial", "📚", 3, 0)
-	assertSeededCategory(t, owner.db, "資料 | Data", "💾", 4, 0)
-	assertSeededCategory(t, owner.db, "靈感 | Inspiration", "💡", 5, 0)
+	assertSeededCategory(t, owner.db, "提示詞 | Prompt", "🎨", "prompt", 1, 0)
+	assertSeededCategory(t, owner.db, "筆記 | Note", "📝", "note", 2, 1)
+	assertSeededCategory(t, owner.db, "教學 | Tutorial", "📚", "tutorial", 3, 0)
+	assertSeededCategory(t, owner.db, "資料 | Data", "💾", "data", 4, 0)
+	assertSeededCategory(t, owner.db, "靈感 | Inspiration", "💡", "inspiration", 5, 0)
 	assertTagCount(t, owner.db, "Welcome", 1)
 
 	var welcomeNotes int
@@ -613,13 +619,16 @@ func TestRunExistingDBMigrationsSkipsDuplicateAndMissingColumns(t *testing.T) {
 	}
 	defer owner.close()
 
-	if cfg.migrationsApplied != 3 {
-		t.Fatalf("expected migrations 14-16 to be considered applied, got %d", cfg.migrationsApplied)
+	if cfg.migrationsApplied != 4 {
+		t.Fatalf("expected migrations 14-17 to be considered applied, got %d", cfg.migrationsApplied)
 	}
 	if err := verifySchemaVersion(owner.db, expectedSchemaVersion); err != nil {
 		t.Fatal(err)
 	}
 	assertSQLiteColumnExists(t, owner.db, "Notes", "prompt_params")
+	assertSQLiteColumnExists(t, owner.db, "Categories", "system_key")
+	assertSQLiteColumnExists(t, owner.db, "Categories", "name_override")
+	assertSQLiteIndexExists(t, owner.db, "idx_categories_system_key")
 	assertSQLiteColumnAbsent(t, owner.db, "Notes", "text_embedding")
 	var layout string
 	if err := owner.db.QueryRow("SELECT editor_layout FROM Notes WHERE title = 'Needs Normalize'").Scan(&layout); err != nil {
@@ -875,16 +884,18 @@ func assertSQLiteColumnDefault(t *testing.T, db *sql.DB, table, column, want str
 	t.Fatalf("expected %s.%s to exist", table, column)
 }
 
-func assertSeededCategory(t *testing.T, db *sql.DB, name, icon string, sortOrder, isDefault int) {
+func assertSeededCategory(t *testing.T, db *sql.DB, name, icon, systemKey string, sortOrder, isDefault int) {
 	t.Helper()
 	var gotIcon string
+	var gotSystemKey sql.NullString
+	var gotNameOverride sql.NullString
 	var gotSortOrder int
 	var gotDefault int
-	if err := db.QueryRow("SELECT icon, sort_order, is_default FROM Categories WHERE name = ?", name).Scan(&gotIcon, &gotSortOrder, &gotDefault); err != nil {
+	if err := db.QueryRow("SELECT icon, system_key, name_override, sort_order, is_default FROM Categories WHERE name = ?", name).Scan(&gotIcon, &gotSystemKey, &gotNameOverride, &gotSortOrder, &gotDefault); err != nil {
 		t.Fatalf("expected seeded category %q: %v", name, err)
 	}
-	if gotIcon != icon || gotSortOrder != sortOrder || gotDefault != isDefault {
-		t.Fatalf("category %q mismatch: got icon=%q sort=%d default=%d", name, gotIcon, gotSortOrder, gotDefault)
+	if gotIcon != icon || !gotSystemKey.Valid || gotSystemKey.String != systemKey || gotNameOverride.Valid || gotSortOrder != sortOrder || gotDefault != isDefault {
+		t.Fatalf("category %q mismatch: got icon=%q system_key=%q override_valid=%v sort=%d default=%d", name, gotIcon, gotSystemKey.String, gotNameOverride.Valid, gotSortOrder, gotDefault)
 	}
 }
 
@@ -1009,22 +1020,22 @@ func TestMigrationStatusHandlerMatchesPythonShapeAndKeepsQueryOnly(t *testing.T)
 		t.Fatalf("unexpected status payload: %#v", payload)
 	}
 	data := payload["data"].(map[string]any)
-	if data["current_version"].(float64) != 16 {
+	if data["current_version"].(float64) != 17 {
 		t.Fatalf("unexpected current version: %#v", data)
 	}
-	if data["latest_version"].(float64) != 16 {
+	if data["latest_version"].(float64) != 17 {
 		t.Fatalf("unexpected latest version: %#v", data)
 	}
 	completed := data["completed"].([]any)
 	pending := data["pending"].([]any)
-	if len(completed) != 16 {
-		t.Fatalf("expected 16 completed migrations, got %d", len(completed))
+	if len(completed) != 17 {
+		t.Fatalf("expected 17 completed migrations, got %d", len(completed))
 	}
 	if len(pending) != 0 {
 		t.Fatalf("expected no pending migrations, got %#v", pending)
 	}
 	last := completed[len(completed)-1].(map[string]any)
-	if last["name"] != "normalize_editor_layout" {
+	if last["name"] != "add_category_identity" {
 		t.Fatalf("unexpected last migration: %#v", last)
 	}
 
@@ -1236,6 +1247,89 @@ func TestCategoryWriteHandlerRejectsWhenFlagDisabled(t *testing.T) {
 	}
 	if name != "note" {
 		t.Fatalf("disabled handler changed category name: %q", name)
+	}
+}
+
+func TestCategoriesAPIIncludesIdentityFields(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	setupDB, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := setupDB.Exec("UPDATE Categories SET name = ?, system_key = ?, name_override = ? WHERE id = 1", "筆記 | Note", "note", "固定筆記"); err != nil {
+		t.Fatal(err)
+	}
+	setupDB.Close()
+
+	db, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
+	request := httptest.NewRequest(http.MethodGet, "/api/categories", nil)
+	recorder := httptest.NewRecorder()
+	srv.handleCategories(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected categories 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("expected JSON response: %v", err)
+	}
+	data := payload["data"].([]any)
+	first := data[0].(map[string]any)
+	if first["name"] != "筆記 | Note" || first["system_key"] != "note" || first["name_override"] != "固定筆記" {
+		t.Fatalf("category identity fields missing: %#v", first)
+	}
+}
+
+func TestCategoryWriteSystemCategoryUsesNameOverride(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("UPDATE Categories SET name = ?, system_key = ?, name_override = NULL WHERE id = 1", "筆記 | Note", "note"); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{enableCategoryWrite: true, sqliteQueryOnly: false}}
+	blocked := httptest.NewRequest(http.MethodPut, "/api/categories/1", strings.NewReader(`{"system_key":"prompt"}`))
+	blockedRecorder := httptest.NewRecorder()
+	srv.handleCategoryDetail(blockedRecorder, blocked)
+	if blockedRecorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected system_key update to fail, got %d body=%s", blockedRecorder.Code, blockedRecorder.Body.String())
+	}
+
+	request := httptest.NewRequest(http.MethodPut, "/api/categories/1", strings.NewReader(`{"name_override":"固定筆記","icon":"🗂️"}`))
+	recorder := httptest.NewRecorder()
+	srv.handleCategoryDetail(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected category override update 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+
+	var name, systemKey, nameOverride, icon sql.NullString
+	if err := db.QueryRow("SELECT name, system_key, name_override, icon FROM Categories WHERE id = 1").Scan(&name, &systemKey, &nameOverride, &icon); err != nil {
+		t.Fatal(err)
+	}
+	if name.String != "筆記 | Note" || systemKey.String != "note" || nameOverride.String != "固定筆記" || icon.String != "🗂️" {
+		t.Fatalf("unexpected system category row after override update: name=%q key=%q override=%q icon=%q", name.String, systemKey.String, nameOverride.String, icon.String)
+	}
+
+	clearRequest := httptest.NewRequest(http.MethodPut, "/api/categories/1", strings.NewReader(`{"name_override":null}`))
+	clearRecorder := httptest.NewRecorder()
+	srv.handleCategoryDetail(clearRecorder, clearRequest)
+	if clearRecorder.Code != http.StatusOK {
+		t.Fatalf("expected override clear 200, got %d body=%s", clearRecorder.Code, clearRecorder.Body.String())
+	}
+	if err := db.QueryRow("SELECT name_override FROM Categories WHERE id = 1").Scan(&nameOverride); err != nil {
+		t.Fatal(err)
+	}
+	if nameOverride.Valid {
+		t.Fatalf("expected name_override to clear, got %q", nameOverride.String)
 	}
 }
 

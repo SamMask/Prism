@@ -93,7 +93,7 @@ export function FilterStrip() {
 
         {categories.map((category) => {
           const isActive = selectedCategoryId === category.id
-          const categoryName = getCategoryDisplayName(category.name, t)
+          const categoryName = getCategoryDisplayName(category, t)
 
           return (
             <button

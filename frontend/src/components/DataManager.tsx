@@ -10,7 +10,7 @@ import { useStarredTags } from '../hooks/useStarredTags'
 import {
   getCategoryDisplayName,
   getCategoryEditName,
-  getCategoryUpdateName,
+  getCategoryUpdatePayload,
 } from '../utils/categoryDisplay'
 
 interface CategoryManagerProps {
@@ -54,12 +54,12 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
       toast.warning(t('settings.organization.categoryNameRequired'))
       return
     }
-    const updates: { name?: string; icon?: string } = { icon: editIcon }
-    const nextName = getCategoryUpdateName(cat.name, editName, t)
-    if (nextName !== undefined) {
-      updates.name = nextName
+    const updates: { name?: string; icon?: string; name_override?: string | null } = { icon: editIcon }
+    const nameUpdate = getCategoryUpdatePayload(cat, editName, t)
+    if (nameUpdate !== undefined) {
+      Object.assign(updates, nameUpdate)
     }
-    if (updates.name === undefined && editIcon === (cat.icon || '📁')) {
+    if (updates.name === undefined && updates.name_override === undefined && editIcon === (cat.icon || '📁')) {
       setEditingId(null)
       return
     }
@@ -89,9 +89,9 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
     if (!await confirm({
       title: t('settings.organization.deleteCategoryTitle'),
       message: t('settings.organization.deleteCategoryMessage', {
-        name: getCategoryDisplayName(cat.name, t),
+        name: getCategoryDisplayName(cat, t),
         count: cat.count || 0,
-        target: getCategoryDisplayName(targetCategory.name, t),
+        target: getCategoryDisplayName(targetCategory, t),
       }),
       variant: 'danger',
     })) {
@@ -100,7 +100,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
     setIsLoading(true)
     try {
       await api.deleteCategory(cat.id, targetCategory.id)
-      toast.success(t('settings.organization.categoryDeleted', { name: getCategoryDisplayName(cat.name, t) }))
+      toast.success(t('settings.organization.categoryDeleted', { name: getCategoryDisplayName(cat, t) }))
       onRefresh()
     } catch (error: any) {
       toast.error(error?.response?.data?.message || t('settings.organization.deleteFailed'))
@@ -111,7 +111,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
 
   const startEdit = (cat: Category) => {
     setEditingId(cat.id)
-    setEditName(getCategoryEditName(cat.name, t))
+    setEditName(getCategoryEditName(cat, t))
     setEditIcon(cat.icon || '📁')
   }
 
@@ -163,7 +163,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
 
       <div className="space-y-1">
         {categories.map((cat) => {
-          const categoryName = getCategoryDisplayName(cat.name, t)
+          const categoryName = getCategoryDisplayName(cat, t)
           return (
           <div key={cat.id} className="flex items-center gap-2 p-2 rounded-lg hover:bg-bg-elevated group">
             {editingId === cat.id ? (
