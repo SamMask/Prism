@@ -1,12 +1,13 @@
 import { Note, api } from '../services/api'
 import { useAppStore, type ViewMode } from '../stores/appStore'
-import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download, BookOpen } from 'lucide-react'
+import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download, BookOpen, Maximize2 } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
+import { ImageLightbox, type LightboxImage } from './ImageLightbox'
 
 interface NoteCardProps {
   note: Note
@@ -18,6 +19,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const { locale, t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isCoverLightboxOpen, setIsCoverLightboxOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const isSelected = selectedNoteIds.includes(note.id)
   const isSelectionMode = selectedNoteIds.length > 0
@@ -45,6 +47,9 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const noteContentLength = note.content_length ?? cardContent.length
   const formattedContentLength = noteContentLength.toLocaleString()
   const coverImage = note.cover_image || extractFirstImage(cardContent)
+  const coverLightboxImages: LightboxImage[] = coverImage
+    ? [{ src: coverImage, alt: note.title || t('noteCard.untitled') }]
+    : []
   const parentTitle = note.parent_title?.trim()
   const variantCount = note.variants_count ?? 0
   const lineageLabel = parentTitle ? t('noteCard.lineageFrom', { title: parentTitle }) : ''
@@ -219,6 +224,41 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     setShowMenu(false)
   }
 
+  const handleOpenCoverLightbox = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    setShowMenu(false)
+    setIsCoverLightboxOpen(true)
+  }
+
+  const renderCoverLightboxButton = () => {
+    if (!coverImage) return null
+
+    return (
+      <button
+        type="button"
+        onClick={handleOpenCoverLightbox}
+        onMouseDown={(event) => event.stopPropagation()}
+        data-testid={`note-card-cover-lightbox-${note.id}`}
+        className="absolute bottom-2 right-2 z-10 rounded-md bg-black/60 p-2 text-white opacity-0 transition-opacity hover:bg-black/75 focus:opacity-100 group-hover:opacity-100"
+        aria-label={t('noteCard.openCoverImage')}
+        title={t('noteCard.openCoverImage')}
+      >
+        <Maximize2 size={16} />
+      </button>
+    )
+  }
+
+  const renderCoverLightbox = () => (
+    isCoverLightboxOpen && coverLightboxImages.length > 0 ? (
+      <ImageLightbox
+        images={coverLightboxImages}
+        activeIndex={0}
+        onActiveIndexChange={() => {}}
+        onClose={() => setIsCoverLightboxOpen(false)}
+      />
+    ) : null
+  )
+
   if (viewMode === 'compact') {
     return (
       <div
@@ -276,118 +316,124 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
   if (viewMode === 'list') {
     return (
-      <div
-        onClick={handleClick}
-        onContextMenu={handleContextMenu}
-        data-testid={`note-card-${note.id}`}
-        className={`
-          flex items-center gap-4 p-[var(--prism-card-padding)] rounded-xl cursor-pointer
-          bg-bg-surface border border-border-subtle
-          hover:border-border-default hover:bg-bg-elevated
-          transition-all duration-200
-          ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
-        `}
-      >
-        {/* Selection Checkbox */}
-        {isSelectionMode && (
-          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center
-                          ${isSelected ? 'bg-primary border-primary' : 'border-border-default'}`}>
-            {isSelected && <Check size={14} className="text-white" />}
-          </div>
-        )}
-
-        {/* Thumbnail */}
-        {coverImage && (
-          <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-            <img
-              src={coverImage}
-              alt=""
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            {note.is_pinned && <Pin size={14} className="text-warning" />}
-            <h3 className="font-medium text-text-primary truncate">
-              {note.title || t('noteCard.untitled')}
-            </h3>
-          </div>
-          <p className="text-sm text-text-secondary mt-1 line-clamp-1">
-            {getPreview(cardContent, 80)}
-          </p>
-          {parentTitle && (
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-accent" title={lineageLabel}>
-              <GitBranch size={12} />
-              <span className="truncate">{lineageLabel}</span>
+      <>
+        <div
+          onClick={handleClick}
+          onContextMenu={handleContextMenu}
+          data-testid={`note-card-${note.id}`}
+          className={`
+            flex items-center gap-4 p-[var(--prism-card-padding)] rounded-xl cursor-pointer
+            bg-bg-surface border border-border-subtle
+            hover:border-border-default hover:bg-bg-elevated
+            transition-all duration-200
+            ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
+          `}
+        >
+          {/* Selection Checkbox */}
+          {isSelectionMode && (
+            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center
+                            ${isSelected ? 'bg-primary border-primary' : 'border-border-default'}`}>
+              {isSelected && <Check size={14} className="text-white" />}
             </div>
           )}
-          {variantCount > 0 && (
-            <div
-              className="mt-1 flex items-center gap-1.5 text-xs text-primary-light"
-              data-testid={`note-card-variants-count-${note.id}`}
-            >
-              <GitBranch size={12} />
-              <span className="truncate">{t('noteCard.variantCount', { count: variantCount })}</span>
+
+          {/* Thumbnail */}
+          {coverImage && (
+            <div className="relative group w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+              <img
+                src={coverImage}
+                alt=""
+                className="w-full h-full object-cover"
+              />
+              {renderCoverLightboxButton()}
             </div>
           )}
-        </div>
 
-        {/* Meta */}
-        <div className="text-xs text-text-muted">
-          {new Date(note.updated_at).toLocaleDateString(locale)}
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              {note.is_pinned && <Pin size={14} className="text-warning" />}
+              <h3 className="font-medium text-text-primary truncate">
+                {note.title || t('noteCard.untitled')}
+              </h3>
+            </div>
+            <p className="text-sm text-text-secondary mt-1 line-clamp-1">
+              {getPreview(cardContent, 80)}
+            </p>
+            {parentTitle && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-accent" title={lineageLabel}>
+                <GitBranch size={12} />
+                <span className="truncate">{lineageLabel}</span>
+              </div>
+            )}
+            {variantCount > 0 && (
+              <div
+                className="mt-1 flex items-center gap-1.5 text-xs text-primary-light"
+                data-testid={`note-card-variants-count-${note.id}`}
+              >
+                <GitBranch size={12} />
+                <span className="truncate">{t('noteCard.variantCount', { count: variantCount })}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Meta */}
+          <div className="text-xs text-text-muted">
+            {new Date(note.updated_at).toLocaleDateString(locale)}
+          </div>
         </div>
-      </div>
+        {renderCoverLightbox()}
+      </>
     )
   }
 
   // Grid View
   return (
-    <div
-      onClick={handleClick}
-      onContextMenu={handleContextMenu}
-      data-testid={`note-card-${note.id}`}
-      className={`
-        group relative rounded-xl cursor-pointer
-        bg-bg-surface border border-border-subtle
-        hover:border-border-default hover:shadow-lg hover:shadow-black/20
-        transition-all duration-300
-        ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
-      `}
-    >
-      {/* Selection Checkbox (top-left) */}
-      <div 
-        className={`absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center
-                    transition-all duration-200
-                    ${isSelectionMode || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
-                    ${isSelected ? 'bg-primary border-primary' : 'bg-bg-surface/80 border-border-default hover:border-primary'}`}
-        onClick={(e) => {
-          e.stopPropagation()
-          toggleNoteSelection(note.id)
-        }}
+    <>
+      <div
+        onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        data-testid={`note-card-${note.id}`}
+        className={`
+          group relative rounded-xl cursor-pointer
+          bg-bg-surface border border-border-subtle
+          hover:border-border-default hover:shadow-lg hover:shadow-black/20
+          transition-all duration-300
+          ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
+        `}
       >
-        {isSelected && <Check size={14} className="text-white" />}
-      </div>
-
-      {/* Cover Image */}
-      {coverImage && (
-        <div className="aspect-video overflow-hidden bg-bg-elevated rounded-t-xl">
-          <img
-            src={coverImage}
-            alt=""
-            className={`
-              w-full h-full object-cover
-              group-hover:scale-105 transition-transform duration-500
-            `}
-            style={{ objectPosition: note.cover_position || 'center' }}
-          />
+        {/* Selection Checkbox (top-left) */}
+        <div
+          className={`absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center
+                      transition-all duration-200
+                      ${isSelectionMode || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
+                      ${isSelected ? 'bg-primary border-primary' : 'bg-bg-surface/80 border-border-default hover:border-primary'}`}
+          onClick={(e) => {
+            e.stopPropagation()
+            toggleNoteSelection(note.id)
+          }}
+        >
+          {isSelected && <Check size={14} className="text-white" />}
         </div>
-      )}
 
-      {/* Content */}
-      <div className="p-[var(--prism-card-padding)]">
+        {/* Cover Image */}
+        {coverImage && (
+          <div className="relative aspect-video overflow-hidden bg-bg-elevated rounded-t-xl">
+            <img
+              src={coverImage}
+              alt=""
+              className={`
+                w-full h-full object-cover
+                group-hover:scale-105 transition-transform duration-500
+              `}
+              style={{ objectPosition: note.cover_position || 'center' }}
+            />
+            {renderCoverLightboxButton()}
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="p-[var(--prism-card-padding)]">
         {/* Title */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
@@ -474,17 +520,17 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             {new Date(note.updated_at).toLocaleDateString(locale)}
           </span>
         </div>
-      </div>
+        </div>
 
-      {/* Dropdown Menu */}
-      {showMenu && (
-        <div
-          ref={menuRef}
-          onClick={(e) => e.stopPropagation()}
-          className="absolute top-2 right-2 z-20
-                     bg-bg-elevated border border-border-default rounded-lg
-                     shadow-xl shadow-black/30 py-1 min-w-[140px]"
-        >
+        {/* Dropdown Menu */}
+        {showMenu && (
+          <div
+            ref={menuRef}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-2 right-2 z-20
+                       bg-bg-elevated border border-border-default rounded-lg
+                       shadow-xl shadow-black/30 py-1 min-w-[140px]"
+          >
           <button
             onClick={handleOpenReading}
             className="w-full flex items-center gap-2 px-3 py-2
@@ -561,8 +607,10 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           >
             <Trash2 size={14} /> {isDeleting ? t('noteCard.deleting') : t('common.delete')}
           </button>
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+      {renderCoverLightbox()}
+    </>
   )
 }

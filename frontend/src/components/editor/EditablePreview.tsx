@@ -3,6 +3,7 @@ import { marked } from 'marked'
 import { Edit3, Trash2 } from 'lucide-react'
 import { removeImageReferences } from './imageReferences'
 import { useTranslation } from '../../hooks/useTranslation'
+import { ImageLightbox, type LightboxImage } from '../ImageLightbox'
 
 interface EditablePreviewProps {
   content: string
@@ -27,7 +28,19 @@ export function EditablePreview({
 }: EditablePreviewProps) {
   const { t } = useTranslation()
   const [activeBlockStart, setActiveBlockStart] = useState<number | null>(null)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const blocks = useMemo(() => splitPreviewBlocks(content), [content])
+  const previewImages = useMemo<LightboxImage[]>(
+    () => blocks
+      .filter((block): block is PreviewBlock & { imageUrl: string } => (
+        block.kind === 'image' && Boolean(block.imageUrl)
+      ))
+      .map((block, index) => ({
+        src: block.imageUrl,
+        alt: t('editor.noteEditor.imageAlt', { index: index + 1 }),
+      })),
+    [blocks, t],
+  )
 
   const updateBlock = (block: PreviewBlock, nextSource: string) => {
     onContentChange(content.slice(0, block.start) + nextSource + content.slice(block.end))
@@ -36,6 +49,11 @@ export function EditablePreview({
   const removeImage = (url: string) => {
     onContentChange(removeImageReferences(content, [url]))
     if (coverImage === url) onSetCover(null)
+  }
+
+  const openLightboxForSource = (src: string) => {
+    const imageIndex = previewImages.findIndex((image) => image.src === src)
+    if (imageIndex >= 0) setLightboxIndex(imageIndex)
   }
 
   if (blocks.length === 0) {
@@ -50,71 +68,89 @@ export function EditablePreview({
   }
 
   return (
-    <div className="flex-1 space-y-4">
-      {blocks.map((block) => {
-        if (block.kind === 'image' && block.imageUrl) {
-          return (
-            <figure
-              key={`${block.kind}-${block.start}`}
-              data-testid="preview-image-block"
-              className="relative group inline-flex min-h-20 min-w-20 max-w-full items-center justify-center rounded-lg border border-border-subtle bg-bg-elevated/40 overflow-hidden"
-            >
-              <img
-                src={block.imageUrl}
-                alt="preview"
-                className="max-h-96 max-w-full object-contain cursor-pointer"
-                onClick={() => window.open(block.imageUrl, '_blank')}
+    <>
+      <div className="flex-1 space-y-4">
+        {blocks.map((block) => {
+          if (block.kind === 'image' && block.imageUrl) {
+            return (
+              <figure
+                key={`${block.kind}-${block.start}`}
+                data-testid="preview-image-block"
+                className="relative group inline-flex min-h-20 min-w-20 max-w-full items-center justify-center rounded-lg border border-border-subtle bg-bg-elevated/40 overflow-hidden"
+              >
+                <button
+                  type="button"
+                  onClick={() => openLightboxForSource(block.imageUrl as string)}
+                  data-testid="preview-image-lightbox-trigger"
+                  className="block max-w-full cursor-zoom-in"
+                  aria-label={t('reading.lightboxOpenImage')}
+                  title={t('reading.lightboxOpenImage')}
+                >
+                  <img
+                    src={block.imageUrl}
+                    alt="preview"
+                    className="max-h-96 max-w-full object-contain"
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeImage(block.imageUrl as string)}
+                  data-testid="preview-remove-image"
+                  className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-danger/90 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                  title={t('editor.preview.removeImageReference')}
+                >
+                  <Trash2 size={16} />
+                </button>
+              </figure>
+            )
+          }
+
+          const isActive = activeBlockStart === block.start
+          if (isActive) {
+            return (
+              <textarea
+                key={`${block.kind}-${block.start}`}
+                value={block.source}
+                onChange={(event) => updateBlock(block, event.target.value)}
+                onBlur={() => setActiveBlockStart(null)}
+                autoFocus
+                className="w-full min-h-[7rem] p-3 rounded-lg bg-bg-elevated border border-primary outline-none resize-y text-text-primary font-mono text-sm leading-relaxed"
               />
+            )
+          }
+
+          return (
+            <section
+              key={`${block.kind}-${block.start}`}
+              data-testid="preview-text-block"
+              className="relative group rounded-lg border border-transparent hover:border-border-subtle hover:bg-bg-elevated/30 transition-colors"
+            >
               <button
                 type="button"
-                onClick={() => removeImage(block.imageUrl as string)}
-                data-testid="preview-remove-image"
-                className="absolute top-2 right-2 z-10 p-2 rounded-lg bg-danger/90 text-white opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                title={t('editor.preview.removeImageReference')}
+                onClick={() => setActiveBlockStart(block.start)}
+                data-testid="preview-edit-block"
+                className="absolute top-2 right-2 p-1.5 rounded-md bg-bg-elevated text-text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-text-primary transition-all"
+                title={t('editor.preview.editBlock')}
               >
-                <Trash2 size={16} />
+                <Edit3 size={14} />
               </button>
-            </figure>
+              <div
+                className="pr-10"
+                dangerouslySetInnerHTML={{ __html: renderMarkdown(block.source) }}
+              />
+            </section>
           )
-        }
-
-        const isActive = activeBlockStart === block.start
-        if (isActive) {
-          return (
-            <textarea
-              key={`${block.kind}-${block.start}`}
-              value={block.source}
-              onChange={(event) => updateBlock(block, event.target.value)}
-              onBlur={() => setActiveBlockStart(null)}
-              autoFocus
-              className="w-full min-h-[7rem] p-3 rounded-lg bg-bg-elevated border border-primary outline-none resize-y text-text-primary font-mono text-sm leading-relaxed"
-            />
-          )
-        }
-
-        return (
-          <section
-            key={`${block.kind}-${block.start}`}
-            data-testid="preview-text-block"
-            className="relative group rounded-lg border border-transparent hover:border-border-subtle hover:bg-bg-elevated/30 transition-colors"
-          >
-            <button
-              type="button"
-              onClick={() => setActiveBlockStart(block.start)}
-              data-testid="preview-edit-block"
-              className="absolute top-2 right-2 p-1.5 rounded-md bg-bg-elevated text-text-muted opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-text-primary transition-all"
-              title={t('editor.preview.editBlock')}
-            >
-              <Edit3 size={14} />
-            </button>
-            <div
-              className="pr-10"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(block.source) }}
-            />
-          </section>
-        )
-      })}
-    </div>
+        })}
+      </div>
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={previewImages}
+          activeIndex={lightboxIndex}
+          onActiveIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
+    </>
   )
 }
 

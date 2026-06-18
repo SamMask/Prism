@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, X, Save, FolderOpen, Tag, GitMerge } from 'lucide-react'
+import { Plus, Pencil, Trash2, X, Save, FolderOpen, Tag, GitMerge, Star } from 'lucide-react'
 import { api, Category, Tag as TagType } from '../services/api'
 import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
+import { useStarredTags } from '../hooks/useStarredTags'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 interface CategoryManagerProps {
@@ -218,6 +219,7 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
   const [selectedTags, setSelectedTags] = useState<number[]>([])
   const [mergeTarget, setMergeTarget] = useState<number | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  const { starredTagIdSet, toggleStarredTag } = useStarredTags(tags)
 
   const handleRename = async (id: number) => {
     if (!editName.trim()) {
@@ -312,49 +314,68 @@ function TagManager({ tags, onRefresh }: TagManagerProps) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {tags.map((tag) => (
-          <div
-            key={tag.id}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs
-                       transition-colors cursor-pointer
-                       ${selectedTags.includes(tag.id)
-                         ? 'bg-primary/20 text-primary ring-1 ring-primary/50'
-                         : 'bg-bg-elevated text-text-secondary hover:bg-bg-hover'
-                       }`}
-            onClick={() => toggleSelect(tag.id)}
-          >
-            {editingId === tag.id ? (
-              <>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleRename(tag.id)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="w-20 px-1 py-0.5 rounded bg-bg-surface border text-xs"
-                  autoFocus
-                />
-                <IconButton size="xs" variant="success" onClick={(e) => { e.stopPropagation(); handleRename(tag.id) }} aria-label={t('common.save')}>
-                  <Save size={12} />
-                </IconButton>
-                <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(null) }} aria-label={t('common.cancel')}>
-                  <X size={12} />
-                </IconButton>
-              </>
-            ) : (
-              <>
-                <span>{tag.name}</span>
-                <span className="text-text-muted">({tag.count || 0})</span>
-                <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(tag.id); setEditName(tag.name) }} className="opacity-50 hover:opacity-100" aria-label={t('settings.organization.rename')}>
-                  <Pencil size={10} />
-                </IconButton>
-                <IconButton size="xs" variant="danger-solid" onClick={(e) => { e.stopPropagation(); handleDelete(tag) }} className="opacity-50 hover:opacity-100" aria-label={t('common.delete')}>
-                  <Trash2 size={10} />
-                </IconButton>
-              </>
-            )}
-          </div>
-        ))}
+        {tags.map((tag) => {
+          const isStarred = starredTagIdSet.has(tag.id)
+          const starLabel = t(
+            isStarred ? 'settings.organization.unstarTagShortcut' : 'settings.organization.starTagShortcut',
+            { name: tag.name },
+          )
+
+          return (
+            <div
+              key={tag.id}
+              className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs
+                         transition-colors cursor-pointer
+                         ${selectedTags.includes(tag.id)
+                           ? 'bg-primary/20 text-primary ring-1 ring-primary/50'
+                           : 'bg-bg-elevated text-text-secondary hover:bg-bg-hover'
+                         }`}
+              onClick={() => toggleSelect(tag.id)}
+            >
+              {editingId === tag.id ? (
+                <>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleRename(tag.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-20 px-1 py-0.5 rounded bg-bg-surface border text-xs"
+                    autoFocus
+                  />
+                  <IconButton size="xs" variant="success" onClick={(e) => { e.stopPropagation(); handleRename(tag.id) }} aria-label={t('common.save')}>
+                    <Save size={12} />
+                  </IconButton>
+                  <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(null) }} aria-label={t('common.cancel')}>
+                    <X size={12} />
+                  </IconButton>
+                </>
+              ) : (
+                <>
+                  <span>{tag.name}</span>
+                  <span className="text-text-muted">({tag.count || 0})</span>
+                  <IconButton
+                    size="xs"
+                    onMouseDown={(event) => event.stopPropagation()}
+                    onClick={(event) => { event.stopPropagation(); toggleStarredTag(tag.id) }}
+                    className={isStarred ? 'text-warning opacity-100 hover:text-warning' : 'opacity-50 hover:opacity-100'}
+                    aria-label={starLabel}
+                    title={starLabel}
+                    data-testid={`settings-star-tag-${tag.id}`}
+                  >
+                    <Star size={10} fill={isStarred ? 'currentColor' : 'none'} />
+                  </IconButton>
+                  <IconButton size="xs" onClick={(e) => { e.stopPropagation(); setEditingId(tag.id); setEditName(tag.name) }} className="opacity-50 hover:opacity-100" aria-label={t('settings.organization.rename')}>
+                    <Pencil size={10} />
+                  </IconButton>
+                  <IconButton size="xs" variant="danger-solid" onClick={(e) => { e.stopPropagation(); handleDelete(tag) }} className="opacity-50 hover:opacity-100" aria-label={t('common.delete')}>
+                    <Trash2 size={10} />
+                  </IconButton>
+                </>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {tags.length === 0 && (

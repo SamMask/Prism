@@ -2,6 +2,7 @@ import { Archive, Hash, Home, Tag } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
+import { useStarredTags } from '../hooks/useStarredTags'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 export function FilterStrip() {
@@ -21,7 +22,8 @@ export function FilterStrip() {
 
   const isHomeRoute = location.pathname === '/'
   const isAllActive = isHomeRoute && !selectedCategoryId && !selectedTagId && !showArchived
-  const displayTags = tags.slice(0, 12)
+  const { starredTagIdSet } = useStarredTags(tags)
+  const displayTags = tags.filter((tag) => starredTagIdSet.has(tag.id))
 
   const goHome = () => {
     if (!isHomeRoute) navigate('/')
@@ -110,11 +112,11 @@ export function FilterStrip() {
           )
         })}
 
-        {displayTags.length > 0 && (
+        {(displayTags.length > 0 || tags.length > 0) && (
           <span className="mx-1 h-4 w-px shrink-0 bg-border-subtle" aria-hidden="true" />
         )}
 
-        {displayTags.map((tag) => {
+        {displayTags.length > 0 ? displayTags.map((tag) => {
           const isActive = selectedTagId === tag.id
 
           return (
@@ -125,6 +127,7 @@ export function FilterStrip() {
               className={`${chipBase} ${isActive ? tagActive : chipIdle}`}
               aria-pressed={isActive}
               data-testid={`filter-tag-${tag.id}`}
+              data-starred-tag="true"
               title={tag.name}
             >
               <Hash size={14} />
@@ -132,12 +135,13 @@ export function FilterStrip() {
               <span className="font-mono text-[11px] text-text-muted">{tag.count || 0}</span>
             </button>
           )
-        })}
-
-        {tags.length > displayTags.length && (
-          <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-bg-base px-3 text-[13px] text-text-muted">
+        }) : tags.length > 0 && (
+          <span
+            className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-border-subtle bg-bg-base px-3 text-[13px] text-text-muted"
+            data-testid="filter-starred-tags-empty-hint"
+          >
             <Tag size={14} />
-            +{tags.length - displayTags.length}
+            {t('filter.starredTagsHint')}
           </span>
         )}
       </div>

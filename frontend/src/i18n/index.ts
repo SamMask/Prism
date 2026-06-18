@@ -139,6 +139,7 @@ const zhTW = {
   filter: {
     all: '全部',
     archive: '封存',
+    starredTagsHint: '在標籤管理加星號後會顯示在這裡',
   },
   header: {
     settings: '設定',
@@ -203,6 +204,7 @@ const zhTW = {
     copied: '內容已複製',
     copyFailed: '複製失敗',
     openReading: '閱讀',
+    openCoverImage: '開啟封面圖片檢視器',
     createVariant: '建立變體',
     viewVariants: '查看變體',
     variantCount: '{count} 個變體',
@@ -245,6 +247,17 @@ const zhTW = {
     variantsLoading: '讀取變體中...',
     variantsUnavailable: '變體清單暫時無法載入',
     openRelatedFailed: '讀取相關筆記失敗',
+    lightboxTitle: '圖片檢視器',
+    lightboxOpenImage: '開啟圖片檢視器',
+    lightboxClose: '關閉圖片檢視器',
+    lightboxPrevious: '上一張圖片',
+    lightboxNext: '下一張圖片',
+    lightboxCopyPath: '複製圖片路徑',
+    lightboxOpenOriginal: '開啟原圖',
+    lightboxCount: '{current} / {total}',
+    lightboxImageAlt: '圖片 {index}',
+    lightboxCopySuccess: '圖片路徑已複製',
+    lightboxCopyFailed: '複製圖片路徑失敗',
   },
   editor: {
     toolbar: {
@@ -575,6 +588,8 @@ const zhTW = {
       mergeFailed: '合併失敗',
       selectMergeTarget: '選擇目標標籤',
       mergeAction: '合併 ({count})',
+      starTagShortcut: '在上方標籤列顯示「{name}」',
+      unstarTagShortcut: '從上方標籤列移除「{name}」',
       noTags: '尚無標籤',
     },
     security: {
@@ -913,6 +928,7 @@ const en: TranslationDict = {
   filter: {
     all: 'All',
     archive: 'Archive',
+    starredTagsHint: 'Star tags in Settings to show shortcuts here',
   },
   header: {
     settings: 'Settings',
@@ -977,6 +993,7 @@ const en: TranslationDict = {
     copied: 'Content copied',
     copyFailed: 'Copy failed',
     openReading: 'Read',
+    openCoverImage: 'Open cover image viewer',
     createVariant: 'Create variant',
     viewVariants: 'View variants',
     variantCount: '{count} variants',
@@ -1019,6 +1036,17 @@ const en: TranslationDict = {
     variantsLoading: 'Loading variants...',
     variantsUnavailable: 'Could not load variants',
     openRelatedFailed: 'Failed to load related note',
+    lightboxTitle: 'Image viewer',
+    lightboxOpenImage: 'Open image viewer',
+    lightboxClose: 'Close image viewer',
+    lightboxPrevious: 'Previous image',
+    lightboxNext: 'Next image',
+    lightboxCopyPath: 'Copy image path',
+    lightboxOpenOriginal: 'Open original',
+    lightboxCount: '{current} / {total}',
+    lightboxImageAlt: 'Image {index}',
+    lightboxCopySuccess: 'Image path copied',
+    lightboxCopyFailed: 'Failed to copy image path',
   },
   editor: {
     toolbar: {
@@ -1349,6 +1377,8 @@ const en: TranslationDict = {
       mergeFailed: 'Merge failed',
       selectMergeTarget: 'Choose target tag',
       mergeAction: 'Merge ({count})',
+      starTagShortcut: 'Show "{name}" in the header tag shortcuts',
+      unstarTagShortcut: 'Hide "{name}" from the header tag shortcuts',
       noTags: 'No tags yet',
     },
     security: {
@@ -1684,6 +1714,7 @@ const ja: TranslationDict = {
   filter: {
     all: 'すべて',
     archive: 'アーカイブ',
+    starredTagsHint: '設定でタグにスターを付けるとここに表示されます',
   },
   header: {
     settings: '設定',
@@ -1748,6 +1779,7 @@ const ja: TranslationDict = {
     copied: '内容をコピーしました',
     copyFailed: 'コピーに失敗しました',
     openReading: '読む',
+    openCoverImage: 'カバー画像ビューアを開く',
     createVariant: 'バリアントを作成',
     viewVariants: 'バリアントを表示',
     variantCount: '{count} 件のバリアント',
@@ -1790,6 +1822,17 @@ const ja: TranslationDict = {
     variantsLoading: 'バリアントを読み込み中...',
     variantsUnavailable: 'バリアント一覧を読み込めません',
     openRelatedFailed: '関連ノートの読み込みに失敗しました',
+    lightboxTitle: '画像ビューア',
+    lightboxOpenImage: '画像ビューアを開く',
+    lightboxClose: '画像ビューアを閉じる',
+    lightboxPrevious: '前の画像',
+    lightboxNext: '次の画像',
+    lightboxCopyPath: '画像パスをコピー',
+    lightboxOpenOriginal: '元画像を開く',
+    lightboxCount: '{current} / {total}',
+    lightboxImageAlt: '画像 {index}',
+    lightboxCopySuccess: '画像パスをコピーしました',
+    lightboxCopyFailed: '画像パスのコピーに失敗しました',
   },
   editor: {
     toolbar: {
@@ -2120,6 +2163,8 @@ const ja: TranslationDict = {
       mergeFailed: '統合に失敗しました',
       selectMergeTarget: '統合先タグを選択',
       mergeAction: '統合 ({count})',
+      starTagShortcut: '「{name}」を上部タグ列に表示',
+      unstarTagShortcut: '「{name}」を上部タグ列から非表示',
       noTags: 'タグはまだありません',
     },
     security: {
@@ -2455,6 +2500,7 @@ const ko: TranslationDict = {
   filter: {
     all: '전체',
     archive: '보관함',
+    starredTagsHint: '설정에서 태그에 별을 표시하면 여기에 나타납니다',
   },
   header: {
     settings: '설정',
@@ -2519,6 +2565,7 @@ const ko: TranslationDict = {
     copied: '내용을 복사했습니다',
     copyFailed: '복사 실패',
     openReading: '읽기',
+    openCoverImage: '표지 이미지 뷰어 열기',
     createVariant: '변형 만들기',
     viewVariants: '변형 보기',
     variantCount: '변형 {count}개',
@@ -2561,6 +2608,17 @@ const ko: TranslationDict = {
     variantsLoading: '변형을 불러오는 중...',
     variantsUnavailable: '변형 목록을 불러올 수 없습니다',
     openRelatedFailed: '관련 노트를 불러오지 못했습니다',
+    lightboxTitle: '이미지 뷰어',
+    lightboxOpenImage: '이미지 뷰어 열기',
+    lightboxClose: '이미지 뷰어 닫기',
+    lightboxPrevious: '이전 이미지',
+    lightboxNext: '다음 이미지',
+    lightboxCopyPath: '이미지 경로 복사',
+    lightboxOpenOriginal: '원본 열기',
+    lightboxCount: '{current} / {total}',
+    lightboxImageAlt: '이미지 {index}',
+    lightboxCopySuccess: '이미지 경로를 복사했습니다',
+    lightboxCopyFailed: '이미지 경로 복사 실패',
   },
   editor: {
     toolbar: {
@@ -2891,6 +2949,8 @@ const ko: TranslationDict = {
       mergeFailed: '병합 실패',
       selectMergeTarget: '대상 태그 선택',
       mergeAction: '병합 ({count})',
+      starTagShortcut: '상단 태그 줄에 "{name}" 표시',
+      unstarTagShortcut: '상단 태그 줄에서 "{name}" 숨기기',
       noTags: '아직 태그가 없습니다',
     },
     security: {

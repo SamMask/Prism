@@ -1,12 +1,14 @@
 import { marked } from 'marked'
 import { Archive, Copy, Edit2, GitBranch, Pin, X } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { type MouseEvent, useEffect, useMemo, useState } from 'react'
 import { Note, api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { Modal, Button } from './ui'
 import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
+import { extractImageReferences } from './editor/imageReferences'
+import { ImageLightbox, type LightboxImage } from './ImageLightbox'
 
 interface ReadingViewProps {
   note: Note
@@ -31,6 +33,22 @@ function renderMarkdown(markdown: string, emptyContent: string): string {
   }
 }
 
+function collectReadingImages(coverImage: string | null, content: string, title: string): LightboxImage[] {
+  const images: LightboxImage[] = []
+  const addImage = (src: string | null | undefined) => {
+    if (!src || images.some((image) => image.src === src)) return
+    images.push({ src, alt: title })
+  }
+
+  addImage(coverImage)
+  extractImageReferences(content).forEach((src) => addImage(src))
+  return images
+}
+
+function imageSourceMatches(candidate: string, observed: string): boolean {
+  return candidate === observed || observed.endsWith(candidate)
+}
+
 export function ReadingView({ note, onClose }: ReadingViewProps) {
   const { openEditor, fetchNotes } = useAppStore()
   const { locale, t } = useTranslation()
@@ -38,7 +56,12 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   const [childVariants, setChildVariants] = useState<Note[]>([])
   const [isVariantsLoading, setIsVariantsLoading] = useState(false)
   const [isAutoContentLoading, setIsAutoContentLoading] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
   const coverImage = localNote.cover_image || extractFirstImage(localNote.content || '')
+  const readingImages = useMemo(
+    () => collectReadingImages(coverImage, localNote.content || '', localNote.title || t('reading.untitled')),
+    [coverImage, localNote.content, localNote.title, t],
+  )
   const renderedContent = useMemo(() => renderMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
   const updatedAt = new Date(localNote.updated_at).toLocaleString(locale)
   const categoryName = getCategoryDisplayName(
@@ -136,6 +159,18 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     }
   }
 
+  const openLightboxForSource = (src: string | null | undefined) => {
+    if (!src) return
+    const index = readingImages.findIndex((image) => imageSourceMatches(image.src, src))
+    if (index >= 0) setLightboxIndex(index)
+  }
+
+  const handleMarkdownImageClick = (event: MouseEvent<HTMLDivElement>) => {
+    const target = event.target
+    if (!(target instanceof HTMLImageElement)) return
+    openLightboxForSource(target.getAttribute('src') || target.src)
+  }
+
   const handleTogglePin = async () => {
     try {
       const result = await api.togglePin(localNote.id)
@@ -159,7 +194,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   }
 
   return (
-    <Modal isOpen onClose={onClose} size="full">
+    <Modal isOpen onClose={lightboxIndex === null ? onClose : () => setLightboxIndex(null)} size="full">
       <article className="flex max-h-[88vh] flex-col overflow-hidden" data-testid="reading-view">
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 lg:px-6">
           <div className="min-w-0">
@@ -221,16 +256,26 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
         <div className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_220px]">
           <div className="overflow-y-auto px-5 py-5 lg:px-8 lg:py-7">
             {coverImage && (
-              <img
-                src={coverImage}
-                alt=""
-                className="mb-6 max-h-[360px] w-full rounded-lg border border-border-subtle object-cover"
-                style={{ objectPosition: localNote.cover_position || 'center' }}
-              />
+              <button
+                type="button"
+                onClick={() => openLightboxForSource(coverImage)}
+                className="mb-6 block w-full overflow-hidden rounded-lg border border-border-subtle bg-bg-elevated text-left"
+                aria-label={t('reading.lightboxOpenImage')}
+              >
+                <img
+                  src={coverImage}
+                  alt=""
+                  className="max-h-[360px] w-full object-cover"
+                  style={{ objectPosition: localNote.cover_position || 'center' }}
+                  data-testid="reading-cover-image"
+                />
+              </button>
             )}
             <div
-              className="prose prose-invert max-w-none text-text-primary prose-headings:text-text-primary prose-a:text-primary prose-strong:text-text-primary prose-code:rounded prose-code:bg-bg-elevated prose-code:px-1 prose-img:rounded-lg"
+              className="prose prose-invert max-w-none text-text-primary prose-headings:text-text-primary prose-a:text-primary prose-strong:text-text-primary prose-code:rounded prose-code:bg-bg-elevated prose-code:px-1 prose-img:cursor-zoom-in prose-img:rounded-lg"
               aria-busy={isAutoContentLoading}
+              data-testid="reading-content"
+              onClick={handleMarkdownImageClick}
               dangerouslySetInnerHTML={{ __html: renderedContent }}
             />
             {localNote.remarks && (
@@ -325,6 +370,14 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
           </aside>
         </div>
       </article>
+      {lightboxIndex !== null && (
+        <ImageLightbox
+          images={readingImages}
+          activeIndex={lightboxIndex}
+          onActiveIndexChange={setLightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+        />
+      )}
     </Modal>
   )
 }

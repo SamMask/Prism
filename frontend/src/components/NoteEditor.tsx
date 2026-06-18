@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal } from './ui'
 import { Note } from '../services/api'
 import { Image, X, History, RotateCcw } from 'lucide-react'
 import { EditorToolbar } from './editor/EditorToolbar'
 import { EditorSidebar } from './editor/EditorSidebar'
 import { EditablePreview } from './editor/EditablePreview'
+import { ImageLightbox, type LightboxImage } from './ImageLightbox'
 
 import { useNoteForm } from '../hooks/editor/useNoteForm'
 import { usePasteHandler } from '../hooks/editor/usePasteHandler'
@@ -28,6 +29,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
   const history = useNoteHistory(note, form.setContent)
   const attachments = useNoteAttachments(note, form.setContent, form.updateOriginalContent)
   const drag = useDragDrop(note?.id, form.setContent, attachments.setAttachments)
+  const [galleryLightboxIndex, setGalleryLightboxIndex] = useState<number | null>(null)
 
   // Load attachments on mount (editing mode only)
   useEffect(() => {
@@ -35,13 +37,20 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
   }, [form.isEditing, attachments.loadAttachments])
 
   // Extract images from content for dual-layout gallery
-  const galleryImages = (() => {
+  const galleryImages = useMemo(() => {
     const pattern = /!\[.*?\]\((\/static\/uploads\/[^)]+)\)|<img[^>]+src=["'](\/static\/uploads\/[^"']+)["']/g
     const images: string[] = []
     let m
     while ((m = pattern.exec(form.content || '')) !== null) images.push(m[1] || m[2])
     return images
-  })()
+  }, [form.content])
+  const galleryLightboxImages = useMemo<LightboxImage[]>(
+    () => galleryImages.map((src, index) => ({
+      src,
+      alt: t('editor.noteEditor.imageAlt', { index: index + 1 }),
+    })),
+    [galleryImages, t],
+  )
 
   return (
     <>
@@ -82,12 +91,20 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                   <div className="space-y-3">
                     {galleryImages.map((src, idx) => (
                       <div key={idx} className="relative group">
-                        <img
-                          src={src}
-                          alt={t('editor.noteEditor.imageAlt', { index: idx + 1 })}
-                          className="w-full rounded-lg border border-border-subtle cursor-pointer hover:border-primary transition-colors"
-                          onClick={() => window.open(src, '_blank')}
-                        />
+                        <button
+                          type="button"
+                          onClick={() => setGalleryLightboxIndex(idx)}
+                          data-testid="editor-gallery-lightbox-trigger"
+                          className="block w-full cursor-zoom-in"
+                          aria-label={t('reading.lightboxOpenImage')}
+                          title={t('reading.lightboxOpenImage')}
+                        >
+                          <img
+                            src={src}
+                            alt={t('editor.noteEditor.imageAlt', { index: idx + 1 })}
+                            className="w-full rounded-lg border border-border-subtle hover:border-primary transition-colors"
+                          />
+                        </button>
                         <span className="absolute top-2 left-2 bg-black/50 text-white text-xs px-2 py-0.5 rounded">
                           {idx + 1}
                         </span>
@@ -248,6 +265,14 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
             )}
           </div>
         </Modal>
+      )}
+      {galleryLightboxIndex !== null && (
+        <ImageLightbox
+          images={galleryLightboxImages}
+          activeIndex={galleryLightboxIndex}
+          onActiveIndexChange={setGalleryLightboxIndex}
+          onClose={() => setGalleryLightboxIndex(null)}
+        />
       )}
     </>
   )
