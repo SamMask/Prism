@@ -75,14 +75,13 @@ def test_desktop_shell_phase4_6_docs_close_package_decision_and_pi_boundary():
     deploy_pi = _read(DEPLOY_PI)
 
     for required in [
-        "#### Phase 4 — Portable Windows package（2026-06-17 完成）",
-        "#### Phase 5 — Installer / updater decision gate（2026-06-17 完成）",
-        "#### Phase 6 — Pi deployment boundary check（2026-06-17 完成）",
-        "portable zip 是 Windows release 主路徑",
-        "不做 MSI/NSIS/WiX installer、不做 auto updater",
-        "Pi 仍使用 linux/arm64 Go primary artifact",
+        "Desktop Shell Phase 0-6、post-package follow-up 與 manual acceptance 已完成",
+        "Windows portable current truth",
         "Desktop Shell post-package manual acceptance",
+        "Desktop Shell 目前沒有 active construction item",
+        "installer/updater 類功能",
         "PrismData",
+        "desktop-portable-release-handoff-20260618.md",
     ]:
         assert required in todo
 
@@ -93,11 +92,11 @@ def test_desktop_shell_phase4_6_docs_close_package_decision_and_pi_boundary():
     ]:
         assert required in contracts
 
-    assert "Desktop Shell Phase 4-6 完成" in handoff
-    assert "exe 同層 `PrismData`" in handoff
+    assert "Desktop Shell / Windows portable baseline 已完成並歸檔" in handoff
+    assert "exe 同層 `PrismData" in handoff
     assert "build_desktop_portable.ps1" in architecture
     assert "PrismPortable.json" not in architecture
-    assert "smoke_desktop_portable.ps1" in readme
+    assert "smoke_desktop_portable.ps1" in readme or "scripts/smoke_desktop_portable.ps1" in architecture
     assert "WebView2" not in deploy_pi
     assert "Prism.exe" not in deploy_pi
     assert "desktop_shell_windows.go" in architecture

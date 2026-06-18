@@ -2655,28 +2655,64 @@ func TestNotesPinArchiveDuplicateReorderHandlers(t *testing.T) {
 	}
 	variantID := noteIDFromResponse(t, variantRec.Body.Bytes())
 	listRec := httptest.NewRecorder()
-	srv.handleNotes(listRec, httptest.NewRequest(http.MethodGet, "/api/notes?per_page=100", nil))
+	srv.handleNotes(listRec, httptest.NewRequest(http.MethodGet, "/api/notes?include_archived=true&per_page=100", nil))
 	if listRec.Code != http.StatusOK {
 		t.Fatalf("expected notes list 200, got %d body=%s", listRec.Code, listRec.Body.String())
 	}
 	var listResp struct {
 		Data []struct {
-			ID          int     `json:"id"`
-			ParentID    *int    `json:"parent_id"`
-			ParentTitle *string `json:"parent_title"`
+			ID            int     `json:"id"`
+			ParentID      *int    `json:"parent_id"`
+			ParentTitle   *string `json:"parent_title"`
+			VariantsCount int     `json:"variants_count"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(listRec.Body.Bytes(), &listResp); err != nil {
 		t.Fatal(err)
 	}
 	foundVariantLineage := false
+	foundParentCount := false
 	for _, item := range listResp.Data {
 		if item.ID == variantID && item.ParentID != nil && *item.ParentID == firstID && item.ParentTitle != nil && *item.ParentTitle == "Pin Fixture" {
 			foundVariantLineage = true
 		}
+		if item.ID == firstID && item.VariantsCount == 1 {
+			foundParentCount = true
+		}
 	}
 	if !foundVariantLineage {
 		t.Fatalf("variant %d should include parent_id=%d and parent_title in notes list, body=%s", variantID, firstID, listRec.Body.String())
+	}
+	if !foundParentCount {
+		t.Fatalf("parent %d should report one child variant, body=%s", firstID, listRec.Body.String())
+	}
+
+	childRec := httptest.NewRecorder()
+	srv.handleNotes(childRec, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/notes?parent_id=%d&per_page=100", firstID), nil))
+	if childRec.Code != http.StatusOK {
+		t.Fatalf("expected notes children lookup 200, got %d body=%s", childRec.Code, childRec.Body.String())
+	}
+	var childResp struct {
+		Data []struct {
+			ID           int  `json:"id"`
+			ParentID     *int `json:"parent_id"`
+			VariantCount int  `json:"variants_count"`
+		} `json:"data"`
+		Pagination struct {
+			Total int `json:"total"`
+		} `json:"pagination"`
+	}
+	if err := json.Unmarshal(childRec.Body.Bytes(), &childResp); err != nil {
+		t.Fatal(err)
+	}
+	if childResp.Pagination.Total != 1 || len(childResp.Data) != 1 {
+		t.Fatalf("children lookup should return exactly one variant, body=%s", childRec.Body.String())
+	}
+	if childResp.Data[0].ID != variantID || childResp.Data[0].ParentID == nil || *childResp.Data[0].ParentID != firstID {
+		t.Fatalf("children lookup returned wrong lineage, body=%s", childRec.Body.String())
+	}
+	if childResp.Data[0].VariantCount != 0 {
+		t.Fatalf("child variant should not report siblings as children, body=%s", childRec.Body.String())
 	}
 
 	// reorder [second, first] sets sort_order second=0, first=1
@@ -2688,6 +2724,152 @@ func TestNotesPinArchiveDuplicateReorderHandlers(t *testing.T) {
 	}
 	assertNoteIntColumn(t, db, secondID, "sort_order", 0)
 	assertNoteIntColumn(t, db, firstID, "sort_order", 1)
+}
+
+func TestDuplicateNoteCopiesAttachmentsAndSeparatedContent(t *testing.T) {
+	dataDir := t.TempDir()
+	attachmentsDir := filepath.Join(dataDir, "docs", "attachments")
+	notesDir := filepath.Join(dataDir, "docs", "notes")
+	if err := os.MkdirAll(attachmentsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(notesDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	srv := &server{db: db, runtime: runtimeConfig{
+		dataDir:                  dataDir,
+		attachmentsDir:           attachmentsDir,
+		notesDir:                 notesDir,
+		enableNotesWrite:         true,
+		enableAttachmentTextRead: true,
+	}}
+
+	parentID := insertSearchNote(t, db, "Attachment Parent", "preview\n\n---\n📎 **[完整內容已分離為附件]**", "", 1)
+	manualContent := "manual attachment content"
+	autoContent := "full separated attachment content\nsecond line"
+	parentManualRel := "docs/attachments/source.md"
+	parentAutoRel := fmt.Sprintf("docs/notes/note_%d.md", parentID)
+	if err := os.WriteFile(filepath.Join(attachmentsDir, "source.md"), []byte(manualContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(notesDir, fmt.Sprintf("note_%d.md", parentID)), []byte(autoContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+		VALUES (?, ?, 'md', 'manual source', ?, 0)`, parentID, parentManualRel, len(manualContent)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+		VALUES (?, ?, 'md', 'Attachment Parent (完整內容)', ?, 1)`, parentID, parentAutoRel, len(autoContent)); err != nil {
+		t.Fatal(err)
+	}
+
+	duplicateRec := httptest.NewRecorder()
+	srv.handleNoteDetail(duplicateRec, httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/duplicate", parentID), strings.NewReader(`{"as_variant":true}`)))
+	if duplicateRec.Code != http.StatusCreated {
+		t.Fatalf("expected duplicate 201, got %d body=%s", duplicateRec.Code, duplicateRec.Body.String())
+	}
+	variantID := noteIDFromResponse(t, duplicateRec.Body.Bytes())
+
+	rows, err := db.Query(`
+		SELECT id, file_path, title, size_bytes, is_auto_extracted
+		FROM Note_Attachments
+		WHERE note_id = ?
+		ORDER BY is_auto_extracted, id`, variantID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	type attachmentRow struct {
+		ID        int
+		FilePath  string
+		Title     string
+		SizeBytes int64
+		Auto      bool
+	}
+	attachments := []attachmentRow{}
+	for rows.Next() {
+		var item attachmentRow
+		var isAuto int
+		if err := rows.Scan(&item.ID, &item.FilePath, &item.Title, &item.SizeBytes, &isAuto); err != nil {
+			t.Fatal(err)
+		}
+		item.Auto = isAuto != 0
+		attachments = append(attachments, item)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if len(attachments) != 2 {
+		t.Fatalf("variant should receive two copied attachments, got %#v", attachments)
+	}
+
+	var manualCopy, autoCopy attachmentRow
+	for _, attachment := range attachments {
+		if attachment.Auto {
+			autoCopy = attachment
+		} else {
+			manualCopy = attachment
+		}
+	}
+	if manualCopy.FilePath == "" || autoCopy.FilePath == "" {
+		t.Fatalf("expected both manual and auto attachment copies, got %#v", attachments)
+	}
+	if manualCopy.FilePath == parentManualRel || autoCopy.FilePath == parentAutoRel {
+		t.Fatalf("variant attachments must not share parent file paths, got %#v", attachments)
+	}
+	if autoCopy.FilePath != fmt.Sprintf("docs/notes/note_%d.md", variantID) {
+		t.Fatalf("auto-extracted copy should use child note path, got %q", autoCopy.FilePath)
+	}
+	if !strings.HasPrefix(manualCopy.FilePath, "docs/attachments/source_copy_") {
+		t.Fatalf("manual copy should stay under docs/attachments with copy suffix, got %q", manualCopy.FilePath)
+	}
+
+	manualBytes, err := os.ReadFile(filepath.Join(dataDir, filepath.FromSlash(manualCopy.FilePath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(manualBytes) != manualContent {
+		t.Fatalf("manual attachment copy content mismatch: %q", string(manualBytes))
+	}
+	autoBytes, err := os.ReadFile(filepath.Join(dataDir, filepath.FromSlash(autoCopy.FilePath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(autoBytes) != autoContent {
+		t.Fatalf("auto attachment copy content mismatch: %q", string(autoBytes))
+	}
+
+	readRec := httptest.NewRecorder()
+	srv.handleAttachmentDetail(readRec, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/attachments/%d", autoCopy.ID), nil))
+	if readRec.Code != http.StatusOK {
+		t.Fatalf("expected copied auto attachment read 200, got %d body=%s", readRec.Code, readRec.Body.String())
+	}
+	var readPayload struct {
+		Data struct {
+			Content string `json:"content"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(readRec.Body.Bytes(), &readPayload); err != nil {
+		t.Fatal(err)
+	}
+	if readPayload.Data.Content != autoContent {
+		t.Fatalf("copied auto attachment content got %q, want %q", readPayload.Data.Content, autoContent)
+	}
+	if !fileExists(filepath.Join(dataDir, filepath.FromSlash(parentManualRel))) || !fileExists(filepath.Join(dataDir, filepath.FromSlash(parentAutoRel))) {
+		t.Fatalf("parent attachment files should remain after duplicate")
+	}
 }
 
 // TestNotesBatchTypeAndTagsHandlers locks batch/type and batch/tags, previously

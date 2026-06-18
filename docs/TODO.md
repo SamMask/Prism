@@ -15,6 +15,9 @@
 - Windows portable current truth：`Prism.exe` 直接進 desktop shell，預設資料在 exe 同層 `PrismData\`；`--data-dir` / `PRISM_GO_DATA_DIR` 只作進階/debug override。runtime 不顯示 first-run data-dir selector、不寫 `PrismPortable.json`、不建立/修補桌面捷徑。Installer/updater/WebView2 bootstrap/Start Menu/uninstall/update 仍 deferred。
 - 2026-06-18 Desktop Shell post-package manual acceptance 已由使用者確認：將最新 portable 複製到其他資料夾執行後，Windows Defender 未再阻擋，雙擊 `Prism.exe` 可正常開啟，簡化後的 `PrismData\` 同層資料路線成立。
 - 新使用者前端預設值（無 localStorage 時）已收斂為淺色 / 暖灰 / 典雅金、卡片開啟預覽模式、自動載入更多開啟；語系不再自動偵測 OS/browser，預設 `en`，使用者可到「設定 > 外觀」手動切換繁中 / 英 / 日 / 韓並保存至 `localStorage`；閱讀模式仍保留元件但不再是卡片開啟模式選項。
+- 2026-06-18 Variant tracking panel gate 已完成：`GET /api/notes?parent_id=<id>` 可查 direct child variants，note list/detail 回傳 `variants_count`；ReadingView 顯示 parent link + children variants 並可跳轉，NoteCard 顯示 variants count / quick link。未新增版本樹、diff/merge、協作語義、schema migration 或大型卡片樹狀 UI。
+- 2026-06-18 Variant tracking panel 已完成 Pi delivery：依 `DEPLOY-PI.md` 透過 Go primary artifact cutover 推到 `PI5Mask24`，`prism-go-primary.service` active、legacy `prism.service` inactive、migration status v16 clean；live API 與 headless Chrome CDP smoke 已驗 `GET /api/notes?parent_id=<id>`、card variants count、ReadingView parent/child 跳轉與 console error=0。
+- 2026-06-18 Variant duplicate attachment repair 已完成 local + Pi delivery：`POST /api/notes/<id>/duplicate` / as-variant 會複製既有文字附件與長內容自動分離附件，子 note 取得自己的 `Note_Attachments` row 與實體檔；ReadingView 會 lazy-load `is_auto_extracted` 附件全文。Live API smoke 與 Playwright UI smoke 已驗 child variant 可讀完整附件全文並清理 temp notes/files。這不是新版本樹、diff/merge 或 note-list partial-load API。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
@@ -29,6 +32,10 @@ Current truth 仍以本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/A
 Desktop Shell 目前沒有 active construction item。Phase 0-6、post-package follow-up、manual acceptance 與 release baseline 已歸檔到 `docs/development-history/desktop-portable-release-handoff-20260618.md`。
 
 下一個 desktop/packaging 入口只在使用者明確需要 installer/updater 類功能時成立，包括 Start Menu、桌面捷徑、指定資料夾 UI、WebView2 bootstrap、uninstall 或 update flow。啟動前必須另開 decision gate；不得直接引入 NSIS/WiX/MSIX、auto updater、shortcut automation 或 hidden PowerShell。
+
+### Pi Delivery Follow-up
+
+Variant tracking panel 的 Pi delivery 已於 2026-06-18 完成。後續若再有 local verified UX/API gate，仍需另開 Pi delivery gate：先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程部署到 `PI5Mask24`，並驗證 `https://prism.local` 的 service status、migration status、changed API endpoint 與對應前端行為。
 
 ### Windows Desktop vs Pi Deployment 差異表
 
@@ -56,12 +63,58 @@ Desktop Shell 目前沒有 active construction item。Phase 0-6、post-package f
 
 ### Supplemental UX Backlog
 
-以下補充功能目前只是 low-priority 候選；先記錄方便日後想做時 promote。不得因列在此處就自動施工、擴 schema、改 API contract 或引入大型 UI 重構。
+以下補充功能目前只是 low-priority 候選；先記錄方便日後想做時 promote。不得因列在此處就自動施工、擴 schema、改 API contract 或引入大型 UI 重構。Promote 時一次只拉一個最小 gate；若該 gate 需要 API/schema contract，先補 `docs/API_REFERENCE.md` / targeted tests，再做 UI。
 
-- [ ] **VARIANT-PANEL-CANDIDATE-01 Variant tracking panel**：在卡片或閱讀頁補一個輕量變體追蹤面板，顯示 parent link 與 children variants，並可直接跳轉到相關 note。第一版優先沿用既有 `parent_id` / `parent_title` / duplicate-as-variant 行為；若 children variants 目前缺少 API 支援，先做 contract / API 最小補點，不新增複雜版本樹、diff engine 或協作語義。
-- [ ] **BULK-MARKDOWN-TXT-IMPORT-CANDIDATE-01 Batch Markdown/txt import**：允許使用者一次匯入多個 `.md` / `.txt` 檔成為 notes。第一版只做本機檔案批量選取、逐檔建立 note、基本標題推導與結果摘要；不做目錄遞迴 watcher、不做自動分類/AI 摘要、不覆蓋既有 notes、不新增同步機制。
-- [ ] **IMAGE-VIEWER-CANDIDATE-01 Unified image lightbox**：在閱讀頁、編輯預覽與可行的卡片封面統一圖片開啟體驗；點擊圖片在 app 內開 lightbox，支援關閉、上一張/下一張、複製路徑、開原圖。第一版不改 upload/storage/cleanup API，不改圖片儲存模式。
-- [ ] **READING-WORKSPACE-CANDIDATE-01 Reading list workspace**：允許使用者把多張卡片加入暫存閱讀清單，閱讀時可在清單內快速切換，不必關閉上一張 note。第一版提供閱讀清單位置設定（上方分頁列 / 右側側欄），支援加入、切換、移除單張、清空全部，並在切換前後保留每張 note 的閱讀捲動位置。狀態先保存在前端 session/localStorage，不新增 DB schema、不改 note API、不做 native 多視窗、不做雙欄比對或 diff engine。
+#### VARIANT-PANEL-CANDIDATE-01 Variant tracking panel
+
+目標：在卡片或閱讀頁補一個輕量變體追蹤面板，顯示 parent link 與 children variants，並可直接跳轉到相關 note。
+
+- [x] **01A Children lookup contract**（2026-06-18 完成）：沿用既有 `Notes.parent_id`、`parent_title`、`POST /api/notes/<id>/duplicate` as-variant 行為；新增最小 read-only `GET /api/notes?parent_id=<id>` direct children lookup，note list/detail 回傳 `variants_count`。已同步 `docs/API_REFERENCE.md`、`docs/CONTRACTS.md` 與 targeted Go/API regression；未新增版本樹、diff engine、merge、collaboration semantics。
+- [x] **01B Reading view panel**（2026-06-18 完成）：`ReadingView` 顯示 parent link + children variants list；點擊 parent/child 會載入相關 note 並保留現有 modal workflow。children lookup 失敗時顯示明確 unavailable 狀態，不假造 children。
+- [x] **01C Card affordance polish**（2026-06-18 完成）：`NoteCard` 保留既有 lineage badge，新增 variants count 與 action menu quick link；未把卡片改成樹狀列表，也未改卡片預設 preview 開啟習慣。
+- [x] **01D Attachment preservation repair**（2026-06-18 完成）：variant duplicate 複製 `Note_Attachments` rows 與實體 `.md/.txt/.markdown` 檔，長內容自動分離檔改寫到 child note 自己的 `docs/notes/note_<child_id>.md`；ReadingView 打開 note 時 lazy-load `is_auto_extracted` 附件全文。未改 DB schema，未新增 note-list partial-load API。
+- 驗收：Loop gate 已跑 `.loop/verify-gate.ps1`；targeted Go/API、frontend build、API smoke 與 headless Chrome CDP / Playwright rendered smoke 已覆蓋 parent note、variant child lookup、無 child count、卡片 variants count、ReadingView parent/child 跳轉、variant duplicate attachment preservation、ReadingView auto-extracted attachment lazy-load 與 console error=0。Pi delivery 已跑 `scripts/go_primary_pi_live_ops.ps1 -Mode Cutover`，live `https://prism.local` 驗證同一 variant contract、child auto attachment full-content read、ReadingView child variant full-content render，temp validation notes/files 已清理。
+
+#### NOTE-LIST-LIGHTWEIGHT-CANDIDATE-01 Partial note payloads for Home/list
+
+目標：降低 Home / 卡片列表載入大量長文時的記憶體與 network 壓力；列表只拿可渲染卡片需要的 preview/detail metadata，打開 ReadingView 或 Editor 才讀完整內容或 lazy-load 自動分離附件。
+
+- [ ] **01A Read contract inventory**：盤點 `GET /api/notes` 目前哪些 frontend flow 依賴完整 `content`（卡片預覽、複製內容、搜尋結果、匯出入口、ReadingView 初始 note、Editor open）。先決定相容策略：保留 `content` 但後端截斷、或新增 `content_preview` / `content_truncated` 並讓 frontend 改用新欄位。
+- [ ] **01B Backend list payload gate**：若採新欄位，`GET /api/notes` list 回 `content_preview` 與 `content_truncated`，`GET /api/notes/<id>` 維持完整 note detail；搜尋仍以 DB/attachment body contract 執行，不因 list preview 截斷而漏搜。
+- [ ] **01C Frontend lazy detail gate**：Home card 使用 preview；ReadingView / Editor 開啟時一律呼叫 detail，再依 auto-extracted attachment lazy-load 完整內容。複製內容若在卡片上觸發，必須先取 detail 或明確只複製 preview，不能靜默複製截斷內容。
+- 不做：新的快取層、server-side UI state、全文預載、背景同步、schema migration、改附件儲存根目錄。
+- 驗收：大量長文 fixtures 下列表 payload 明顯變小；ReadingView / Editor 仍可看到完整內容；搜尋命中不退化；frontend build + browser flow 驗證卡片、閱讀、編輯與複製行為。
+
+#### BULK-MARKDOWN-TXT-IMPORT-CANDIDATE-01 Batch Markdown/txt import
+
+目標：允許使用者一次選多個 `.md` / `.txt` 檔建立 notes，回報逐檔結果摘要。
+
+- [ ] **01A Import path lock**：先確認 current runtime：`POST /api/notes/import/md` 只接受單一 `.md`；frontend client 目前沒有 wrapper。第一版不新增真正 batch endpoint：`.md` 由 frontend 逐檔呼叫單檔 Markdown import；`.txt` 由 frontend 讀檔後走既有 `POST /api/notes`，標題用檔名 stem，content 用純文字內容。
+- [ ] **01B Settings import UI**：在現有 backup/import 設定區加多檔 selector、檔案清單、匯入按鈕與結果摘要（created / skipped / failed）。匯入逐檔執行；單檔失敗不回滾已成功 notes，但要顯示失敗檔名與後端錯誤。
+- [ ] **01C Contract/docs cleanup**：若 `.md` import wrapper 或 `.txt` create-note path 成為正式 UI，更新 `docs/API_REFERENCE.md` 的 frontend usage note；不要把它寫成 server-side batch API。
+- 不做：目錄遞迴 watcher、自動分類/AI 摘要、覆蓋既有 notes、同步機制、background daemon、批量 DB transaction。
+- 驗收：Markdown H1 title、frontmatter category/tags、`.txt` filename title、混合成功/失敗摘要；frontend typecheck/build；若只改 frontend，不需要 Go schema/migration 測試。
+
+#### IMAGE-VIEWER-CANDIDATE-01 Unified image lightbox
+
+目標：閱讀頁、編輯預覽與可行的卡片封面使用同一個 app 內圖片 lightbox。
+
+- [ ] **01A Shared lightbox component**：新增純前端 `ImageLightbox`，支援 close、prev/next、copy path、open original；圖片清單由呼叫端傳入，不碰 upload/storage/cleanup API。
+- [ ] **01B Reading view integration**：從 `ReadingView` cover image + rendered markdown images 收集圖片；點擊圖片開 lightbox，鍵盤 Esc/左右鍵可操作。
+- [ ] **01C Editor preview/card integration**：把 `EditablePreview` 圖片與 `NoteCard` cover image 接上同一 lightbox；若卡片點擊衝突，先只讓 cover image 的明確 icon/button 開啟，不改整張卡片開啟 note 的習慣。
+- 不做：改圖片儲存模式、改 upload/delete/cleanup API、重寫 markdown renderer、建立 gallery DB、OCR/AI 圖片描述。
+- 驗收：閱讀頁 markdown 多圖 prev/next、cover-only note、無圖 note、editor preview 圖片；frontend typecheck/build + browser console 無新增錯誤。
+
+#### READING-WORKSPACE-CANDIDATE-01 Reading list workspace
+
+目標：讓使用者把多張卡片加入暫存閱讀清單，閱讀時快速切換，不必關閉上一張 note。
+
+- [ ] **01A State contract**：先做純前端 state，key 建議 `prism.readingWorkspace.v1`；保存 note ids、active id、layout preference（tabs/sidebar）與每張 note 的 scroll position。狀態限 session/localStorage，不新增 DB schema、不改 note API。
+- [ ] **01B Reading panel switcher**：在 `ReadingView` 加 tabs 或右側清單之一作為第一版預設（先用一種即可，另一種作為 appearance setting 後續再補）；支援加入目前 note、切換、移除單張、清空全部。
+- [ ] **01C Home/card entry points**：在 `NoteCard` action menu 加「加入閱讀清單」；若使用者直接開單張閱讀，維持現有行為，不強迫建立 workspace。
+- [ ] **01D Scroll restore**：切換 note 前記錄目前閱讀容器 scrollTop，切回同 note 後 restore；若 note 內容重新載入失敗，保留清單但顯示可移除狀態。
+- 不做：native 多視窗、雙欄比對、diff engine、server persistence、跨裝置同步、改 `GET /api/notes` contract。
+- 驗收：加入多張、切換、移除、清空、reload 後 localStorage restore、scroll restore；frontend typecheck/build + browser flow 驗證。
 
 ### Future Branch Candidates
 

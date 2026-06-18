@@ -136,7 +136,9 @@ def test_new_user_frontend_defaults_are_light_warm_elegant_preview_autoload():
     assert "localStorage.getItem('autoLoadMore') !== 'false'" in home
     assert "localStorage.getItem('cardOpenMode') === 'edit' ? 'edit' : 'preview'" in note_card
     assert "openEditor(note, { preview: true })" in note_card
-    assert "openReading(note)" not in note_card
+    card_click_handler = note_card.split("const handleClick = () => {", 1)[1].split("const handleContextMenu", 1)[0]
+    assert "openReading" not in card_click_handler
+    assert "openReading(note)" in note_card
 
 
 def test_windows_dashboard_hides_cpu_temperature_even_if_value_exists():

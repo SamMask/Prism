@@ -59,15 +59,11 @@ def test_desktop_shell_phase1_3_docs_are_closed_without_package_scope():
     handoff = _read(HANDOFF_PATH)
     contracts = _read(CONTRACTS_PATH)
 
-    assert "#### Phase 1 — WebView2 spike（2026-06-17 完成）" in todo
-    assert "#### Phase 2 — Local runtime host integration（2026-06-17 完成）" in todo
-    assert "#### Phase 3 — Windows desktop UX hardening（2026-06-17 完成）" in todo
-    assert "下一個可施工入口是 Desktop Shell post-package manual acceptance" in todo
-    assert "Phase 4 — Portable Windows package（2026-06-17 完成）" in todo
-    assert "Phase 5 — Installer / updater decision gate（2026-06-17 完成）" in todo
-    assert "不做 MSI/NSIS/WiX installer" in todo
-    assert "Phase 1-3 完成" in handoff
-    assert "Phase 4-6 完成" in handoff
+    assert "Desktop Shell Phase 0-6、post-package follow-up 與 manual acceptance 已完成" in todo
+    assert "Desktop Shell 目前沒有 active construction item" in todo
+    assert "installer / updater 只有在明確需要" in handoff
+    assert "Desktop Shell / Windows portable baseline 已完成並歸檔" in handoff
+    assert "desktop-portable-release-handoff-20260618.md" in handoff
     assert "CONTRACT-DESKTOP-SHELL-RUNTIME-HOST" in contracts
     assert "CONTRACT-DESKTOP-SHELL-UX-HARDENING" in contracts
 

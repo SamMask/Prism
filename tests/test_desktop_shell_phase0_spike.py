@@ -64,14 +64,11 @@ def test_desktop_shell_phase0_docs_close_current_entry_without_expanding_scope()
     todo = _read(TODO_PATH)
     handoff = _read(HANDOFF_PATH)
 
-    assert "[x] 建立獨立 `desktop-spike/`" in todo
-    assert "[x] 僅使用 `golang.org/x/sys/windows` syscall" in todo
-    assert "[x] 空 Win32 視窗 + tray icon" in todo
-    assert "[x] 關閉視窗預設直接結束行程" in todo
-    assert "[x] 驗收：tray 選單有反應、關視窗正常退出、message loop 不卡住" in todo
-    assert "#### Phase 1 — WebView2 spike" in todo
-    assert "Phase 0 完成" in handoff
-    assert "Phase 1" in handoff
+    assert "Desktop Shell Phase 0-6、post-package follow-up 與 manual acceptance 已完成" in todo
+    assert "docs/development-history/desktop-portable-release-handoff-20260618.md" in todo
+    assert "Desktop Shell 目前沒有 active construction item" in todo
+    assert "Desktop Shell / Windows portable baseline 已完成並歸檔" in handoff
+    assert "desktop-portable-release-handoff-20260618.md" in handoff
 
 
 def test_desktop_shell_phase0_go_build_and_self_test():

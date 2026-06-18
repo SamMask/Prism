@@ -1,6 +1,6 @@
 import { Note, api } from '../services/api'
 import { useAppStore, type ViewMode } from '../stores/appStore'
-import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download } from 'lucide-react'
+import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download, BookOpen } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { IconButton } from './ui'
 import { toast } from './ui/Toast'
@@ -14,7 +14,7 @@ interface NoteCardProps {
 }
 
 export function NoteCard({ note, viewMode }: NoteCardProps) {
-  const { openEditor, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
+  const { openEditor, openReading, selectedNoteIds, toggleNoteSelection, deleteNote } = useAppStore()
   const { locale, t } = useTranslation()
   const [showMenu, setShowMenu] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -43,6 +43,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
   const coverImage = note.cover_image || extractFirstImage(note.content)
   const parentTitle = note.parent_title?.trim()
+  const variantCount = note.variants_count ?? 0
   const lineageLabel = parentTitle ? t('noteCard.lineageFrom', { title: parentTitle }) : ''
   const categoryName = getCategoryDisplayName(note.category_name || note.type, t)
 
@@ -179,6 +180,16 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     setShowMenu(false)
   }
 
+  const handleOpenReading = () => {
+    openReading(note)
+    setShowMenu(false)
+  }
+
+  const handleOpenVariants = () => {
+    openReading(note)
+    setShowMenu(false)
+  }
+
   if (viewMode === 'compact') {
     return (
       <div
@@ -209,6 +220,15 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             <span className="hidden shrink-0 items-center gap-1 text-xs text-accent sm:inline-flex" title={lineageLabel}>
               <GitBranch size={12} />
               <span className="max-w-[120px] truncate">{parentTitle}</span>
+            </span>
+          )}
+          {variantCount > 0 && (
+            <span
+              className="hidden shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary-light sm:inline-flex"
+              data-testid={`note-card-variants-count-${note.id}`}
+            >
+              <GitBranch size={12} />
+              {t('noteCard.variantCount', { count: variantCount })}
             </span>
           )}
           <span className="hidden min-w-0 flex-1 truncate text-xs text-text-muted md:block">
@@ -273,6 +293,15 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             <div className="mt-1 flex items-center gap-1.5 text-xs text-accent" title={lineageLabel}>
               <GitBranch size={12} />
               <span className="truncate">{lineageLabel}</span>
+            </div>
+          )}
+          {variantCount > 0 && (
+            <div
+              className="mt-1 flex items-center gap-1.5 text-xs text-primary-light"
+              data-testid={`note-card-variants-count-${note.id}`}
+            >
+              <GitBranch size={12} />
+              <span className="truncate">{t('noteCard.variantCount', { count: variantCount })}</span>
             </div>
           )}
         </div>
@@ -390,6 +419,17 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             </span>
           </div>
         )}
+        {variantCount > 0 && (
+          <div
+            className="flex items-center gap-1.5 mt-2 text-xs text-primary-light"
+            data-testid={`note-card-variants-count-${note.id}`}
+          >
+            <GitBranch size={12} />
+            <span className="truncate">
+              {t('noteCard.variantCount', { count: variantCount })}
+            </span>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-between mt-3 pt-3 border-t border-border-subtle">
@@ -416,6 +456,14 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
                      bg-bg-elevated border border-border-default rounded-lg
                      shadow-xl shadow-black/30 py-1 min-w-[140px]"
         >
+          <button
+            onClick={handleOpenReading}
+            className="w-full flex items-center gap-2 px-3 py-2
+                       text-sm text-text-secondary
+                       hover:bg-bg-hover hover:text-text-primary"
+          >
+            <BookOpen size={14} /> {t('noteCard.openReading')}
+          </button>
           <button 
             onClick={() => {
               openEditor(note)
@@ -451,6 +499,16 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           >
             <GitBranch size={14} /> {t('noteCard.createVariant')}
           </button>
+          {variantCount > 0 && (
+            <button
+              onClick={handleOpenVariants}
+              className="w-full flex items-center gap-2 px-3 py-2
+                         text-sm text-text-secondary
+                         hover:bg-bg-hover hover:text-text-primary"
+            >
+              <GitBranch size={14} /> {t('noteCard.viewVariants')}
+            </button>
+          )}
           <button 
             onClick={handleToggleArchive}
             className={`w-full flex items-center gap-2 px-3 py-2

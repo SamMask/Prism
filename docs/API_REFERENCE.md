@@ -82,6 +82,7 @@
 | `q` | string | 卡片搜尋關鍵字，後端會截斷到 200 字；搜尋範圍包含標題、內文、備註、附件標題 / 路徑 / 文字內容、標籤 |
 | `type` | string | 分類名稱相容參數；不是 DB 欄位 |
 | `category_id` | int | 分類 ID 過濾；前端應優先使用此欄位，避免分類改名造成 `type` 字串漂移 |
+| `parent_id` | int | 只列出指定 note 的直接 child variants；用於 variant tracking panel |
 | `tags` | string | Tag ID 逗號分隔，例如 `1,2,3` |
 | `tag_mode` | string | `AND` 或 `OR`，預設 `AND` |
 | `include_archived` | bool | 是否包含封存筆記，預設 `false` |
@@ -115,7 +116,8 @@
         "https://example.com"
       ],
       "parent_id": null,
-      "parent_title": null
+      "parent_title": null,
+      "variants_count": 0
     }
   ],
   "pagination": {
@@ -132,6 +134,7 @@
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
 - 列表回應包含 `parent_id` / `parent_title`，供 Home 卡片直接顯示 variant 上一代來源；非 variant 為 `null`。
+- `parent_id` query filter 只回直接 child variants，不回整棵樹；列表與詳情回應的 `variants_count` 是該 note 的直接 child variant 數量。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。
 
 ### GET `/api/notes/<note_id>`
@@ -162,7 +165,8 @@
       "https://example.com"
     ],
     "parent_id": null,
-    "parent_title": null
+    "parent_title": null,
+    "variants_count": 0
   }
 }
 ```
@@ -292,6 +296,12 @@
   }
 }
 ```
+
+#### 規則
+
+- 複製會保留原 note 的 tags、source URLs 與文字附件。
+- 附件會複製成新 note 自己的 `Note_Attachments` row 與實體檔，不共用父 note 的 `file_path`。
+- 若原 note 已做長內容自動分離，variant 會得到自己的 `docs/notes/note_<child_id>.md` 自動分離附件；閱讀模式會在打開該 note 時 lazy-load 這份完整內容。
 
 ### PUT `/api/notes/reorder`
 
@@ -959,7 +969,7 @@ Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism
 - `GET /api/system/go-read-routing` 是 legacy Phase 19 proof endpoint，已於 T053 隨 Python source 移除，不存在於任何 runtime。
 - `GET /api/system/migration-status` 已補回後端路由。
 - `DELETE /api/categories/<id>` 使用 `target_category_id`，不再使用舊的 `target_category` / `target_name`。
-- `GET /api/notes` 支援 `archived`、`include_archived`、`pinned_only`、`category_id`。
+- `GET /api/notes` 支援 `archived`、`include_archived`、`pinned_only`、`category_id`、`parent_id`。
 
 ---
 

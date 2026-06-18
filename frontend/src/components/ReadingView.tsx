@@ -35,6 +35,9 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   const { openEditor, fetchNotes } = useAppStore()
   const { locale, t } = useTranslation()
   const [localNote, setLocalNote] = useState(note)
+  const [childVariants, setChildVariants] = useState<Note[]>([])
+  const [isVariantsLoading, setIsVariantsLoading] = useState(false)
+  const [isAutoContentLoading, setIsAutoContentLoading] = useState(false)
   const coverImage = localNote.cover_image || extractFirstImage(localNote.content || '')
   const renderedContent = useMemo(() => renderMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
   const updatedAt = new Date(localNote.updated_at).toLocaleString(locale)
@@ -46,6 +49,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
 
   useEffect(() => {
     let isMounted = true
+    setLocalNote(note)
     api.getNote(note.id)
       .then((detail) => {
         if (isMounted) setLocalNote(detail)
@@ -59,6 +63,55 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     }
   }, [note.id])
 
+  useEffect(() => {
+    let isMounted = true
+    setIsAutoContentLoading(true)
+    api.getNoteAttachments(localNote.id)
+      .then(async (attachments) => {
+        const autoExtracted = attachments.find((attachment) => attachment.is_auto_extracted)
+        if (!autoExtracted) return
+        const { content } = await api.getAttachmentContent(autoExtracted.id)
+        if (!isMounted) return
+        setLocalNote((current) => (
+          current.id === localNote.id ? { ...current, content } : current
+        ))
+      })
+      .catch(() => {
+        if (isMounted) toast.error(t('editor.attachmentsToast.loadFullFailed'))
+      })
+      .finally(() => {
+        if (isMounted) setIsAutoContentLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [localNote.id, t])
+
+  useEffect(() => {
+    let isMounted = true
+    setIsVariantsLoading(true)
+    api.getNotes({
+      parent_id: localNote.id,
+      per_page: 100,
+      include_archived: true,
+      sort: 'updated',
+    })
+      .then((response) => {
+        if (isMounted) setChildVariants(response.notes)
+      })
+      .catch(() => {
+        if (isMounted) setChildVariants([])
+      })
+      .finally(() => {
+        if (isMounted) setIsVariantsLoading(false)
+      })
+
+    return () => {
+      isMounted = false
+    }
+  }, [localNote.id])
+
   const handleEdit = () => {
     onClose()
     openEditor(localNote)
@@ -70,6 +123,16 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
       toast.success(t('noteCard.copied'))
     } catch {
       toast.error(t('noteCard.copyFailed'))
+    }
+  }
+
+  const handleOpenRelatedNote = async (noteId: number) => {
+    if (noteId === localNote.id) return
+    try {
+      const detail = await api.getNote(noteId)
+      setLocalNote(detail)
+    } catch {
+      toast.error(t('reading.openRelatedFailed'))
     }
   }
 
@@ -116,13 +179,18 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               <span>{categoryName}</span>
               <span>·</span>
               <span>{updatedAt}</span>
-              {localNote.parent_title && (
+              {localNote.parent_id && localNote.parent_title && (
                 <>
                   <span>·</span>
-                  <span className="inline-flex items-center gap-1 text-accent">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRelatedNote(localNote.parent_id!)}
+                    className="inline-flex items-center gap-1 text-accent transition-colors hover:text-primary-light"
+                    title={t('reading.parentNote')}
+                  >
                     <GitBranch size={12} />
                     {localNote.parent_title}
-                  </span>
+                  </button>
                 </>
               )}
             </div>
@@ -162,6 +230,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
             )}
             <div
               className="prose prose-invert max-w-none text-text-primary prose-headings:text-text-primary prose-a:text-primary prose-strong:text-text-primary prose-code:rounded prose-code:bg-bg-elevated prose-code:px-1 prose-img:rounded-lg"
+              aria-busy={isAutoContentLoading}
               dangerouslySetInnerHTML={{ __html: renderedContent }}
             />
             {localNote.remarks && (
@@ -201,6 +270,58 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
               <Archive size={16} />
               {localNote.is_archived ? t('reading.unarchive') : t('reading.archive')}
             </button>
+
+            {(localNote.parent_id || childVariants.length > 0 || (localNote.variants_count ?? 0) > 0 || isVariantsLoading) && (
+              <section className="mt-2 border-t border-border-subtle pt-4" data-testid="reading-variant-panel">
+                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium uppercase tracking-wider text-text-muted">
+                  <GitBranch size={13} />
+                  {t('reading.variantsTitle')}
+                </div>
+
+                {localNote.parent_id && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenRelatedNote(localNote.parent_id!)}
+                    className="mb-2 flex w-full min-w-0 items-center gap-2 rounded-md border border-border-subtle px-3 py-2 text-left text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
+                    data-testid="reading-parent-link"
+                  >
+                    <GitBranch size={14} className="shrink-0 text-accent" />
+                    <span className="min-w-0 flex-1 truncate">
+                      {localNote.parent_title || t('reading.parentNote')}
+                    </span>
+                  </button>
+                )}
+
+                <div className="space-y-2">
+                  {isVariantsLoading && (
+                    <div className="rounded-md border border-border-subtle px-3 py-2 text-sm text-text-muted">
+                      {t('reading.variantsLoading')}
+                    </div>
+                  )}
+                  {!isVariantsLoading && childVariants.length === 0 && (localNote.variants_count ?? 0) > 0 && (
+                    <div className="rounded-md border border-border-subtle px-3 py-2 text-sm text-text-muted">
+                      {t('reading.variantsUnavailable')}
+                    </div>
+                  )}
+                  {!isVariantsLoading && childVariants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => handleOpenRelatedNote(variant.id)}
+                      className="flex w-full min-w-0 flex-col rounded-md border border-border-subtle px-3 py-2 text-left transition-colors hover:bg-bg-hover"
+                      data-testid={`reading-variant-child-${variant.id}`}
+                    >
+                      <span className="truncate text-sm text-text-primary">
+                        {variant.title || t('reading.untitled')}
+                      </span>
+                      <span className="mt-0.5 text-xs text-text-muted">
+                        {new Date(variant.updated_at).toLocaleDateString(locale)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
           </aside>
         </div>
       </article>

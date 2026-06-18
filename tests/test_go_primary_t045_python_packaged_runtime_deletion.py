@@ -145,7 +145,7 @@ def test_t045_docs_mark_go_primary_product_startup_and_t046_source_followup():
     assert "prism-go-primary.service" in deploy_pi
     assert "linux-venv" not in deploy_pi
     assert "ExecStart=/home/mask070924/prism/linux-venv/bin/python app.py" not in deploy_pi
-    assert "Python Flask backend source 已於 T053 移除" in readme
+    assert "The Python Flask backend source was removed in T053" in readme
     assert "Go primary" in docs_readme
     assert "Go primary deployment" in deployment
     assert "Python backend source 已於 T053 移除" in contributing

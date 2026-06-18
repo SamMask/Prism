@@ -23,6 +23,7 @@ export interface Note {
   // Phase 3.7: Card Lineage
   parent_id?: number;
   parent_title?: string;
+  variants_count?: number;
 }
 
 export interface Category {
@@ -69,6 +70,7 @@ interface GetNotesParams {
   search?: string;
   type?: string;
   category_id?: number;
+  parent_id?: number;
   tags?: string; // Tag IDs, comma-separated (e.g., "1,2,3")
   tag_mode?: "AND" | "OR";
   sort?: "updated" | "created" | "custom"; // Backend sort options
@@ -240,6 +242,7 @@ export const api = {
       q: params.search,
       type: params.type,
       category_id: params.category_id,
+      parent_id: params.parent_id,
       tags: params.tags, // Backend expects comma-separated tag IDs
       tag_mode: params.tag_mode,
       sort: params.sort, // 'updated', 'created', or 'custom'

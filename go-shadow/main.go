@@ -7048,7 +7048,8 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 		       n.remarks, n.cover_image, COALESCE(n.cover_position, 'top') AS cover_position,
 		       COALESCE(n.editor_layout, 'single') AS editor_layout,
 		       COALESCE(n.is_pinned, 0) AS is_pinned, COALESCE(n.is_archived, 0) AS is_archived,
-		       n.category_id, n.created_at, n.updated_at, n.parent_id, p.title AS parent_title
+		       n.category_id, n.created_at, n.updated_at, n.parent_id, p.title AS parent_title,
+		       (SELECT COUNT(*) FROM Notes child WHERE child.parent_id = n.id) AS variants_count
 		FROM Notes n
 		LEFT JOIN Categories c ON n.category_id = c.id
 		LEFT JOIN Notes p ON n.parent_id = p.id
@@ -7284,6 +7285,10 @@ func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
 	if categoryID := r.URL.Query().Get("category_id"); categoryID != "" {
 		clauses = append(clauses, "n.category_id = ?")
 		args = append(args, categoryID)
+	}
+	if parentID := r.URL.Query().Get("parent_id"); parentID != "" {
+		clauses = append(clauses, "n.parent_id = ?")
+		args = append(args, parentID)
 	}
 	if noteType := r.URL.Query().Get("type"); noteType != "" && !strings.EqualFold(noteType, "all") {
 		var categoryID int
@@ -7633,11 +7638,11 @@ type noteScanner interface {
 }
 
 func (s *server) scanNoteRow(row noteScanner) (response, error) {
-	var id, isPinned, isArchived int
+	var id, isPinned, isArchived, variantsCount int
 	var title, content, categoryName, coverPosition, editorLayout, createdAt, updatedAt sql.NullString
 	var remarks, coverImage, parentTitle sql.NullString
 	var categoryID, parentID sql.NullInt64
-	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt, &parentID, &parentTitle); err != nil {
+	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt, &parentID, &parentTitle, &variantsCount); err != nil {
 		return nil, err
 	}
 	tags, err := s.noteTags(id)
@@ -7657,6 +7662,7 @@ func (s *server) scanNoteRow(row noteScanner) (response, error) {
 		"category_id": nullableIntOrNil(categoryID), "created_at": nullableString(createdAt),
 		"updated_at": nullableString(updatedAt), "tags": tags, "urls": urls,
 		"parent_id": nullableIntOrNil(parentID), "parent_title": nullableStringOrNil(parentTitle),
+		"variants_count": variantsCount,
 	}
 	return note, nil
 }
@@ -8616,17 +8622,18 @@ func (s *server) handleNoteDetail(w http.ResponseWriter, r *http.Request) {
 		       n.remarks, n.cover_image, COALESCE(n.cover_position, 'top') AS cover_position,
 		       COALESCE(n.editor_layout, 'single') AS editor_layout,
 		       COALESCE(n.is_pinned, 0) AS is_pinned, COALESCE(n.is_archived, 0) AS is_archived,
-		       n.category_id, n.created_at, n.updated_at, n.prompt_params, n.parent_id, p.title AS parent_title
+		       n.category_id, n.created_at, n.updated_at, n.prompt_params, n.parent_id, p.title AS parent_title,
+		       (SELECT COUNT(*) FROM Notes child WHERE child.parent_id = n.id) AS variants_count
 		FROM Notes n
 		LEFT JOIN Categories c ON n.category_id = c.id
 		LEFT JOIN Notes p ON n.parent_id = p.id
 		WHERE n.id = ?`, noteID)
 
-	var id, isPinned, isArchived int
+	var id, isPinned, isArchived, variantsCount int
 	var title, content, categoryName, coverPosition, editorLayout, createdAt, updatedAt sql.NullString
 	var remarks, coverImage, promptParams, parentTitle sql.NullString
 	var categoryID, parentID sql.NullInt64
-	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt, &promptParams, &parentID, &parentTitle); err != nil {
+	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt, &promptParams, &parentID, &parentTitle, &variantsCount); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "Note not found")
 			return
@@ -8653,6 +8660,7 @@ func (s *server) handleNoteDetail(w http.ResponseWriter, r *http.Request) {
 		"prompt_params": parseJSONOrNil(promptParams), "created_at": nullableString(createdAt),
 		"updated_at": nullableString(updatedAt), "tags": tags, "urls": urls,
 		"parent_id": nullableIntOrNil(parentID), "parent_title": nullableStringOrNil(parentTitle),
+		"variants_count": variantsCount,
 	}})
 }
 
@@ -8950,6 +8958,164 @@ func resolveAutoExtractedNotePath(dataDir, relativePath string) (string, bool) {
 	return resolved, true
 }
 
+func (s *server) duplicateNoteAttachments(tx *sql.Tx, sourceNoteID int, targetNoteID int64, targetTitle string) ([]string, error) {
+	rows, err := tx.Query(`
+		SELECT id, file_path, file_type, title, is_auto_extracted
+		FROM Note_Attachments
+		WHERE note_id = ?
+		ORDER BY id`, sourceNoteID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	createdFiles := []string{}
+	cleanupCreated := func() {
+		for _, filePath := range createdFiles {
+			_ = os.Remove(filePath)
+		}
+	}
+
+	for rows.Next() {
+		var attachmentID int64
+		var filePath, fileType, title sql.NullString
+		var isAutoExtracted sql.NullInt64
+		if err := rows.Scan(&attachmentID, &filePath, &fileType, &title, &isAutoExtracted); err != nil {
+			cleanupCreated()
+			return nil, err
+		}
+
+		srcRel := strings.TrimSpace(strings.ReplaceAll(nullableString(filePath), "\\", "/"))
+		cleanedRel := path.Clean(srcRel)
+		if cleanedRel == "." || cleanedRel == ".." || strings.HasPrefix(cleanedRel, "../") {
+			cleanupCreated()
+			return nil, fmt.Errorf("unsafe attachment path: %s", srcRel)
+		}
+		normalizedType := strings.TrimPrefix(strings.ToLower(strings.TrimSpace(nullableString(fileType))), ".")
+		if normalizedType == "" {
+			normalizedType = strings.TrimPrefix(strings.ToLower(path.Ext(cleanedRel)), ".")
+		}
+
+		var srcAbs string
+		var destAbs string
+		var destRel string
+		autoExtracted := isAutoExtracted.Valid && isAutoExtracted.Int64 != 0
+		if autoExtracted || strings.HasPrefix(cleanedRel, "docs/notes/") {
+			var ok bool
+			srcAbs, ok = resolveAutoExtractedNotePath(s.runtime.dataDir, cleanedRel)
+			if !ok {
+				cleanupCreated()
+				return nil, fmt.Errorf("auto-extracted attachment file not found: %s", cleanedRel)
+			}
+			ext := strings.ToLower(path.Ext(cleanedRel))
+			if ext == "" {
+				ext = ".md"
+			}
+			normalizedType = strings.TrimPrefix(ext, ".")
+			filename := fmt.Sprintf("note_%d%s", targetNoteID, ext)
+			destRel = path.Join("docs", "notes", filename)
+			destAbs = filepath.Join(s.notesDirectory(), filename)
+			if !isSubpath(destAbs, s.runtime.dataDir) {
+				cleanupCreated()
+				return nil, fmt.Errorf("unsafe notes attachment destination: %s", destRel)
+			}
+			autoExtracted = true
+		} else {
+			var ok bool
+			srcAbs, _, ok = resolveAttachmentFile(s.runtime.dataDir, cleanedRel, normalizedType)
+			if !ok {
+				cleanupCreated()
+				return nil, fmt.Errorf("attachment file not found: %s", cleanedRel)
+			}
+			sourceName := sanitizeAttachmentFilename(path.Base(cleanedRel))
+			baseName, ext := splitAttachmentName(sourceName)
+			if baseName == "" {
+				baseName = "attachment"
+			}
+			if ext == "" {
+				ext = "." + normalizedType
+			}
+			filename := fmt.Sprintf("%s_copy_%d_%d%s", baseName, targetNoteID, attachmentID, ext)
+			destRel = path.Join("docs", "attachments", filepath.ToSlash(filename))
+			destAbs = filepath.Join(s.runtime.attachmentsDir, filename)
+			if !isSubpath(destAbs, s.runtime.dataDir) {
+				cleanupCreated()
+				return nil, fmt.Errorf("unsafe attachment destination: %s", destRel)
+			}
+		}
+
+		sizeBytes, err := copyFileAtomic(srcAbs, destAbs)
+		if err != nil {
+			cleanupCreated()
+			return nil, err
+		}
+		createdFiles = append(createdFiles, destAbs)
+
+		attachmentTitle := nullableStringOrNil(title)
+		if autoExtracted {
+			attachmentTitle = targetTitle + " (完整內容)"
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted, created_at)
+			VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+			targetNoteID, destRel, normalizedType, attachmentTitle, sizeBytes, boolToInt(autoExtracted)); err != nil {
+			cleanupCreated()
+			return nil, err
+		}
+	}
+	if err := rows.Err(); err != nil {
+		cleanupCreated()
+		return nil, err
+	}
+	return createdFiles, nil
+}
+
+func copyFileAtomic(sourcePath, destinationPath string) (int64, error) {
+	if err := os.MkdirAll(filepath.Dir(destinationPath), 0755); err != nil {
+		return 0, err
+	}
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	tempPath := destinationPath + ".tmp"
+	target, err := os.OpenFile(tempPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return 0, err
+	}
+	sizeBytes, copyErr := io.Copy(target, source)
+	closeErr := target.Close()
+	if copyErr != nil {
+		_ = os.Remove(tempPath)
+		return 0, copyErr
+	}
+	if closeErr != nil {
+		_ = os.Remove(tempPath)
+		return 0, closeErr
+	}
+	_ = os.Remove(destinationPath)
+	if err := os.Rename(tempPath, destinationPath); err != nil {
+		_ = os.Remove(tempPath)
+		return 0, err
+	}
+	return sizeBytes, nil
+}
+
+func removeFiles(paths []string) {
+	for _, filePath := range paths {
+		_ = os.Remove(filePath)
+	}
+}
+
+func boolToInt(value bool) int {
+	if value {
+		return 1
+	}
+	return 0
+}
+
 func (s *server) toggleNoteBool(w http.ResponseWriter, r *http.Request, noteID int, column, payloadKey string) {
 	tx, err := s.db.Begin()
 	if err != nil {
@@ -9026,18 +9192,19 @@ func (s *server) duplicateNote(w http.ResponseWriter, r *http.Request, noteID in
 		return
 	}
 
+	newTitle := nullableString(title) + titleSuffix
 	var result sql.Result
 	if asVariant {
 		result, err = tx.Exec(`
 			INSERT INTO Notes (title, content, remarks, cover_image, cover_position, editor_layout, category_id, prompt_params, parent_id)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			nullableString(title)+titleSuffix, nullableString(content), nullableStringOrNil(remarks), nullableStringOrNil(coverImage),
+			newTitle, nullableString(content), nullableStringOrNil(remarks), nullableStringOrNil(coverImage),
 			nullableString(coverPosition), nullableString(editorLayout), nullableIntOrNil(categoryID), nullableStringOrNil(promptParams), noteID)
 	} else {
 		result, err = tx.Exec(`
 			INSERT INTO Notes (title, content, remarks, cover_image, cover_position, editor_layout, category_id, prompt_params)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			nullableString(title)+titleSuffix, nullableString(content), nullableStringOrNil(remarks), nullableStringOrNil(coverImage),
+			newTitle, nullableString(content), nullableStringOrNil(remarks), nullableStringOrNil(coverImage),
 			nullableString(coverPosition), nullableString(editorLayout), nullableIntOrNil(categoryID), nullableStringOrNil(promptParams))
 	}
 	if err != nil {
@@ -9057,7 +9224,13 @@ func (s *server) duplicateNote(w http.ResponseWriter, r *http.Request, noteID in
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	createdAttachmentFiles, err := s.duplicateNoteAttachments(tx, noteID, newID, newTitle)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	if err := tx.Commit(); err != nil {
+		removeFiles(createdAttachmentFiles)
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
