@@ -8549,10 +8549,21 @@ func roundedMB(size int64) float64 {
 func resolveAttachmentReferenceScanFile(dataDir, relativePath string) (string, bool) {
 	relativePath = strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))
 	ext := strings.ToLower(path.Ext(relativePath))
-	if ext != ".md" && ext != ".txt" && ext != ".html" {
+	if ext != ".md" && ext != ".markdown" && ext != ".txt" && ext != ".html" {
 		return "", false
 	}
-	resolved, ok := resolveAttachmentMutationPath(dataDir, relativePath)
+	cleaned := path.Clean(relativePath)
+	if cleaned == "." || cleaned == ".." || strings.HasPrefix(cleaned, "../") {
+		return "", false
+	}
+	if strings.HasPrefix(cleaned, "docs/notes/") {
+		return resolveAutoExtractedNotePath(dataDir, cleaned)
+	}
+	if !strings.HasPrefix(cleaned, "docs/attachments/") {
+		return "", false
+	}
+
+	resolved, ok := resolveAttachmentMutationPath(dataDir, cleaned)
 	if !ok {
 		return "", false
 	}

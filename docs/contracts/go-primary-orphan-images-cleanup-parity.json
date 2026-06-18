@@ -28,7 +28,7 @@
   "parity_scope": [
     "GET scans PRISM_GO_DATA_DIR/static/uploads image files and reports orphan_images, total_count, total_size_bytes, and total_size_mb",
     "referenced originals protect matching same-extension and _thumb.webp thumbnail companions",
-    "references include Notes.content, Notes.cover_image, direct static/uploads attachments, and text attachment embedded images",
+    "references include Notes.content, Notes.cover_image, direct static/uploads attachments, docs/attachments embedded images, and auto-extracted docs/notes embedded images",
     "DELETE requires filenames and rechecks that each target is still orphan before file mutation",
     "DELETE removes true orphan original plus true orphan thumbnail companions",
     "referenced files are reported as not orphan and are not deleted",

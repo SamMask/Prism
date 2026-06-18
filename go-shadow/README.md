@@ -345,7 +345,7 @@ go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-
 go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-media-cleanup
 ```
 
-`--enable-upload-delete` keeps SQLite `query_only=true` and enables `POST /api/upload/delete` only for copied data. It deletes unreferenced originals plus `_thumb.webp` / same-extension thumbnail companions under `PRISM_GO_DATA_DIR/static/uploads`, while DB/reference scans protect images referenced by `Notes.content`, `Notes.cover_image`, direct static/uploads attachments, and text attachment content.
+`--enable-upload-delete` keeps SQLite `query_only=true` and enables `POST /api/upload/delete` only for copied data. It deletes unreferenced originals plus `_thumb.webp` / same-extension thumbnail companions under `PRISM_GO_DATA_DIR/static/uploads`, while DB/reference scans protect images referenced by `Notes.content`, `Notes.cover_image`, direct static/uploads attachments, `docs/attachments` text content, and auto-extracted `docs/notes` text content.
 
 `--enable-media-cleanup` intentionally disables SQLite `query_only` because originals cleanup and broken image fixes update `Notes.content` / `Notes.cover_image`. It enables `GET` / `DELETE /api/cleanup/orphan-images`, `GET` / `DELETE /api/cleanup/originals`, and `GET` / `POST /api/cleanup/broken-images` for copied DB/data only. File mutation remains confined to `PRISM_GO_DATA_DIR/static/uploads`; production files, Pi/Caddy/systemd routing, frontend defaults, and live/default cleanup ownership remain retained Python.
 

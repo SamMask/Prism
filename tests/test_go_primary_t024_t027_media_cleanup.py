@@ -178,8 +178,19 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
     go_db = _copy_db(temp_db, tmp_path / "go_t025.db")
     go_data = tmp_path / "go_data"
     attachments_dir = go_data / "docs" / "attachments"
+    notes_dir = go_data / "docs" / "notes"
     attachments_dir.mkdir(parents=True, exist_ok=True)
+    notes_dir.mkdir(parents=True, exist_ok=True)
     (attachments_dir / "refs.md").write_text("![a](/static/uploads/attachment_ref.png)", encoding="utf-8")
+    (notes_dir / "note_1.md").write_text(
+        "\n".join(
+            [
+                "![auto](/static/uploads/auto_attachment_ref.png)",
+                "![auto thumb](/static/uploads/auto_attachment_thumb_ref_thumb.webp)",
+            ]
+        ),
+        encoding="utf-8",
+    )
     _set_note_media(
         go_db,
         "\n".join(
@@ -198,6 +209,13 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
             VALUES (1, 'docs/attachments/refs.md', 'md', 'refs', 34, 0)
             """
         )
+        conn.execute(
+            """
+            INSERT INTO Note_Attachments
+                (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+            VALUES (1, 'docs/notes/note_1.md', 'md', 'auto refs', 92, 1)
+            """
+        )
         conn.commit()
     finally:
         conn.close()
@@ -206,6 +224,8 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
         "referenced.png",
         "referenced_thumb.webp",
         "attachment_ref.png",
+        "auto_attachment_ref.png",
+        "auto_attachment_thumb_ref_thumb.webp",
         "thumb_only_ref.png",
         "thumb_only_ref_thumb.webp",
         "orphan.png",
@@ -227,6 +247,8 @@ def test_t025_orphan_scan_and_delete_only_true_orphans(temp_db, tmp_path):
         assert "referenced.png" not in orphan_names
         assert "referenced_thumb.webp" not in orphan_names
         assert "attachment_ref.png" not in orphan_names
+        assert "auto_attachment_ref.png" not in orphan_names
+        assert "auto_attachment_thumb_ref_thumb.webp" not in orphan_names
         assert "thumb_only_ref.png" in orphan_names
         assert "thumb_only_ref_thumb.webp" not in orphan_names
 
