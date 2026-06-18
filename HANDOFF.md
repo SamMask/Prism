@@ -10,11 +10,12 @@
 - Core UX / Maintenance 三個 candidate 已完成：Home 搜尋可解釋性 UX、`/api/system/search-integrity` 診斷 + 手動 FTS rebuild、Settings 維護狀態總覽；未新增 semantic search、SearchHistory DB、自動修復、schema 或 deploy 變更。
 - Frontend 新使用者預設已改為淺色 / 暖灰 / 典雅金、卡片預覽模式、自動載入更多開啟。Windows Server Dashboard 固定不顯示 CPU 溫度卡，四格為記憶體 / 儲存空間 / 資料位置 / 資料庫狀態。
 - Variant tracking panel gate 已完成 local + Pi live verification：Go API 支援 `GET /api/notes?parent_id=<id>` direct children lookup，note list/detail 回傳 `variants_count`；ReadingView 顯示 parent link + children variants，NoteCard 顯示 variants count / quick link。2026-06-18 追加修補 duplicate-as-variant 附件保存：文字附件與長內容自動分離附件會複製成 child note 自己的 row/file，ReadingView 會 lazy-load `is_auto_extracted` 完整內容。沒有新增 schema、version tree、diff/merge 或 collaboration semantics；Pi 上 `prism-go-primary.service` active，live API/UI smoke 已通過。
+- Note list lightweight gate 已完成 local verification：`GET /api/notes` list payload 回 preview-compatible `content`、`content_preview`、`content_truncated`、`content_length`；`GET /api/notes/<id>` 保持完整 note detail，搜尋仍可命中 preview 外的 tail content。Home card 使用 preview + full length metadata，Editor / card copy / image export 會先 lazy-load detail，ReadingView 維持 detail + auto-extracted attachment lazy-load。未新增 schema、cache、server-side UI state、全文預載、背景同步或附件 root 變更；尚未做 Pi delivery。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留最新 desktop shell / portable smoke 輸出；不要把 DB、attachments、notes、uploads 這類真資料當 build artifact 清理。
 
 ## Next Entry
 
-下一個建議入口若以使用者剛提到的資料量 / 記憶體壓力為優先，是 `NOTE-LIST-LIGHTWEIGHT-CANDIDATE-01 Partial note payloads for Home/list`：先盤點 `GET /api/notes` list payload 相容性，再決定 `content_preview` / `content_truncated` 或保留 `content` 截斷策略。若先回到閱讀體驗 polish，則推 `IMAGE-VIEWER-CANDIDATE-01 Unified image lightbox`。任何完成後要上 Pi 的 UX/API gate，都需另跑 `DEPLOY-PI.md` 的 Pi delivery + live verification；installer / updater 只有在明確需要 Start Menu、桌面捷徑、指定資料夾 UI、WebView2 bootstrap、uninstall 或 update flow 時才另開 decision gate。
+下一個建議入口是 `NOTE-LIST-LIGHTWEIGHT` 的 Pi delivery gate：先讀 `DEPLOY-PI.md`，用 Go primary artifact cutover 推到 `PI5Mask24`，再 live 驗 `GET /api/notes` preview payload、`GET /api/notes/<id>` detail 全文、tail token 搜尋、Home card preview metadata、Editor/ReadingView detail 載入與 console error=0。若先繼續本地 UX polish，下一個 candidate 建議推 `IMAGE-VIEWER-CANDIDATE-01 Unified image lightbox`。installer / updater 只有在明確需要 Start Menu、桌面捷徑、指定資料夾 UI、WebView2 bootstrap、uninstall 或 update flow 時才另開 decision gate。
 
 ## Required Reads
 

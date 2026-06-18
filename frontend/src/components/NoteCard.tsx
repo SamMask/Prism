@@ -41,11 +41,25 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     return match ? match[1] : null
   }
 
-  const coverImage = note.cover_image || extractFirstImage(note.content)
+  const cardContent = note.content_preview ?? note.content ?? ''
+  const noteContentLength = note.content_length ?? cardContent.length
+  const formattedContentLength = noteContentLength.toLocaleString()
+  const coverImage = note.cover_image || extractFirstImage(cardContent)
   const parentTitle = note.parent_title?.trim()
   const variantCount = note.variants_count ?? 0
   const lineageLabel = parentTitle ? t('noteCard.lineageFrom', { title: parentTitle }) : ''
   const categoryName = getCategoryDisplayName(note.category_name || note.type, t)
+  const resolveFullNote = async (): Promise<Note> => (
+    note.content_truncated ? api.getNote(note.id) : note
+  )
+  const openEditorWithDetail = async (preview = false) => {
+    try {
+      const fullNote = await resolveFullNote()
+      openEditor(fullNote, preview ? { preview: true } : undefined)
+    } catch {
+      toast.error(t('noteCard.loadFailed'))
+    }
+  }
 
   // Truncate content for preview
   const getPreview = (content: string, maxLength = 120): string => {
@@ -59,15 +73,15 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   }
 
   // Handle card click
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isSelectionMode) {
       toggleNoteSelection(note.id)
     } else {
       const cardOpenMode = localStorage.getItem('cardOpenMode') === 'edit' ? 'edit' : 'preview'
       if (cardOpenMode === 'edit') {
-        openEditor(note)
+        await openEditorWithDetail()
       } else {
-        openEditor(note, { preview: true })
+        await openEditorWithDetail(true)
       }
     }
   }
@@ -101,7 +115,8 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   // Handle copy content
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(note.content)
+      const fullNote = await resolveFullNote()
+      await navigator.clipboard.writeText(fullNote.content)
       toast.success(t('noteCard.copied'))
     } catch {
       toast.error(t('noteCard.copyFailed'))
@@ -139,9 +154,18 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
   // Handle export images
   const handleExportImages = async () => {
+    let fullNote: Note
+    try {
+      fullNote = await resolveFullNote()
+    } catch {
+      toast.error(t('noteCard.loadFailed'))
+      setShowMenu(false)
+      return
+    }
+
     // Extract image URLs from content
     const imagePattern = /\/static\/uploads\/[^\s\)"\]']+/g
-    const matches: string[] = note.content?.match(imagePattern) || []
+    const matches: string[] = fullNote.content?.match(imagePattern) || []
     
     // Add cover image if exists
     if (note.cover_image) {
@@ -190,6 +214,11 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     setShowMenu(false)
   }
 
+  const handleOpenEditorFromMenu = async () => {
+    await openEditorWithDetail()
+    setShowMenu(false)
+  }
+
   if (viewMode === 'compact') {
     return (
       <div
@@ -232,13 +261,13 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             </span>
           )}
           <span className="hidden min-w-0 flex-1 truncate text-xs text-text-muted md:block">
-            {getPreview(note.content, 96)}
+            {getPreview(cardContent, 96)}
           </span>
         </div>
 
         <div className="hidden shrink-0 items-center gap-2 text-xs text-text-muted sm:flex">
           <span className="max-w-[140px] truncate">{categoryName}</span>
-          <span>{t('noteCard.wordCount', { count: note.content?.length?.toLocaleString() || 0 })}</span>
+          <span>{t('noteCard.wordCount', { count: formattedContentLength })}</span>
           <span>{new Date(note.updated_at).toLocaleDateString(locale)}</span>
         </div>
       </div>
@@ -287,7 +316,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             </h3>
           </div>
           <p className="text-sm text-text-secondary mt-1 line-clamp-1">
-            {getPreview(note.content, 80)}
+            {getPreview(cardContent, 80)}
           </p>
           {parentTitle && (
             <div className="mt-1 flex items-center gap-1.5 text-xs text-accent" title={lineageLabel}>
@@ -386,7 +415,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
 
         {/* Preview */}
         <p className="text-sm text-text-secondary mt-2 line-clamp-2">
-          {getPreview(note.content)}
+          {getPreview(cardContent)}
         </p>
 
         {/* Tags */}
@@ -438,7 +467,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
               {categoryName}
             </span>
             <span className="text-xs text-text-muted">
-              {t('noteCard.wordCount', { count: note.content?.length?.toLocaleString() || 0 })}
+              {t('noteCard.wordCount', { count: formattedContentLength })}
             </span>
           </div>
           <span className="text-xs text-text-muted">
@@ -465,10 +494,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             <BookOpen size={14} /> {t('noteCard.openReading')}
           </button>
           <button 
-            onClick={() => {
-              openEditor(note)
-              setShowMenu(false)
-            }}
+            onClick={handleOpenEditorFromMenu}
             className="w-full flex items-center gap-2 px-3 py-2
                        text-sm text-text-secondary
                        hover:bg-bg-hover hover:text-text-primary"

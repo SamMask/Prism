@@ -52,6 +52,7 @@ const sqlitePragmaQueryOnlyOff = "PRAGMA query_only = OFF"
 const maxAttachmentFileBytes int64 = 1048576
 const separationThreshold = 5000
 const separationPreviewLength = 500
+const noteListContentPreviewLength = 500
 const maxAttachmentScanFiles = 200
 const maxAttachmentScanBytes int64 = 5242880
 const maxAttachmentScanDuration = 250 * time.Millisecond
@@ -7069,6 +7070,7 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		applyNoteListContentPreview(note)
 		items = append(items, note)
 	}
 	writeJSON(w, http.StatusOK, response{
@@ -7665,6 +7667,23 @@ func (s *server) scanNoteRow(row noteScanner) (response, error) {
 		"variants_count": variantsCount,
 	}
 	return note, nil
+}
+
+func applyNoteListContentPreview(note response) {
+	fullContent, _ := note["content"].(string)
+	preview, truncated, contentLength := noteListContentPreview(fullContent)
+	note["content"] = preview
+	note["content_preview"] = preview
+	note["content_truncated"] = truncated
+	note["content_length"] = contentLength
+}
+
+func noteListContentPreview(content string) (string, bool, int) {
+	runes := []rune(content)
+	if len(runes) <= noteListContentPreviewLength {
+		return content, false, len(runes)
+	}
+	return string(runes[:noteListContentPreviewLength]) + "...", true, len(runes)
 }
 
 func (s *server) noteTags(noteID int) ([]tagRef, error) {

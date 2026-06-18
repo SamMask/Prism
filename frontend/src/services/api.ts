@@ -7,6 +7,9 @@ export interface Note {
   id: number;
   title: string;
   content: string;
+  content_preview?: string;
+  content_truncated?: boolean;
+  content_length?: number;
   type: string;
   remarks?: string;
   cover_image?: string;

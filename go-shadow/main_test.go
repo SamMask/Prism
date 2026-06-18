@@ -1325,6 +1325,86 @@ func TestNotesSearchUsesTokenizedFTSAndCardFields(t *testing.T) {
 	}
 }
 
+func TestNotesListUsesLightweightContentPreviewAndDetailStaysFull(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	fullContent := strings.Repeat("alpha ", 120) + "tailpayloadlightweight"
+	noteID := insertSearchNote(t, db, "Long Payload Fixture", fullContent, "", 1)
+	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
+
+	listRec := httptest.NewRecorder()
+	srv.handleNotes(listRec, httptest.NewRequest(http.MethodGet, "/api/notes?per_page=100", nil))
+	if listRec.Code != http.StatusOK {
+		t.Fatalf("expected notes list 200, got %d body=%s", listRec.Code, listRec.Body.String())
+	}
+	var listResp struct {
+		Data []struct {
+			ID               int    `json:"id"`
+			Content          string `json:"content"`
+			ContentPreview   string `json:"content_preview"`
+			ContentTruncated bool   `json:"content_truncated"`
+			ContentLength    int    `json:"content_length"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(listRec.Body.Bytes(), &listResp); err != nil {
+		t.Fatal(err)
+	}
+	var listNote *struct {
+		ID               int    `json:"id"`
+		Content          string `json:"content"`
+		ContentPreview   string `json:"content_preview"`
+		ContentTruncated bool   `json:"content_truncated"`
+		ContentLength    int    `json:"content_length"`
+	}
+	for i := range listResp.Data {
+		if listResp.Data[i].ID == noteID {
+			listNote = &listResp.Data[i]
+			break
+		}
+	}
+	if listNote == nil {
+		t.Fatalf("notes list did not include fixture note %d, body=%s", noteID, listRec.Body.String())
+	}
+	if !listNote.ContentTruncated {
+		t.Fatalf("notes list should mark long content as truncated, item=%#v", listNote)
+	}
+	if listNote.Content != listNote.ContentPreview {
+		t.Fatalf("legacy content should match content_preview in list response, item=%#v", listNote)
+	}
+	if listNote.ContentLength != len([]rune(fullContent)) {
+		t.Fatalf("content_length got %d, want %d", listNote.ContentLength, len([]rune(fullContent)))
+	}
+	if got := len([]rune(listNote.Content)); got > noteListContentPreviewLength+3 {
+		t.Fatalf("list content preview too long: %d", got)
+	}
+	if strings.Contains(listNote.Content, "tailpayloadlightweight") {
+		t.Fatalf("notes list leaked full tail content: %q", listNote.Content)
+	}
+
+	detailRec := httptest.NewRecorder()
+	srv.handleNoteDetail(detailRec, httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/notes/%d", noteID), nil))
+	if detailRec.Code != http.StatusOK {
+		t.Fatalf("expected note detail 200, got %d body=%s", detailRec.Code, detailRec.Body.String())
+	}
+	var detailResp struct {
+		Data struct {
+			Content string `json:"content"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(detailRec.Body.Bytes(), &detailResp); err != nil {
+		t.Fatal(err)
+	}
+	if detailResp.Data.Content != fullContent {
+		t.Fatalf("detail content should remain full; got %d runes want %d", len([]rune(detailResp.Data.Content)), len([]rune(fullContent)))
+	}
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=tailpayloadlightweight&per_page=100", noteID)
+}
+
 func TestNotesCreateAndUpdateDefaultCategoryFTSAndRollback(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	db, err := openDB(dbPath, true)

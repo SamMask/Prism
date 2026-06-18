@@ -99,7 +99,10 @@
     {
       "id": 12,
       "title": "Prompt A",
-      "content": "markdown...",
+      "content": "markdown preview...",
+      "content_preview": "markdown preview...",
+      "content_truncated": true,
+      "content_length": 12345,
       "type": "筆記 | Note",
       "category_name": "筆記 | Note",
       "remarks": "",
@@ -133,6 +136,7 @@
 
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
+- 列表回應是 Home/card 輕量 payload：`content` 為相容用 preview（與 `content_preview` 相同），`content_truncated=true` 代表前端若要編輯、複製全文、匯出內容或閱讀完整內容，必須再呼叫 `GET /api/notes/<id>`；`content_length` 提供完整 `Notes.content` 字數供卡片 metadata 顯示。
 - 列表回應包含 `parent_id` / `parent_title`，供 Home 卡片直接顯示 variant 上一代來源；非 variant 為 `null`。
 - `parent_id` query filter 只回直接 child variants，不回整棵樹；列表與詳情回應的 `variants_count` 是該 note 的直接 child variant 數量。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。
@@ -359,6 +363,8 @@
   "note_ids": [1, 2, 3]
 }
 ```
+
+單筆詳情不套用 list preview 截斷；`content` 回傳目前 `Notes.content` 完整欄位。若該 note 已經由長內容自動分離機制轉成附件 preview，前端仍需使用 `/api/notes/<id>/attachments` 與 `/api/attachments/<attachment_id>` lazy-load `is_auto_extracted` 附件全文。
 
 ---
 
