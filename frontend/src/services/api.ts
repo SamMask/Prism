@@ -647,6 +647,16 @@ export const api = {
     return response.data;
   },
 
+  importMarkdown: async (file: File): Promise<{ note_id: number }> => {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const { data } = await client.post("/notes/import/md", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return data.data;
+  },
+
   // ===================================================================
   // Note Actions API
   // ===================================================================

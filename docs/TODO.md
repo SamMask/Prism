@@ -21,6 +21,7 @@
 - 2026-06-18 Note list lightweight gate 已完成 local + Pi delivery：`GET /api/notes` list payload 只回 `content_preview` / `content_truncated` / `content_length` 與相容 preview `content`；`GET /api/notes/<id>` 保持完整 note detail，搜尋仍以 DB/attachment body contract 執行。Home card 使用 preview + full length metadata；Editor、card copy 與 image export 會先 lazy-load detail，ReadingView 維持 detail + auto-extracted attachment lazy-load。Pi live `https://prism.local` 已驗 list preview 不洩 tail、detail/search 命中 tail、Home card preview、Editor/ReadingView detail 載入與 console error=0，temp validation notes 已清理。未新增 schema migration、cache layer、server-side UI state、全文預載、背景同步或附件 root 變更。
 - 2026-06-18 Image viewer lightbox gate 已完成 local + Pi delivery：`ImageLightbox` 是純前端 shared component，ReadingView cover/markdown images、EditablePreview standalone images、NoteEditor 雙欄 gallery 與 NoteCard cover 明確 icon/button 都走同一 lightbox；Esc/左右鍵在 lightbox capture 階段攔截，不會連同底層 ReadingView/Editor modal 一起關閉。Pi live `https://prism.local` 已驗 card cover、ReadingView cover/markdown、Editor preview lightbox、console error=0，temp validation note/uploads 已清理。未改 upload/delete/cleanup API、DB schema、gallery DB 或 markdown renderer。
 - 2026-06-18 Header starred tag shortcuts gate 已完成 local + Pi delivery：`Settings > Organization > Tag management` 的星號只保存純前端 `localStorage` key `prism.starredTags.v1`，`FilterStrip` 分類右側只顯示 starred tags；沒有 starred tags 時只顯示低存在感提示文字。Pi live `https://prism.local` 已驗星號開關、reload persistence、header 顯示/隱藏、tag filter 點擊與 console error=0，temp validation notes/tags 已清理。未新增 DB 欄位、tags API、server-side preference、跨裝置同步、tag sort/group 或 sidebar redesign。
+- 2026-06-18 Batch Markdown/txt import gate 已完成 local + Pi delivery：`Settings > Backup & Restore` 新增 `.md/.txt` 多檔匯入；前端待匯入清單可多次選擇不同資料夾檔案、同檔去重、單檔移除與清空，匯入後清空待匯入清單但保留結果摘要。`.md` 逐檔走既有單檔 `POST /api/notes/import/md`，`.txt` 由前端讀檔後走既有 `POST /api/notes`，結果逐檔回報 created / skipped / failed。Pi live `https://prism.local` 已驗 Markdown H1 title、frontmatter category/tags、TXT 檔名 title、跨批選檔累加、重複去重、混合 2 created / 1 failed summary、temp note/tag cleanup 與 Go journal evidence。未新增 server-side batch API、schema migration、目錄 watcher、AI 摘要、自動分類、overwrite/sync/background daemon 或批量 DB transaction。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
@@ -38,7 +39,7 @@ Desktop Shell 目前沒有 active construction item。Phase 0-6、post-package f
 
 ### Pi Delivery Follow-up
 
-Variant tracking panel、variant duplicate attachment repair、Note list lightweight、Image viewer lightbox 與 Header starred tag shortcuts 的 Pi delivery 已於 2026-06-18 完成。後續若再有 local verified UX/API gate，仍需另開 Pi delivery gate：先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程部署到 `PI5Mask24`，並驗證 `https://prism.local` 的 service status、migration status、changed API endpoint 與對應前端行為。
+Variant tracking panel、variant duplicate attachment repair、Note list lightweight、Image viewer lightbox、Header starred tag shortcuts 與 Batch Markdown/txt import 的 Pi delivery 已於 2026-06-18 完成。後續若再有 local verified UX/API gate，仍需另開 Pi delivery gate：先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程部署到 `PI5Mask24`，並驗證 `https://prism.local` 的 service status、migration status、changed API endpoint 與對應前端行為。
 
 ### Windows Desktop vs Pi Deployment 差異表
 
@@ -103,11 +104,12 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 
 目標：允許使用者一次選多個 `.md` / `.txt` 檔建立 notes，回報逐檔結果摘要。
 
-- [ ] **01A Import path lock**：先確認 current runtime：`POST /api/notes/import/md` 只接受單一 `.md`；frontend client 目前沒有 wrapper。第一版不新增真正 batch endpoint：`.md` 由 frontend 逐檔呼叫單檔 Markdown import；`.txt` 由 frontend 讀檔後走既有 `POST /api/notes`，標題用檔名 stem，content 用純文字內容。
-- [ ] **01B Settings import UI**：在現有 backup/import 設定區加多檔 selector、檔案清單、匯入按鈕與結果摘要（created / skipped / failed）。匯入逐檔執行；單檔失敗不回滾已成功 notes，但要顯示失敗檔名與後端錯誤。
-- [ ] **01C Contract/docs cleanup**：若 `.md` import wrapper 或 `.txt` create-note path 成為正式 UI，更新 `docs/API_REFERENCE.md` 的 frontend usage note；不要把它寫成 server-side batch API。
+- [x] **01A Import path lock**（2026-06-18 完成）：current runtime 仍是 `POST /api/notes/import/md` 單檔 `.md` import；frontend 新增 `api.importMarkdown(file)` wrapper，但不新增 batch endpoint。`.md` 逐檔呼叫既有 Markdown import；`.txt` 由 frontend `file.text()` 後走既有 `POST /api/notes`，title 使用檔名 stem、content 使用純文字內容。
+- [x] **01B Settings import UI**（2026-06-18 完成）：`Settings > Backup & Restore` 匯入區已新增 `.md/.txt` 多檔 selector、檔案清單、清空、單檔移除、匯入按鈕與 created / skipped / failed 結果摘要。待匯入清單可多次選不同資料夾檔案並以 name / size / lastModified 去重；匯入逐檔執行，匯入後清空待匯入清單但保留結果摘要。單檔失敗不回滾已成功 note，並在該檔結果列顯示 backend error。
+- [x] **01C Contract/docs cleanup**（2026-06-18 完成）：已同步 `docs/CONTRACTS.md` / `docs/API_REFERENCE.md`，明確標記這只是 Settings 前端逐檔 wrapper；沒有 server-side batch import API，`.txt` 不走 `/api/notes/import/md`。
+- [x] **01D Regression and smoke**（2026-06-18 完成）：static regression 鎖住 `api.importMarkdown` 單檔 endpoint、Settings `.md/.txt` 多檔 UI、跨批選檔累加、同檔去重、單檔移除、清空、匯入後清空待匯入清單、`.txt` create-note path、逐檔 try/catch 與 summary data attributes；frontend build、本機 embedded Go runtime + Playwright smoke 已驗 Markdown H1 title、frontmatter category/tags、`.txt` filename title、跨批選檔累加、重複去重、混合 2 created / 1 failed summary、API detail content 與 temp note cleanup。Pi delivery 已跑 `scripts/go_primary_pi_live_ops.ps1 -Mode Cutover`；live Playwright smoke 驗同一 flow，temp notes/tags 已清理，service/header/migration/journal final check clean。
 - 不做：目錄遞迴 watcher、自動分類/AI 摘要、覆蓋既有 notes、同步機制、background daemon、批量 DB transaction。
-- 驗收：Markdown H1 title、frontmatter category/tags、`.txt` filename title、混合成功/失敗摘要；frontend typecheck/build；若只改 frontend，不需要 Go schema/migration 測試。
+- 驗收：跨批選檔累加、重複去重、匯入後清空待匯入清單、Markdown H1 title、frontmatter category/tags、`.txt` filename title、混合成功/失敗摘要；frontend build；若只改 frontend，不需要 Go schema/migration 測試。Pi delivery 已依 `DEPLOY-PI.md` 完成 live verification。
 
 #### IMAGE-VIEWER-CANDIDATE-01 Unified image lightbox
 

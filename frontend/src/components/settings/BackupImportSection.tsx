@@ -1,22 +1,63 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Loader2, RotateCcw, Database } from 'lucide-react';
+import { Download, Upload, Loader2, RotateCcw, Database, X } from 'lucide-react';
 import { Button, toast } from '../ui';
 import { api, type BackupItem } from '../../services/api';
+import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../hooks/useTranslation';
 
 interface BackupImportSectionProps {
   onStatsUpdate: () => void;
 }
 
+type BulkImportStatus = 'created' | 'skipped' | 'failed';
+
+interface BulkImportResult {
+  fileName: string;
+  status: BulkImportStatus;
+  noteId?: number;
+  message: string;
+}
+
+function fileStem(fileName: string): string {
+  const trimmed = fileName.trim();
+  const dotIndex = trimmed.lastIndexOf('.');
+  const stem = dotIndex > 0 ? trimmed.slice(0, dotIndex) : trimmed;
+  return stem.trim() || trimmed || 'Untitled';
+}
+
+function lowerFileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf('.');
+  return dotIndex >= 0 ? fileName.slice(dotIndex).toLowerCase() : '';
+}
+
+function bulkFileKey(file: File): string {
+  return `${file.name}::${file.size}::${file.lastModified}`;
+}
+
+function errorMessage(error: unknown): string {
+  const shaped = error as {
+    response?: { data?: { message?: string; error?: string } };
+    message?: string;
+  };
+  return shaped.response?.data?.message || shaped.response?.data?.error || shaped.message || 'Import failed';
+}
+
 export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps) {
   const { t } = useTranslation();
+  const fetchNotes = useAppStore((state) => state.fetchNotes);
+  const fetchCategories = useAppStore((state) => state.fetchCategories);
+  const fetchTags = useAppStore((state) => state.fetchTags);
   // Import State
   const [isImporting, setIsImporting] = useState(false);
+  const [isBulkImporting, setIsBulkImporting] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importData, setImportData] = useState<unknown>(null);
   const [importMode, setImportMode] = useState<'skip' | 'duplicate'>('skip');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bulkFileInputRef = useRef<HTMLInputElement>(null);
+  const [bulkFiles, setBulkFiles] = useState<File[]>([]);
+  const [bulkResults, setBulkResults] = useState<BulkImportResult[]>([]);
 
   // Restore-from-backup state
   const [backups, setBackups] = useState<BackupItem[]>([]);
@@ -95,6 +136,37 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
     }
   };
 
+  const handleBulkFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setBulkFiles((current) => {
+      const seen = new Set(current.map(bulkFileKey));
+      const next = [...current];
+      for (const file of files) {
+        const key = bulkFileKey(file);
+        if (!seen.has(key)) {
+          seen.add(key);
+          next.push(file);
+        }
+      }
+      return next;
+    });
+    setBulkResults([]);
+    if (bulkFileInputRef.current) {
+      bulkFileInputRef.current.value = '';
+    }
+  };
+
+  const clearBulkFiles = () => {
+    setBulkFiles([]);
+    setBulkResults([]);
+  };
+
+  const removeBulkFile = (target: File) => {
+    const targetKey = bulkFileKey(target);
+    setBulkFiles((current) => current.filter((file) => bulkFileKey(file) !== targetKey));
+    setBulkResults([]);
+  };
+
   // Handle import
   const handleImport = async () => {
     if (!importData) return;
@@ -122,6 +194,73 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       setIsImporting(false);
     }
   };
+
+  const handleBulkImport = async () => {
+    if (bulkFiles.length === 0) {
+      toast.info(t('settings.backup.bulkImportNoFiles'));
+      return;
+    }
+
+    setIsBulkImporting(true);
+    const nextResults: BulkImportResult[] = [];
+
+    for (const file of bulkFiles) {
+      const extension = lowerFileExtension(file.name);
+      try {
+        if (extension === '.md') {
+          const result = await api.importMarkdown(file);
+          nextResults.push({
+            fileName: file.name,
+            status: 'created',
+            noteId: result.note_id,
+            message: t('settings.backup.bulkImportCreatedMessage', { id: result.note_id }),
+          });
+        } else if (extension === '.txt') {
+          const content = await file.text();
+          const result = await api.createNote({
+            title: fileStem(file.name),
+            content,
+          });
+          nextResults.push({
+            fileName: file.name,
+            status: 'created',
+            noteId: result.note_id,
+            message: t('settings.backup.bulkImportCreatedMessage', { id: result.note_id }),
+          });
+        } else {
+          nextResults.push({
+            fileName: file.name,
+            status: 'skipped',
+            message: t('settings.backup.bulkImportUnsupported'),
+          });
+        }
+      } catch (error) {
+        nextResults.push({
+          fileName: file.name,
+          status: 'failed',
+          message: errorMessage(error),
+        });
+      }
+      setBulkResults([...nextResults]);
+    }
+
+    const created = nextResults.filter((result) => result.status === 'created').length;
+    const skipped = nextResults.filter((result) => result.status === 'skipped').length;
+    const failed = nextResults.filter((result) => result.status === 'failed').length;
+
+    if (created > 0) {
+      await Promise.all([fetchNotes(true), fetchCategories(), fetchTags()]);
+      onStatsUpdate();
+    }
+
+    setBulkFiles([]);
+    setIsBulkImporting(false);
+    toast.success(t('settings.backup.bulkImportCompleteToast', { created, skipped, failed }));
+  };
+
+  const bulkCreatedCount = bulkResults.filter((result) => result.status === 'created').length;
+  const bulkSkippedCount = bulkResults.filter((result) => result.status === 'skipped').length;
+  const bulkFailedCount = bulkResults.filter((result) => result.status === 'failed').length;
 
   return (
     <>
@@ -221,6 +360,139 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
               {t('settings.backup.chooseFile')}
             </Button>
           </div>
+        </div>
+        <div className="border-t border-border-subtle mt-5 pt-5" data-testid="bulk-import-panel">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-text-primary">{t('settings.backup.bulkImportTitle')}</p>
+              <p className="text-text-muted text-sm">
+                {t('settings.backup.bulkImportDescription')}
+              </p>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <input
+                type="file"
+                ref={bulkFileInputRef}
+                accept=".md,.txt"
+                multiple
+                onChange={handleBulkFileSelect}
+                className="hidden"
+                data-testid="bulk-import-file-input"
+              />
+              <Button
+                variant="secondary"
+                onClick={() => bulkFileInputRef.current?.click()}
+                disabled={isBulkImporting}
+              >
+                {t('settings.backup.bulkImportChooseFiles')}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={clearBulkFiles}
+                disabled={isBulkImporting || bulkFiles.length === 0}
+                data-testid="bulk-import-clear"
+              >
+                {t('settings.backup.bulkImportClear')}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleBulkImport}
+                disabled={isBulkImporting || bulkFiles.length === 0}
+                data-testid="bulk-import-start"
+              >
+                {isBulkImporting ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    {t('settings.backup.bulkImporting')}
+                  </>
+                ) : (
+                  t('settings.backup.bulkImportStart')
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {bulkFiles.length === 0 ? (
+            <p className="text-text-muted text-sm mt-3" data-testid="bulk-import-empty">
+              {t('settings.backup.bulkImportEmpty')}
+            </p>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <p className="text-text-muted text-sm">
+                {t('settings.backup.bulkImportSelectedCount', { count: bulkFiles.length })}
+              </p>
+              <div className="max-h-40 overflow-auto rounded-lg border border-border-subtle divide-y divide-border-subtle">
+                {bulkFiles.map((file) => (
+                  <div
+                    key={bulkFileKey(file)}
+                    className="flex items-center justify-between gap-3 px-3 py-2 text-sm"
+                    data-testid="bulk-import-file-row"
+                  >
+                    <span className="text-text-secondary truncate">{file.name}</span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-text-muted">{Math.max(1, Math.ceil(file.size / 1024))} KB</span>
+                      <button
+                        type="button"
+                        onClick={() => removeBulkFile(file)}
+                        disabled={isBulkImporting}
+                        className="p-1 rounded-md text-text-muted hover:text-danger hover:bg-danger/10 disabled:opacity-50 disabled:hover:text-text-muted disabled:hover:bg-transparent"
+                        aria-label={t('settings.backup.bulkImportRemoveFile', { name: file.name })}
+                        data-testid="bulk-import-remove-file"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {bulkResults.length > 0 && (
+            <div className="mt-4 rounded-lg border border-border-subtle bg-bg-base p-3">
+              <div
+                className="text-sm text-text-secondary mb-2"
+                data-testid="bulk-import-summary"
+                data-created={bulkCreatedCount}
+                data-skipped={bulkSkippedCount}
+                data-failed={bulkFailedCount}
+              >
+                {t('settings.backup.bulkImportSummary', {
+                  created: bulkCreatedCount,
+                  skipped: bulkSkippedCount,
+                  failed: bulkFailedCount,
+                })}
+              </div>
+              <div className="space-y-2">
+                {bulkResults.map((result, index) => (
+                  <div
+                    key={`${result.fileName}-${index}`}
+                    className="flex items-start justify-between gap-3 text-sm"
+                    data-testid={`bulk-import-result-${index}`}
+                    data-status={result.status}
+                  >
+                    <span className="text-text-primary truncate">{result.fileName}</span>
+                    <span
+                      className={
+                        result.status === 'created'
+                          ? 'text-success text-right'
+                          : result.status === 'skipped'
+                            ? 'text-text-muted text-right'
+                            : 'text-danger text-right'
+                      }
+                    >
+                      {result.status === 'created'
+                        ? t('settings.backup.bulkImportCreated')
+                        : result.status === 'skipped'
+                          ? t('settings.backup.bulkImportSkipped')
+                          : t('settings.backup.bulkImportFailed')}
+                      {result.message ? ` · ${result.message}` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
