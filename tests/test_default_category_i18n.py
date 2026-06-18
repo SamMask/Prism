@@ -25,6 +25,9 @@ def test_default_category_i18n_mapping_is_exact_seed_only():
 
     assert "美食 | Gourmet" not in source
     assert "defaultCategoryLabelKeys[name.trim()] ?? null" in source
+    assert "getCategoryEditName" in source
+    assert "getCategoryUpdateName" in source
+    assert "trimmedName === currentDisplayName" in source
 
 
 def test_default_category_labels_are_available_in_all_locales():
@@ -57,5 +60,8 @@ def test_default_category_display_helper_is_used_by_visible_category_surfaces():
         assert "categoryDisplay" in source
 
     data_manager = DATA_MANAGER.read_text(encoding="utf-8")
-    assert "setEditName(cat.name)" in data_manager
+    assert "setEditName(getCategoryEditName(cat.name, t))" in data_manager
     assert "getCategoryDisplayName(cat.name, t)" in data_manager
+    assert "getCategoryUpdateName(cat.name, editName, t)" in data_manager
+    assert "if (nextName !== undefined)" in data_manager
+    assert "updates.name = nextName" in data_manager

@@ -7,6 +7,8 @@ param(
     [int]$Port = 5004,
     [int]$SoakSamples = 5,
     [int]$SoakIntervalSeconds = 10,
+    [ValidateRange(3, 5)]
+    [int]$DeploySnapshotKeep = 5,
     [string]$BuildOutputDir = "build/go-runtime",
     [string]$LocalEvidenceRoot = "build/go-primary-live/pi",
     [switch]$SkipBuild
@@ -129,6 +131,7 @@ PORT="$3"
 REMOTE_USER="$4"
 TASK_ID="$5"
 CLEAN_AFTER_SMOKE="$6"
+DEPLOY_SNAPSHOT_KEEP="$7"
 SERVICE_NAME="prism-go-primary.service"
 LIVE_DB="$REMOTE_ROOT/knowledge.db"
 BINARY="$LIVE/bin/prism-go-runtime-linux-arm64"
@@ -182,6 +185,75 @@ service_rss_kb() {
   if [ -n "$pid" ] && [ "$pid" != "0" ]; then
     ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' || true
   fi
+}
+
+prune_deploy_snapshots() {
+  python3 - "$REMOTE_ROOT/backups" "$DEPLOY_SNAPSHOT_KEEP" "$EVIDENCE/$TASK_ID-deploy-snapshot-retention.json" <<'PY'
+import datetime
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+backups_root = Path(sys.argv[1]).resolve()
+keep = int(sys.argv[2])
+evidence_path = Path(sys.argv[3])
+
+items = []
+if backups_root.exists():
+    for path in backups_root.glob("go-primary-*"):
+        tar_path = path / "data-files.tar.gz"
+        if path.is_dir() and tar_path.is_file():
+            stat = tar_path.stat()
+            items.append({
+                "path": path.resolve(),
+                "name": path.name,
+                "mtime": stat.st_mtime,
+                "data_tar_bytes": stat.st_size,
+            })
+
+items.sort(key=lambda item: item["mtime"], reverse=True)
+kept = items[:keep]
+deleted = []
+errors = []
+for item in items[keep:]:
+    path = item["path"]
+    if path.parent != backups_root or not path.name.startswith("go-primary-"):
+        errors.append({"path": str(path), "error": "refused_unsafe_path"})
+        continue
+    proc = subprocess.run(["sudo", "rm", "-rf", "--", str(path)], text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    if proc.returncode == 0:
+        deleted.append(item)
+    else:
+        errors.append({"path": str(path), "error": proc.stdout.strip(), "returncode": proc.returncode})
+
+def encode(item):
+    return {
+        "name": item["name"],
+        "path": str(item["path"]),
+        "data_tar_mtime": datetime.datetime.fromtimestamp(item["mtime"]).isoformat(),
+        "data_tar_mib": round(item["data_tar_bytes"] / 1024 / 1024, 2),
+    }
+
+payload = {
+    "status": "passed" if not errors else "failed",
+    "policy": {
+        "scope": "go-primary deploy/cutover data snapshots",
+        "keep_latest": keep,
+    },
+    "before_count": len(items),
+    "kept_count": len(kept),
+    "deleted_count": len(deleted),
+    "deleted_data_tar_mib": round(sum(item["data_tar_bytes"] for item in deleted) / 1024 / 1024, 2),
+    "kept": [encode(item) for item in kept],
+    "deleted": [encode(item) for item in deleted],
+    "errors": errors,
+}
+evidence_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+if errors:
+    print(json.dumps(payload, ensure_ascii=False), file=sys.stderr)
+    sys.exit(61)
+PY
 }
 
 write_go_caddy() {
@@ -427,6 +499,8 @@ data = {
 with open(os.environ["JSON_PATH"], "w", encoding="utf-8") as fh:
     json.dump(data, fh, indent=2, sort_keys=True)
 PY
+
+prune_deploy_snapshots
 
 trap - ERR
 '@
@@ -740,13 +814,13 @@ PY
 '@
 
 if ($Mode -in @("All", "Cutover")) {
-    Invoke-RemoteBash "T042 Go primary live cutover" $cutoverScript @($RemoteRoot, $remoteLive, [string]$Port, $RemoteUser, "t042", "0")
+    Invoke-RemoteBash "T042 Go primary live cutover" $cutoverScript @($RemoteRoot, $remoteLive, [string]$Port, $RemoteUser, "t042", "0", [string]$DeploySnapshotKeep)
 }
 if ($Mode -in @("All", "Rollback")) {
     Invoke-RemoteBash "T043 Go primary rollback drill" $rollbackScript @($RemoteRoot, $remoteLive, [string]$Port, "t043", "t042")
 }
 if ($Mode -in @("All", "Soak")) {
-    Invoke-RemoteBash "T044 Go primary live cutover for soak" $cutoverScript @($RemoteRoot, $remoteLive, [string]$Port, $RemoteUser, "t044", "1")
+    Invoke-RemoteBash "T044 Go primary live cutover for soak" $cutoverScript @($RemoteRoot, $remoteLive, [string]$Port, $RemoteUser, "t044", "1", [string]$DeploySnapshotKeep)
     Invoke-RemoteBash "T044 Go primary soak" $soakScript @($RemoteRoot, $remoteLive, "t044", [string]$SoakSamples, [string]$SoakIntervalSeconds, "t044")
 }
 

@@ -11,7 +11,7 @@
 
 ## 快速更新（日常使用）
 
-日常 live 部署使用 Go primary ops script；它會建置 linux/arm64 artifact、上傳到 Pi、建立 backup、更新 `prism-go-primary.service`，並讓 Caddy 繼續指向 `127.0.0.1:5004`。
+日常 live 部署使用 Go primary ops script；它會建置 linux/arm64 artifact、上傳到 Pi、建立 pre-cutover backup/data snapshot、更新 `prism-go-primary.service`，並讓 Caddy 繼續指向 `127.0.0.1:5004`。部署 snapshot 位於 `/home/mask070924/prism/backups/go-primary-*/data-files.tar.gz`，預設只保留最新 5 份；舊 snapshot 會在 cutover smoke 通過後自動清理。
 
 ```powershell
 # 在 Windows repo root 執行
@@ -22,6 +22,12 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -SkipBuild
+```
+
+若需要調整 deploy snapshot 保留數，只允許 3-5 份：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5
 ```
 
 快速驗證：
@@ -107,7 +113,7 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 
 ## 自動備份排程
 
-每週日 03:00 透過 Go primary server backup API 下載 DB backup 並輪替。
+每週日 03:00 透過 Go primary server backup API 下載 DB backup 並輪替。這是 `knowledge.db` 備份，與部署前的 `go-primary-*/data-files.tar.gz` snapshot 不同；DB backup 不能還原已從 `static/uploads/` 刪掉的圖片檔。
 
 ```bash
 ssh PI5Mask24 "sudo tee /home/mask070924/prism/scripts/auto-backup.sh > /dev/null <<'SCRIPT'

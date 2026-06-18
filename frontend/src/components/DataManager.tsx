@@ -7,7 +7,11 @@ import { confirm } from './ui/ConfirmDialog'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
 import { useStarredTags } from '../hooks/useStarredTags'
-import { getCategoryDisplayName } from '../utils/categoryDisplay'
+import {
+  getCategoryDisplayName,
+  getCategoryEditName,
+  getCategoryUpdateName,
+} from '../utils/categoryDisplay'
 
 interface CategoryManagerProps {
   categories: Category[]
@@ -45,14 +49,23 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
     }
   }
 
-  const handleUpdate = async (id: number) => {
+  const handleUpdate = async (cat: Category) => {
     if (!editName.trim()) {
       toast.warning(t('settings.organization.categoryNameRequired'))
       return
     }
+    const updates: { name?: string; icon?: string } = { icon: editIcon }
+    const nextName = getCategoryUpdateName(cat.name, editName, t)
+    if (nextName !== undefined) {
+      updates.name = nextName
+    }
+    if (updates.name === undefined && editIcon === (cat.icon || '📁')) {
+      setEditingId(null)
+      return
+    }
     setIsLoading(true)
     try {
-      await api.updateCategory(id, { name: editName.trim(), icon: editIcon })
+      await api.updateCategory(cat.id, updates)
       toast.success(t('settings.organization.categoryUpdated'))
       setEditingId(null)
       onRefresh()
@@ -98,7 +111,7 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
 
   const startEdit = (cat: Category) => {
     setEditingId(cat.id)
-    setEditName(cat.name)
+    setEditName(getCategoryEditName(cat.name, t))
     setEditIcon(cat.icon || '📁')
   }
 
@@ -165,11 +178,11 @@ function CategoryManager({ categories, onRefresh }: CategoryManagerProps) {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleUpdate(cat.id)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleUpdate(cat)}
                   className="flex-1 px-3 py-1.5 rounded bg-bg-surface border border-border-default text-sm"
                   autoFocus
                 />
-                <IconButton size="sm" variant="success" onClick={() => handleUpdate(cat.id)} disabled={isLoading} aria-label={t('common.save')}>
+                <IconButton size="sm" variant="success" onClick={() => handleUpdate(cat)} disabled={isLoading} aria-label={t('common.save')}>
                   <Save size={16} />
                 </IconButton>
                 <IconButton size="sm" onClick={cancelEdit} aria-label={t('common.cancel')}>

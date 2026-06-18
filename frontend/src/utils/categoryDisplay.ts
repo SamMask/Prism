@@ -26,6 +26,30 @@ export function getCategoryDisplayName(
   return name || fallback;
 }
 
+export function getCategoryEditName(
+  name: string | undefined | null,
+  t: Translate,
+  fallback = '',
+): string {
+  return getCategoryDisplayName(name, t, fallback);
+}
+
+export function getCategoryUpdateName(
+  currentName: string | undefined | null,
+  editedName: string,
+  t: Translate,
+): string | undefined {
+  const trimmedName = editedName.trim();
+  if (trimmedName === (currentName || '').trim()) return undefined;
+
+  if (getDefaultCategoryLabelKey(currentName)) {
+    const currentDisplayName = getCategoryDisplayName(currentName, t);
+    if (trimmedName === currentDisplayName) return undefined;
+  }
+
+  return trimmedName;
+}
+
 export function getCategoryOptionLabel(category: Category, t: Translate): string {
   return `${category.icon || '📁'} ${getCategoryDisplayName(category.name, t)}`;
 }
