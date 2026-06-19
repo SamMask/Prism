@@ -8,6 +8,7 @@ DOCS_README_PATH = ROOT / "docs" / "README.md"
 DOCS_INDEX_PATH = ROOT / "docs" / "INDEX.md"
 CONTRIBUTING_PATH = ROOT / "docs" / "CONTRIBUTING.md"
 RELEASE_CHECKLIST_PATH = ROOT / "docs" / "RELEASE_CHECKLIST.md"
+PORTABLE_README_PATH = ROOT / "docs" / "desktop" / "README-PORTABLE.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
 CI_PATH = ROOT / ".github" / "workflows" / "ci.yml"
@@ -113,6 +114,20 @@ def test_project_review_hygiene_release_checklist_requires_fresh_evidence():
     assert "docs/RELEASE_CHECKLIST.md" in _text(README_ZH_PATH)
     assert "RELEASE_CHECKLIST.md" in _text(DOCS_README_PATH)
     assert "RELEASE_CHECKLIST.md" in _text(DOCS_INDEX_PATH)
+
+
+def test_project_review_hygiene_unsigned_portable_smartscreen_notice_is_documented():
+    docs = "\n".join([_text(README_PATH), _text(README_ZH_PATH), _text(PORTABLE_README_PATH)])
+
+    for required in (
+        "SmartScreen",
+        "unsigned",
+        "Zone.Identifier",
+        "Unblock-File",
+        "Get-FileHash",
+        "GitHub Release notes",
+    ):
+        assert required in docs
 
 
 def test_project_review_hygiene_contributing_e2e_path_matches_repo_layout():

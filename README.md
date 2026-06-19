@@ -40,6 +40,29 @@ The portable package includes:
 
 Microsoft Edge WebView2 Runtime must already be installed. If the machine does not have it, install it from Microsoft's official [Download Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/consumer/) page. The portable package does not install WebView2 and is not an MSI/NSIS/WiX installer.
 
+### Windows SmartScreen
+
+The Windows portable executable is currently unsigned. GitHub downloads may carry
+Mark-of-the-Web (`Zone.Identifier`), so Microsoft Defender SmartScreen can show
+"Windows protected your PC" with an unknown publisher. This is expected for the
+unsigned portable build.
+
+Verify the V2.5 release zip against the SHA256 listed in the GitHub Release
+notes before running it:
+
+```powershell
+Get-FileHash .\PrismDesktopPortable-v2.5.zip -Algorithm SHA256
+```
+
+After verifying the hash, use **More info** / **Run anyway**, or remove
+Mark-of-the-Web:
+
+```powershell
+Unblock-File .\PrismDesktopPortable-v2.5.zip
+# or, after extraction:
+Get-ChildItem . -Recurse -File | Unblock-File
+```
+
 ## Quick Start
 
 ### Windows Portable
