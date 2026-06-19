@@ -47,6 +47,8 @@ def test_project_review_hygiene_ci_is_no_secret_no_pi_local_gate_baseline():
         "npm ci",
         "python -m pip install -r requirements.txt",
         "npm run build",
+        "go-shadow/web/dist",
+        "frontend/dist/*",
         ".loop/verify-gate.ps1",
     ):
         assert required in ci

@@ -48,6 +48,13 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Prepare Go embedded frontend
+        shell: pwsh
+        run: |
+          Remove-Item -Recurse -Force go-shadow/web/dist -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force go-shadow/web/dist | Out-Null
+          Copy-Item -Path frontend/dist/* -Destination go-shadow/web/dist -Recurse -Force
+
       - name: Run Loop verification gate
         shell: pwsh
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1
