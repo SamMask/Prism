@@ -103,6 +103,7 @@
       "content_preview": "markdown preview...",
       "content_truncated": true,
       "content_length": 12345,
+      "content_first_image": "/static/uploads/first-image.webp",
       "type": "筆記 | Note",
       "category_name": "筆記 | Note",
       "remarks": "",
@@ -137,7 +138,7 @@
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
 - 文字附件內容搜尋是 request-time bounded scan：最多 200 個附件檔、5 MiB、250 ms。若超限，回應會加上 optional `search_diagnostics.attachment_body_scan.partial=true`，並標出 `reason`（`file_limit` / `byte_limit` / `time_limit` / `scan_error`）。
-- 列表回應是 Home/card 輕量 payload：`content` 為相容用 preview（與 `content_preview` 相同），`content_truncated=true` 代表前端若要編輯、複製全文、匯出內容或閱讀完整內容，必須再呼叫 `GET /api/notes/<id>`；`content_length` 提供完整 `Notes.content` 字數供卡片 metadata 顯示。
+- 列表回應是 Home/card 輕量 payload：`content` 為相容用 preview（與 `content_preview` 相同），`content_truncated=true` 代表前端若要編輯、複製全文、匯出內容或閱讀完整內容，必須再呼叫 `GET /api/notes/<id>`；`content_length` 提供完整 `Notes.content` 字數供卡片 metadata 顯示；`content_first_image` 是從完整內容抽出的第一張圖片 URL，供卡片在不預載全文時維持「無手動封面時用第一張圖」的 fallback。
 - 列表回應包含 `parent_id` / `parent_title`，供 Home 卡片直接顯示 variant 上一代來源；非 variant 為 `null`。
 - `parent_id` query filter 只回直接 child variants，不回整棵樹；列表與詳情回應的 `variants_count` 是該 note 的直接 child variant 數量。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。

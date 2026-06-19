@@ -1709,7 +1709,8 @@ func TestNotesListUsesLightweightContentPreviewAndDetailStaysFull(t *testing.T) 
 	}
 	defer db.Close()
 
-	fullContent := strings.Repeat("alpha ", 120) + "tailpayloadlightweight"
+	lateImage := "/static/uploads/late-cover.png"
+	fullContent := strings.Repeat("alpha ", 120) + "![late cover](" + lateImage + ") tailpayloadlightweight"
 	noteID := insertSearchNote(t, db, "Long Payload Fixture", fullContent, "", 1)
 	srv := &server{db: db, runtime: runtimeConfig{sqliteQueryOnly: true}}
 
@@ -1720,22 +1721,24 @@ func TestNotesListUsesLightweightContentPreviewAndDetailStaysFull(t *testing.T) 
 	}
 	var listResp struct {
 		Data []struct {
-			ID               int    `json:"id"`
-			Content          string `json:"content"`
-			ContentPreview   string `json:"content_preview"`
-			ContentTruncated bool   `json:"content_truncated"`
-			ContentLength    int    `json:"content_length"`
+			ID                int    `json:"id"`
+			Content           string `json:"content"`
+			ContentPreview    string `json:"content_preview"`
+			ContentTruncated  bool   `json:"content_truncated"`
+			ContentLength     int    `json:"content_length"`
+			ContentFirstImage string `json:"content_first_image"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(listRec.Body.Bytes(), &listResp); err != nil {
 		t.Fatal(err)
 	}
 	var listNote *struct {
-		ID               int    `json:"id"`
-		Content          string `json:"content"`
-		ContentPreview   string `json:"content_preview"`
-		ContentTruncated bool   `json:"content_truncated"`
-		ContentLength    int    `json:"content_length"`
+		ID                int    `json:"id"`
+		Content           string `json:"content"`
+		ContentPreview    string `json:"content_preview"`
+		ContentTruncated  bool   `json:"content_truncated"`
+		ContentLength     int    `json:"content_length"`
+		ContentFirstImage string `json:"content_first_image"`
 	}
 	for i := range listResp.Data {
 		if listResp.Data[i].ID == noteID {
@@ -1760,6 +1763,12 @@ func TestNotesListUsesLightweightContentPreviewAndDetailStaysFull(t *testing.T) 
 	}
 	if strings.Contains(listNote.Content, "tailpayloadlightweight") {
 		t.Fatalf("notes list leaked full tail content: %q", listNote.Content)
+	}
+	if listNote.ContentFirstImage != lateImage {
+		t.Fatalf("content_first_image got %q, want %q", listNote.ContentFirstImage, lateImage)
+	}
+	if strings.Contains(listNote.Content, lateImage) {
+		t.Fatalf("notes list leaked late image markdown in preview: %q", listNote.Content)
 	}
 
 	detailRec := httptest.NewRecorder()

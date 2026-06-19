@@ -47,7 +47,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const cardContent = note.content_preview ?? note.content ?? ''
   const noteContentLength = note.content_length ?? cardContent.length
   const formattedContentLength = noteContentLength.toLocaleString()
-  const coverImage = note.cover_image || extractFirstImage(cardContent)
+  const coverImage = note.cover_image || note.content_first_image || extractFirstImage(cardContent)
   const coverLightboxImages: LightboxImage[] = coverImage
     ? [{ src: coverImage, alt: note.title || t('noteCard.untitled') }]
     : []

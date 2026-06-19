@@ -10,6 +10,7 @@ export interface Note {
   content_preview?: string;
   content_truncated?: boolean;
   content_length?: number;
+  content_first_image?: string;
   type: string;
   remarks?: string;
   cover_image?: string;

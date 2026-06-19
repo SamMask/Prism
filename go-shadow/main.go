@@ -8021,6 +8021,9 @@ func applyNoteListContentPreview(note response) {
 	note["content_preview"] = preview
 	note["content_truncated"] = truncated
 	note["content_length"] = contentLength
+	if firstImage := firstNoteContentImage(fullContent); firstImage != "" {
+		note["content_first_image"] = firstImage
+	}
 }
 
 func noteListContentPreview(content string) (string, bool, int) {
@@ -8029,6 +8032,14 @@ func noteListContentPreview(content string) (string, bool, int) {
 		return content, false, len(runes)
 	}
 	return string(runes[:noteListContentPreviewLength]) + "...", true, len(runes)
+}
+
+func firstNoteContentImage(content string) string {
+	refs := collectMarkdownImageRefs(content)
+	if len(refs) == 0 {
+		return ""
+	}
+	return refs[0]
 }
 
 func (s *server) noteTags(noteID int) ([]tagRef, error) {

@@ -64,7 +64,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   const pendingScrollRestoreIdRef = useRef<number | null>(null)
   const workspaceIdsKey = workspace.noteIds.join(',')
   const isCurrentInWorkspace = workspace.noteIds.includes(localNote.id)
-  const coverImage = localNote.cover_image || extractFirstImage(localNote.content || '')
+  const coverImage = localNote.cover_image || localNote.content_first_image || extractFirstImage(localNote.content || '')
   const readingImages = useMemo(
     () => collectReadingImages(coverImage, localNote.content || '', localNote.title || t('reading.untitled')),
     [coverImage, localNote.content, localNote.title, t],
