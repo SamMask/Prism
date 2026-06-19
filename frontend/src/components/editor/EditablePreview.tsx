@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { marked } from 'marked'
 import { Edit3, Trash2 } from 'lucide-react'
 import { removeImageReferences } from './imageReferences'
 import { useTranslation } from '../../hooks/useTranslation'
+import { renderSafeMarkdown } from '../../utils/markdown'
 import { ImageLightbox, type LightboxImage } from '../ImageLightbox'
 
 interface EditablePreviewProps {
@@ -136,7 +136,7 @@ export function EditablePreview({
               </button>
               <div
                 className="pr-10"
-                dangerouslySetInnerHTML={{ __html: renderMarkdown(block.source) }}
+                dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(block.source) }}
               />
             </section>
           )
@@ -152,16 +152,6 @@ export function EditablePreview({
       )}
     </>
   )
-}
-
-function renderMarkdown(markdown: string): string {
-  if (!markdown.trim()) return ''
-  try {
-    marked.setOptions({ breaks: true, gfm: true })
-    return marked(markdown) as string
-  } catch {
-    return markdown
-  }
 }
 
 function splitPreviewBlocks(content: string): PreviewBlock[] {

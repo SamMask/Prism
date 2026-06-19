@@ -57,6 +57,7 @@ const maxAttachmentScanFiles = 200
 const maxAttachmentScanBytes int64 = 5242880
 const maxAttachmentScanDuration = 250 * time.Millisecond
 const maxUploadFileBytes int64 = 5 * 1024 * 1024
+const attachmentUploadMultipartOverheadBytes int64 = 64 * 1024
 const maxMarkdownImportBytes int64 = 2 * 1024 * 1024
 const maxExportImages = 100
 const defaultBackupKeepCount = 3
@@ -2362,21 +2363,10 @@ func (s *server) handleBackupDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tmpPath := tmp.Name()
-	defer os.Remove(tmpPath)
-	in, err := os.Open(s.runtime.dbPath)
-	if err != nil {
-		tmp.Close()
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	_, copyErr := io.Copy(tmp, in)
-	in.Close()
-	if copyErr == nil {
-		copyErr = tmp.Sync()
-	}
 	tmp.Close()
-	if copyErr != nil {
-		writeError(w, http.StatusInternalServerError, copyErr.Error())
+	defer os.Remove(tmpPath)
+	if err := s.writeConsistentDBBackup(tmpPath); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.Header().Set("Content-Type", "application/x-sqlite3")
@@ -2396,7 +2386,7 @@ func (s *server) handleBackupRotate(w http.ResponseWriter, r *http.Request) {
 	keepCount := parseBackupKeepCount(payload, defaultBackupKeepCount)
 	backupName := managedBackupName()
 	backupPath := filepath.Join(s.runtime.backupsDir, backupName)
-	if err := copyFileExclusive(s.runtime.dbPath, backupPath); err != nil {
+	if err := s.writeConsistentDBBackup(backupPath); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -2414,6 +2404,31 @@ func (s *server) handleBackupRotate(w http.ResponseWriter, r *http.Request) {
 			"total_size_mb":   roundMB(totalSize),
 		},
 	})
+}
+
+func (s *server) writeConsistentDBBackup(destination string) error {
+	if strings.TrimSpace(destination) == "" {
+		return errors.New("backup destination is required")
+	}
+	if err := os.MkdirAll(filepath.Dir(destination), 0755); err != nil {
+		return err
+	}
+	tmp := destination + ".tmp"
+	_ = os.Remove(tmp)
+	if _, err := s.db.Exec("VACUUM INTO " + sqliteStringLiteral(tmp)); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := validateSQLiteBackup(tmp); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	_ = os.Remove(destination)
+	return os.Rename(tmp, destination)
+}
+
+func sqliteStringLiteral(value string) string {
+	return "'" + strings.ReplaceAll(value, "'", "''") + "'"
 }
 
 type pendingRestore struct {
@@ -6486,7 +6501,7 @@ func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, category
 		hasName = true
 		name, ok := rawName.(string)
 		if !ok {
-			writeError(w, http.StatusInternalServerError, "category name must be a string")
+			writeError(w, http.StatusBadRequest, "category name must be a string")
 			return
 		}
 		newName = strings.TrimSpace(name)
@@ -6535,7 +6550,7 @@ func (s *server) updateCategory(w http.ResponseWriter, r *http.Request, category
 			if rawOverride != nil {
 				overrideText, ok := rawOverride.(string)
 				if !ok {
-					writeError(w, http.StatusInternalServerError, "category name_override must be a string or null")
+					writeError(w, http.StatusBadRequest, "category name_override must be a string or null")
 					return
 				}
 				overrideText = strings.TrimSpace(overrideText)
@@ -6607,7 +6622,7 @@ func (s *server) deleteCategory(w http.ResponseWriter, r *http.Request, category
 		}
 		if strings.TrimSpace(string(body)) != "" {
 			if err := json.Unmarshal(body, &payload); err != nil {
-				writeError(w, http.StatusInternalServerError, err.Error())
+				writeError(w, http.StatusBadRequest, "Invalid JSON body")
 				return
 			}
 		}
@@ -6640,6 +6655,10 @@ func (s *server) deleteCategory(w http.ResponseWriter, r *http.Request, category
 		return
 	}
 	targetCategoryID, hasTargetCategoryID := intField(payload, "target_category_id")
+	if _, ok := payload["target_category_id"]; ok && !hasTargetCategoryID {
+		writeError(w, http.StatusBadRequest, "target_category_id must be an integer")
+		return
+	}
 	if notesCount > 0 && (!hasTargetCategoryID || targetCategoryID == 0) {
 		writeJSON(w, http.StatusBadRequest, response{
 			"status":      "error",
@@ -6647,6 +6666,21 @@ func (s *server) deleteCategory(w http.ResponseWriter, r *http.Request, category
 			"notes_count": notesCount,
 		})
 		return
+	}
+	if hasTargetCategoryID && targetCategoryID == categoryID {
+		writeError(w, http.StatusBadRequest, "Target category cannot be the category being deleted")
+		return
+	}
+	if hasTargetCategoryID && targetCategoryID != 0 {
+		var targetExists int
+		if err := tx.QueryRow("SELECT id FROM Categories WHERE id = ?", targetCategoryID).Scan(&targetExists); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				writeError(w, http.StatusNotFound, "Target category not found")
+				return
+			}
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
 	}
 
 	migratedCount := int64(0)
@@ -7080,9 +7114,17 @@ func (s *server) uploadAttachment(w http.ResponseWriter, r *http.Request, noteID
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if err := r.ParseMultipartForm(maxUploadFileBytes); err != nil {
+	r.Body = http.MaxBytesReader(w, r.Body, maxAttachmentFileBytes+attachmentUploadMultipartOverheadBytes)
+	if err := r.ParseMultipartForm(maxAttachmentFileBytes); err != nil {
+		if strings.Contains(strings.ToLower(err.Error()), "request body too large") {
+			writeError(w, http.StatusBadRequest, attachmentTooLargeMessage())
+			return
+		}
 		writeError(w, http.StatusBadRequest, "No file provided")
 		return
+	}
+	if r.MultipartForm != nil {
+		defer r.MultipartForm.RemoveAll()
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
@@ -7117,11 +7159,16 @@ func (s *server) uploadAttachment(w http.ResponseWriter, r *http.Request, noteID
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	sizeBytes, copyErr := io.Copy(target, file)
+	sizeBytes, copyErr := io.Copy(target, io.LimitReader(file, maxAttachmentFileBytes+1))
 	closeErr := target.Close()
 	if copyErr != nil {
 		_ = os.Remove(targetPath)
 		writeError(w, http.StatusInternalServerError, copyErr.Error())
+		return
+	}
+	if sizeBytes > maxAttachmentFileBytes {
+		_ = os.Remove(targetPath)
+		writeError(w, http.StatusBadRequest, attachmentTooLargeMessage())
 		return
 	}
 	if closeErr != nil {
@@ -7152,6 +7199,10 @@ func (s *server) uploadAttachment(w http.ResponseWriter, r *http.Request, noteID
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
 		"id": attachmentID, "file_path": relativePath, "title": title, "size_bytes": sizeBytes,
 	}})
+}
+
+func attachmentTooLargeMessage() string {
+	return fmt.Sprintf("Attachment too large. Maximum size: %dMB", maxAttachmentFileBytes/(1024*1024))
 }
 
 func (s *server) deleteAttachment(w http.ResponseWriter, attachmentID int) {
@@ -7243,7 +7294,7 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 		perPage = 100
 	}
 
-	where, args := s.buildNotesWhere(r)
+	where, args, searchDiagnostics := s.buildNotesWhere(r)
 	var total int
 	if err := s.db.QueryRow("SELECT COUNT(*) FROM Notes n LEFT JOIN Categories c ON n.category_id = c.id "+where, args...).Scan(&total); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -7288,14 +7339,20 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 		applyNoteListContentPreview(note)
 		items = append(items, note)
 	}
-	writeJSON(w, http.StatusOK, response{
+	payload := response{
 		"status": "success",
 		"data":   items,
 		"pagination": response{
 			"page": page, "per_page": perPage, "total": total,
 			"total_pages": int(math.Ceil(float64(total) / float64(perPage))),
 		},
-	})
+	}
+	if searchDiagnostics != nil && searchDiagnostics.Partial {
+		payload["search_diagnostics"] = response{
+			"attachment_body_scan": searchDiagnostics.toResponse(),
+		}
+	}
+	writeJSON(w, http.StatusOK, payload)
 }
 
 func (s *server) createNote(w http.ResponseWriter, r *http.Request) {
@@ -7494,9 +7551,10 @@ func (s *server) deleteNote(w http.ResponseWriter, noteID int) {
 	writeJSON(w, http.StatusOK, response{"status": "success"})
 }
 
-func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
+func (s *server) buildNotesWhere(r *http.Request) (string, []any, *attachmentScanDiagnostics) {
 	clauses := []string{"1 = 1"}
 	args := []any{}
+	var diagnostics *attachmentScanDiagnostics
 	if boolString(r, "archived") {
 		clauses = append(clauses, "COALESCE(n.is_archived, 0) = 1")
 	} else if !boolString(r, "include_archived") {
@@ -7537,13 +7595,14 @@ func (s *server) buildNotesWhere(r *http.Request) (string, []any) {
 	}
 	if q := strings.TrimSpace(r.URL.Query().Get("q")); q != "" {
 		q = truncateRunes(q, 200)
-		searchClause, searchArgs := s.buildNotesSearchClause(q)
+		searchClause, searchArgs, searchDiagnostics := s.buildNotesSearchClause(q)
 		if searchClause != "" {
 			clauses = append(clauses, searchClause)
 			args = append(args, searchArgs...)
 		}
+		diagnostics = searchDiagnostics
 	}
-	return "WHERE " + strings.Join(clauses, " AND "), args
+	return "WHERE " + strings.Join(clauses, " AND "), args, diagnostics
 }
 
 func truncateRunes(value string, maxRunes int) string {
@@ -7560,10 +7619,11 @@ func truncateRunes(value string, maxRunes int) string {
 	return value
 }
 
-func (s *server) buildNotesSearchClause(keyword string) (string, []any) {
+func (s *server) buildNotesSearchClause(keyword string) (string, []any, *attachmentScanDiagnostics) {
 	tokens := searchTokens(keyword)
 	clauses := []string{}
 	args := []any{}
+	var diagnostics *attachmentScanDiagnostics
 	if ftsQuery := sanitizeFTSQuery(keyword); ftsQuery != "" {
 		clauses = append(clauses, "n.id IN (SELECT rowid FROM Notes_FTS WHERE Notes_FTS MATCH ?)")
 		args = append(args, ftsQuery)
@@ -7573,16 +7633,51 @@ func (s *server) buildNotesSearchClause(keyword string) (string, []any) {
 		clauses = append(clauses, tagTokenSearchClause(tokens, &args))
 		clauses = append(clauses, attachmentMetadataTokenSearchClause(tokens, &args))
 	}
-	if attachmentNoteIDs := s.attachmentContentNoteIDs(keyword); len(attachmentNoteIDs) > 0 {
+	attachmentNoteIDs, scanDiagnostics := s.attachmentContentNoteIDs(keyword)
+	diagnostics = scanDiagnostics
+	if len(attachmentNoteIDs) > 0 {
 		clauses = append(clauses, "n.id IN ("+placeholders(len(attachmentNoteIDs))+")")
 		for _, noteID := range attachmentNoteIDs {
 			args = append(args, noteID)
 		}
 	}
 	if len(clauses) == 0 {
-		return "", nil
+		return "", nil, diagnostics
 	}
-	return "(" + strings.Join(clauses, " OR ") + ")", args
+	return "(" + strings.Join(clauses, " OR ") + ")", args, diagnostics
+}
+
+type attachmentScanDiagnostics struct {
+	ScannedFiles int
+	ScannedBytes int64
+	Partial      bool
+	Reason       string
+}
+
+func (d *attachmentScanDiagnostics) markPartial(reason string) {
+	if d.Partial {
+		return
+	}
+	d.Partial = true
+	d.Reason = reason
+}
+
+func (d *attachmentScanDiagnostics) toResponse() response {
+	out := response{
+		"partial":       d.Partial,
+		"reason":        d.Reason,
+		"scanned_files": d.ScannedFiles,
+		"scanned_bytes": d.ScannedBytes,
+		"limits": response{
+			"files":       maxAttachmentScanFiles,
+			"bytes":       maxAttachmentScanBytes,
+			"duration_ms": maxAttachmentScanDuration.Milliseconds(),
+		},
+	}
+	if !d.Partial {
+		out["reason"] = nil
+	}
+	return out
 }
 
 func tokenAndClause(condition string, tokens []string, args *[]any) string {
@@ -7658,17 +7753,19 @@ func sanitizeFTSQuery(keyword string) string {
 	return strings.Join(quoted, " ")
 }
 
-func (s *server) attachmentContentNoteIDs(keyword string) []int {
+func (s *server) attachmentContentNoteIDs(keyword string) ([]int, *attachmentScanDiagnostics) {
 	tokens := searchTokens(keyword)
 	if len(tokens) == 0 {
-		return nil
+		return nil, nil
 	}
+	diagnostics := &attachmentScanDiagnostics{}
 	rows, err := s.db.Query(`
 		SELECT note_id, file_path, file_type
 		FROM Note_Attachments
 		WHERE LOWER(COALESCE(file_type, '')) IN ('md', 'markdown', 'txt')`)
 	if err != nil {
-		return nil
+		diagnostics.markPartial("query_error")
+		return nil, diagnostics
 	}
 	defer rows.Close()
 
@@ -7678,23 +7775,35 @@ func (s *server) attachmentContentNoteIDs(keyword string) []int {
 	noteIDs := map[int]bool{}
 	for rows.Next() {
 		if filesRead >= maxAttachmentScanFiles || totalBytes >= maxAttachmentScanBytes || time.Now().After(deadline) {
+			switch {
+			case filesRead >= maxAttachmentScanFiles:
+				diagnostics.markPartial("file_limit")
+			case totalBytes >= maxAttachmentScanBytes:
+				diagnostics.markPartial("byte_limit")
+			default:
+				diagnostics.markPartial("time_limit")
+			}
 			break
 		}
 		var noteID int
 		var filePath, fileType sql.NullString
 		if err := rows.Scan(&noteID, &filePath, &fileType); err != nil {
-			return sortedIntKeys(noteIDs)
+			diagnostics.markPartial("scan_error")
+			return sortedIntKeys(noteIDs), diagnostics
 		}
 		resolved, size, ok := resolveAttachmentFile(s.runtime.dataDir, nullableString(filePath), nullableString(fileType))
 		if !ok {
 			continue
 		}
 		if totalBytes+size > maxAttachmentScanBytes {
+			diagnostics.markPartial("byte_limit")
 			break
 		}
 		content, err := os.ReadFile(resolved)
 		filesRead++
 		totalBytes += size
+		diagnostics.ScannedFiles = filesRead
+		diagnostics.ScannedBytes = totalBytes
 		if err != nil {
 			continue
 		}
@@ -7703,7 +7812,10 @@ func (s *server) attachmentContentNoteIDs(keyword string) []int {
 			noteIDs[noteID] = true
 		}
 	}
-	return sortedIntKeys(noteIDs)
+	if err := rows.Err(); err != nil {
+		diagnostics.markPartial("scan_error")
+	}
+	return sortedIntKeys(noteIDs), diagnostics
 }
 
 func resolveAttachmentFile(dataDir, relativePath, fileType string) (string, int64, bool) {

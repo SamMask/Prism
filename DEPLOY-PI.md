@@ -113,7 +113,7 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 
 ## 自動備份排程
 
-每週日 03:00 透過 Go primary server backup API 下載 DB backup 並輪替。這是 `knowledge.db` 備份，與部署前的 `go-primary-*/data-files.tar.gz` snapshot 不同；DB backup 不能還原已從 `static/uploads/` 刪掉的圖片檔。
+每週日 03:00 透過 Go primary server backup API 下載 DB backup 並輪替。這是 SQLite 一致 DB snapshot，會包含 request 當下 active WAL 的最新 DB 交易；但它仍只是 `knowledge.db` 備份，與部署前的 `go-primary-*/data-files.tar.gz` snapshot 不同。DB backup 不包含 `static/uploads/` / `docs/attachments/`，不能還原已從檔案系統刪掉的圖片或附件檔。
 
 ```bash
 ssh PI5Mask24 "sudo tee /home/mask070924/prism/scripts/auto-backup.sh > /dev/null <<'SCRIPT'

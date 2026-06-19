@@ -20,6 +20,7 @@
 - 2026-06-18 Variant duplicate attachment repair 已完成 local + Pi delivery：`POST /api/notes/<id>/duplicate` / as-variant 會複製既有文字附件與長內容自動分離附件，子 note 取得自己的 `Note_Attachments` row 與實體檔；ReadingView 會 lazy-load `is_auto_extracted` 附件全文。Live API smoke 與 Playwright UI smoke 已驗 child variant 可讀完整附件全文並清理 temp notes/files。這不是新版本樹、diff/merge 或 note-list partial-load API。
 - 2026-06-18 Note list lightweight gate 已完成 local + Pi delivery：`GET /api/notes` list payload 只回 `content_preview` / `content_truncated` / `content_length` 與相容 preview `content`；`GET /api/notes/<id>` 保持完整 note detail，搜尋仍以 DB/attachment body contract 執行。Home card 使用 preview + full length metadata；Editor、card copy 與 image export 會先 lazy-load detail，ReadingView 維持 detail + auto-extracted attachment lazy-load。Pi live `https://prism.local` 已驗 list preview 不洩 tail、detail/search 命中 tail、Home card preview、Editor/ReadingView detail 載入與 console error=0，temp validation notes 已清理。未新增 schema migration、cache layer、server-side UI state、全文預載、背景同步或附件 root 變更。
 - 2026-06-18 Image viewer lightbox gate 已完成 local + Pi delivery：`ImageLightbox` 是純前端 shared component，ReadingView cover/markdown images、EditablePreview standalone images、NoteEditor 雙欄 gallery 與 NoteCard cover 明確 icon/button 都走同一 lightbox；Esc/左右鍵在 lightbox capture 階段攔截，不會連同底層 ReadingView/Editor modal 一起關閉。Pi live `https://prism.local` 已驗 card cover、ReadingView cover/markdown、Editor preview lightbox、console error=0，temp validation note/uploads 已清理。未改 upload/delete/cleanup API、DB schema、gallery DB 或 markdown renderer。
+- 2026-06-19 Image viewer zoom follow-up 已完成 local gate：shared `ImageLightbox` 新增放大/縮小/重設縮放、背景點擊關閉與 ArrowUp/ArrowDown 快捷鍵；切換圖片或重開 lightbox 會回 100%/fit，ReadingView、EditablePreview、NoteEditor gallery 與 NoteCard cover 仍共用同一 viewer。未改 upload/delete/cleanup API、附件 contract、DB schema、gallery DB、per-image zoom persistence 或 Pi delivery。
 - 2026-06-18 Header starred tag shortcuts gate 已完成 local + Pi delivery：`Settings > Organization > Tag management` 的星號只保存純前端 `localStorage` key `prism.starredTags.v1`，`FilterStrip` 分類右側只顯示 starred tags；沒有 starred tags 時只顯示低存在感提示文字。Pi live `https://prism.local` 已驗星號開關、reload persistence、header 顯示/隱藏、tag filter 點擊與 console error=0，temp validation notes/tags 已清理。未新增 DB 欄位、tags API、server-side preference、跨裝置同步、tag sort/group 或 sidebar redesign。
 - 2026-06-18 Batch Markdown/txt import gate 已完成 local + Pi delivery：`Settings > Backup & Restore` 新增 `.md/.txt` 多檔匯入；前端待匯入清單可多次選擇不同資料夾檔案、同檔去重、單檔移除與清空，匯入後清空待匯入清單但保留結果摘要。`.md` 逐檔走既有單檔 `POST /api/notes/import/md`，`.txt` 由前端讀檔後走既有 `POST /api/notes`，結果逐檔回報 created / skipped / failed。Pi live `https://prism.local` 已驗 Markdown H1 title、frontmatter category/tags、TXT 檔名 title、跨批選檔累加、重複去重、混合 2 created / 1 failed summary、temp note/tag cleanup 與 Go journal evidence。未新增 server-side batch API、schema migration、目錄 watcher、AI 摘要、自動分類、overwrite/sync/background daemon 或批量 DB transaction。
 - 2026-06-18 Reading list workspace 已完成 Pi delivery：新增純前端 `localStorage` key `prism.readingWorkspace.v1`，ReadingView 可加入目前 note、顯示暫存閱讀清單、切換、移除單張、清空全部與 scroll restore；NoteCard action menu、NoteEditor toolbar 與 Header 都可加入/開啟閱讀清單，卡片開啟模式維持既有習慣；Appearance sidebar width slider 為 150-320px。Pi live `https://prism.local` 已跑 Go primary cutover，`prism-go-primary.service` active、legacy `prism.service` inactive、migration status v16 clean；live Playwright smoke 已驗 Editor toolbar 加入、Header 開啟、workspace panel、sidebar `V2.5`、HTML title `Prism V2.5`、舊「提取圖片提示詞」入口不存在、console/page/request error=0。未新增 DB schema、note API、server-side persistence、跨裝置同步、native 多視窗、雙欄比對或 diff engine。
@@ -27,7 +28,9 @@
 - 2026-06-18 release checkpoint / repo hygiene gate 已完成：dirty tree 範圍只含 Reading list workspace 功能、測試與文件收尾；ignored `build/` 產物已清到只保留 `build/release` 與 `build/desktop-portable-smoke`，系統 temp 的 reading workspace smoke screenshots 也已清理；tracked runtime/private path sweep 未發現 `.omx`、production DB/WAL/SHM、uploads、attachments、notes、env/key/log 類檔案進入 git，既有 `resources/demo_db/knowledge_demo.db` 仍是 demo fixture。`main` 與 `origin/main` 在未提交工作前為 `0 0`；本 checkpoint 未 commit、未 tag、未重新 package。
 - 2026-06-19 Pi deploy snapshot retention 已收斂：`scripts/go_primary_pi_live_ops.ps1` 的 pre-cutover `go-primary-*/data-files.tar.gz` snapshot 預設只保留最新 5 份，cutover smoke 通過後自動清理舊 snapshot；每週 `prism_backup_*.db` 仍是獨立 DB backup/rotate 流程，不能代替 uploads data snapshot。
 - 2026-06-19 Default category identity split 已完成 local + Pi delivery：`Categories` schema 升到 migration v17，新增 `system_key` / `name_override` 與 `idx_categories_system_key`；五個系統分類以 `system_key` 作身份，使用者改名只寫 `name_override`，`is_default` 仍只作刪除分類搬移目標。Pi live `https://prism.local` 已完成 Go primary cutover，`prism-go-primary.service` active、legacy `prism.service` inactive、migration status v17 clean；live API 驗五個系統分類 `system_key` 正確且測試後 `name_override=null`，Playwright smoke 驗 zh-TW / en / ja / ko 分類顯示、暫時改名後跨語系固定顯示、清除 override 後回語系顯示、console/page/request error=0。
-- 2026-06-19 Prism 深度掃描報告已產出：`20260619_Prism_深度掃描報告.md`。本輪已修 request log query leak、CSRF origin prefix bypass、UTF-8 search query truncate、local artifact smoke migration hardcode，並同步 root/docs 最新進度；未修風險已排入 `DEEP-SCAN-RISK-CANDIDATE-01`，明天優先處理 P1 markdown sanitization。
+- 2026-06-19 Prism 深度掃描報告已產出：`20260619_Prism_深度掃描報告.md`。掃描當輪已修 request log query leak、CSRF origin prefix bypass、UTF-8 search query truncate、local artifact smoke migration hardcode，並同步 root/docs 最新進度。
+- 2026-06-19 `DEEP-SCAN-RISK-CANDIDATE-01` 01A-01G 已完成 local gate：markdown render path 改為 DOMPurify sanitizer；文字附件 upload/read 同步 1 MiB hard limit；server DB backup/download/rotate 改 SQLite consistent DB snapshot；category invalid payload / delete target validation 回 400/404；bounded attachment body search 超限回 optional partial diagnostics；no-auth/local-only exposure boundary 有 runtime/docs regression；stability pack 補搜尋同步、中文/emoji、missing/Windows attachment path 與 bad pending-restore marker。未新增 auth、AI、schema、search index、備份平台、Pi deploy 或 Go runtime 大拆。
+- 2026-06-19 `PROJECT_REVIEW.md` 與 image viewer follow-up 已完成 TODO 去重 intake：P1/P2 runtime/security findings 由 `DEEP-SCAN-RISK-CANDIDATE-01` 承接；未重複的新工作只新增 `IMAGE-VIEWER-ZOOM-CANDIDATE-01` 與 `PROJECT-REVIEW-HYGIENE-CANDIDATE-01`。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留 `build/release` 與最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
@@ -53,14 +56,9 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 
 ### Deep Scan Risk Follow-up（2026-06-20）
 
-`20260619_Prism_深度掃描報告.md` 已把 API、搜尋、DB、檔案、啟動、安全與測試缺口盤點完。明天處理時不要一次全開，按 `DEEP-SCAN-RISK-CANDIDATE-01` 的子項一次 promote 一個最小 gate。
+`DEEP-SCAN-RISK-CANDIDATE-01` 的 01A-01G 已完成 local gate。01H 仍是低優先維護 triage，只有在要主動整理 frontend bundle/browserslist warning、歷史 frozen docs/test wording 或 route-local Go 小整理時才 promote；不得把 01H 擴成 code-splitting 大重構、批量歷史改寫或整檔 Go runtime 拆分。
 
-建議順序：
-
-1. 先做 **01A Markdown rendering sanitization**，這是唯一 P1。
-2. 再做 **01B Attachment upload hard size gate**，避免大文字附件寫入後不可讀或吃磁碟。
-3. 再做 **01C Backup WAL snapshot proof**，確認 DB backup 在 WAL active write 下的語意與實作。
-4. 其餘 P2/P3 測試缺口與維護性項目，等前三項完成後再逐一 promote。
+若要接下一個可施工項，建議優先處理 `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 的 **01A LICENSE consistency gate**，因為這是 GitHub/release/reuse readiness 的最小明確缺口，且不牽涉 runtime schema/API。
 
 ### Windows Desktop vs Pi Deployment 差異表
 
@@ -97,47 +95,55 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 - 不改 DB schema；若實作證明必須改 schema，先另開 schema contract，不在本 candidate 內偷做。
 - 涉及 Pi live delivery 時，先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程，並驗 service/header/migration/API/UI smoke；純 local/docs/test 子項不自動部署 Pi。
 
-- [ ] **01A Markdown rendering sanitization（P1，明天第一優先）**
+- [x] **01A Markdown rendering sanitization（P1，2026-06-19 完成）**
   - 風險：`ReadingView` / `EditablePreview` 直接把 `marked()` 結果送進 `dangerouslySetInnerHTML`，未見 sanitizer；惡意 note/import/attachment markdown 可能形成 stored XSS，並同源呼叫本機 `/api/*`。
   - 施工範圍：只處理 markdown render path；優先用本地已安裝或小型明確 dependency / existing sanitizer；不得改 note schema、不得重寫 editor、不得新增 markdown WYSIWYG、不得新增 auth 系統。
   - 驗收：`<script>`、`onerror`、`javascript:` link、iframe/svg、HTML comment、中文 markdown 混排都不能執行 unsafe HTML；正常 markdown、圖片 lightbox、code block、link rendering 不退化。
-  - 最小驗證：targeted frontend/static regression、`cd frontend && npm run build`、必要時 Playwright smoke；若 touching Go/API，再加 `cd go-shadow && go test ./...` 與 Loop gate。
+  - 驗收：`frontend/src/utils/markdown.ts` 使用 DOMPurify 統一 sanitizer；ReadingView / EditablePreview 不再直接 import/use `marked()` output，`<script>`、event handler、`javascript:` URL、iframe/svg/raw HTML comments 由 sanitizer gate 處理；正常 markdown/code/link/image lightbox 保留。
+  - 驗證：`pytest tests/test_markdown_sanitization.py -q`、`cd frontend && npm run build`、local Playwright smoke、Loop gate。
 
-- [ ] **01B Attachment upload hard size gate（P2）**
+- [x] **01B Attachment upload hard size gate（P2，2026-06-19 完成）**
   - 風險：`POST /api/notes/<id>/attachments` 用 `ParseMultipartForm(maxUploadFileBytes)` 後直接 `io.Copy`，沒有像 image upload 一樣用 `LimitReader` 明確拒絕超限內容；read path 又受 `maxAttachmentFileBytes` 限制。
   - 施工範圍：讓文字附件 upload limit 與 read limit / documented contract 對齊；若採 1 MiB，API error 要明確；若採 5 MiB，read path 與 docs/test 必須一起調整。
   - 驗收：超限 `.md/.txt/.markdown` 不留下 DB row 或 partial file；missing note / unsupported extension / valid small upload 行為不退化。
-  - 最小驗證：targeted Go attachment tests、`cd go-shadow && go test ./...`；若 docs 改限額，加 `git diff --check`。
+  - 驗收：文字附件 upload 以 1 MiB 為 hard limit；超限回明確 400，不留下 `Note_Attachments` row 或 partial file；missing note / unsupported extension / valid small upload 行為已鎖。
+  - 驗證：`TestAttachmentUploadRejectsOversizedTextWithoutRowOrPartialFile`、`cd go-shadow && go test ./...`、Loop gate。
 
-- [ ] **01C Backup WAL snapshot proof（P2）**
+- [x] **01C Backup WAL snapshot proof（P2，2026-06-19 完成）**
   - 風險：`/api/server/backup/download` 目前是 transient `.db` copy；報告未確認 WAL active write 下是否包含最新交易。DB backup 也不包含 `static/uploads/` / `docs/attachments/`，容易和 deploy data snapshot 混淆。
   - 施工範圍：先用 test/proof 確認現況；若 DB-only copy 不足，改 SQLite online backup 或明確 WAL checkpoint strategy。不得做大型備份平台，不改 data snapshot retention policy。
   - 驗收：active WAL write 後下載/rotate backup 可通過 integrity check，且包含預期最新 DB state；docs 清楚區分 DB backup 與 data snapshot。
-  - 最小驗證：targeted server backup Go tests、local artifact/API smoke；必要時 `scripts/smoke_go_local_artifact.ps1`。
+  - 驗收：`/api/server/backup/download` 與 `/api/server/backup/rotate` 改用 SQLite `VACUUM INTO` consistent DB snapshot；active WAL 最新 DB state 可在 download/rotate backup 中查到；API/DEPLOY docs 明確標記 DB-only，不包含 uploads/attachments data snapshot。
+  - 驗證：`TestBackupDownloadAndRotateIncludeLatestWALState`、`cd go-shadow && go test ./...`、Loop gate。
 
-- [ ] **01D Category API invalid input hardening（P2）**
+- [x] **01D Category API invalid input hardening（P2，2026-06-19 完成）**
   - 風險：category update 的 `name` / `name_override` 型別錯誤目前可能回 500；delete category 有 notes 時未先驗 `target_category_id` 是否存在或等於自己，錯誤可讀性不足。
   - 施工範圍：只修 validation 與 error code/message；不改 category identity schema，不改 frontend category workflow。
   - 驗收：wrong JSON type 回 400；missing target / invalid target / self target 有明確 400/404；合法 update/delete/migrate notes 不退化。
-  - 最小驗證：targeted Go category tests、`cd go-shadow && go test ./...`。
+  - 驗收：`name` / `name_override` wrong type 回 400；delete category 的 missing/wrong/self/missing target 回明確 400/404；合法 delete + migrate notes 不退化。
+  - 驗證：`TestCategoryInvalidPayloadsReturnClientErrorsAndValidMigrationStillWorks`、`cd go-shadow && go test ./...`、Loop gate。
 
-- [ ] **01E Attachment search bounded-scan transparency（P2）**
+- [x] **01E Attachment search bounded-scan transparency（P2，2026-06-19 完成）**
   - 風險：文字附件 body search 有 200 files / 5 MiB / 250 ms 上限；超過上限時可能漏結果，且目前對使用者/Agent 不透明。
   - 施工範圍：先鎖 current bounded behavior 測試；再決定是否只補 docs/API note，或在不破壞 response contract 的前提下回傳 partial scan hint。不得取消上限、不得把附件全文塞進 FTS、不得引入新索引/schema。
   - 驗收：大量附件時不吃爆 memory/time；超限行為可診斷；一般中文/英文/符號搜尋不退化。
-  - 最小驗證：targeted search tests、`pytest` 對應 contract tests、`cd go-shadow && go test ./...`。
+  - 驗收：bounded attachment body scan 保留 200 files / 5 MiB / 250 ms 上限；超限時 list response 可回 `search_diagnostics.attachment_body_scan.partial=true` 與 reason/limits/scanned counts；一般附件 body search 不退化。
+  - 驗證：`TestAttachmentBodySearchReportsPartialWhenScanLimitIsHit`、`TestStabilityPackSearchSyncUnicodeAndUnsafeAttachmentPaths`、`cd go-shadow && go test ./...`、Loop gate。
 
-- [ ] **01F Local exposure / no-auth boundary audit（P2）**
+- [x] **01F Local exposure / no-auth boundary audit（P2，2026-06-19 完成）**
   - 風險：Prism 無內建 auth 是明確設計；若 raw Go/Caddy 被 public internet 暴露，`/api/*` 風險不可接受。`/api/server/*` 依 localhost/proxy boundary 與 CSRF 控制，需要保持文件與 runtime 一致。
   - 施工範圍：只補啟動/health/docs/test guard；不得直接新增 login、OAuth、JWT、RBAC、API key 或多使用者系統。
   - 驗收：non-local bind guard、public bind warning、Origin/Referer same-origin、server/system localhost assumptions 有 regression；README / DEPLOY-PI / API docs warning 一致。
-  - 最小驗證：targeted Go middleware tests、docs check、Loop gate。
+  - 驗收：non-local bind 預設拒絕且錯誤訊息保留 no-auth warning；`PRISM_GO_ALLOW_PUBLIC_BIND=1` 只作明確 override；healthz 回報 `auth:none` / public exposure policy；`/api/server/*` remote address 403；README / DEPLOY-PI / API warning 一致。
+  - 驗證：`TestExposureBoundaryRegressionGuards`、既有 `TestCSRFProtectMiddleware` / `TestCSRFProtectionToggleHandlerAndGate`、Loop gate。
 
-- [ ] **01G Stability test-gap pack（P2/P3，分批 promote）**
+- [x] **01G Stability test-gap pack（P2/P3，2026-06-19 完成）**
   - 風險來源：掃描報告列出的空資料庫、中文/emoji/特殊字元、大量文件、update/delete 後搜尋同步、檔案不存在、Windows 路徑、port occupied、DB lock/concurrent request、壞 DB / restore pending marker 等測試缺口。
   - 施工範圍：這不是單一大任務；明天若要做，先選一組最小相關 tests，例如「搜尋同步 + 中文/emoji」或「Windows path + missing attachment」。不得一次補完整壓測框架。
   - 驗收：每個 promoted test pack 要有明確 fixture、失敗前提與 runtime owner；只補測試時不得改 runtime。
-  - 最小驗證：對應 targeted pytest/Go tests，再視影響跑 full gate。
+  - Promoted pack：搜尋同步 + 中文/emoji + missing/Windows attachment path + bad pending-restore marker。未做 port occupied/DB lock 壓測框架，保留到未來有明確 runtime failure 時再 promote。
+  - 驗收：note update/delete 後 FTS/search sync；中文/emoji title/content 與 unicode attachment body 不破壞搜尋；missing file / Windows absolute attachment path 不 crash、不逃逸 data dir；bad/missing pending restore marker 不阻塞啟動且會移除 marker、保留 current DB。
+  - 驗證：`TestStabilityPackSearchSyncUnicodeAndUnsafeAttachmentPaths`、`TestPendingRestoreBadMarkerIsDroppedAndKeepsCurrentDB`、Loop gate。
 
 - [ ] **01H Low-priority maintenance triage（P3，前三項完成後再看）**
   - 風險：frontend bundle size / browserslist warning、`go-shadow/main.go` 單檔過大、歷史 frozen docs/tests 仍含 migration 16 字樣。
@@ -150,6 +156,46 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 - semantic search / AI / embedding / GraphRAG。
 - 大型備份平台、目錄 watcher、背景同步 daemon。
 - 一次性重寫 markdown editor 或拆分整個 Go runtime。
+
+### Project Review Hygiene Backlog
+
+#### PROJECT-REVIEW-HYGIENE-CANDIDATE-01 GitHub / reuse readiness
+
+來源：`PROJECT_REVIEW.md`。
+
+目標：把外部 fork / GitHub release / reuse 會踩到、且尚未被 `DEEP-SCAN-RISK-CANDIDATE-01` 覆蓋的專案衛生缺口拆成小 gate。這不是 runtime 功能開發，也不是 public service 化。
+
+共同邊界：
+
+- 不重複 markdown sanitization、attachment size gate、backup WAL proof、category invalid input、no-auth boundary 這些已在 deep-scan queue 的 P1/P2 項目。
+- 不新增登入、OAuth、JWT、RBAC、cloud sync、telemetry 或 SaaS 多使用者假設。
+- 不為了 CI / release hygiene 大拆 `go-shadow/main.go`；單檔過大只在相關 route 維修時小步整理。
+- 不自動部署 Pi；Pi/live 驗證只在 release 或 deploy gate 明確需要時依 `DEPLOY-PI.md` 執行。
+
+- [ ] **01A LICENSE consistency gate**
+  - 問題：README 宣稱 MIT / See `LICENSE`，但 repo root 未見 `LICENSE` / `LICENSE.md` / `COPYING`。
+  - 施工範圍：若 owner 確認維持 MIT，新增 root `LICENSE` 並確認 README / release package wording 一致；若不是 MIT，先更新 README 與 release metadata，不偷改授權語意。
+  - 驗收：clean checkout 可直接看到明確授權檔；README 不再指向不存在的 license file。
+
+- [ ] **01B GitHub CI baseline**
+  - 問題：repo root 未見 `.github/workflows`，外部導入者無法從 GitHub 狀態判斷基本驗證是否通過。
+  - 施工範圍：新增無祕密、無 Pi 依賴的 baseline workflow；至少跑 Go tests、frontend type/build check、pytest contract gate 的可負擔 subset 或 full gate。
+  - 驗收：PR / push 能在 clean runner 上重現主要本機驗證；不需要 SSH、Pi、production DB、uploads 或 private path。
+
+- [ ] **01C Verification environment alignment**
+  - 問題：`PROJECT_REVIEW.md` 記錄本機 pytest 版本與 `requirements.txt` pin 不一致；導入者可能不知道應採 pinned env 或 local toolchain。
+  - 施工範圍：決定並記錄測試環境真實 contract；必要時同步 requirements / docs / CI install step。
+  - 驗收：README / docs / CI 對 pytest、Go、Node/npm 版本要求一致；不把未驗證版本宣稱為 supported。
+
+- [ ] **01D Release validation checklist**
+  - 問題：外部 release claim 需要 full gate、frontend build、browser/desktop smoke 證據；單次 source review 不足以宣稱 release asset 可用。
+  - 施工範圍：補 release 前 checklist 或 script entry；至少列 `pytest tests/ -v`、`cd go-shadow && go test ./...`、`cd frontend && npm run build`、local browser smoke、desktop portable smoke 的證據欄位。
+  - 驗收：每次 public release / tag / package claim 都能對應新鮮驗證日期與結果；未跑項目必須明確列為 Not-tested。
+
+- [ ] **01E Small docs consistency cleanup**
+  - 問題：`PROJECT_REVIEW.md` 記錄 CONTRIBUTING 的 e2e 路徑與 repo 實際 `e2e/` 目錄有小落差，README release/license wording 也依賴 01A/01D。
+  - 施工範圍：只修明確不一致的 docs；不批量改歷史 archived evidence，不改 runtime。
+  - 驗收：`git diff --check`、相關 docs path check、AGENTS/CLAUDE mirror check（若有 touching agent guidance）。
 
 ### Core UX / Maintenance
 
@@ -212,6 +258,31 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 - [x] **01C Editor preview/card integration**（2026-06-18 完成）：`EditablePreview` standalone image、`NoteEditor` 雙欄 gallery 與 `NoteCard` cover image 已接同一 `ImageLightbox`。卡片 cover 只用明確 icon/button 開啟，並 stop propagation；不改整張卡片開啟 note 的習慣。
 - 不做：改圖片儲存模式、改 upload/delete/cleanup API、重寫 markdown renderer、建立 gallery DB、OCR/AI 圖片描述。
 - 驗收：01A/01B local gate 已覆蓋 ReadingView markdown 多圖 prev/next、cover-only note、無圖 note、Esc close、左右鍵、copy path/open original contract；01C static regression 已鎖住 Editor preview / editor gallery / NoteCard cover 都走 shared lightbox，且卡片 cover 入口不 hijack card click。Local Playwright smoke 已驗 Home card cover `1/1`、ReadingView cover/markdown `1/3 -> 2/3`、Editor preview `1/2 -> 2/2`、Esc 後底層 panel/editor 仍開啟、console error=0；Loop gate 已通過。Pi delivery 已跑 `scripts/go_primary_pi_live_ops.ps1 -Mode Cutover`，live Playwright smoke 驗同一 flow，temp validation note/uploads 已清理，service/header/migration/journal final check clean。
+
+#### IMAGE-VIEWER-ZOOM-CANDIDATE-01 Lightbox pure-view zoom controls
+
+來源：使用者 2026-06-19 follow-up。
+
+目標：在既有 shared `ImageLightbox` 內補純觀看縮放與更直覺的關閉操作；只改善 lightbox viewing，不改圖片儲存、上傳、刪除或附件 contract。
+
+- [x] **01A Zoom controls**（2026-06-19 完成）
+  - 施工範圍：在 lightbox toolbar 加入放大 / 縮小控制，限制合理 min/max scale，切換圖片或重新打開時回到可預期的 fit/100% 狀態。
+  - 驗收：ReadingView cover/markdown image、EditablePreview standalone image、NoteEditor gallery、NoteCard cover lightbox 都能使用同一組 zoom controls。
+
+- [x] **01B Backdrop click close**（2026-06-19 完成）
+  - 施工範圍：點擊圖片外的 dimmed background 關閉 lightbox；點擊圖片本身、toolbar、prev/next、copy/open original 不關閉。
+  - 驗收：背景 click 只關 lightbox，不連帶關閉底層 ReadingView / Editor modal；Esc close 既有行為不退化。
+
+- [x] **01C Keyboard zoom shortcuts**（2026-06-19 完成）
+  - 施工範圍：lightbox 開啟時，`ArrowUp` 放大、`ArrowDown` 縮小；既有 `ArrowLeft` / `ArrowRight` 圖片切換仍保留。
+  - 驗收：快捷鍵只在 lightbox active 時攔截，不影響底層閱讀/編輯頁；到 min/max scale 時不產生 layout jump 或 console error。
+
+- [x] **01D Regression and smoke**（2026-06-19 完成）
+  - 最小驗證：static/frontend regression、`cd frontend && npm run build`、local Playwright smoke 覆蓋 background close、zoom buttons、上下鍵縮放、左右鍵切圖與底層 modal 不被誤關。
+  - Pi delivery：只有在使用者要求上 Pi 或 release gate 需要時，才依 `DEPLOY-PI.md` 另跑 live delivery。
+
+- 不做：crop / rotate / image edit、persisted per-image zoom、gallery DB、upload/delete/cleanup API、server-side preference、AI/OCR 圖片分析。
+- 驗收：local static regression 鎖住 min/max zoom、reset-on-image-change、ArrowUp/ArrowDown、backdrop close 與 prev/next/image/toolbar stop propagation；frontend build 與 local rendered smoke 覆蓋 zoom buttons、keyboard zoom、left/right image switch、background close、Esc close，以及 ReadingView / Editor 底層 modal 不被連帶關閉。Loop gate 已通過。本輪未做 Pi delivery，需 release/deploy gate 另行執行。
 
 #### READING-WORKSPACE-CANDIDATE-01 Reading list workspace
 

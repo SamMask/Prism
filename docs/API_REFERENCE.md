@@ -136,6 +136,7 @@
 
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
+- 文字附件內容搜尋是 request-time bounded scan：最多 200 個附件檔、5 MiB、250 ms。若超限，回應會加上 optional `search_diagnostics.attachment_body_scan.partial=true`，並標出 `reason`（`file_limit` / `byte_limit` / `time_limit` / `scan_error`）。
 - 列表回應是 Home/card 輕量 payload：`content` 為相容用 preview（與 `content_preview` 相同），`content_truncated=true` 代表前端若要編輯、複製全文、匯出內容或閱讀完整內容，必須再呼叫 `GET /api/notes/<id>`；`content_length` 提供完整 `Notes.content` 字數供卡片 metadata 顯示。
 - 列表回應包含 `parent_id` / `parent_title`，供 Home 卡片直接顯示 variant 上一代來源；非 variant 為 `null`。
 - `parent_id` query filter 只回直接 child variants，不回整棵樹；列表與詳情回應的 `variants_count` 是該 note 的直接 child variant 數量。
@@ -581,6 +582,10 @@ Response 每筆欄位：
 - `file`: 必填，僅允許 `.md` / `.txt` / `.markdown`
 - `title`: 可選
 
+限制：
+
+- 單一文字附件最大 1 MiB；超限會回 `400`，不建立 `Note_Attachments` row，也不保留 partial file。
+
 ### GET `/api/attachments/<attachment_id>`
 
 預設回 JSON：
@@ -986,8 +991,8 @@ Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism
 - `GET /api/server/logs`
 - `POST /api/server/restart`
 - `GET /api/server/backup/list`
-- `GET /api/server/backup/download`（下載目前 DB 的快照供使用者自行保存；**不在 server-side 留存或輪換備份**——server-side 保留是 `rotate` 的職責）
-- `POST /api/server/backup/rotate`（建立 server-side 備份並輪換；body 可用 `{ "keep_count": 3 }`，預設保留最近 3 份；相容舊鍵 `{ "keep": N }`）
+- `GET /api/server/backup/download`（以 SQLite `VACUUM INTO` 產生目前 DB 的一致快照，包含 request 當下 active WAL 最新交易，供使用者自行保存；**不在 server-side 留存或輪換備份**——server-side 保留是 `rotate` 的職責；此 DB backup 不包含 `static/uploads/` / `docs/attachments/` 檔案）
+- `POST /api/server/backup/rotate`（以同樣一致 DB snapshot 建立 server-side 備份並輪換；body 可用 `{ "keep_count": 3 }`，預設保留最近 3 份；相容舊鍵 `{ "keep": N }`；仍是 DB-only backup，不等於 deploy data snapshot）
 - `POST /api/server/backup/restore`（body `{ "backup": "<managed backup filename>" }`；驗證該備份後寫入 pending-restore 標記並重啟程序，開機時以該備份覆蓋 live DB，覆蓋前自動另存目前 DB 一份）
 - `DELETE /api/server/backup/<filename>`
 - `GET /api/server/version`

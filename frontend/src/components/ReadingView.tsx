@@ -1,4 +1,3 @@
-import { marked } from 'marked'
 import { Archive, Copy, Edit2, GitBranch, ListPlus, ListX, Loader2, Pin, X } from 'lucide-react'
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Note, api } from '../services/api'
@@ -8,6 +7,7 @@ import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
 import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
+import { renderSafeMarkdown } from '../utils/markdown'
 import { extractImageReferences } from './editor/imageReferences'
 import { ImageLightbox, type LightboxImage } from './ImageLightbox'
 
@@ -22,16 +22,6 @@ function extractFirstImage(content: string): string | null {
 
   const htmlMatch = content.match(/<img[^>]+src=["']([^"']+)["']/i)
   return htmlMatch?.[1] ?? null
-}
-
-function renderMarkdown(markdown: string, emptyContent: string): string {
-  if (!markdown.trim()) return `<p class="text-text-muted">${emptyContent}</p>`
-  try {
-    marked.setOptions({ breaks: true, gfm: true })
-    return marked(markdown) as string
-  } catch {
-    return markdown
-  }
 }
 
 function collectReadingImages(coverImage: string | null, content: string, title: string): LightboxImage[] {
@@ -79,7 +69,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     () => collectReadingImages(coverImage, localNote.content || '', localNote.title || t('reading.untitled')),
     [coverImage, localNote.content, localNote.title, t],
   )
-  const renderedContent = useMemo(() => renderMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
+  const renderedContent = useMemo(() => renderSafeMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
   const updatedAt = new Date(localNote.updated_at).toLocaleString(locale)
   const categoryName = getCategoryDisplayName(
     localNote.category_name || localNote.type,

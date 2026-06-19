@@ -1199,6 +1199,96 @@ func TestAttachmentWriteDisablesQueryOnlyWhenExplicitlyEnabled(t *testing.T) {
 	}
 }
 
+func TestAttachmentUploadRejectsOversizedTextWithoutRowOrPartialFile(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	attachmentsDir := filepath.Join(dataDir, "docs", "attachments")
+	srv := &server{db: db, runtime: runtimeConfig{
+		dataDir:               dataDir,
+		attachmentsDir:        attachmentsDir,
+		enableAttachmentWrite: true,
+		sqliteQueryOnly:       false,
+	}}
+	noteID := insertSearchNote(t, db, "Attachment Upload", "body", "", 1)
+
+	oversizedReq := newAttachmentUploadRequest(t, noteID, "oversized.md", bytes.Repeat([]byte("x"), int(maxAttachmentFileBytes)+1), "too large")
+	oversizedRec := httptest.NewRecorder()
+	srv.handleNoteDetail(oversizedRec, oversizedReq)
+	if oversizedRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected oversized upload 400, got %d body=%s", oversizedRec.Code, oversizedRec.Body.String())
+	}
+	if !strings.Contains(oversizedRec.Body.String(), "Attachment too large") {
+		t.Fatalf("oversized response should be explicit, got %s", oversizedRec.Body.String())
+	}
+	assertTableCount(t, db, "Note_Attachments", noteID, 0)
+	if entries, _ := os.ReadDir(attachmentsDir); len(entries) != 0 {
+		t.Fatalf("oversized upload left partial files: %#v", entries)
+	}
+
+	validContent := []byte("small attachment")
+	validReq := newAttachmentUploadRequest(t, noteID, "small.md", validContent, "small title")
+	validRec := httptest.NewRecorder()
+	srv.handleNoteDetail(validRec, validReq)
+	if validRec.Code != http.StatusOK {
+		t.Fatalf("expected valid upload 200, got %d body=%s", validRec.Code, validRec.Body.String())
+	}
+	assertTableCount(t, db, "Note_Attachments", noteID, 1)
+	var filePath string
+	var sizeBytes int64
+	if err := db.QueryRow("SELECT file_path, size_bytes FROM Note_Attachments WHERE note_id = ?", noteID).Scan(&filePath, &sizeBytes); err != nil {
+		t.Fatal(err)
+	}
+	if sizeBytes != int64(len(validContent)) {
+		t.Fatalf("valid upload size got %d want %d", sizeBytes, len(validContent))
+	}
+	if !fileExists(filepath.Join(dataDir, filepath.FromSlash(filePath))) {
+		t.Fatalf("valid upload did not write attachment file %q", filePath)
+	}
+
+	missingReq := newAttachmentUploadRequest(t, 999999, "missing.md", []byte("missing"), "")
+	missingRec := httptest.NewRecorder()
+	srv.handleNoteDetail(missingRec, missingReq)
+	if missingRec.Code != http.StatusNotFound {
+		t.Fatalf("expected missing note 404, got %d body=%s", missingRec.Code, missingRec.Body.String())
+	}
+	unsupportedReq := newAttachmentUploadRequest(t, noteID, "bad.exe", []byte("bad"), "")
+	unsupportedRec := httptest.NewRecorder()
+	srv.handleNoteDetail(unsupportedRec, unsupportedReq)
+	if unsupportedRec.Code != http.StatusBadRequest {
+		t.Fatalf("expected unsupported extension 400, got %d body=%s", unsupportedRec.Code, unsupportedRec.Body.String())
+	}
+}
+
+func newAttachmentUploadRequest(t *testing.T, noteID int, filename string, content []byte, title string) *http.Request {
+	t.Helper()
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := part.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	if title != "" {
+		if err := writer.WriteField("title", title); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := writer.Close(); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/api/notes/%d/attachments", noteID), &body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	return req
+}
+
 func TestAttachmentTextReadRejectsWhenFlagDisabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	db, err := openDB(dbPath, false)
@@ -1335,6 +1425,72 @@ func TestCategoryWriteSystemCategoryUsesNameOverride(t *testing.T) {
 	}
 }
 
+func TestCategoryInvalidPayloadsReturnClientErrorsAndValidMigrationStillWorks(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("UPDATE Categories SET name = ?, system_key = ?, name_override = NULL WHERE id = 1", "筆記 | Note", "note"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Categories (name) VALUES ('Source'), ('Target')"); err != nil {
+		t.Fatal(err)
+	}
+	var sourceID, targetID int
+	if err := db.QueryRow("SELECT id FROM Categories WHERE name = 'Source'").Scan(&sourceID); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow("SELECT id FROM Categories WHERE name = 'Target'").Scan(&targetID); err != nil {
+		t.Fatal(err)
+	}
+	noteID := insertSearchNote(t, db, "Category Move", "move body", "", sourceID)
+
+	srv := &server{db: db, runtime: runtimeConfig{enableCategoryWrite: true, sqliteQueryOnly: false}}
+	cases := []struct {
+		name   string
+		method string
+		path   string
+		body   string
+		code   int
+		msg    string
+	}{
+		{"wrong name type", http.MethodPut, fmt.Sprintf("/api/categories/%d", sourceID), `{"name":123}`, http.StatusBadRequest, "category name must be a string"},
+		{"wrong override type", http.MethodPut, "/api/categories/1", `{"name_override":123}`, http.StatusBadRequest, "category name_override must be a string or null"},
+		{"missing target", http.MethodDelete, fmt.Sprintf("/api/categories/%d", sourceID), `{}`, http.StatusBadRequest, "Target category required"},
+		{"wrong target type", http.MethodDelete, fmt.Sprintf("/api/categories/%d", sourceID), `{"target_category_id":"1"}`, http.StatusBadRequest, "target_category_id must be an integer"},
+		{"self target", http.MethodDelete, fmt.Sprintf("/api/categories/%d", sourceID), fmt.Sprintf(`{"target_category_id":%d}`, sourceID), http.StatusBadRequest, "Target category cannot be the category being deleted"},
+		{"missing target category", http.MethodDelete, fmt.Sprintf("/api/categories/%d", sourceID), `{"target_category_id":999999}`, http.StatusNotFound, "Target category not found"},
+	}
+	for _, tc := range cases {
+		recorder := httptest.NewRecorder()
+		srv.handleCategoryDetail(recorder, httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body)))
+		if recorder.Code != tc.code {
+			t.Fatalf("%s: got %d want %d body=%s", tc.name, recorder.Code, tc.code, recorder.Body.String())
+		}
+		if !strings.Contains(recorder.Body.String(), tc.msg) {
+			t.Fatalf("%s: expected message %q, got %s", tc.name, tc.msg, recorder.Body.String())
+		}
+		assertNoteIntColumn(t, db, noteID, "category_id", sourceID)
+	}
+
+	validRec := httptest.NewRecorder()
+	validBody := fmt.Sprintf(`{"target_category_id":%d}`, targetID)
+	srv.handleCategoryDetail(validRec, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/categories/%d", sourceID), strings.NewReader(validBody)))
+	if validRec.Code != http.StatusOK {
+		t.Fatalf("expected valid category delete/migrate 200, got %d body=%s", validRec.Code, validRec.Body.String())
+	}
+	assertNoteIntColumn(t, db, noteID, "category_id", targetID)
+	var sourceCount int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Categories WHERE id = ?", sourceID).Scan(&sourceCount); err != nil {
+		t.Fatal(err)
+	}
+	if sourceCount != 0 {
+		t.Fatalf("source category should be deleted after valid migration, got %d", sourceCount)
+	}
+}
+
 func TestNotesWriteHandlerRejectsWhenFlagDisabled(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	db, err := openDB(dbPath, false)
@@ -1418,6 +1574,130 @@ func TestNotesSearchUsesTokenizedFTSAndCardFields(t *testing.T) {
 	pagination := payload["pagination"].(map[string]any)
 	if int(pagination["total"].(float64)) < 6 {
 		t.Fatalf("unknown type should not add an empty filter, payload=%#v", payload)
+	}
+}
+
+func TestAttachmentBodySearchReportsPartialWhenScanLimitIsHit(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	attachmentsDir := filepath.Join(dataDir, "docs", "attachments")
+	if err := os.MkdirAll(attachmentsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < maxAttachmentScanFiles+1; i++ {
+		noteID := insertSearchNote(t, db, fmt.Sprintf("scan limit %d", i), "plain body", "", 1)
+		filename := fmt.Sprintf("scan-limit-%03d.md", i)
+		content := "ordinary attachment body"
+		if i == maxAttachmentScanFiles {
+			content = "needlepartial appears beyond the scan limit"
+		}
+		if err := os.WriteFile(filepath.Join(attachmentsDir, filename), []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec(
+			"INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes) VALUES (?, ?, 'md', ?, ?)",
+			noteID, "docs/attachments/"+filename, filename, len(content),
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: dataDir, sqliteQueryOnly: false}}
+	recorder := httptest.NewRecorder()
+	srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, "/api/notes?q=needlepartial&per_page=100", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected notes search 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload struct {
+		Data              []map[string]any `json:"data"`
+		SearchDiagnostics struct {
+			AttachmentBodyScan struct {
+				Partial      bool   `json:"partial"`
+				Reason       string `json:"reason"`
+				ScannedFiles int    `json:"scanned_files"`
+			} `json:"attachment_body_scan"`
+		} `json:"search_diagnostics"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(payload.Data) != 0 {
+		t.Fatalf("needle beyond scan limit should not be returned, got %#v", payload.Data)
+	}
+	diag := payload.SearchDiagnostics.AttachmentBodyScan
+	if !diag.Partial || (diag.Reason != "file_limit" && diag.Reason != "time_limit") || diag.ScannedFiles <= 0 || diag.ScannedFiles > maxAttachmentScanFiles {
+		t.Fatalf("unexpected attachment scan diagnostics: %+v", diag)
+	}
+}
+
+func TestStabilityPackSearchSyncUnicodeAndUnsafeAttachmentPaths(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	attachmentsDir := filepath.Join(dataDir, "docs", "attachments")
+	if err := os.MkdirAll(attachmentsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: dataDir, enableNotesWrite: true, sqliteQueryOnly: false}}
+
+	noteID := insertSearchNote(t, db, "Unicode 搜尋 😀", "oldtoken 中文 emoji 😀", "全形＃符號", 1)
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=oldtoken&per_page=100", noteID)
+
+	updateBody := `{"title":"Unicode 搜尋 😀","content":"newtoken 中文 emoji 😀","category_id":1}`
+	updateRec := httptest.NewRecorder()
+	srv.handleNoteDetail(updateRec, httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/notes/%d", noteID), strings.NewReader(updateBody)))
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("expected unicode update 200, got %d body=%s", updateRec.Code, updateRec.Body.String())
+	}
+	assertNotesSearchExcludes(t, srv, "/api/notes?q=oldtoken&per_page=100", noteID)
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=newtoken&per_page=100", noteID)
+
+	deleteRec := httptest.NewRecorder()
+	srv.handleNoteDetail(deleteRec, httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/notes/%d", noteID), nil))
+	if deleteRec.Code != http.StatusOK {
+		t.Fatalf("expected unicode delete 200, got %d body=%s", deleteRec.Code, deleteRec.Body.String())
+	}
+	assertNotesSearchExcludes(t, srv, "/api/notes?q=newtoken&per_page=100", noteID)
+	assertFTSCount(t, db, "newtoken", 0)
+
+	attachmentNoteID := insertSearchNote(t, db, "Attachment Unicode", "plain body", "", 1)
+	unicodeFilename := "測試 attachment.md"
+	unicodeContent := "中文 emoji 😀 specialtoken"
+	if err := os.WriteFile(filepath.Join(attachmentsDir, unicodeFilename), []byte(unicodeContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	rows := []struct {
+		path     string
+		title    string
+		size     int
+		fileType string
+	}{
+		{"docs/attachments/" + unicodeFilename, "unicode valid", len(unicodeContent), "md"},
+		{"docs/attachments/missing.md", "missing file", 0, "md"},
+		{`C:\temp\outside.md`, "windows absolute path", 5, "md"},
+	}
+	for _, row := range rows {
+		if _, err := db.Exec(
+			"INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes) VALUES (?, ?, ?, ?, ?)",
+			attachmentNoteID, row.path, row.fileType, row.title, row.size,
+		); err != nil {
+			t.Fatal(err)
+		}
+	}
+	assertNotesSearchIncludes(t, srv, "/api/notes?q=specialtoken&per_page=100", attachmentNoteID)
+	if _, _, ok := resolveAttachmentFile(dataDir, `C:\temp\outside.md`, "md"); ok {
+		t.Fatal("Windows absolute attachment path must not resolve inside the Prism data dir")
 	}
 }
 
@@ -1743,6 +2023,27 @@ func insertSearchNote(t *testing.T, db *sql.DB, title, content, remarks string, 
 
 func assertNotesSearchIncludes(t *testing.T, srv *server, path string, wantID int) {
 	t.Helper()
+	notes := notesSearchResultIDs(t, srv, path)
+	for _, id := range notes {
+		if id == wantID {
+			return
+		}
+	}
+	t.Fatalf("%s did not include note id %d; ids=%v", path, wantID, notes)
+}
+
+func assertNotesSearchExcludes(t *testing.T, srv *server, path string, unwantedID int) {
+	t.Helper()
+	notes := notesSearchResultIDs(t, srv, path)
+	for _, id := range notes {
+		if id == unwantedID {
+			t.Fatalf("%s unexpectedly included note id %d; ids=%v", path, unwantedID, notes)
+		}
+	}
+}
+
+func notesSearchResultIDs(t *testing.T, srv *server, path string) []int {
+	t.Helper()
 	recorder := httptest.NewRecorder()
 	srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, path, nil))
 	if recorder.Code != http.StatusOK {
@@ -1754,12 +2055,11 @@ func assertNotesSearchIncludes(t *testing.T, srv *server, path string, wantID in
 	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
 		t.Fatal(err)
 	}
+	ids := []int{}
 	for _, note := range payload.Data {
-		if int(note["id"].(float64)) == wantID {
-			return
-		}
+		ids = append(ids, int(note["id"].(float64)))
 	}
-	t.Fatalf("%s did not include note id %d; payload=%s", path, wantID, recorder.Body.String())
+	return ids
 }
 
 func noteIDFromResponse(t *testing.T, body []byte) int {
@@ -3395,6 +3695,171 @@ func TestTruncateRunesKeepsUTF8Boundary(t *testing.T) {
 	}
 	if strings.Contains(truncated, "tail") {
 		t.Fatalf("truncateRunes did not truncate beyond the rune limit: %q", truncated)
+	}
+}
+
+func TestBackupDownloadAndRotateIncludeLatestWALState(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	backupsDir := filepath.Join(dataDir, "backups")
+	if err := os.MkdirAll(backupsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	latestID := insertSearchNote(t, db, "WAL Snapshot 最新", "wal latest transaction token", "", 1)
+	srv := &server{db: db, runtime: runtimeConfig{
+		dbPath:             dbPath,
+		backupsDir:         backupsDir,
+		enableServerSystem: true,
+		sqliteQueryOnly:    false,
+	}}
+
+	downloadReq := httptest.NewRequest(http.MethodGet, "/api/server/backup/download", nil)
+	downloadReq.RemoteAddr = "127.0.0.1:12345"
+	downloadRec := httptest.NewRecorder()
+	srv.handleBackupDownload(downloadRec, downloadReq)
+	if downloadRec.Code != http.StatusOK {
+		t.Fatalf("expected backup download 200, got %d body=%s", downloadRec.Code, downloadRec.Body.String())
+	}
+	downloaded := filepath.Join(t.TempDir(), "downloaded.db")
+	if err := os.WriteFile(downloaded, downloadRec.Body.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	assertBackupContainsNote(t, downloaded, latestID, "WAL Snapshot 最新")
+
+	rotateReq := httptest.NewRequest(http.MethodPost, "/api/server/backup/rotate", strings.NewReader(`{"keep_count":3}`))
+	rotateReq.RemoteAddr = "127.0.0.1:12345"
+	rotateRec := httptest.NewRecorder()
+	srv.handleBackupRotate(rotateRec, rotateReq)
+	if rotateRec.Code != http.StatusOK {
+		t.Fatalf("expected backup rotate 200, got %d body=%s", rotateRec.Code, rotateRec.Body.String())
+	}
+	var rotatePayload struct {
+		Data struct {
+			NewBackup string `json:"new_backup"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rotateRec.Body.Bytes(), &rotatePayload); err != nil {
+		t.Fatal(err)
+	}
+	if rotatePayload.Data.NewBackup == "" {
+		t.Fatalf("rotate response missing new_backup: %s", rotateRec.Body.String())
+	}
+	assertBackupContainsNote(t, filepath.Join(backupsDir, rotatePayload.Data.NewBackup), latestID, "WAL Snapshot 最新")
+}
+
+func assertBackupContainsNote(t *testing.T, backupPath string, noteID int, title string) {
+	t.Helper()
+	if err := validateSQLiteBackup(backupPath); err != nil {
+		t.Fatalf("backup failed integrity validation: %v", err)
+	}
+	backupDB, err := sql.Open("sqlite", backupPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer backupDB.Close()
+	var gotTitle string
+	if err := backupDB.QueryRow("SELECT title FROM Notes WHERE id = ?", noteID).Scan(&gotTitle); err != nil {
+		t.Fatalf("backup missing latest note %d: %v", noteID, err)
+	}
+	if gotTitle != title {
+		t.Fatalf("backup note title got %q want %q", gotTitle, title)
+	}
+}
+
+func TestExposureBoundaryRegressionGuards(t *testing.T) {
+	t.Setenv("PRISM_GO_ALLOW_PUBLIC_BIND", "")
+	if err := validateListenAddress("127.0.0.1:5004"); err != nil {
+		t.Fatalf("local listen address should be accepted: %v", err)
+	}
+	if err := validateListenAddress("0.0.0.0:5004"); err == nil || !strings.Contains(err.Error(), "no built-in auth/token layer") {
+		t.Fatalf("public listen address should be rejected with no-auth warning, got %v", err)
+	}
+	t.Setenv("PRISM_GO_ALLOW_PUBLIC_BIND", "1")
+	if err := validateListenAddress("0.0.0.0:5004"); err != nil {
+		t.Fatalf("explicit public bind override should be accepted: %v", err)
+	}
+
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	srv := &server{db: db, runtime: runtimeConfig{
+		addr:               "127.0.0.1:5004",
+		dataDir:            t.TempDir(),
+		dbPath:             dbPath,
+		enableServerSystem: true,
+		sqliteQueryOnly:    true,
+	}}
+	healthRec := httptest.NewRecorder()
+	srv.handleHealth(healthRec, httptest.NewRequest(http.MethodGet, "/healthz", nil))
+	if healthRec.Code != http.StatusOK {
+		t.Fatalf("expected health 200, got %d body=%s", healthRec.Code, healthRec.Body.String())
+	}
+	if !strings.Contains(healthRec.Body.String(), `"auth":"none"`) || !strings.Contains(healthRec.Body.String(), "do not expose Prism directly to the public internet") {
+		t.Fatalf("healthz must expose no-auth/public-bind policy, got %s", healthRec.Body.String())
+	}
+
+	remoteReq := httptest.NewRequest(http.MethodGet, "/api/server/version", nil)
+	remoteReq.RemoteAddr = "203.0.113.9:12345"
+	remoteRec := httptest.NewRecorder()
+	srv.handleServerVersion(remoteRec, remoteReq)
+	if remoteRec.Code != http.StatusForbidden {
+		t.Fatalf("remote server API should be localhost-only, got %d body=%s", remoteRec.Code, remoteRec.Body.String())
+	}
+}
+
+func TestPendingRestoreBadMarkerIsDroppedAndKeepsCurrentDB(t *testing.T) {
+	dataDir := t.TempDir()
+	cfg := runtimeConfig{
+		dataDir:    dataDir,
+		dbPath:     createSpikeDB(t),
+		backupsDir: filepath.Join(dataDir, "backups"),
+		configDir:  filepath.Join(dataDir, "config"),
+	}
+	if err := os.MkdirAll(cfg.backupsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(cfg.configDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	markerPath := filepath.Join(cfg.configDir, pendingRestoreMarker)
+	if err := os.WriteFile(markerPath, []byte("{not json"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := applyPendingRestore(cfg); err != nil {
+		t.Fatalf("bad marker should not block startup: %v", err)
+	}
+	if fileExists(markerPath) {
+		t.Fatal("bad pending restore marker should be removed")
+	}
+	if err := validateSQLiteBackup(cfg.dbPath); err != nil {
+		t.Fatalf("current DB should remain valid after bad marker: %v", err)
+	}
+
+	missing := pendingRestore{Backup: managedBackupName(), RequestedAt: time.Now().UTC().Format(time.RFC3339)}
+	raw, err := json.Marshal(missing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(markerPath, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := applyPendingRestore(cfg); err != nil {
+		t.Fatalf("missing backup marker should not block startup: %v", err)
+	}
+	if fileExists(markerPath) {
+		t.Fatal("missing-backup pending restore marker should be removed")
+	}
+	if err := validateSQLiteBackup(cfg.dbPath); err != nil {
+		t.Fatalf("current DB should remain valid after missing backup marker: %v", err)
 	}
 }
 

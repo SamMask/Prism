@@ -31,6 +31,26 @@ def test_shared_lightbox_component_stays_frontend_only_and_keyboard_accessible()
     assert "/api/cleanup" not in lightbox
 
 
+def test_lightbox_zoom_and_backdrop_controls_stay_inside_shared_viewer():
+    lightbox = LIGHTBOX_PATH.read_text(encoding="utf-8")
+
+    assert "const MIN_ZOOM = 0.5" in lightbox
+    assert "const MAX_ZOOM = 3" in lightbox
+    assert "const ZOOM_STEP = 0.25" in lightbox
+    assert "const [zoomScale, setZoomScale] = useState(1)" in lightbox
+    assert "setZoomScale(1)" in lightbox
+    assert "event.key === 'ArrowUp'" in lightbox
+    assert "event.key === 'ArrowDown'" in lightbox
+    assert 'data-testid="image-lightbox-zoom-out"' in lightbox
+    assert 'data-testid="image-lightbox-reset-zoom"' in lightbox
+    assert 'data-testid="image-lightbox-zoom-in"' in lightbox
+    assert "style={{ transform: `scale(${zoomScale})` }}" in lightbox
+    assert "onClick={onClose}" in lightbox
+    assert "onClick={(event) => event.stopPropagation()}" in lightbox
+    assert "const handlePreviousClick = (event: MouseEvent<HTMLButtonElement>)" in lightbox
+    assert "const handleNextClick = (event: MouseEvent<HTMLButtonElement>)" in lightbox
+
+
 def test_reading_view_collects_cover_and_markdown_images():
     reading_view = READING_VIEW_PATH.read_text(encoding="utf-8")
 
@@ -91,11 +111,18 @@ def test_lightbox_i18n_and_docs_track_all_subgates():
         "lightboxOpenOriginal",
         "lightboxPrevious",
         "lightboxNext",
+        "lightboxZoomIn",
+        "lightboxZoomOut",
+        "lightboxResetZoom",
     ]:
         assert i18n.count(key) == 4
 
     assert "CONTRACT-IMAGE-VIEWER-LIGHTBOX" in contracts
+    assert "CONTRACT-IMAGE-VIEWER-ZOOM" in contracts
     assert "Editor preview / card cover integration" not in contracts
     assert "[x] **01A Shared lightbox component**" in todo
     assert "[x] **01B Reading view integration**" in todo
     assert "[x] **01C Editor preview/card integration**" in todo
+    assert "[x] **01A Zoom controls**" in todo
+    assert "[x] **01B Backdrop click close**" in todo
+    assert "[x] **01C Keyboard zoom shortcuts**" in todo
