@@ -6,16 +6,17 @@
 
 | 軟體 | 版本 | 說明 |
 |------|------|------|
-| Go | current stable | Go primary runtime |
-| Node.js | 18+ | 前端建置工具 (Vite) |
-| Python | 3.10+ | Dev/test only (pytest)；無 backend source |
+| Go | Go 1.26.x | Go primary runtime；`go-shadow/go.mod` 宣告 `go 1.26.1`，本機 gate 以 Go 1.26.3 驗證 |
+| Node.js | Node.js 22.14.0 | 前端建置工具 (Vite) |
+| npm | npm 10.9.2 | 與 `frontend/package-lock.json` 搭配，CI 使用 `npm ci` |
+| Python | Python 3.11.x | Dev/test only；pytest 9.0.2 由 `requirements.txt` / `requirements-pi.txt` 固定 |
 | SQLite | 內建 | 無需額外安裝 |
 
 ### 安裝依賴
 
 ```bash
 cd frontend
-npm install
+npm ci
 ```
 
 ### 啟動開發伺服器
@@ -94,7 +95,7 @@ D:/AI/Prism/
 
 ```bash
 pytest tests/ -v
-# 預期: 全綠（以 test_run.log 為準）
+# 預期: pytest 9.0.2 全綠（以 test_run.log 為準）
 ```
 
 測試檔案位於 `tests/`，涵蓋：CRUD、批次操作、標籤合併、上傳安全性、SQL 注入防護。
@@ -103,13 +104,13 @@ pytest tests/ -v
 
 ```bash
 cd frontend
-npx tsc --noEmit
-# 零錯誤才算通過
+npm run build
+# TypeScript 與 Vite build 零錯誤才算通過
 ```
 
 ### E2E (Playwright)
 
-位於 `tests/e2e/`，測試核心流程（新增 / 編輯 / 刪除 / 搜尋）。
+位於 `e2e/`，測試核心流程（新增 / 編輯 / 刪除 / 搜尋）。
 
 ---
 
@@ -155,12 +156,16 @@ npm run build
 
 ### Release Checklist（每次發版前必確認）
 
+public release、tag 或 portable package 宣稱必須使用
+[`docs/RELEASE_CHECKLIST.md`](./RELEASE_CHECKLIST.md) 記錄新鮮驗證日期、結果與證據；
+未跑項目必須明確標為 `Not-tested`，不得用 source review 代替 release smoke。
+
 - [ ] Go runtime fallback version、release tag、release asset 與 README badge 已同步
 - [ ] `docs/TODO.md` Current Truth / Archive Index 已對齊本版；長版完成紀錄已歸檔到 `docs/development-history/`
 - [ ] `README.md`（英文預設）與 `README.zh-TW.md`（繁中）頂端互相連結，且內容 current truth 一致
 - [ ] `pytest tests/ -v` 全部通過（含 `test_schema_regression.py`）
-- [ ] `cd frontend && npx tsc --noEmit` 零錯誤
 - [ ] `cd frontend && npm run build` 成功，`frontend/dist/` 已更新
+- [ ] local browser smoke 通過，console/page/request error 已記錄
 - [ ] `scripts/smoke_desktop_portable.ps1` 或等效 portable smoke 通過，且 zip 不含 DB/WAL/SHM
 - [ ] 若有新 Migration：確認版本號遞增，且遷移為冪等操作
 - [ ] `docs/README.md`、`docs/INDEX.md`、`docs/CONTRIBUTING.md`、`docs/DEPLOYMENT.md` 的版本 / 日期 / 「最後更新」標記已同步本版

@@ -26,6 +26,10 @@ Use the latest GitHub Release asset:
 
 - `PrismDesktopPortable-v2.5.zip` - Windows desktop portable package
 
+Public release, tag, and portable package claims should include fresh validation
+evidence from [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). Missing
+checks must be called out as `Not-tested`.
+
 The portable package includes:
 
 - `Prism.exe` - GUI desktop app
@@ -120,6 +124,7 @@ Prism currently has no built-in user login, bearer token, or public API authenti
 | Database schema | [`docs/SCHEMA.md`](docs/SCHEMA.md) |
 | Raspberry Pi deployment | [`DEPLOY-PI.md`](DEPLOY-PI.md) |
 | Windows portable notes | [`docs/desktop/README-PORTABLE.md`](docs/desktop/README-PORTABLE.md) |
+| Release validation checklist | [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) |
 | Development handoff | [`HANDOFF.md`](HANDOFF.md) |
 
 ## Development and Verification
@@ -127,6 +132,16 @@ Prism currently has no built-in user login, bearer token, or public API authenti
 Prism's product runtime is Go. Python is used only for repository test
 orchestration through `pytest`; it is not a backend runtime or Windows portable
 runtime dependency.
+
+Validated verification environment:
+
+| Tool | Version contract |
+|---|---|
+| Go | Go 1.26.x; `go-shadow/go.mod` declares `go 1.26.1` and local gate was verified with Go 1.26.3 |
+| Node.js | Node.js 22.14.0 |
+| npm | npm 10.9.2 |
+| Python | Python 3.11.x |
+| pytest | pytest 9.0.2 from `requirements.txt` |
 
 ```bash
 # Go runtime tests
@@ -144,6 +159,11 @@ npm run build
 # Python dev/test-only regression suite
 pytest tests/ -v
 ```
+
+The GitHub Actions baseline uses a Windows runner, installs frontend
+dependencies with `npm ci`, installs Python test dependencies from
+`requirements.txt`, builds the frontend, and runs the Loop verification gate
+without SSH, Pi, production DB, uploads, or private-path dependencies.
 
 Build the Windows portable package:
 

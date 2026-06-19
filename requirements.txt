@@ -1,4 +1,4 @@
 # Dev/test tooling only — there is no Python backend after T053.
 # Go primary product startup does not install or require this file.
 # The test suite drives the Go runtime over HTTP and uses only the stdlib + pytest.
-pytest==7.4.3
+pytest==9.0.2

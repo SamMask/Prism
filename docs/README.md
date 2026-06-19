@@ -69,6 +69,7 @@ docs/
 ├── INDEX.md           # 完整文檔索引
 ├── TODO.md            # Active roadmap / next entry only
 ├── CONTRACTS.md       # Active task contract index
+├── RELEASE_CHECKLIST.md # Public release/tag/package validation evidence template
 ├── SCHEMA.md          # DB Schema + Migration 歷程
 ├── ARCHITECTURE.md    # C4 架構圖與 Go primary boundary
 ├── API_REFERENCE.md   # REST API 完整參考
@@ -90,4 +91,5 @@ docs/
 近期 current-truth 更新：
 
 - 2026-06-19：Default category identity split 已完成，schema 為 migration v17；`Categories.system_key` / `name_override` 是系統分類身份與改名的 current contract。
-- 2026-06-19：深度掃描報告見 repo root `20260619_Prism_深度掃描報告.md`；最高優先未修項為 markdown rendering sanitization。
+- 2026-06-19：深度掃描報告見 repo root `20260619_Prism_深度掃描報告.md`；`DEEP-SCAN-RISK-CANDIDATE-01` 01A-01G 已關閉主要 local security/runtime risk gates，01H 保留為低優先維護 triage。
+- 2026-06-19：`PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01A-01E 已收斂 GitHub / reuse readiness：root `LICENSE`、CI baseline、verification environment、release evidence checklist 與 CONTRIBUTING E2E path 已對齊。

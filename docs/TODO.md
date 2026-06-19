@@ -31,6 +31,7 @@
 - 2026-06-19 Prism 深度掃描報告已產出：`20260619_Prism_深度掃描報告.md`。掃描當輪已修 request log query leak、CSRF origin prefix bypass、UTF-8 search query truncate、local artifact smoke migration hardcode，並同步 root/docs 最新進度。
 - 2026-06-19 `DEEP-SCAN-RISK-CANDIDATE-01` 01A-01G 已完成 local gate：markdown render path 改為 DOMPurify sanitizer；文字附件 upload/read 同步 1 MiB hard limit；server DB backup/download/rotate 改 SQLite consistent DB snapshot；category invalid payload / delete target validation 回 400/404；bounded attachment body search 超限回 optional partial diagnostics；no-auth/local-only exposure boundary 有 runtime/docs regression；stability pack 補搜尋同步、中文/emoji、missing/Windows attachment path 與 bad pending-restore marker。未新增 auth、AI、schema、search index、備份平台、Pi deploy 或 Go runtime 大拆。
 - 2026-06-19 `PROJECT_REVIEW.md` 與 image viewer follow-up 已完成 TODO 去重 intake：P1/P2 runtime/security findings 由 `DEEP-SCAN-RISK-CANDIDATE-01` 承接；未重複的新工作只新增 `IMAGE-VIEWER-ZOOM-CANDIDATE-01` 與 `PROJECT-REVIEW-HYGIENE-CANDIDATE-01`。
+- 2026-06-19 `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01A-01E 已完成 local gate：root `LICENSE` 補齊既有 MIT README 宣稱；新增 no-secret/no-Pi GitHub Actions baseline；requirements/docs/CI 對齊 Go 1.26.x、Node.js 22.14.0、npm 10.9.2、Python 3.11.x、pytest 9.0.2；新增 `docs/RELEASE_CHECKLIST.md` fresh evidence template；CONTRIBUTING 的 E2E 路徑改為實際 `e2e/`。未新增 runtime/schema/API/auth/Pi deploy。
 - `build/` 舊 generated smoke/build artifacts 已清理，只保留 `build/release` 與最新 desktop shell / portable smoke 輸出；真實資料目錄（DB、attachments、notes、uploads）未納入清理。
 - i18n active UI 可先視為完成；不要再開大型 UI 抽字串批次。Hidden/deferred UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
 
@@ -58,7 +59,7 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 
 `DEEP-SCAN-RISK-CANDIDATE-01` 的 01A-01G 已完成 local gate。01H 仍是低優先維護 triage，只有在要主動整理 frontend bundle/browserslist warning、歷史 frozen docs/test wording 或 route-local Go 小整理時才 promote；不得把 01H 擴成 code-splitting 大重構、批量歷史改寫或整檔 Go runtime 拆分。
 
-若要接下一個可施工項，建議優先處理 `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 的 **01A LICENSE consistency gate**，因為這是 GitHub/release/reuse readiness 的最小明確缺口，且不牽涉 runtime schema/API。
+`PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01A-01E 已完成 local gate。若要發佈，下一步不是新功能，而是依 `docs/RELEASE_CHECKLIST.md` 做 commit / tag / package evidence run，並在第一次 push/PR 後確認 GitHub Actions 實際綠燈。
 
 ### Windows Desktop vs Pi Deployment 差異表
 
@@ -172,30 +173,35 @@ Variant tracking panel、variant duplicate attachment repair、Note list lightwe
 - 不為了 CI / release hygiene 大拆 `go-shadow/main.go`；單檔過大只在相關 route 維修時小步整理。
 - 不自動部署 Pi；Pi/live 驗證只在 release 或 deploy gate 明確需要時依 `DEPLOY-PI.md` 執行。
 
-- [ ] **01A LICENSE consistency gate**
+- [x] **01A LICENSE consistency gate（2026-06-19 完成）**
   - 問題：README 宣稱 MIT / See `LICENSE`，但 repo root 未見 `LICENSE` / `LICENSE.md` / `COPYING`。
   - 施工範圍：若 owner 確認維持 MIT，新增 root `LICENSE` 並確認 README / release package wording 一致；若不是 MIT，先更新 README 與 release metadata，不偷改授權語意。
   - 驗收：clean checkout 可直接看到明確授權檔；README 不再指向不存在的 license file。
+  - 驗收：root `LICENSE` 已補 MIT text，README / README.zh-TW 的 license link 指向存在檔案；此為對齊既有 README MIT 宣稱，不擴張授權語意。
 
-- [ ] **01B GitHub CI baseline**
+- [x] **01B GitHub CI baseline（2026-06-19 完成）**
   - 問題：repo root 未見 `.github/workflows`，外部導入者無法從 GitHub 狀態判斷基本驗證是否通過。
   - 施工範圍：新增無祕密、無 Pi 依賴的 baseline workflow；至少跑 Go tests、frontend type/build check、pytest contract gate 的可負擔 subset 或 full gate。
   - 驗收：PR / push 能在 clean runner 上重現主要本機驗證；不需要 SSH、Pi、production DB、uploads 或 private path。
+  - 驗收：`.github/workflows/ci.yml` 使用 Windows runner、Go setup from `go-shadow/go.mod`、Node.js 22.14.0、Python 3.11、`npm ci`、`npm run build`、`requirements.txt` 與 `.loop/verify-gate.ps1`；不含 SSH、Pi、secrets、production DB/uploads/attachments path。
 
-- [ ] **01C Verification environment alignment**
+- [x] **01C Verification environment alignment（2026-06-19 完成）**
   - 問題：`PROJECT_REVIEW.md` 記錄本機 pytest 版本與 `requirements.txt` pin 不一致；導入者可能不知道應採 pinned env 或 local toolchain。
   - 施工範圍：決定並記錄測試環境真實 contract；必要時同步 requirements / docs / CI install step。
   - 驗收：README / docs / CI 對 pytest、Go、Node/npm 版本要求一致；不把未驗證版本宣稱為 supported。
+  - 驗收：`requirements.txt` / `requirements-pi.txt` 固定 `pytest==9.0.2`；README / README.zh-TW / CONTRIBUTING / release checklist / CI 對齊 Go 1.26.x、Node.js 22.14.0、npm 10.9.2、Python 3.11.x、pytest 9.0.2。
 
-- [ ] **01D Release validation checklist**
+- [x] **01D Release validation checklist（2026-06-19 完成）**
   - 問題：外部 release claim 需要 full gate、frontend build、browser/desktop smoke 證據；單次 source review 不足以宣稱 release asset 可用。
   - 施工範圍：補 release 前 checklist 或 script entry；至少列 `pytest tests/ -v`、`cd go-shadow && go test ./...`、`cd frontend && npm run build`、local browser smoke、desktop portable smoke 的證據欄位。
   - 驗收：每次 public release / tag / package claim 都能對應新鮮驗證日期與結果；未跑項目必須明確列為 Not-tested。
+  - 驗收：新增 `docs/RELEASE_CHECKLIST.md`，要求每個 public release/tag/package claim 記錄 fresh date/result/evidence；未跑項目保留 `Not-tested` reason；README、docs index 與 CONTRIBUTING 已連到該 checklist。
 
-- [ ] **01E Small docs consistency cleanup**
+- [x] **01E Small docs consistency cleanup（2026-06-19 完成）**
   - 問題：`PROJECT_REVIEW.md` 記錄 CONTRIBUTING 的 e2e 路徑與 repo 實際 `e2e/` 目錄有小落差，README release/license wording 也依賴 01A/01D。
   - 施工範圍：只修明確不一致的 docs；不批量改歷史 archived evidence，不改 runtime。
   - 驗收：`git diff --check`、相關 docs path check、AGENTS/CLAUDE mirror check（若有 touching agent guidance）。
+  - 驗收：CONTRIBUTING 的 E2E path 改為 `e2e/`；README release/license wording 指到實體 `LICENSE` 與 release evidence checklist；`tests/test_project_review_hygiene.py` 鎖住 docs/CI/license/env/path closure。
 
 ### Core UX / Maintenance
 
