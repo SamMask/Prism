@@ -9,6 +9,9 @@ DOCS_INDEX_PATH = ROOT / "docs" / "INDEX.md"
 CONTRIBUTING_PATH = ROOT / "docs" / "CONTRIBUTING.md"
 RELEASE_CHECKLIST_PATH = ROOT / "docs" / "RELEASE_CHECKLIST.md"
 PORTABLE_README_PATH = ROOT / "docs" / "desktop" / "README-PORTABLE.md"
+TODO_HANDOFF_ARCHIVE_PATH = (
+    ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
+)
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
 CI_PATH = ROOT / ".github" / "workflows" / "ci.yml"
@@ -141,10 +144,14 @@ def test_project_review_hygiene_contributing_e2e_path_matches_repo_layout():
 def test_project_review_hygiene_todo_and_handoff_close_01a_to_01e():
     todo = _text(TODO_PATH)
     handoff = _text(HANDOFF_PATH)
+    archive = _text(TODO_HANDOFF_ARCHIVE_PATH)
 
     for task_id in ("01A", "01B", "01C", "01D", "01E"):
-        assert f"- [x] **{task_id} " in todo
+        assert task_id in archive
 
-    normalized_docs = "\n".join([todo, handoff]).replace("`", "")
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in todo
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in handoff
+
+    normalized_docs = "\n".join([todo, handoff, archive]).replace("`", "")
     assert "PROJECT-REVIEW-HYGIENE-CANDIDATE-01 01A-01E 已完成 local gate" in normalized_docs
     assert "01H 仍是低優先維護 triage" in todo
