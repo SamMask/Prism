@@ -40,6 +40,7 @@ def test_project_review_hygiene_ci_is_no_secret_no_pi_local_gate_baseline():
         "actions/checkout@v4",
         "actions/setup-go@v5",
         "go-version-file: go-shadow/go.mod",
+        "cache-dependency-path: go-shadow/go.sum",
         "actions/setup-node@v4",
         "node-version: 22.14.0",
         "actions/setup-python@v5",

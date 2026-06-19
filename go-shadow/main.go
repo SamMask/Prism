@@ -5231,7 +5231,8 @@ func (s *server) resolvePromptImagePath(imagePath string) (string, bool) {
 		return "", false
 	}
 	resolved, err := filepath.EvalSymlinks(absPath)
-	if err != nil || filepath.Clean(resolved) != filepath.Clean(absPath) || !isSubpath(resolved, s.runtime.uploadsDir) {
+	evaluatedUploadsDir, rootErr := filepath.EvalSymlinks(s.runtime.uploadsDir)
+	if err != nil || rootErr != nil || !isSubpath(resolved, evaluatedUploadsDir) {
 		return "", false
 	}
 	return resolved, true
@@ -7826,6 +7827,10 @@ func resolveAttachmentFile(dataDir, relativePath, fileType string) (string, int6
 	if err != nil {
 		return "", 0, false
 	}
+	evaluatedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", 0, false
+	}
 	candidate := filepath.Join(root, filepath.FromSlash(relativePath))
 	absCandidate, err := filepath.Abs(candidate)
 	if err != nil || !isSubpath(absCandidate, root) {
@@ -7836,7 +7841,7 @@ func resolveAttachmentFile(dataDir, relativePath, fileType string) (string, int6
 		return "", 0, false
 	}
 	resolved, err := filepath.EvalSymlinks(absCandidate)
-	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+	if err != nil || !isSubpath(resolved, evaluatedRoot) {
 		return "", 0, false
 	}
 	return resolved, info.Size(), true
@@ -7850,6 +7855,10 @@ func resolveAttachmentRawFile(dataDir, relativePath, fileType string) (string, i
 	if err != nil {
 		return "", 0, false
 	}
+	evaluatedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", 0, false
+	}
 	candidate := filepath.Join(root, filepath.FromSlash(strings.TrimSpace(strings.ReplaceAll(relativePath, "\\", "/"))))
 	absCandidate, err := filepath.Abs(candidate)
 	if err != nil || !isSubpath(absCandidate, root) {
@@ -7860,7 +7869,7 @@ func resolveAttachmentRawFile(dataDir, relativePath, fileType string) (string, i
 		return "", 0, false
 	}
 	resolved, err := filepath.EvalSymlinks(absCandidate)
-	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+	if err != nil || !isSubpath(resolved, evaluatedRoot) {
 		return "", 0, false
 	}
 	return resolved, info.Size(), true
@@ -8437,6 +8446,10 @@ func resolveNoteAttachmentCleanupPath(dataDir, relativePath string) (string, boo
 	if err != nil {
 		return "", false
 	}
+	evaluatedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", false
+	}
 	candidate := filepath.Join(root, filepath.FromSlash(cleaned))
 	absCandidate, err := filepath.Abs(candidate)
 	if err != nil || !isSubpath(absCandidate, root) {
@@ -8447,7 +8460,7 @@ func resolveNoteAttachmentCleanupPath(dataDir, relativePath string) (string, boo
 		return "", false
 	}
 	resolved, err := filepath.EvalSymlinks(absCandidate)
-	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+	if err != nil || !isSubpath(resolved, evaluatedRoot) {
 		return "", false
 	}
 	return resolved, true
@@ -9444,6 +9457,10 @@ func resolveAutoExtractedNotePath(dataDir, relativePath string) (string, bool) {
 	if err != nil {
 		return "", false
 	}
+	evaluatedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", false
+	}
 	candidate := filepath.Join(root, filepath.FromSlash(cleaned))
 	absCandidate, err := filepath.Abs(candidate)
 	if err != nil || !isSubpath(absCandidate, root) {
@@ -9454,7 +9471,7 @@ func resolveAutoExtractedNotePath(dataDir, relativePath string) (string, bool) {
 		return "", false
 	}
 	resolved, err := filepath.EvalSymlinks(absCandidate)
-	if err != nil || filepath.Clean(resolved) != filepath.Clean(absCandidate) || !isSubpath(resolved, root) {
+	if err != nil || !isSubpath(resolved, evaluatedRoot) {
 		return "", false
 	}
 	return resolved, true
