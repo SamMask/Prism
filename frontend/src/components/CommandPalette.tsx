@@ -9,14 +9,18 @@ import {
   Sparkles,
   Sun,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Note } from '../services/api'
+import { Note, api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
 
-type CommandGroup = 'navigation' | 'recent' | 'actions'
+const SERVER_SEARCH_MIN_CHARS = 3
+const SERVER_SEARCH_LIMIT = 8
+const SERVER_SEARCH_DEBOUNCE_MS = 250
+
+type CommandGroup = 'navigation' | 'results' | 'recent' | 'actions'
 
 interface CommandItem {
   id: string
@@ -25,7 +29,7 @@ interface CommandItem {
   subtitle: string
   keywords: string
   icon: typeof Search
-  action: () => void
+  action: () => void | Promise<void>
 }
 
 function formatNoteDate(value: string, locale: string, fallback: string) {
@@ -35,13 +39,19 @@ function formatNoteDate(value: string, locale: string, fallback: string) {
 }
 
 function getNotePreview(note: Note, fallback: string) {
-  const content = note.content
+  const content = (note.content_preview ?? note.content)
     ?.replace(/!\[.*?\]\(.*?\)/g, '')
     .replace(/\[.*?\]\(.*?\)/g, '')
     .replace(/#{1,6}\s/g, '')
     .trim()
 
   return content ? content.slice(0, 72) : fallback
+}
+
+function getServerSearchTerm(query: string): string {
+  const trimmed = query.trim()
+  if (trimmed.startsWith('?')) return trimmed.slice(1).trim()
+  return trimmed.length >= SERVER_SEARCH_MIN_CHARS ? trimmed : ''
 }
 
 export function CommandPalette() {
@@ -62,6 +72,11 @@ export function CommandPalette() {
 
   const [query, setQuery] = useState('')
   const [activeIndex, setActiveIndex] = useState(0)
+  const [serverSearchNotes, setServerSearchNotes] = useState<Note[]>([])
+  const [serverSearchTotal, setServerSearchTotal] = useState(0)
+  const [isServerSearchLoading, setIsServerSearchLoading] = useState(false)
+  const [serverSearchFailed, setServerSearchFailed] = useState(false)
+  const serverSearchTerm = useMemo(() => getServerSearchTerm(query), [query])
 
   const closePalette = () => {
     closeCommandPalette()
@@ -90,6 +105,16 @@ export function CommandPalette() {
       theme: t(nextTheme === 'dark' ? 'commandPalette.themeDark' : 'commandPalette.themeLight'),
     }))
   }
+
+  const openNoteFromPalette = useCallback(async (note: Note) => {
+    navigate('/')
+    try {
+      const noteForEditor = note.content_truncated ? await api.getNote(note.id) : note
+      openEditor(noteForEditor)
+    } catch {
+      toast.error(t('reading.loadFailed'))
+    }
+  }, [navigate, openEditor, t])
 
   const recentNotes = useMemo(() => {
     return [...notes]
@@ -149,10 +174,17 @@ export function CommandPalette() {
       subtitle: `${formatNoteDate(note.updated_at, locale, t('commandPalette.unknownTime'))} · ${getNotePreview(note, t('commandPalette.noPreview'))}`,
       keywords: `${note.title || ''} ${note.content || ''} ${note.category_name || note.type || ''} ${note.tags?.map((tag) => tag.name).join(' ') || ''}`,
       icon: FileText,
-      action: () => {
-        navigate('/')
-        openEditor(note)
-      },
+      action: () => openNoteFromPalette(note),
+    }))
+
+    const serverResultCommands = serverSearchNotes.map((note) => ({
+      id: `search-note-${note.id}`,
+      group: 'results' as const,
+      title: note.title || t('commandPalette.untitled'),
+      subtitle: `${formatNoteDate(note.updated_at, locale, t('commandPalette.unknownTime'))} · ${getNotePreview(note, t('commandPalette.noPreview'))}`,
+      keywords: `${note.title || ''} ${note.content || ''} ${note.content_preview || ''} ${note.category_name || note.type || ''} ${note.tags?.map((tag) => tag.name).join(' ') || ''}`,
+      icon: Search,
+      action: () => openNoteFromPalette(note),
     }))
 
     const actions: CommandItem[] = [
@@ -185,12 +217,14 @@ export function CommandPalette() {
       },
     ]
 
-    return [...navigation, ...noteCommands, ...actions]
+    return [...navigation, ...serverResultCommands, ...noteCommands, ...actions]
   }, [
     navigate,
     locale,
     openEditor,
+    openNoteFromPalette,
     recentNotes,
+    serverSearchNotes,
     setSelectedCategory,
     setSelectedTag,
     setShowArchived,
@@ -199,7 +233,7 @@ export function CommandPalette() {
   ])
 
   const filteredCommands = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase()
+    const normalizedQuery = (serverSearchTerm || query.trim()).toLowerCase()
     if (!normalizedQuery) return commands
     return commands
       .map((item, index) => {
@@ -219,14 +253,56 @@ export function CommandPalette() {
       .filter((entry) => entry.score >= 0)
       .sort((a, b) => a.score - b.score || a.index - b.index)
       .map((entry) => entry.item)
-  }, [commands, query])
+  }, [commands, query, serverSearchTerm])
 
   const groupedCommands = useMemo(() => {
     return filteredCommands.reduce<Record<CommandGroup, CommandItem[]>>((acc, item) => {
       acc[item.group].push(item)
       return acc
-    }, { navigation: [], recent: [], actions: [] })
+    }, { navigation: [], results: [], recent: [], actions: [] })
   }, [filteredCommands])
+
+  useEffect(() => {
+    if (!isOpen || !serverSearchTerm) {
+      setServerSearchNotes([])
+      setServerSearchTotal(0)
+      setIsServerSearchLoading(false)
+      setServerSearchFailed(false)
+      return
+    }
+
+    let isCurrent = true
+    setIsServerSearchLoading(true)
+    setServerSearchFailed(false)
+
+    const timer = window.setTimeout(() => {
+      api.getNotes({
+        search: serverSearchTerm,
+        per_page: SERVER_SEARCH_LIMIT,
+        include_archived: true,
+        sort: 'updated',
+      })
+        .then((response) => {
+          if (!isCurrent) return
+          setServerSearchNotes(response.notes)
+          setServerSearchTotal(response.total)
+        })
+        .catch(() => {
+          if (!isCurrent) return
+          setServerSearchNotes([])
+          setServerSearchTotal(0)
+          setServerSearchFailed(true)
+        })
+        .finally(() => {
+          if (isCurrent) setIsServerSearchLoading(false)
+        })
+    }, SERVER_SEARCH_DEBOUNCE_MS)
+
+    return () => {
+      isCurrent = false
+      window.clearTimeout(timer)
+    }
+  }, [isOpen, serverSearchTerm])
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -257,8 +333,8 @@ export function CommandPalette() {
     setActiveIndex(0)
   }, [query])
 
-  const runCommand = (item: CommandItem) => {
-    item.action()
+  const runCommand = async (item: CommandItem) => {
+    await item.action()
     closePalette()
   }
 
@@ -273,7 +349,7 @@ export function CommandPalette() {
       setActiveIndex((index) => Math.max(index - 1, 0))
     } else if (event.key === 'Enter' && filteredCommands[activeIndex]) {
       event.preventDefault()
-      runCommand(filteredCommands[activeIndex])
+      void runCommand(filteredCommands[activeIndex])
     }
   }
 
@@ -308,6 +384,17 @@ export function CommandPalette() {
         </div>
 
         <div className="overflow-y-auto p-2" data-testid="command-palette-list">
+          {serverSearchTerm && (
+            <div className="mb-1 rounded-md border border-border-subtle bg-bg-elevated/45 px-3 py-2 text-xs text-text-muted" data-testid="command-palette-server-search-status">
+              {isServerSearchLoading
+                ? t('commandPalette.serverSearch.searching', { query: serverSearchTerm })
+                : serverSearchFailed
+                  ? t('commandPalette.serverSearch.failed')
+                  : serverSearchNotes.length === 0
+                    ? t('commandPalette.serverSearch.empty', { query: serverSearchTerm })
+                    : t('commandPalette.serverSearch.count', { query: serverSearchTerm, count: serverSearchTotal })}
+            </div>
+          )}
           {filteredCommands.length === 0 ? (
             <div className="px-4 py-10 text-center text-sm text-text-muted">
               {t('commandPalette.empty')}
@@ -333,7 +420,7 @@ export function CommandPalette() {
                         <button
                           key={item.id}
                           type="button"
-                          onClick={() => runCommand(item)}
+                          onClick={() => { void runCommand(item) }}
                           onMouseEnter={() => setActiveIndex(itemIndex)}
                           className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors ${
                             isActive

@@ -26,7 +26,7 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 
 ### Markdown / Knowledge Workflow Candidates
 
-2026-07-05 新增 `MARKDOWN-SYNTAX-CANDIDATE-01` 與 `KNOWLEDGE-WORKFLOW-CANDIDATE-01`。若要開始施工，先 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 `MDS-01`（renderer contract audit + regression fixtures），再做 `MDS-02`。不要一次導入 Mermaid / KaTeX / abcjs、schema/API 變更或搜尋架構重做。
+2026-07-05 新增 `MARKDOWN-SYNTAX-CANDIDATE-01` 與 `KNOWLEDGE-WORKFLOW-CANDIDATE-01`。`MARKDOWN-SYNTAX-CANDIDATE-01` 的低風險 renderer/preview slice 已完成；Mermaid / KaTeX / ABC 仍保留為 blocked decision gate。`KNOWLEDGE-WORKFLOW-CANDIDATE-01` 的 `KWF-01` Command Palette server-side search 已完成。下一個建議 promote `KWF-02` Saved Search / Search Workspace；不要一次導入 schema/API 變更或搜尋架構重做。
 
 ### Release / GitHub Maintenance
 
@@ -50,7 +50,7 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 ### MARKDOWN-SYNTAX-CANDIDATE-01 Port MarkForge-MD supported Markdown syntax into Prism
 
-狀態：`Todo`
+狀態：`Done`
 
 來源：2026-07-05 使用者要求把 `D:\AI\MarkForge-MD` 支援的 md 語法支援到 Prism，且 Markdown 語法支援列優先。
 
@@ -61,21 +61,22 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 目標：把高頻、可維護、低風險的 MarkForge-compatible Markdown 顯示能力帶進 Prism 的 ReadingView / editor preview；先做前端 preview fidelity，不改 note schema、import/export contract、search contract、DB migration 或 Go runtime storage semantics。
 
-施工順序：
+完成範圍：
 
-- `MDS-01 Renderer contract audit`（狀態：`Todo`）：先為 Prism 現有 `renderSafeMarkdown()` 建立 fixture matrix，明確記錄目前支援與 blocked syntax：GFM table/task list、raw HTML sanitizer、危險 protocol、image/link、code fence、blockquote、heading、empty content。此 gate 不新增依賴、不改 UX，只建立可回歸證據。
-- `MDS-02 Low-risk GFM preview UX`（狀態：`Todo`）：補 task list 視覺、responsive table overflow、code block copy、heading id/anchor 與 ReadingView TOC/outline。若 `marked` 已輸出對應 HTML，優先只補 CSS / wrapper / click 行為；不得改 Markdown source、不得新增 WYSIWYG。
-- `MDS-03 MarkForge prose extensions`（狀態：`Todo`）：補 GitHub alert、footnote、`==highlight==`、`:::markforge-box info|success|warning`、`:::markforge-details title`。優先用本地 parser helper 或 `marked` extension，延續 DOMPurify allowlist；不得允許任意 CSS、`style`、script、iframe/object/embed、遠端 renderer 或 plugin host。
-- `MDS-04 Code syntax highlighting`（狀態：`Todo`）：評估是否引入 MarkForge 同級的 `highlight.js` subset，只註冊常用語言並量測 bundle 影響；若導入，仍不得使用 CDN 或遠端語法服務。
-- `MDS-05 Mermaid / KaTeX decision gate`（狀態：`Todo`）：晚於 MDS-01~MDS-04。若要支援，必須離線渲染、可設定開關、錯誤只影響該 block、render timeout、有 sanitizer / protocol boundary regression，並明確處理 export/preview fidelity 差異。
-- `MDS-06 ABC score fence decision gate`（狀態：`Todo`）：`abc` / `music-abc` / `score-abc` 是 MarkForge 的音樂文件特化能力；Prism 預設不啟用。只有使用者明確需要把樂譜當知識卡片顯示時，才另開離線 renderer / bundle / safety gate。
+- `MDS-01 Renderer contract audit`（狀態：`Done`）：`tests/test_markdown_sanitization.py` 已鎖住 ReadingView / EditablePreview 只能走共用 `renderSafeMarkdown()` + DOMPurify sanitizer path，並保留 unsafe tag / unsafe protocol boundary regression。
+- `MDS-02 Low-risk GFM preview UX`（狀態：`Done`）：`marked` 產出的 table、task list、code fence、heading 以 render 後 DOM helper 補 responsive table wrapper、task list 視覺、code-copy button、heading id/anchor；ReadingView 右側補 TOC/outline。沒有改 Markdown source，也沒有新增 WYSIWYG。
+- `MDS-03 MarkForge prose extensions`（狀態：`Done`）：本地 parser helper 支援 GitHub alert、footnote、`==highlight==`、`:::markforge-box info|success|warning`、`:::markforge-details title`，仍走 DOMPurify allowlist；未允許任意 CSS、`style`、script、iframe/object/embed、遠端 renderer 或 plugin host。
+- `MDS-04 Code syntax highlighting`（狀態：`Done`）：本次評估後不導入 `highlight.js` 或新 dependency；只補 code block copy 與可讀樣式。若未來需要語法高亮，另開 bundle/security review。
+- `MDS-05 Mermaid / KaTeX decision gate`（狀態：`Blocked`）：本次未導入。若要支援，必須離線渲染、可設定開關、錯誤只影響該 block、render timeout、有 sanitizer / protocol boundary regression，並明確處理 export/preview fidelity 差異。
+- `MDS-06 ABC score fence decision gate`（狀態：`Blocked`）：本次未導入。只有使用者明確需要把樂譜當知識卡片顯示時，才另開離線 renderer / bundle / safety gate。
 
-驗收候選：
+驗證證據：
 
-- `frontend/src/utils/markdown.ts` renderer / sanitizer unit tests，覆蓋 safe syntax、blocked HTML、blocked protocol、extension on/off 與 failure isolation。
-- ReadingView + EditablePreview browser smoke：table overflow 不撐破 modal、task list 可讀、code copy 只複製程式碼、TOC/anchor 不遮擋內容、圖片 lightbox 行為不回退。
-- `cd frontend && npm run build`、必要時 Playwright smoke / screenshots、`git diff --check`。
-- 若新增依賴，補 bundle impact 與 security review；不得引入 AI/ML、CDN、背景服務、遠端 renderer 或 editor rewrite。
+- `pytest tests/test_markdown_sanitization.py tests/test_image_viewer_lightbox.py::test_reading_view_collects_cover_and_markdown_images -v`：5 passed。
+- `cd frontend && npm run build`：passed；僅有既有 Browserslist outdated 與 Vite chunk-size warning。
+- `pytest tests/ -v`：已跑完整套件一次，該次結果為 344 passed / 20 failed；其中 ReadingView handler name regression 已在本 slice 修正並以 targeted test 驗過，其餘失敗集中在 TODO/HANDOFF 瘦身後仍期待舊 `[x]` 歷史條目的既有 docs regression。
+- 未新增 dependency，未引入 AI/ML、CDN、背景服務、遠端 renderer、schema/API change 或 editor rewrite。
+- 未跑 Playwright screenshot smoke；本 slice 以 targeted regression + TypeScript/Vite build 作為驗收證據。
 
 不做：
 
@@ -99,7 +100,11 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 採納項目與施工順序：
 
-- `KWF-01 Command Palette server-side search`（狀態：`Todo`）：在 Command Palette 輸入 `? xxx` 或超過最小字數時，debounced 呼叫 `api.getNotes({ search: xxx, per_page: N })` 顯示全庫結果；保留 navigation / recent / new note / theme actions。這是最小搜尋工作流改良，不改後端搜尋引擎。
+- `KWF-01 Command Palette server-side search`（狀態：`Done`）：Command Palette 輸入 `? xxx` 或至少 3 個字元時，debounced 呼叫既有 `api.getNotes({ search: xxx, per_page: N })` 顯示全庫結果；保留 navigation / recent / new note / theme actions。這是最小搜尋工作流改良，不改後端搜尋引擎。
+  - 完成：新增 `results` 分組、loading / empty / error / count 狀態、四語 i18n、server result 點開前依 `content_truncated` 補抓完整 note detail。
+  - 邊界：沒有改 Go API、FTS/search contract、DB schema、Pi deploy、auth 或 public internet exposure policy。
+  - 驗證：`pytest tests/test_command_palette_server_search.py tests/test_phase22_command_palette_entrypoint_reliability.py tests/test_frontend_i18n_settings.py::test_active_ui_final_i18n_namespaces_are_translated_for_four_locales tests/test_frontend_i18n_settings.py::test_active_ui_final_components_use_i18n_for_extracted_strings -v`：11 passed；`cd frontend && npm run build`：passed，僅既有 Browserslist / chunk-size warning；`git diff --check`：passed，僅 Windows CRLF warning；`pytest tests/ -v`：349 passed / 19 failed，失敗仍集中在 TODO 瘦身後舊測試期待歷史 `[x]` 條目的既有 docs regression，KWF-01 tests 皆通過。
+  - Pi live deploy：2026-07-05 已用 `powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` 推到 `PI5Mask24`。Artifact sha256 `b1216cc1aefcc893db9b867e97960de3bb3e4689a739ee8227b5fd4738dcb871`；pre-cutover snapshot `/home/mask070924/prism/backups/go-primary-t042-20260705_012430`；`prism-go-primary.service` active、legacy `prism.service` inactive、Caddy active；`/api/system/migration-status` current/latest v17 且 pending empty；`/api/notes?q=prompt&per_page=1&include_archived=true` success；served JS contains `command-palette-server-search-status`；local evidence at `build/go-primary-live/pi/evidence.json`。
 - `KWF-02 Saved Search / Search Workspace`（狀態：`Todo`）：先用 localStorage 儲存常用 query/filter/sort view，例如「AI 工具」「ComfyUI」「待整理」「有附件」「最近修改」「已封存」「某組 tags AND/OR」。不得先改 DB；若 localStorage 形狀穩定後仍需要跨裝置，再另開 schema gate。
 - `KWF-03 Full data snapshot export`（狀態：`Todo`）：新增 script 或受控 local endpoint/desktop action，打包 DB、WAL/SHM safety handling、`static/uploads/`、`docs/attachments/`、`docs/notes/`、config 與必要 manifest。必須明確命名為 full data snapshot，避免和 DB-only backup 混淆；Pi/live 版本需保留 rollback 與 snapshot retention 邊界。
 - `KWF-04 Agent-safe write guards`（狀態：`Todo`）：為 destructive/bulk/API write 增加小型防手殘機制候選，例如 `dry_run=true` preview、batch delete preview、`expected_updated_at` optimistic guard、`client_request_id` 或 `source=agent_name` 記錄。這不是 auth，不得宣稱能安全 public exposure。
@@ -114,7 +119,7 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 驗收候選：
 
-- KWF-01/KWF-02 以 frontend unit / browser smoke 驗證 Command Palette 結果、saved view persistence、filter restore、keyboard navigation 與 loading/empty/error state。
+- KWF-02 以 frontend unit / browser smoke 驗證 saved view persistence、filter restore、keyboard navigation 與 loading/empty/error state。
 - KWF-03 若只做 script，需有 dry-run / fixture data dir smoke；若做 API/desktop action，需 Go tests + artifact smoke，並清楚證明包含 DB、uploads、attachments、config，且不覆蓋 live data。
 - KWF-04/KWF-05 涉及 API contract 時必須補 `docs/API_REFERENCE.md`、Go tests、frontend regression 與 failure/no-partial-write evidence。
 

@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { type MouseEvent, useMemo, useState } from 'react'
 import { Edit3, Trash2 } from 'lucide-react'
 import { removeImageReferences } from './imageReferences'
 import { useTranslation } from '../../hooks/useTranslation'
-import { renderSafeMarkdown } from '../../utils/markdown'
+import { copyMarkdownCodeFromClick, renderSafeMarkdown } from '../../utils/markdown'
 import { ImageLightbox, type LightboxImage } from '../ImageLightbox'
 
 interface EditablePreviewProps {
@@ -54,6 +54,18 @@ export function EditablePreview({
   const openLightboxForSource = (src: string) => {
     const imageIndex = previewImages.findIndex((image) => image.src === src)
     if (imageIndex >= 0) setLightboxIndex(imageIndex)
+  }
+
+  const handleMarkdownContentClick = async (event: MouseEvent<HTMLDivElement>) => {
+    try {
+      const didCopyCode = await copyMarkdownCodeFromClick(event.target, {
+        copiedLabel: t('reading.codeCopied'),
+        failedLabel: t('reading.codeCopyFailed'),
+      })
+      if (didCopyCode) event.preventDefault()
+    } catch {
+      // The inline copy button shows failure state locally.
+    }
   }
 
   if (blocks.length === 0) {
@@ -136,7 +148,13 @@ export function EditablePreview({
               </button>
               <div
                 className="pr-10"
-                dangerouslySetInnerHTML={{ __html: renderSafeMarkdown(block.source) }}
+                onClick={handleMarkdownContentClick}
+                dangerouslySetInnerHTML={{
+                  __html: renderSafeMarkdown(block.source, '', {
+                    codeCopyAriaLabel: t('reading.copyCode'),
+                    codeCopyLabel: t('reading.copyCode'),
+                  }),
+                }}
               />
             </section>
           )

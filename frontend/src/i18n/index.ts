@@ -68,6 +68,7 @@ const zhTW = {
   commandPalette: {
     groups: {
       navigation: '導覽',
+      results: '全庫搜尋',
       recent: '最近筆記',
       actions: '動作',
     },
@@ -80,6 +81,12 @@ const zhTW = {
     themeDark: '深色',
     themeLight: '淺色',
     themeChanged: '已切換至{theme}主題',
+    serverSearch: {
+      searching: '搜尋全庫「{query}」...',
+      failed: '全庫搜尋失敗',
+      empty: '全庫沒有符合「{query}」的筆記',
+      count: '全庫搜尋「{query}」 · {count} 筆結果',
+    },
     commands: {
       allNotes: {
         title: '全部筆記',
@@ -243,6 +250,9 @@ const zhTW = {
     remarks: '備註',
     edit: '編輯',
     copyContent: '複製內容',
+    copyCode: '複製程式碼',
+    codeCopied: '已複製',
+    codeCopyFailed: '複製失敗',
     pin: '置頂',
     unpin: '取消置頂',
     archive: '封存',
@@ -252,6 +262,7 @@ const zhTW = {
     variantsLoading: '讀取變體中...',
     variantsUnavailable: '變體清單暫時無法載入',
     openRelatedFailed: '讀取相關筆記失敗',
+    outlineTitle: '大綱',
     workspaceTitle: '閱讀清單 ({count})',
     workspaceAddCurrent: '加入目前筆記',
     workspaceAdded: '已加入閱讀清單',
@@ -891,6 +902,7 @@ const en: TranslationDict = {
   commandPalette: {
     groups: {
       navigation: 'Navigation',
+      results: 'Full search',
       recent: 'Recent notes',
       actions: 'Actions',
     },
@@ -903,6 +915,12 @@ const en: TranslationDict = {
     themeDark: 'dark',
     themeLight: 'light',
     themeChanged: 'Switched to {theme} theme',
+    serverSearch: {
+      searching: 'Searching all notes for "{query}"...',
+      failed: 'Full search failed',
+      empty: 'No notes found for "{query}"',
+      count: 'Full search "{query}" · {count} results',
+    },
     commands: {
       allNotes: {
         title: 'All notes',
@@ -1066,6 +1084,9 @@ const en: TranslationDict = {
     remarks: 'Remarks',
     edit: 'Edit',
     copyContent: 'Copy content',
+    copyCode: 'Copy code',
+    codeCopied: 'Copied',
+    codeCopyFailed: 'Copy failed',
     pin: 'Pin',
     unpin: 'Unpin',
     archive: 'Archive',
@@ -1075,6 +1096,7 @@ const en: TranslationDict = {
     variantsLoading: 'Loading variants...',
     variantsUnavailable: 'Could not load variants',
     openRelatedFailed: 'Failed to load related note',
+    outlineTitle: 'Outline',
     workspaceTitle: 'Reading list ({count})',
     workspaceAddCurrent: 'Add current note',
     workspaceAdded: 'Added to reading list',
@@ -1711,6 +1733,7 @@ const ja: TranslationDict = {
   commandPalette: {
     groups: {
       navigation: 'ナビゲーション',
+      results: '全体検索',
       recent: '最近のノート',
       actions: 'アクション',
     },
@@ -1723,6 +1746,12 @@ const ja: TranslationDict = {
     themeDark: 'ダーク',
     themeLight: 'ライト',
     themeChanged: '{theme}テーマに切り替えました',
+    serverSearch: {
+      searching: '全ノートから「{query}」を検索中...',
+      failed: '全体検索に失敗しました',
+      empty: '「{query}」に一致するノートはありません',
+      count: '全体検索「{query}」 · {count} 件',
+    },
     commands: {
       allNotes: {
         title: 'すべてのノート',
@@ -1886,6 +1915,9 @@ const ja: TranslationDict = {
     remarks: '備考',
     edit: '編集',
     copyContent: '内容をコピー',
+    copyCode: 'コードをコピー',
+    codeCopied: 'コピーしました',
+    codeCopyFailed: 'コピーに失敗しました',
     pin: 'ピン留め',
     unpin: 'ピン留め解除',
     archive: 'アーカイブ',
@@ -1895,6 +1927,7 @@ const ja: TranslationDict = {
     variantsLoading: 'バリアントを読み込み中...',
     variantsUnavailable: 'バリアント一覧を読み込めません',
     openRelatedFailed: '関連ノートの読み込みに失敗しました',
+    outlineTitle: 'アウトライン',
     workspaceTitle: '読書リスト ({count})',
     workspaceAddCurrent: '現在のノートを追加',
     workspaceAdded: '読書リストに追加しました',
@@ -2531,6 +2564,7 @@ const ko: TranslationDict = {
   commandPalette: {
     groups: {
       navigation: '탐색',
+      results: '전체 검색',
       recent: '최근 노트',
       actions: '작업',
     },
@@ -2543,6 +2577,12 @@ const ko: TranslationDict = {
     themeDark: '어두운',
     themeLight: '밝은',
     themeChanged: '{theme} 테마로 전환했습니다',
+    serverSearch: {
+      searching: '전체 노트에서 "{query}" 검색 중...',
+      failed: '전체 검색 실패',
+      empty: '"{query}"와 일치하는 노트가 없습니다',
+      count: '전체 검색 "{query}" · 결과 {count}개',
+    },
     commands: {
       allNotes: {
         title: '모든 노트',
@@ -2706,6 +2746,9 @@ const ko: TranslationDict = {
     remarks: '비고',
     edit: '편집',
     copyContent: '내용 복사',
+    copyCode: '코드 복사',
+    codeCopied: '복사됨',
+    codeCopyFailed: '복사 실패',
     pin: '고정',
     unpin: '고정 해제',
     archive: '보관',
@@ -2715,6 +2758,7 @@ const ko: TranslationDict = {
     variantsLoading: '변형을 불러오는 중...',
     variantsUnavailable: '변형 목록을 불러올 수 없습니다',
     openRelatedFailed: '관련 노트를 불러오지 못했습니다',
+    outlineTitle: '개요',
     workspaceTitle: '읽기 목록 ({count})',
     workspaceAddCurrent: '현재 노트 추가',
     workspaceAdded: '읽기 목록에 추가했습니다',

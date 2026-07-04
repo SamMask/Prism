@@ -803,3 +803,193 @@ html[data-aesthetic="studio"] .gradient-text {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+@layer components {
+  .prism-table-wrapper {
+    width: 100%;
+    margin: 1.25rem 0;
+    overflow-x: auto;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--prism-radius-sm);
+  }
+
+  .prism-table-wrapper table {
+    min-width: 36rem;
+    margin: 0;
+  }
+
+  .prism-code-block {
+    position: relative;
+    margin: 1.25rem 0;
+  }
+
+  .prism-code-block pre {
+    margin: 0;
+    overflow-x: auto;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--prism-radius-sm);
+    background: var(--color-bg-elevated);
+    padding-top: 2.75rem;
+  }
+
+  .prism-code-copy {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 1;
+    min-width: 4rem;
+    border: 1px solid var(--color-border-default);
+    border-radius: var(--prism-radius-sm);
+    background: color-mix(in oklab, var(--color-bg-base) 82%, transparent);
+    color: var(--color-text-secondary);
+    font-size: 0.75rem;
+    line-height: 1;
+    padding: 0.45rem 0.6rem;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .prism-code-copy:hover,
+  .prism-code-copy:focus-visible {
+    border-color: var(--color-primary);
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    outline: none;
+  }
+
+  .prism-heading-anchor {
+    margin-left: 0.5rem;
+    color: var(--color-text-muted);
+    font-size: 0.8em;
+    opacity: 0;
+    text-decoration: none;
+    transition: color 0.15s ease, opacity 0.15s ease;
+  }
+
+  .prose :is(h1, h2, h3, h4, h5, h6):hover .prism-heading-anchor,
+  .prism-heading-anchor:focus-visible {
+    color: var(--color-primary-light);
+    opacity: 1;
+    outline: none;
+  }
+
+  .prism-callout {
+    margin: 1.25rem 0;
+    border: 1px solid var(--color-border-subtle);
+    border-left-width: 3px;
+    border-radius: var(--prism-radius-sm);
+    background: color-mix(in oklab, var(--color-bg-elevated) 78%, transparent);
+    padding: 0.85rem 1rem;
+  }
+
+  .prism-callout-title {
+    margin: 0 0 0.5rem;
+    color: var(--color-text-primary);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .prism-callout > :last-child {
+    margin-bottom: 0;
+  }
+
+  .prism-callout-note,
+  .prism-callout-info {
+    border-left-color: var(--color-primary);
+  }
+
+  .prism-callout-tip,
+  .prism-callout-success {
+    border-left-color: var(--color-success);
+  }
+
+  .prism-callout-important {
+    border-left-color: var(--color-accent);
+  }
+
+  .prism-callout-warning {
+    border-left-color: var(--color-warning);
+  }
+
+  .prism-callout-caution {
+    border-left-color: var(--color-danger);
+  }
+
+  .prism-details {
+    margin: 1.25rem 0;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--prism-radius-sm);
+    background: color-mix(in oklab, var(--color-bg-elevated) 64%, transparent);
+    padding: 0.85rem 1rem;
+  }
+
+  .prism-details > summary {
+    cursor: pointer;
+    color: var(--color-text-primary);
+    font-weight: 600;
+  }
+
+  .prism-details > :last-child {
+    margin-bottom: 0;
+  }
+
+  .prose mark {
+    border-radius: 0.25rem;
+    background: color-mix(in oklab, var(--color-warning) 32%, transparent);
+    color: inherit;
+    padding: 0 0.18em;
+  }
+
+  .prism-footnotes {
+    margin-top: 2rem;
+    border-top: 1px solid var(--color-border-subtle);
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+    padding-top: 1rem;
+  }
+
+  .prism-footnote-ref {
+    font-size: 0.75em;
+    line-height: 0;
+  }
+
+  .prism-task-list {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .prism-task-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .prism-task-box {
+    position: relative;
+    flex: 0 0 auto;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.35em;
+    border: 1px solid var(--color-border-default);
+    border-radius: 0.25rem;
+    background: var(--color-bg-surface);
+  }
+
+  .prism-task-box-checked {
+    border-color: var(--color-primary);
+    background: var(--color-primary);
+  }
+
+  .prism-task-box-checked::after {
+    position: absolute;
+    top: 0.08rem;
+    left: 0.32rem;
+    width: 0.32rem;
+    height: 0.58rem;
+    border: solid var(--color-bg-base);
+    border-width: 0 2px 2px 0;
+    content: "";
+    transform: rotate(45deg);
+  }
+}

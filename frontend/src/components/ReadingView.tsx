@@ -7,7 +7,7 @@ import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
 import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { getCategoryDisplayName } from '../utils/categoryDisplay'
-import { renderSafeMarkdown } from '../utils/markdown'
+import { copyMarkdownCodeFromClick, extractMarkdownHeadings, renderSafeMarkdown } from '../utils/markdown'
 import { extractImageReferences } from './editor/imageReferences'
 import { ImageLightbox, type LightboxImage } from './ImageLightbox'
 
@@ -69,7 +69,13 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     () => collectReadingImages(coverImage, localNote.content || '', localNote.title || t('reading.untitled')),
     [coverImage, localNote.content, localNote.title, t],
   )
-  const renderedContent = useMemo(() => renderSafeMarkdown(localNote.content || '', t('reading.emptyContent')), [localNote.content, t])
+  const renderedContent = useMemo(() => (
+    renderSafeMarkdown(localNote.content || '', t('reading.emptyContent'), {
+      codeCopyAriaLabel: t('reading.copyCode'),
+      codeCopyLabel: t('reading.copyCode'),
+    })
+  ), [localNote.content, t])
+  const contentHeadings = useMemo(() => extractMarkdownHeadings(localNote.content || ''), [localNote.content])
   const updatedAt = new Date(localNote.updated_at).toLocaleString(locale)
   const categoryName = getCategoryDisplayName(
     localNote.category_name || localNote.type,
@@ -286,8 +292,23 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     if (index >= 0) setLightboxIndex(index)
   }
 
-  const handleMarkdownImageClick = (event: MouseEvent<HTMLDivElement>) => {
+  const handleMarkdownImageClick = async (event: MouseEvent<HTMLDivElement>) => {
     const target = event.target
+
+    try {
+      const didCopyCode = await copyMarkdownCodeFromClick(target, {
+        copiedLabel: t('reading.codeCopied'),
+        failedLabel: t('reading.codeCopyFailed'),
+      })
+      if (didCopyCode) {
+        event.preventDefault()
+        return
+      }
+    } catch {
+      toast.error(t('noteCard.copyFailed'))
+      return
+    }
+
     if (!(target instanceof HTMLImageElement)) return
     openLightboxForSource(target.getAttribute('src') || target.src)
   }
@@ -424,6 +445,30 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
           </div>
 
           <aside className="flex shrink-0 flex-col gap-3 border-t border-border-subtle bg-bg-elevated/25 p-4 lg:border-l lg:border-t-0">
+            {contentHeadings.length > 1 && (
+              <section
+                className="rounded-md border border-border-subtle bg-bg-base/40 p-3"
+                data-testid="reading-outline-panel"
+              >
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
+                  {t('reading.outlineTitle')}
+                </div>
+                <nav className="flex max-h-48 flex-col gap-1 overflow-y-auto" aria-label={t('reading.outlineTitle')}>
+                  {contentHeadings.map((heading) => (
+                    <a
+                      key={heading.id}
+                      href={`#${heading.id}`}
+                      title={heading.text}
+                      className="truncate rounded-md px-2 py-1 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
+                      style={{ paddingLeft: `${Math.max(0, heading.depth - 1) * 0.75 + 0.5}rem` }}
+                    >
+                      {heading.text}
+                    </a>
+                  ))}
+                </nav>
+              </section>
+            )}
+
             {workspaceItems.length > 0 && (
               <section
                 className="rounded-md border border-border-subtle bg-bg-base/40 p-3"
