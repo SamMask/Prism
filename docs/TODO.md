@@ -2,9 +2,11 @@
 
 本檔只保留目前可施工的 active roadmap、候選 backlog 與下一步入口。完成紀錄、舊 phase 與長版 changelog 全部移到 `docs/development-history/`。
 
+狀態欄位固定使用：`Todo` / `Doing` / `Blocked` / `Review` / `Done`。未 promote 的候選項維持 `Todo`；缺少明確需求、決策 gate 或安全前提的項目標 `Blocked`；只有正在施工的單一 active item 才標 `Doing`。
+
 ---
 
-## Current Truth（2026-06-19）
+## Current Truth（2026-07-05）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
 - Prism V2.5 已封版到 commit `42ce747bc273182b045455de49b8be06fd6c051a`；GitHub Release `V2.5` 與 portable zip asset 已對齊該 commit。
@@ -14,12 +16,17 @@
 - Prism 仍沒有內建 auth/token layer；safe boundary 是 localhost、trusted LAN、VPN、SSH tunnel，或外部 auth 保護的 reverse proxy。不得把 API 寫成可直接 public internet 暴露。
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
 - `build/` 只應保留最新 release 產物；不得把 DB、attachments、notes、uploads 等真資料當 build artifact 清理。
+- `docs/GOVERNANCE.md` 是完成宣稱、狀態層級、驗證證據、委派與 UI/UX governance 的 current entry；新版治理素材已保留到 `docs/development-history/governance-source-20260705/`，正式文檔不依賴暫存素材目錄。
 
 Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA.md`, `docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
 
 ---
 
 ## 下一個可施工入口
+
+### Markdown / Knowledge Workflow Candidates
+
+2026-07-05 新增 `MARKDOWN-SYNTAX-CANDIDATE-01` 與 `KNOWLEDGE-WORKFLOW-CANDIDATE-01`。若要開始施工，先 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 `MDS-01`（renderer contract audit + regression fixtures），再做 `MDS-02`。不要一次導入 Mermaid / KaTeX / abcjs、schema/API 變更或搜尋架構重做。
 
 ### Release / GitHub Maintenance
 
@@ -41,7 +48,79 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 ## Active Candidates
 
+### MARKDOWN-SYNTAX-CANDIDATE-01 Port MarkForge-MD supported Markdown syntax into Prism
+
+狀態：`Todo`
+
+來源：2026-07-05 使用者要求把 `D:\AI\MarkForge-MD` 支援的 md 語法支援到 Prism，且 Markdown 語法支援列優先。
+
+實際對照：
+
+- MarkForge-MD current renderer 使用 `markdown-it`，並已支援 CommonMark / GFM-like table、task list、strikethrough、fenced code、syntax highlighting、相對/本機圖片 preview、GitHub alert、footnote、code block copy、outline、Mermaid、KaTeX、白名單 HTML、`==highlight==`、`:::markforge-box info|success|warning`、`:::markforge-details title`，以及 `abc` / `music-abc` / `score-abc` 樂譜 fence。
+- Prism current renderer 使用 `marked` (`gfm=true`, `breaks=true`) + `DOMPurify`，集中在 `frontend/src/utils/markdown.ts`，由 `ReadingView` 與 `EditablePreview` 共用。它目前沒有 MarkForge 的 markdown-it pipeline、Mermaid / KaTeX / highlight.js、footnote / GitHub alert / MarkForge extension、code-copy wrapper 或 TOC/outline 行為。
+
+目標：把高頻、可維護、低風險的 MarkForge-compatible Markdown 顯示能力帶進 Prism 的 ReadingView / editor preview；先做前端 preview fidelity，不改 note schema、import/export contract、search contract、DB migration 或 Go runtime storage semantics。
+
+施工順序：
+
+- `MDS-01 Renderer contract audit`（狀態：`Todo`）：先為 Prism 現有 `renderSafeMarkdown()` 建立 fixture matrix，明確記錄目前支援與 blocked syntax：GFM table/task list、raw HTML sanitizer、危險 protocol、image/link、code fence、blockquote、heading、empty content。此 gate 不新增依賴、不改 UX，只建立可回歸證據。
+- `MDS-02 Low-risk GFM preview UX`（狀態：`Todo`）：補 task list 視覺、responsive table overflow、code block copy、heading id/anchor 與 ReadingView TOC/outline。若 `marked` 已輸出對應 HTML，優先只補 CSS / wrapper / click 行為；不得改 Markdown source、不得新增 WYSIWYG。
+- `MDS-03 MarkForge prose extensions`（狀態：`Todo`）：補 GitHub alert、footnote、`==highlight==`、`:::markforge-box info|success|warning`、`:::markforge-details title`。優先用本地 parser helper 或 `marked` extension，延續 DOMPurify allowlist；不得允許任意 CSS、`style`、script、iframe/object/embed、遠端 renderer 或 plugin host。
+- `MDS-04 Code syntax highlighting`（狀態：`Todo`）：評估是否引入 MarkForge 同級的 `highlight.js` subset，只註冊常用語言並量測 bundle 影響；若導入，仍不得使用 CDN 或遠端語法服務。
+- `MDS-05 Mermaid / KaTeX decision gate`（狀態：`Todo`）：晚於 MDS-01~MDS-04。若要支援，必須離線渲染、可設定開關、錯誤只影響該 block、render timeout、有 sanitizer / protocol boundary regression，並明確處理 export/preview fidelity 差異。
+- `MDS-06 ABC score fence decision gate`（狀態：`Todo`）：`abc` / `music-abc` / `score-abc` 是 MarkForge 的音樂文件特化能力；Prism 預設不啟用。只有使用者明確需要把樂譜當知識卡片顯示時，才另開離線 renderer / bundle / safety gate。
+
+驗收候選：
+
+- `frontend/src/utils/markdown.ts` renderer / sanitizer unit tests，覆蓋 safe syntax、blocked HTML、blocked protocol、extension on/off 與 failure isolation。
+- ReadingView + EditablePreview browser smoke：table overflow 不撐破 modal、task list 可讀、code copy 只複製程式碼、TOC/anchor 不遮擋內容、圖片 lightbox 行為不回退。
+- `cd frontend && npm run build`、必要時 Playwright smoke / screenshots、`git diff --check`。
+- 若新增依賴，補 bundle impact 與 security review；不得引入 AI/ML、CDN、背景服務、遠端 renderer 或 editor rewrite。
+
+不做：
+
+- 不追「所有 Markdown dialect」；只做 MarkForge 已證明且 Prism 高頻可用的子集。
+- 不把 MarkForge 的 Tauri local-file asset scope、desktop file association、installer behavior 搬進 Prism。
+- 不把 Markdown syntax gate 順手擴成 import/export 重做、搜尋重做、schema 欄位新增或 Pi deploy。
+
+### KNOWLEDGE-WORKFLOW-CANDIDATE-01 Local-first knowledge workspace improvements after Markdown candidate
+
+狀態：`Todo`
+
+來源：2026-07-05 使用者貼上的 ChatGPT 優先序建議；依 Prism current docs/source 實際狀態評估後吸收到 TODO。Markdown syntax support 仍列優先，本 candidate 排在 Markdown 之後。
+
+實際對照：
+
+- `GET /api/notes?q=...` 已支援 title/content FTS5、remarks、tags、attachment metadata 與 bounded text attachment body scan，且仍是純關鍵字搜尋；API 也已有 category、tags、archived、pinned、sort 等條件。
+- `CommandPalette` 目前只搜尋前端 store 內已載入 notes，recent notes 取最近 6 筆，沒有在 palette input 中觸發 server-side 全庫 `/api/notes?q=...`。
+- server backup/download 與 rotate 是 DB-only；`DEPLOY-PI.md` 與 API docs 已明確指出 DB backup 不包含 `static/uploads/` / `docs/attachments/`，不同於 deploy data snapshot。
+- Prism 無內建 API token / Bearer token / 使用者認證；文件已要求 localhost、trusted LAN、VPN、SSH tunnel 或外部 auth reverse proxy。
+- Settings 批次 Markdown/TXT 匯入仍是前端逐檔 wrapper，沒有 server-side batch import API，也沒有 dry-run / collision preview。
+
+採納項目與施工順序：
+
+- `KWF-01 Command Palette server-side search`（狀態：`Todo`）：在 Command Palette 輸入 `? xxx` 或超過最小字數時，debounced 呼叫 `api.getNotes({ search: xxx, per_page: N })` 顯示全庫結果；保留 navigation / recent / new note / theme actions。這是最小搜尋工作流改良，不改後端搜尋引擎。
+- `KWF-02 Saved Search / Search Workspace`（狀態：`Todo`）：先用 localStorage 儲存常用 query/filter/sort view，例如「AI 工具」「ComfyUI」「待整理」「有附件」「最近修改」「已封存」「某組 tags AND/OR」。不得先改 DB；若 localStorage 形狀穩定後仍需要跨裝置，再另開 schema gate。
+- `KWF-03 Full data snapshot export`（狀態：`Todo`）：新增 script 或受控 local endpoint/desktop action，打包 DB、WAL/SHM safety handling、`static/uploads/`、`docs/attachments/`、`docs/notes/`、config 與必要 manifest。必須明確命名為 full data snapshot，避免和 DB-only backup 混淆；Pi/live 版本需保留 rollback 與 snapshot retention 邊界。
+- `KWF-04 Agent-safe write guards`（狀態：`Todo`）：為 destructive/bulk/API write 增加小型防手殘機制候選，例如 `dry_run=true` preview、batch delete preview、`expected_updated_at` optimistic guard、`client_request_id` 或 `source=agent_name` 記錄。這不是 auth，不得宣稱能安全 public exposure。
+- `KWF-05 Import dry-run / collision preview`（狀態：`Todo`）：先做 import preview，回報會建立、跳過、疑似重複與錯誤檔數；不做 watcher、不做 sync daemon、不把單檔 endpoint 偷升成未驗證大批次寫入。
+- `KWF-06 Source URL panel`（狀態：`Todo`）：利用既有 `Source_Urls` / note `urls`，做來源連結面板：domain 顯示、duplicate URL detection、手動 title、失效檢查候選。避免直接做 full web clipper。
+- `KWF-07 Knowledge quality metadata decision gate`（狀態：`Todo`）：`status` / `review_state` / `last_verified_at` 需要 schema v18+，排在搜尋工作流、snapshot 與 import preview 後面；啟動前必須先更新 `docs/SCHEMA.md` 與 migration/test contract。
+
+不採納 / deferred：
+
+- 內建登入、多使用者、OAuth、RBAC、cloud sync、semantic search、embeddings、GraphRAG、directory watcher、background sync daemon、大型備份平台、一次性 editor rewrite、一次性 Go runtime 大拆分。
+- Source URL 自動抓 title / link health 若需要外網或批次請求，必須另開 privacy / timeout / user-triggered boundary，不得在讀取 note 時背景追蹤遠端 URL。
+
+驗收候選：
+
+- KWF-01/KWF-02 以 frontend unit / browser smoke 驗證 Command Palette 結果、saved view persistence、filter restore、keyboard navigation 與 loading/empty/error state。
+- KWF-03 若只做 script，需有 dry-run / fixture data dir smoke；若做 API/desktop action，需 Go tests + artifact smoke，並清楚證明包含 DB、uploads、attachments、config，且不覆蓋 live data。
+- KWF-04/KWF-05 涉及 API contract 時必須補 `docs/API_REFERENCE.md`、Go tests、frontend regression 與 failure/no-partial-write evidence。
+
 ### NOTE-DELETE-MEDIA-UX-CANDIDATE-01 Deleting notes and unused images copy
+
+狀態：`Todo`
 
 來源：2026-06-19 使用者回報，下載版新增有圖片的卡片後，單張刪除或批次刪除 note 時，關聯 upload 圖片檔不一定會一起刪；使用者也指出「不一起刪」有安全上的好處，目前可用「清理未使用的圖片」事後處理。
 
@@ -49,9 +128,9 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 - 預設產品語意：刪卡片 = 刪 note 資料，不保證刪除實體 upload 圖片檔。
 - 明確刪檔語意：圖片管理面板的「刪除檔案」與 Settings 的「清理未使用圖片」才是刪實體檔入口。
-- 可施工方向 A：在刪除 note/批次刪除確認框加一句短 copy，說明關聯圖片檔不會自動清掉，可到 Settings 清理未使用圖片。
-- 可施工方向 B：在 Settings 清理未使用圖片區塊補說明，標明刪除 notes 後留下的未引用圖片會在這裡掃出。
-- 可施工方向 C：若未來真的要改行為，只做 opt-in checkbox，例如「同時刪除只被這些卡片使用的圖片」，且預設不勾。
+- 可施工方向 A（狀態：`Todo`）：在刪除 note/批次刪除確認框加一句短 copy，說明關聯圖片檔不會自動清掉，可到 Settings 清理未使用圖片。
+- 可施工方向 B（狀態：`Todo`）：在 Settings 清理未使用圖片區塊補說明，標明刪除 notes 後留下的未引用圖片會在這裡掃出。
+- 可施工方向 C（狀態：`Todo`）：若未來真的要改行為，只做 opt-in checkbox，例如「同時刪除只被這些卡片使用的圖片」，且預設不勾。
 - 不做：預設自動 cascade 刪 upload 檔、不繞過引用掃描、不刪仍被其他 note/attachment/cover 引用的圖片、不在 V2.5 封版後只為此重包 release。
 
 驗收候選：copy 或 opt-in 行為需有 frontend regression；若涉及刪檔 runtime，必須補 Go/API tests 證明 shared references、cover image、Markdown/HTML image、thumbnail companion 與 batch delete order 都不誤刪。
@@ -60,10 +139,11 @@ Desktop Shell 沒有 active construction item。Installer/updater 類功能只�
 
 ## Deferred Candidates
 
-- `DEEP-SCAN-RISK-CANDIDATE-01` 01H Low-priority maintenance triage。
-- Desktop installer/updater/WebView2 bootstrap/shortcut automation。
-- Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）若日後恢復 render，再於該 gate 同步補四語 key。
-- AI / semantic search / embeddings / GraphRAG / auto-writing 仍不在 active roadmap。
+- `DEEP-SCAN-RISK-CANDIDATE-01` 01H Low-priority maintenance triage（狀態：`Blocked`；需明確 promote 才可施工）。
+- Desktop installer/updater/WebView2 bootstrap/shortcut automation（狀態：`Blocked`；需使用者明確需要 installer/updater 類能力）。
+- Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）（狀態：`Blocked`；只有日後恢復 render，才於該 gate 同步補四語 key）。
+- Mermaid / KaTeX / ABC score fence（狀態：`Blocked`；只有 `MARKDOWN-SYNTAX-CANDIDATE-01` 對應 decision gate 被 promote 後才可施工；不得在 MDS-01/MDS-02 順手導入 heavy renderer）。
+- AI / semantic search / embeddings / GraphRAG / auto-writing（狀態：`Blocked`；仍不在 active roadmap）。
 
 ---
 

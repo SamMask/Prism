@@ -5,6 +5,7 @@
 | Contract | Boundary |
 |---|---|
 | CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | `docs/TODO.md` 只保留 active roadmap、候選 backlog、下一步入口與歸檔索引；`HANDOFF.md` 只保留最短 current state / next entry；歷史 phase、完成紀錄與長版交接快照移入 `docs/development-history/`。 |
+| CONTRACT-AGENT-GOVERNANCE-CURRENT-TRUTH | `docs/GOVERNANCE.md` 是 Prism 的完成宣稱、狀態層級、驗證證據、委派與 UI/UX 治理入口；`docs/development-history/governance-source-20260705/` 只能作為素材來源，不得覆蓋 current source/contracts/tests、不得直接升格成 runtime feature、schema/API 變更或 active roadmap。 |
 | CONTRACT-DESKTOP-SHELL-SPIKE | Desktop Shell Phase 0 只能建立 isolated Windows message-loop spike：空 Win32 視窗 + tray icon + 單一 loop；不得接 WebView2、後端、schema/API/runtime、deploy 或 production data。 |
 | CONTRACT-DESKTOP-SHELL-WEBVIEW2-SPIKE | Desktop Shell Phase 1 只能在 Phase 0 message loop proof 上接入 WebView2 placeholder / URL target；不得接 Prism Go server goroutine、schema/API/runtime、deploy、installer、updater 或 production data。 |
 | CONTRACT-DESKTOP-SHELL-RUNTIME-HOST | Desktop Shell Phase 2 只能把 Windows shell 接到同一行程內的 Go primary runtime goroutine，使用明確 local addr 與 external data-dir；不得碰 production Pi data、不得改 schema/API、不得改 Pi deploy、不得做 installer/updater。 |

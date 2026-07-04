@@ -4,19 +4,36 @@
 評估範圍：本機 checkout `D:\AI\Prism`，未查詢 GitHub Issues / PR / Releases live 狀態。  
 限制：依要求未修改既有專案檔；本輪只新增本報告。完整 runtime 啟動、瀏覽器操作、Pi live、`npm audit`、GitHub issue/PR 健康度未驗證。
 
+> 2026-06-19 現況覆核：本檔先保留在 repo root，不歸檔。原始評估內容保留作為當時 evidence；若與下方「現況差異」衝突，以現況差異、`docs/TODO.md`、`docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md` 與實際 source/tests 為準。
+
 ## 0. 一句話結論
 
 Prism 是一個實際可用、文件與測試基礎偏厚的 local-first 知識庫 / prompt 工具，不是單純展示型 prototype。  
-但它目前最適合 localhost / trusted LAN / Windows portable / Pi 私有部署；若要導入到其他專案或暴露給不可信內容，必須先處理 markdown stored XSS、no-auth 邊界、LICENSE 缺失與 CI 缺口。
+它目前仍最適合 localhost / trusted LAN / Windows portable / Pi 私有部署；原始評估中的 markdown stored XSS、LICENSE 缺失、CI 缺口與驗證環境不一致已收斂，no-auth / public-internet boundary 仍是導入時的硬限制。
+
+## 0.1 現況差異（2026-06-19）
+
+| 原始 intake / finding | 原始狀態 | 目前狀態 | 差異判斷 |
+|---|---|---|---|
+| `IMAGE-VIEWER-ZOOM-CANDIDATE-01` | 只規劃進 TODO：zoom buttons、背景點擊關閉、ArrowUp/ArrowDown 縮放 | 已完成 local gate；shared `ImageLightbox` 已有縮放、重設、背景關閉與 keyboard zoom；完成紀錄已在 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md` | 已解決，不是 active TODO；若未來要 Pi 專項驗證，另開 Pi delivery gate |
+| `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01A LICENSE | README 宣稱 MIT，但 root 缺 `LICENSE` | root `LICENSE` 已存在，README / README.zh-TW 指向實體 `LICENSE` | 已解決 |
+| `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01B GitHub CI | root 缺 `.github/workflows` | `.github/workflows/ci.yml` 已存在，且 V2.5 push 後 GitHub Actions run 已通過 | 已解決；CI 是 validation，不自動 publish release asset |
+| `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01C env alignment | `requirements.txt` pin 與本機 pytest 9.0.2 不一致 | `requirements.txt` / `requirements-pi.txt` 已固定 `pytest==9.0.2`；docs/CI 對齊 Go 1.26.x、Node 22.14.0、npm 10.9.2、Python 3.11.x | 已解決 |
+| `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01D release checklist | release claim 缺 fresh evidence template | `docs/RELEASE_CHECKLIST.md` 已建立，V2.5 release notes 也有 CI/build/smoke/privacy/hash evidence | 已解決 |
+| `PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01E docs consistency | CONTRIBUTING E2E path 與 repo 實際 `e2e/` 不一致 | CONTRIBUTING 已改為實際 `e2e/`，並有 hygiene regression 鎖住 | 已解決 |
+| Markdown stored XSS | `marked()` + `dangerouslySetInnerHTML` 未見 sanitizer | `frontend/src/utils/markdown.ts` 使用 DOMPurify；ReadingView / EditablePreview 走 `renderSafeMarkdown`，並有 `tests/test_markdown_sanitization.py` | 已解決，屬 `DEEP-SCAN-RISK-CANDIDATE-01` 01A |
+| no-auth / public exposure boundary | 無內建 auth，public internet 不可接受 | 維持 no-auth 設計；docs/runtime regression 已補，但未新增 auth/token layer | 仍是設計限制，不是 bug；不得對外宣稱 public-internet-ready |
+| Go runtime 單檔過大、bundle/browserslist warning | 維護性 / tooling 風險 | 仍 deferred 到低優先 01H maintenance triage | 未解但低優先；不得擴成大重構 |
+| GitHub / release asset 狀態 | 原始評估未查 live Releases | V2.5 release、tag、portable asset 已對齊最新 commit；release notes 已補 SmartScreen / SHA256 / `Unblock-File` | 原始未驗證項已補齊 release evidence |
 
 ## 1. 最終建議
 
 - 建議等級：可 fork 改造
-- 總體分數：7.1/10
+- 原始總體分數：7.1/10；現況因 LICENSE / CI / sanitizer / release evidence 已補齊，reuse readiness 比原始評估好，但 no-auth / public exposure 邊界仍限制用途。
 - 最大優點：Go primary 單一 runtime、React SPA、SQLite external data dir、文件與 contract/test evidence 很完整，`go test ./...` 與 TypeScript no-emit 在本輪通過。
-- 最大風險：`frontend/src/components/ReadingView.tsx:27` / `:426` 與 `frontend/src/components/editor/EditablePreview.tsx:157` / `:139` 直接使用 `marked()` + `dangerouslySetInnerHTML`，未見 sanitizer；同時 Prism 明確沒有內建 auth。
+- 最大剩餘風險：Prism 明確沒有內建 auth；仍只適合 localhost / trusted LAN / VPN / SSH tunnel / 外部 auth 保護的 reverse proxy，不適合直接 public internet。
 - 最適合用途：個人本機知識庫、可信 LAN / VPN / SSH tunnel 工具、可 fork 的 Go + React + SQLite local-first app 參考。
-- 不適合用途：public internet API、多使用者 SaaS、處理不可信 markdown / 外部匯入內容且未先補 sanitizer 的部署、需要現成 auth / RBAC / cloud sync 的產品。
+- 不適合用途：public internet API、多使用者 SaaS、需要現成 auth / RBAC / cloud sync 的產品。
 
 ## 2. 專案定位與實際成熟度
 
@@ -160,7 +177,7 @@ Browser 或 WebView2 -> React SPA -> `/api/*` -> Go handlers -> SQLite WAL / FTS
 - tracked private/runtime path 檢查：`git ls-files -- knowledge.db app.log test_run.log logs static/uploads docs/attachments docs/notes build .omx .env frontend/dist` 無輸出，表示這些高風險 runtime/private path 未被 tracked。
 - Public bind guard：`go-shadow/main.go:520-534` 預設拒絕 non-local bind，除非 `PRISM_GO_ALLOW_PUBLIC_BIND=1`。
 - SSRF guard：`go-shadow/main.go:5662-5682` 驗證 DNS / literal IP；`go-shadow/main.go:5707-5725` 擋 loopback/private/link-local/multicast/unspecified/reserved ranges。
-- Log privacy 有近期修補證據：`20260619_Prism_深度掃描報告.md` 記錄 request log 不再記 query string。
+- Log privacy 有近期修補證據：`docs/development-history/20260619_Prism_深度掃描報告.md` 記錄 request log 不再記 query string。
 
 ### 中風險
 
@@ -247,37 +264,38 @@ Browser 或 WebView2 -> React SPA -> `/api/*` -> Go handlers -> SQLite WAL / FTS
 
 ### P1
 
-- 問題：Markdown rendering 未 sanitization。
-- 影響：stored XSS，可在同源 localhost/WebView2 context 呼叫 `/api/*`。
-- 建議修法：加入 DOMPurify 或等效 sanitizer，或在 `marked` renderer 禁 raw HTML / unsafe URL；補 `<script>`、`onerror`、`javascript:`、iframe/svg regression。
+- 問題：Markdown rendering 未 sanitization。（原始 P1，已解決）
+- 影響：原始風險為 stored XSS，可在同源 localhost/WebView2 context 呼叫 `/api/*`。
+- 現況：已導入 DOMPurify sanitizer，ReadingView / EditablePreview 不再直接信任 raw `marked()` output；已有 sanitizer regression。
 - 涉及檔案：`frontend/src/components/ReadingView.tsx`、`frontend/src/components/editor/EditablePreview.tsx`、frontend tests。
-- 預估修改成本：中。
+- 狀態：已解決。
 
 ### P2
 
-- 問題：Attachment upload size gate 與 read limit 不一致。
-- 影響：大 `.md/.txt/.markdown` 可能寫入後不可讀或造成磁碟壓力。
-- 建議修法：用 `MaxBytesReader` / `LimitReader` 對齊 1 MiB contract，超限時不留下 partial file / DB row。
+- 問題：Attachment upload size gate 與 read limit 不一致。（已解決）
+- 影響：原始風險為大 `.md/.txt/.markdown` 可能寫入後不可讀或造成磁碟壓力。
+- 現況：文字附件 upload/read 已對齊 1 MiB hard limit，超限不留下 partial file / DB row。
 - 涉及檔案：`go-shadow/main.go` attachment upload path、Go tests、`docs/API_REFERENCE.md` 如需同步限額。
-- 預估修改成本：中。
+- 狀態：已解決。
 
-- 問題：Backup WAL snapshot proof 未確認。
-- 影響：使用者可能下載到不含最新 WAL transaction 的 DB snapshot，或誤以為 DB backup 包含 uploads/attachments。
-- 建議修法：補 WAL active write test；必要時改 SQLite online backup 或 checkpoint strategy，docs 明確區分 DB backup 與 data snapshot。
+- 問題：Backup WAL snapshot proof 未確認。（已解決）
+- 影響：原始風險為使用者可能下載到不含最新 WAL transaction 的 DB snapshot，或誤以為 DB backup 包含 uploads/attachments。
+- 現況：server backup download/rotate 改 SQLite consistent DB snapshot；docs 標明 DB-only，不包含 uploads/attachments data snapshot。
 - 涉及檔案：`go-shadow/main.go` backup handlers、`DEPLOY-PI.md`、server backup tests。
-- 預估修改成本：中。
+- 狀態：已解決。
 
-- 問題：Category API invalid input / target validation。
-- 影響：外部 Agent 傳錯 payload 可能得到 500，不利診斷。
-- 建議修法：wrong type 回 400，invalid/missing/self target 回 400/404，補 tests。
+- 問題：Category API invalid input / target validation。（已解決）
+- 影響：原始風險為外部 Agent 傳錯 payload 可能得到 500，不利診斷。
+- 現況：wrong type / invalid target / missing target / self target 已收斂為 400/404。
 - 涉及檔案：`go-shadow/main.go` category handlers、Go tests。
-- 預估修改成本：低到中。
+- 狀態：已解決。
 
 - 問題：No-auth boundary 對外部導入很硬。
 - 影響：任何 public exposure 都不可接受。
+- 現況：仍是設計限制；已補 local-only/no-auth runtime/docs regression，但未新增 auth/token layer。
 - 建議修法：短期保持 local/trusted LAN/VPN/proxy auth 文件與 startup guard；不要偷加半套 auth。若要公開使用，另開 auth/RBAC design。
 - 涉及檔案：README、DEPLOY-PI、API docs、startup guard tests。
-- 預估修改成本：低（維持警告）到高（真的做 auth）。
+- 狀態：保留為導入限制。
 
 ### P3
 
@@ -287,17 +305,17 @@ Browser 或 WebView2 -> React SPA -> `/api/*` -> Go handlers -> SQLite WAL / FTS
 - 涉及檔案：`go-shadow/main.go` 及新 package files。
 - 預估修改成本：高。
 
-- 問題：缺 root CI workflow。
-- 影響：GitHub 導入者無法看到自動化驗證狀態。
-- 建議修法：新增 GitHub Actions，至少跑 Go test、TypeScript no-emit/build、pytest targeted/full 分層。
+- 問題：缺 root CI workflow。（已解決）
+- 影響：原始風險為 GitHub 導入者無法看到自動化驗證狀態。
+- 現況：已新增 `.github/workflows/ci.yml`；GitHub Actions 只做 validation，不自動 publish release asset。
 - 涉及檔案：`.github/workflows/*`。
-- 預估修改成本：中。
+- 狀態：已解決。
 
-- 問題：README 宣稱 MIT 但缺 LICENSE。
-- 影響：法律可用性不清楚。
-- 建議修法：補 MIT LICENSE 檔並確認第三方 license notice。
+- 問題：README 宣稱 MIT 但缺 LICENSE。（已解決）
+- 影響：原始風險為法律可用性不清楚。
+- 現況：root `LICENSE` 已補，README / README.zh-TW 已指向實體檔。
 - 涉及檔案：`LICENSE`、README、release package。
-- 預估修改成本：低。
+- 狀態：已解決。
 
 ## 12. 評分表
 
@@ -306,26 +324,26 @@ Browser 或 WebView2 -> React SPA -> `/api/*` -> Go handlers -> SQLite WAL / FTS
 | 專案定位清晰度 | 8.5/10 | Local-first KMS / prompt tooling 定位清楚，no-AI/no-cloud/no-auth 邊界明確。 | `README.md`、`docs/API_REFERENCE.md`、`docs/TODO.md` |
 | 可跑性與開發體驗 | 7.0/10 | 文件與 scripts 清楚，本輪 Go/TS/pytest collect 可跑；但工具鏈新、WebView2/Pi/PowerShell 條件多，full build 未跑。 | `scripts/start_go_primary.ps1`、`scripts/build_go_runtime.ps1`、本輪命令結果 |
 | 架構設計 | 7.0/10 | Data flow 與 contracts 清楚；最大扣分是 Go runtime 單檔過大。 | `docs/ARCHITECTURE.md`、`docs/CONTRACTS.md`、`go-shadow/main.go` |
-| Code 品質 | 6.5/10 | 錯誤處理與 safety helper 不少；但 monolith、XSS path、attachment/backup TODO 顯示仍有負債。 | `go-shadow/main.go:5546-5725`、`ReadingView.tsx:27-31` |
-| UI / UX 或使用流程 | 7.5/10 | Shell、command palette、filters、reading workspace、settings 完整；本輪未做 browser smoke，且 markdown XSS 影響信任。 | `Layout.tsx`、`HomePage.tsx`、`CommandPalette.tsx`、`docs/TODO.md` |
-| 測試與穩定性 | 8.0/10 | 352 tests collected，Go tests 通過，contract tests 很厚；缺 CI、full suite 本輪未跑，仍有明列缺口。 | `pytest collect-only`、`go test ./...`、`.loop/verify-gate.ps1` |
-| 安全性 | 5.8/10 | Public bind、SSRF、CSRF 有 guard；但 stored XSS + no-auth 是導入阻礙。 | `go-shadow/main.go:520-534`、`:1606-1630`、`ReadingView.tsx` |
-| 依賴與維護風險 | 6.5/10 | lockfiles 存在、依賴量合理、近期 commits 活躍；缺 LICENSE、缺 CI、未做 live audit。 | `package.json`、`go.mod`、`git log -5`、`Test-Path LICENSE=False` |
+| Code 品質 | 6.5/10 | 原始評估指出 monolith、XSS path、attachment/backup TODO；現況 XSS、attachment、backup 已收斂，monolith 仍是維護性負債。 | `go-shadow/main.go`、`frontend/src/utils/markdown.ts` |
+| UI / UX 或使用流程 | 7.5/10 | Shell、command palette、filters、reading workspace、settings 完整；image viewer zoom 已完成，仍需視具體 gate 做 browser/Pi smoke。 | `Layout.tsx`、`HomePage.tsx`、`CommandPalette.tsx`、`docs/TODO.md` |
+| 測試與穩定性 | 8.0/10 | 原始評估只跑 collect/Go/TS；現況已有 CI baseline 與 release evidence，但 public release 前仍要依 checklist 重跑 fresh validation。 | `.github/workflows/ci.yml`、`.loop/verify-gate.ps1`、`docs/RELEASE_CHECKLIST.md` |
+| 安全性 | 5.8/10 | Public bind、SSRF、CSRF 有 guard；stored XSS 已修，no-auth / public exposure 邊界仍是導入限制。 | `go-shadow/main.go:520-534`、`:1606-1630`、`frontend/src/utils/markdown.ts` |
+| 依賴與維護風險 | 6.5/10 | lockfiles 存在、依賴量合理、LICENSE 與 CI 已補；未做 live dependency audit，Go monolith 仍是維護風險。 | `package.json`、`go.mod`、`LICENSE`、`.github/workflows/ci.yml` |
 | 文件品質 | 8.0/10 | 文件非常完整且 current truth 明確；但歷史 docs 過多、新人可能迷路，且 CONTRIBUTING 有 e2e 路徑小落差。 | `docs/README.md`、`docs/API_REFERENCE.md`、`docs/TODO.md` |
-| 導入適配度 | 6.8/10 | 作為 local-first fork 很有價值；作為直接 dependency / public service 不適合。 | no-auth docs、LICENSE 缺失、monolith、tests |
+| 導入適配度 | 6.8/10 | 作為 local-first fork 很有價值；LICENSE/CI/sanitizer 已補，但仍不適合作為 public service。 | no-auth docs、monolith、tests |
 
 總體分數：7.1/10。這不是平均值；安全與導入風險被加權提高，因此雖然文件/測試分數高，整體仍不建議無修改直接導入到公開或多使用者產品。
 
 ## 13. 總結
 
 這專案是不是看起來比實際成熟？  
-部分是。文件、contract 與測試讓它看起來很成熟，而且核心 local-first runtime 也確實可用；但安全產品化、license、CI、monolith 維護性還沒到可無痛外部導入的水準。
+部分是。文件、contract 與測試讓它看起來很成熟，而且核心 local-first runtime 也確實可用；現況已補 license、CI 與 sanitizer，但 public-service 等級的 auth / permission / audit 仍不是目前目標，Go monolith 也還是維護性負債。
 
 它最大的價值是什麼？  
 一套已落地的 Go + React + SQLite local-first knowledge tool：有 REST API、Windows portable、Pi deployment、external data dir、FTS/search、import/export、backup、maintenance UI 與大量 regression/contract evidence。
 
 它最大的坑是什麼？  
-安全邊界高度依賴「本機可信環境」。一旦處理不可信 markdown 或暴露到公網，`marked()` + `dangerouslySetInnerHTML` 與 no-auth surface 會讓風險立刻升高。
+安全邊界高度依賴「本機可信環境」。不可信 markdown 的 sanitizer gate 已補，但一旦暴露到公網，no-auth surface 仍會讓風險立刻升高。
 
 如果我要拿來接進自己的工具鏈，建議怎麼做？  
-先 fork，不要直接當 upstream dependency。第一步補 LICENSE 與 CI；第二步修 markdown sanitizer；第三步針對你的部署方式確認 auth/exposure boundary；第四步只接 `docs/API_REFERENCE.md` 建議的 notes/categories/tags/attachments 最小 API subset。若只是本機私人工具，可以先用；若要多人或 public access，先另開完整 auth / permission / audit design。
+先 fork，不要直接當 upstream dependency。現況已補 LICENSE、CI 與 markdown sanitizer；下一步要針對你的部署方式確認 auth/exposure boundary，並只接 `docs/API_REFERENCE.md` 建議的 notes/categories/tags/attachments 最小 API subset。若只是本機私人工具，可以先用；若要多人或 public access，先另開完整 auth / permission / audit design。

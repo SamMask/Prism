@@ -1,7 +1,7 @@
 # Prism 文檔中心
 
 > **版本**: v2.5 / Go primary runtime
-> **更新日期**: 2026-06-19
+> **更新日期**: 2026-07-05
 > **狀態**: Go primary 為唯一 runtime owner；Python Flask backend source 已於 T053 移除
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。
@@ -53,6 +53,7 @@ go test ./...
 
 ## 文件治理
 
+- `docs/GOVERNANCE.md` 是完成宣稱、狀態層級、驗證證據、委派與 UI/UX 治理入口。
 - `docs/TODO.md` 只保留 active roadmap、候選 backlog 與下一步入口。
 - `HANDOFF.md` 只保留新對話接手需要的最短 current state / next entry。
 - 長版完成紀錄、handoff 快照、舊 phase 與 changelog 放在 `docs/development-history/`。
@@ -67,6 +68,7 @@ go test ./...
 docs/
 ├── README.md          # 本文件中心入口
 ├── INDEX.md           # 完整文檔索引
+├── GOVERNANCE.md      # 開發治理、完成宣稱、驗證證據與 UI/UX 準則
 ├── TODO.md            # Active roadmap / next entry only
 ├── CONTRACTS.md       # Active task contract index
 ├── RELEASE_CHECKLIST.md # Public release/tag/package validation evidence template
@@ -84,12 +86,14 @@ docs/
 
 近期歸檔：
 
+- `development-history/governance-source-20260705/`
 - `development-history/go-primary-runtime-completion-20260617.md`
 - `development-history/desktop-backup-i18n-handoff-20260617.md`
 - `development-history/desktop-portable-release-handoff-20260618.md`
 
 近期 current-truth 更新：
 
+- 2026-07-05：新版治理素材已歸檔到 `development-history/governance-source-20260705/` 並收斂為 `docs/GOVERNANCE.md`；正式治理入口是該檔、`docs/TODO.md`、`docs/CONTRACTS.md` 與鏡像的 `AGENTS.md` / `CLAUDE.md`。
 - 2026-06-19：Default category identity split 已完成，schema 為 migration v17；`Categories.system_key` / `name_override` 是系統分類身份與改名的 current contract。
-- 2026-06-19：深度掃描報告見 repo root `20260619_Prism_深度掃描報告.md`；`DEEP-SCAN-RISK-CANDIDATE-01` 01A-01G 已關閉主要 local security/runtime risk gates，01H 保留為低優先維護 triage。
+- 2026-06-19：深度掃描報告已歸檔到 `development-history/20260619_Prism_深度掃描報告.md`；`DEEP-SCAN-RISK-CANDIDATE-01` 01A-01G 已關閉主要 local security/runtime risk gates，01H 保留為低優先維護 triage。
 - 2026-06-19：`PROJECT-REVIEW-HYGIENE-CANDIDATE-01` 01A-01E 已收斂 GitHub / reuse readiness：root `LICENSE`、CI baseline、verification environment、release evidence checklist 與 CONTRIBUTING E2E path 已對齊。

@@ -1,7 +1,7 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.5
-> **更新日期**: 2026-06-19
+> **更新日期**: 2026-07-05
 > **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
@@ -11,6 +11,7 @@
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
 | [README.md](./README.md) | 文檔中心入口、快速開始、文件治理與近期歸檔入口 | ✅ 持續更新 |
+| [GOVERNANCE.md](./GOVERNANCE.md) | 完成宣稱、狀態層級、驗證證據、委派邊界與 UI/UX 治理規則 | ✅ 持續更新 |
 | [TODO.md](./TODO.md) | Active roadmap、候選 backlog、下一步入口；完成紀錄與長版歷史移至 development-history | ✅ 持續更新 |
 | [SCHEMA.md](./SCHEMA.md) | **現行 DB 綱要** — 所有資料表欄位定義（唯一真實來源），附 Migration 歷程 | ✅ 持續更新 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | C4 Container Diagram、模組邊界、資料流向 | ✅ 持續更新 |
@@ -59,7 +60,7 @@
 
 | 文件 | 說明 | 狀態 |
 |------|------|------|
-| [20260619_Prism_深度掃描報告.md](../20260619_Prism_深度掃描報告.md) | **深度全面掃描** — API、搜尋、DB、檔案、啟動、安全、測試與可維護性檢查；記錄已修小問題與下一步優先級 | ✅ 已完成 (2026-06-19) |
+| [20260619_Prism_深度掃描報告.md](./development-history/20260619_Prism_深度掃描報告.md) | **深度全面掃描** — API、搜尋、DB、檔案、啟動、安全、測試與可維護性檢查；01A-01G 已收斂，01H 保留為低優先維護 triage | 🗄️ 已歸檔 / 已吸收 |
 | [Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | **Go primary 收尾審查** — 唯讀靜態審查原文；T046-T052 已吸收 findings，T053 前作 Python source 封存/刪除 guardrail | 🗄️ 已歸檔 / 已吸收 |
 | [20260412-cco-綜合分析報告.md](./過期/20260412-cco-綜合分析報告.md) | **體檢報告** — Linus-mode 深度審核，列出 P0/P1/P2 問題與「好品味」段落 | ✅ 已完成 v2.4.2 |
 
@@ -79,6 +80,7 @@
 | 文件 | 說明 | 狀態 |
 |------|------|------|
 | [development-history/README.md](./development-history/README.md) | 從 TODO 拆出的完成階段與完整 Changelog 保存區 | 🗄️ 歷史保存，按需更新 |
+| [development-history/governance-source-20260705/README.md](./development-history/governance-source-20260705/README.md) | 2026-07-05 新版治理素材歸檔；正式規則已收斂到 `GOVERNANCE.md` | 🗄️ 歷史保存 |
 | [development-history/go-primary-runtime-completion-20260617.md](./development-history/go-primary-runtime-completion-20260617.md) | T001-T053 Go primary migration 完成敘事、artifact 與完整任務表 | 🗄️ 歷史保存 |
 | [development-history/desktop-backup-i18n-handoff-20260617.md](./development-history/desktop-backup-i18n-handoff-20260617.md) | 2026-06-14 local desktop / backup / dashboard handoff、2026-06-17 Core UX 與 i18n 詳細完成記錄 | 🗄️ 歷史保存 |
 | [development-history/desktop-portable-release-handoff-20260618.md](./development-history/desktop-portable-release-handoff-20260618.md) | Desktop Shell Phase 0-6、Windows portable baseline、manual acceptance、README split 與 release packaging 邊界 | 🗄️ 歷史保存 |

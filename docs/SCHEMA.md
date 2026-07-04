@@ -2,7 +2,7 @@
 
 > **用途**: 共享資料綱要 — 所有資料表的現行定義，開發時的唯一真實來源。
 > **版本**: Migration v17 (Default category identity)
-> **最後更新**: 2026-06-19
+> **最後更新**: 2026-07-05
 > **改 DB 前必讀**: Go runtime 是唯一 migration owner；新增欄位請在 `go-shadow/main.go` 的 ordered migration list 追加 migration，並更新本文件與對應 regression tests。
 
 ---
@@ -74,20 +74,29 @@ CREATE UNIQUE INDEX idx_categories_system_key
 
 | 欄位 | 說明 |
 |------|------|
-| `name` | legacy canonical name；系統分類 seed 仍保留 `提示詞 \| Prompt` 等固定值，作匯入/舊資料相容 |
-| `system_key` | 五個系統分類身份：`prompt` / `note` / `tutorial` / `data` / `inspiration`；一般自訂分類為 `NULL` |
+| `name` | legacy canonical name；系統分類 seed 仍保留 `提示詞 \| Prompt` 等固定值，作匯入/舊資料相容，不是目前 UI 顯示名稱 |
+| `system_key` | 五個系統分類身份：`prompt` / `note` / `tutorial` / `data` / `inspiration`；一般自訂分類為 `NULL`；前端以此欄位決定多語系預設顯示 |
 | `name_override` | 使用者改名後的固定顯示文字；`NULL` / 空值代表依目前語系顯示系統分類預設名 |
 | `is_default` | 只代表刪除分類時的搬移目標；不代表系統分類身份 |
 
-**預設種子資料**（init_db 時建立）:
+**預設種子資料與顯示名稱**:
 
-| name | system_key | icon | is_default |
-|------|------------|------|------------|
-| 提示詞 \| Prompt | `prompt` | 🎨 | 0 |
-| 筆記 \| Note | `note` | 📝 | **1** |
-| 教學 \| Tutorial | `tutorial` | 📚 | 0 |
-| 資料 \| Data | `data` | 💾 | 0 |
-| 靈感 \| Inspiration | `inspiration` | 💡 | 0 |
+Fresh DB init 時由 `go-shadow/main.go` 的 `defaultCategorySeeds` 建立 DB seed；可見 UI 文字由 `frontend/src/utils/categoryDisplay.ts` 依 `system_key` 轉到 `categoryDefaults.*` 多語系字串。系統分類在沒有 `name_override` 時不直接顯示 `name` 的 `提示詞 | Prompt`。
+
+| DB `name`（legacy canonical） | system_key | zh-TW display | en display | ja display | ko display | icon | sort_order | is_default |
+|------|------------|---------------|------------|------------|------------|------|------------|------------|
+| 提示詞 \| Prompt | `prompt` | 提示詞 | Prompt | プロンプト | 프롬프트 | 🎨 | 1 | 0 |
+| 筆記 \| Note | `note` | 筆記 | Note | ノート | 노트 | 📝 | 2 | **1** |
+| 教學 \| Tutorial | `tutorial` | 教學 | Tutorial | チュートリアル | 튜토리얼 | 📚 | 3 | 0 |
+| 資料 \| Data | `data` | 資料 | Data | データ | 데이터 | 💾 | 4 | 0 |
+| 靈感 \| Inspiration | `inspiration` | 靈感 | Inspiration | インスピレーション | 영감 | 💡 | 5 | 0 |
+
+顯示規則：
+
+- `system_key` 有值且 `name_override` 為空：依目前 locale 顯示 `categoryDefaults.*`，例如中文 `提示詞`、英文 `Prompt`、日文 `プロンプト`、韓文 `프롬프트`。
+- `system_key` 有值且 `name_override` 有值：顯示 `name_override`，不再隨語系切換。
+- 沒有 `system_key` 的自訂分類：顯示 `name`。
+- `提示詞 | Prompt` 這類 legacy `name` 仍用於舊資料 / 匯入 / fallback matching，不應當成新版 UI label。
 
 ---
 
@@ -215,24 +224,13 @@ CREATE TRIGGER notes_au AFTER UPDATE ON Notes ...
 
 > FTS5 純關鍵字全文檢索，無 AI / 向量搜尋。
 > `Notes_FTS` 僅索引 `Notes.title` / `Notes.content`。`GET /api/notes?q=...` 的使用者搜尋範圍另由 API 層擴充到 `Notes.remarks`、`Tags.name`、`Note_Attachments.title` / `file_path` 與文字附件檔案內容；此行為不需要新增 DB 欄位或 migration。
-> Go T009/T010 已在 local/copied DB 證明 existing DB migration runner、backup-before-migrate 與 rollback safety；這不新增資料表或欄位，且 does not touch production `knowledge.db`。
-> Go T011/T012 已在 local/copied DB 證明 notes read/search/create/update parity，包含 `Notes_FTS` trigger 更新與 failed update rollback；這不等於 live/default notes write owner 已切換，notes delete/actions/batch/history restore/delete/media cleanup 仍是後續 gate。
-> Go T013 已在 local/copied DB-and-data 證明 notes single delete 與 batch delete parity，包含 `Notes_FTS` delete trigger、Note_Tags / Source_Urls / Note_History / Note_Attachments 清理、unshared `docs/attachments` / `docs/notes` attachment file cleanup、shared attachment file preservation、referenced image preserve，以及 `static/uploads` original / `_thumb.webp` companion cleanup；這仍不等於 live/default notes write owner 或 general media cleanup owner 已切換。
-> Go T014/T015 已在 local/copied DB 證明 notes pin/archive/duplicate/reorder 與現行 batch type/tags parity，涵蓋 `Notes.is_pinned`、`Notes.is_archived`、`Notes.sort_order`、variant `parent_id`、Note_Tags / Source_Urls 複製、batch category/tag 更新與 rollback/no partial write；沒有新增 schema 或 migration。`POST /api/notes/batch/archive` 目前不是 Python API route，因此不被寫成 Go-owned surface。
-> Go T016/T017 已在 local/copied DB 證明 notes history list/restore/delete-history 與 categories create/update/delete/default-delete guard/sort_order parity，涵蓋 `Note_History` 備份/刪除、`Notes.content` restore、`Categories.name` / `icon` / `sort_order`、default category 保護，以及 in-use category 對 `Notes.category_id` 的 target migration；沒有新增 schema 或 migration，live/default notes/taxonomy owner 仍未切換。
-> Go T018 已在 local/copied DB 證明 tags rename/delete/merge parity，涵蓋 `Tags.name` route-level `COLLATE NOCASE` lookup、`Note_Tags` delete-time cleanup、merge transfer `INSERT OR IGNORE`、source tag deletion、missing target rollback/no mutation，以及 notes tag assignment path 的 NOCASE auto-create guard；沒有新增 schema 或 migration，live/default taxonomy owner 仍未切換。
-> Go T019 已在 local/copied DB-and-files 證明 attachments metadata list/upload/delete parity，涵蓋 `Note_Attachments` row create/delete、`docs/attachments` copied file write/delete、missing-file delete still removes DB row、missing-note validation order，以及 unsupported extension validation；沒有新增 schema 或 migration，live/default files owner 仍未切換，raw/binary serving 與 long-content separate/restore 仍是後續 gate。
-> Go T020-T023 已在 local/copied DB/data fixtures 證明 attachment raw/text/binary serving、`POST /api/upload`、thumbnail `_thumb.webp` generation、`thumbnail_only`、以及 `POST /api/upload/url` remote fetch safety；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16，live/default files/uploads owner 仍未切換，upload delete、cleanup、import/export、server/system 仍是後續 gate。
-> Go T024-T027 已在 local/copied DB/data fixtures 證明 upload delete reference check、orphan images scan/delete、originals cleanup rewrite/delete、broken images scan/fix；Go T024-T027 不新增資料表或欄位，SQLite 仍維持 v16，live/default uploads/media cleanup owner 仍未切換，import/export、server/system 與 production/Pi cutover 仍是後續 gate。
-> Go T028-T031 已在 local/copied DB/data fixtures 證明 Markdown/JSON import、JSON/Markdown export、DB download、images bundle 與 batch markdown/assets zip；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16，live/default import/export owner 仍未切換，server/system、backup management、full workflow E2E 與 production/Pi cutover 仍是後續 gate。
-> Go T032-T035 已在 local/copied DB/data fixtures 證明 server status/hardware/logs、backup list/download/rotate/delete、port/startup config、prompt options 與 wizard options runtime surface；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。`--enable-server-system` 可對 copied DB 執行 WAL checkpoint / VACUUM / clear-history 類維護，所以不是 default query-only 模式；live/default server/system owner、實際 host service restart、production/Pi cutover 仍未切換。
-> Go T036/T037/T038 已在 local/copied DB/data fixtures 證明 embedded SPA/static uploads serving、安全邊界與 full workflow E2E；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Full workflow 只驗證既有 Notes / Tags / Source_Urls / Note_History / uploads / backups / Schema_Meta 行為，live/default Go primary ownership、production/Pi cutover 與 Python removal 仍未切換。
-> Go T039/T040/T041 已在 package/Pi staging 證明 Windows artifact fresh DB smoke、linux/arm64 artifact copied production DB/data staging smoke、以及 staging service active；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。Pi staging 使用 `knowledge_t041_staging.db` 與 copied uploads/attachments，live `knowledge.db` SHA256 必須不變；live/default Caddy/systemd ownership、rollback、soak 與 Python removal 仍未切換。
-> Go T042/T043/T044 已在 Pi live/default 完成 Go primary cutover、rollback drill 與 bounded soak；這些 gate 不新增資料表或欄位，SQLite 仍維持 v16。T042/T044 使用 live `knowledge.db` 與 external data dir `/home/mask070924/prism`，T043 以 SQLite online backup artifact 與 uploads/attachments tar restore 作 rollback 證據；final state 是 Go primary active、Python `prism.service` inactive。
-> Go T045 已移除 Python packaged runtime 與產品啟動路徑；這同樣不新增資料表或欄位，SQLite 仍維持 v16。Python backend source / `requirements*.txt` 只保留為 legacy source/dev/test context，最終刪除或封存留給 T053。
-> Go T046-T050 補齊 frontend 實際呼叫的漏接 route：prompt metadata extraction、長文自動分離/還原、system check-update、wizard options API path 與 static config fallback guard。這些變更只使用既有 `Notes` / `Note_Attachments` / external data dir `docs/notes` contract，不新增資料表、欄位、索引或 migration，SQLite 仍維持 v16。
-> Go T051 刷新 route ownership manifest、API reference 與部署/schema wording；這是 current-truth documentation gate，不新增資料表、欄位、索引或 migration。舊 T008-T041 段落中的「未切 live/default」語句是當時 gate 邊界；目前產品 runtime / Pi live default owner 已是 Go primary；Python backend source 已於 T053 移除。
-> Go T052 清理 stale tracked packaging/root artifacts（embedded Python zip、Pillow wheel、root empty package-lock）；這不改 DB schema、不碰 `knowledge.db`、WAL/SHM、`static/uploads`、`docs/attachments`、`docs/notes` 或 backups。
+
+**Current schema status**:
+
+- Fresh DB init 與 existing DB migration runner 皆由 Go primary runtime 擁有；`Schema_Meta schema_version` current value 為 `17`。
+- v17 唯一 schema delta 是 `Categories.system_key` / `name_override` 與 `idx_categories_system_key`，用來固定五個系統分類 identity 與使用者改名語意。
+- T008-T052 的長版 gate 歷史已歸檔到 `docs/development-history/` 與 `docs/contracts/`；其中早期 v16 / retained-Python / candidate-owner 語句只代表當時 gate 邊界，不是 current schema truth。
+- Python backend source 與 Python migration runner 已於 T053 移除；不要再引用 Python `migrations/` 作為現行 schema source。
 
 ---
 
@@ -254,9 +252,10 @@ Schema_Meta (獨立，無 FK)
 ## 3. 新增欄位流程
 
 1. 在 `go-shadow/main.go` 的 ordered migration list 追加下一版 migration。
-2. 遷移必須**冪等**（使用 `IF NOT EXISTS` / `IF EXISTS`）
-3. 更新本文件 Section 1 對應資料表
-4. 更新 `docs/ER-DIAGRAM.md`（若關聯關係有變）
+2. 遷移必須可安全重跑或可由 Go migration runner 明確 skip duplicate-column / no-such-column 類相容錯誤；不得依賴已移除的 Python migration source。
+3. 更新本文件 Section 1 對應資料表、附錄 migration 歷程與必要的 API / contract 文件。
+4. 更新 `docs/ER-DIAGRAM.md`（若關聯關係有變）。
+5. 補 fresh DB、existing DB、rollback / idempotency regression tests。
 
 ---
 
@@ -283,4 +282,4 @@ Schema_Meta (獨立，無 FK)
 | v17 | `add_category_identity` | `Categories` 新增 `system_key` / `name_override` 與 `idx_categories_system_key`；只回填仍保留完整 legacy seed name 的五個系統分類 |
 | v18+ | （預留） | 下一次 Schema 變更接續此版本號 |
 
-> **v14 完整 SQL** 見 `migrations/__init__.py` 的 `strip_ai_features` tuple。
+> Migration SQL current source：`go-shadow/main.go` 的 `migrationDefinitions` 與 `freshSchemaStatements`。Python `migrations/` source 已於 T053 移除。

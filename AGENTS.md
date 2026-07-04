@@ -9,6 +9,7 @@
 | `CLAUDE.md` / `AGENTS.md` | 開發規範（哲學 / 禁止事項 / 專案快查） — 雙份鏡像 |
 | `HANDOFF.md` | 新對話接手用最短 current state / next entry；長版交接快照見 `docs/development-history/` |
 | `docs/README.md` | 文檔中心入口、快速開始、文件治理與近期歸檔入口 |
+| `docs/GOVERNANCE.md` | 完成宣稱、狀態層級、驗證證據、委派與 UI/UX 治理規則 |
 | `DEPLOY-PI.md` | 樹莓派 Go primary 更新流程（artifact deploy、systemd、Caddy、rollback/soak） |
 | `docs/ARCHITECTURE.md` | 架構圖（C4 Container Diagram） |
 | `docs/SCHEMA.md` | 現行 DB 綱要（所有資料表欄位定義，改 DB 前必讀） |
@@ -36,6 +37,7 @@
    - `docs/SCHEMA.md`（有新 DB 欄位或遷移時）
    - `CLAUDE.md` + `AGENTS.md`（開發規範本身要改時，**兩份都要改**）
 3. **測試** → 每次實作後跑 `pytest tests/ -v`；Go runtime / contracts 有變更時加跑 `cd go-shadow && go test ./...`；docs-only 變更至少跑 `git diff --check`、鏡像比對與相關文件 regression
+4. **治理 / 完成宣稱** → 涉及狀態層級、完成宣稱、委派、UI/UX 或 docs policy 時讀 `docs/GOVERNANCE.md`；不得把 candidate、本機驗證、deploy 可用、舊依賴可刪混成同一件事
 
 ## Codex Loop Engineering（開發迴圈）
 
