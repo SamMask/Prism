@@ -32,18 +32,18 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `KWF-01 Command Palette server-side search`（狀態：`Done`）：Command Palette 已能用既有 `/api/notes?q=...` 做全庫純關鍵字搜尋，且已完成 Pi live deploy evidence。
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已能把目前 query/filter/sort view 保存成瀏覽器本機 Search Workspace，localStorage key `prism.savedSearchWorkspaces.v1`，不改 DB schema。
 - [x] `NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）：已補刪卡片 / 批次刪除確認框與 Settings「清理未使用圖片」copy；runtime 已有 reference-counted cleanup，本輪未改 Go delete/media cleanup semantics。
-- [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；未做 Pi deploy、auth、semantic search 或 schema migration。
+- [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；2026-07-08 已通過 local release validation 並部署到 Pi live；未做 auth、semantic search 或 schema migration。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有 `Doing` item。下一輪若要接續產品工作，優先做 local release validation / optional Pi deploy gate；不要把本機完成、release package 與 Pi live 狀態混成同一件事。
+目前沒有 `Doing` item。下一輪若要接續產品工作，優先做 release/tag/package decision 或明確 promote 下一個 decision gate；不要把 Pi live deploy 視為 GitHub release asset 自動完成。
 
 ---
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除會先做 dry-run preview，Settings 批次匯入會先顯示 create / duplicate / unsupported 預覽，ReadingView 會顯示既有 source URLs 與重複標記。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。下一個最適合做的是本機 release validation / optional Pi deploy gate；不要自動上 Pi 或重包 release。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除會先做 dry-run preview，Settings 批次匯入會先顯示 create / duplicate / unsupported 預覽，ReadingView 會顯示既有 source URLs 與重複標記。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。2026-07-08 已完成 local release validation 與 Pi live deploy gate；下一個最適合做的是 release/tag/package decision，或明確 promote 下一個 decision gate。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；KWF-03..07 已是 local verified slice。下一輪若要讓這批功能進 Pi/live，必須另開 Pi delivery gate，讀 `DEPLOY-PI.md`，跑 artifact deploy / service / migration / changed endpoint / UI smoke evidence；不要自動上 Pi、不新增 auth、不改 public exposure。任何 promoted item 完成後至少跑 `git diff --check`，有 frontend 行為則加 targeted tests/build，並把驗證證據寫回本檔或 `HANDOFF.md`。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；KWF-03..07 已完成 local release validation 與 Pi live deploy gate。下一輪若要對外發版，必須依 `docs/RELEASE_CHECKLIST.md` 做版本號 / commit / tag / package / push / GitHub Actions gate；不要新增 auth、不改 public exposure。任何 promoted item 完成後至少跑 `git diff --check`，有 frontend 行為則加 targeted tests/build，並把驗證證據寫回本檔或 `HANDOFF.md`。
 
 ---
 
@@ -129,7 +129,7 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 驗收候選：
 
 - KWF-02 已以 `pytest tests/test_kwf02_saved_search_workspace.py tests/test_note_delete_media_ux_copy.py -v`、相關 i18n/Home targeted tests、`cd frontend && npm run build` 與 Browser smoke 驗證 saved view persistence / filter restore 基本路徑；本輪未新增 backend/API/DB contract。Browser smoke 在 `http://127.0.0.1:5173/` 驗證 Home 可載入、Search Workspace bar 可見、保存後 chip 出現、刪除後回到 empty state；Go backend 5004 未啟動，因此 console 有既有 API fetch errors。
-- KWF-03..07 驗收：`pytest tests/test_kwf03_to_kwf07_workflow.py -v`、`cd go-shadow && go test -run TestBatchDeleteDryRunPreviewsWithoutDeletingRowsOrFiles -count=1`、snapshot script fixture dry-run、frontend build、`git diff --check`；完整 `pytest tests/ -v` 目前仍有 TODO 瘦身後舊 docs-lock regression，需另案清理。
+- KWF-03..07 驗收：`pytest tests/test_kwf03_to_kwf07_workflow.py -v`、`cd go-shadow && go test -run TestBatchDeleteDryRunPreviewsWithoutDeletingRowsOrFiles -count=1`、snapshot script fixture dry-run、frontend build、`git diff --check`。2026-07-08 local release validation / Pi deploy gate 已補跑：`.loop/verify-gate.ps1` passed（含 full `pytest tests/ -v` 379 passed、`cd go-shadow && go test ./...` passed、mirror check / `git diff --check` passed）、Go package smoke passed、local artifact smoke passed、desktop portable smoke passed、browser e2e 9 passed、privacy/package sweeps passed；Pi Cutover evidence `build/go-primary-live/pi/evidence.json`，live migration v17 no pending，batch delete dry-run API success，served JS contains batch preview / import preview / source URL panel hooks。
 
 ### [x] NOTE-DELETE-MEDIA-UX-CANDIDATE-01 Deleting notes and unused images copy
 
@@ -178,7 +178,7 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 ## Release / GitHub / Pi Maintenance
 
 - [ ] Release / GitHub maintenance（狀態：`Blocked`）：目前沒有未交付的 release construction item。若要重新發佈或更新 V2.5 以後的版本，先依 `docs/RELEASE_CHECKLIST.md` 重跑 fresh evidence，再 commit / tag / package；push 後必須確認 GitHub Actions workflow 綠燈。
-- [ ] Pi delivery（狀態：`Blocked`）：Pi delivery 不是 release notes / GitHub asset 的自動副作用。任何 Pi 上線都需另開 gate：先讀 `DEPLOY-PI.md`，使用 Go primary live ops 流程部署到 `PI5Mask24`，並驗證 service status、migration status、changed API endpoint 與對應前端行為。
+- [x] Pi delivery（狀態：`Done`）：2026-07-08 已依 `DEPLOY-PI.md` 使用 Go primary live ops Cutover 部署到 `PI5Mask24`。驗證：`prism-go-primary.service` active、legacy `prism.service` inactive、migration current/latest v17 pending empty、`/api/server/version` version `2.5`、batch delete dry-run API success、served JS contains batch preview / import preview / source URL panel hooks。Pi delivery 不是 release notes / GitHub asset 的自動副作用；未來任何 Pi 上線仍需另開 gate 重跑 service / migration / changed endpoint / UI evidence。
 
 ---
 

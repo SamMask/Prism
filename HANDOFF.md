@@ -26,14 +26,14 @@
 - 2026-07-08 KWF-05 Import dry-run / collision preview 已完成：Settings 批次 Markdown/TXT 匯入會先顯示本機 create / duplicate / unsupported preview；仍只用既有單檔 import / create-note 路徑，沒有 server-side batch import API、watcher 或 sync daemon。
 - 2026-07-08 KWF-06 Source URL panel 已完成：ReadingView 使用既有 note `urls` 顯示 source URL panel、domain 與 duplicate URL 標記；未做 web clipper、外網 title fetch 或 link health 背景檢查。
 - 2026-07-08 KWF-07 Knowledge quality metadata decision gate 已完成：`status / review_state / last_verified_at` 保留為 schema v18 decision gate；本輪未改 `docs/SCHEMA.md` current Migration v17，未新增 DB 欄位或 migration。
-- KWF-03..07 fresh verification：new/related pytest 13 passed；`cd go-shadow && go test ./...` passed；`cd frontend && npm run build` passed（僅既有 Browserslist / chunk-size warning）；snapshot script dry-run + zip fixture smoke passed；Browser smoke on `http://127.0.0.1:5173/settings` passed for Settings load + Backup & Restore / bulk import panel visible, no framework overlay。Go backend 5004 未啟動，Browser console 有既有 API fetch/server errors；ReadingView source URL panel 以 targeted static regression + TypeScript build 驗證，未做 backend-connected note detail smoke；未做 Pi deploy。
-- Full `pytest tests/ -v`：359 passed / 20 failed；失敗仍集中在 TODO 瘦身後舊測試期待歷史 `[x]` 條目與既有 hidden i18n audit，不是 KWF-03..07 targeted regressions。
+- KWF-03..07 local release validation / Pi deploy gate（2026-07-08）已完成：`.loop/verify-gate.ps1` passed（含 `pytest tests/ -v` 379 passed、`cd go-shadow && go test ./...` passed、mirror check / `git diff --check` passed）；`cd frontend && npm run build` passed（僅既有 Browserslist / chunk-size warning）；Go package smoke、local artifact smoke、desktop portable smoke、browser e2e `python -m pytest e2e -q` 9 passed；tracked privacy sweep 與 portable zip forbidden-entry sweep passed。
+- Pi live deploy（2026-07-08）已完成：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed，evidence `build/go-primary-live/pi/evidence.json`；`prism-go-primary.service` active、legacy `prism.service` inactive、`/api/system/migration-status` current/latest v17 且 pending empty、`/api/server/version` version `2.5`；live batch delete dry-run returned `status: success` without deletion，served JS `/assets/index-DqUfa497.js` contains `previewBatchDeleteNotes`、`bulk-import-dry-run-preview`、`reading-source-url-panel`。
 
 ## Next Entry
 
 目前沒有未交付的 active construction item。
 
-- 下一個建議入口是 local release validation / optional Pi deploy gate：若要把 KWF-03..06 帶到 Pi/live，先讀 `DEPLOY-PI.md`，跑 Go primary artifact deploy、service/migration/API/UI smoke evidence；不要自動上 Pi 或重包 release。
+- 下一個建議入口是 release/tag/package decision：若要把 2026-07-08 KWF 與 Pi gate 對外發版，先依 `docs/RELEASE_CHECKLIST.md` 決定版本號、commit/tag/package/push，並確認 GitHub Actions 綠燈；不要把 Pi live deploy 視為 GitHub release asset 自動完成。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。
 - 若要繼續 Markdown 重型支援，只能明確 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 Mermaid decision gate 或 syntax-highlighting dependency review；KaTeX / ABC 目前凍結為備選，不要順手導入 schema/API 變更。
 - 若要處理 governance、完成宣稱、委派或 UI/UX policy，先讀 `docs/GOVERNANCE.md`；需要追溯來源時讀 `docs/development-history/governance-source-20260705/`。
