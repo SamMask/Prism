@@ -8151,6 +8151,11 @@ func boolIntField(payload map[string]any, key string) int {
 	return 0
 }
 
+func boolField(payload map[string]any, key string) bool {
+	value, _ := payload[key].(bool)
+	return value
+}
+
 func stringArrayField(payload map[string]any, key string) []string {
 	raw, ok := payload[key]
 	if !ok || raw == nil {
@@ -8518,6 +8523,35 @@ func (s *server) cleanupNoteImages(tx *sql.Tx, ref noteImageReference) {
 			}
 		}
 	}
+}
+
+func (s *server) previewNoteImageCleanupFiles(tx *sql.Tx, refs []noteImageReference) ([]string, error) {
+	files := []string{}
+	for _, ref := range refs {
+		for _, imagePath := range staticUploadReferences(ref.Content, ref.CoverImage) {
+			var refCount int
+			err := tx.QueryRow(`
+				SELECT COUNT(*) FROM Notes
+				WHERE id != ? AND (cover_image = ? OR content LIKE ?)
+			`, ref.ID, imagePath, "%"+imagePath+"%").Scan(&refCount)
+			if err != nil {
+				return nil, err
+			}
+			if refCount > 0 {
+				continue
+			}
+			for _, filename := range cleanupUploadFilenames(imagePath) {
+				absPath, ok := s.resolveUploadFile(filename)
+				if !ok {
+					continue
+				}
+				if fileExists(absPath) {
+					files = append(files, absPath)
+				}
+			}
+		}
+	}
+	return uniqueStrings(files), nil
 }
 
 func staticUploadReferences(content, coverImage sql.NullString) []string {
@@ -9944,6 +9978,15 @@ func (s *server) batchDeleteNotes(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "Maximum 500 notes per batch")
 		return
 	}
+	if boolField(payload, "dry_run") {
+		preview, err := s.previewBatchDelete(noteIDs)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, response{"status": "success", "data": preview})
+		return
+	}
 	tx, err := s.db.Begin()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -9974,6 +10017,81 @@ func (s *server) batchDeleteNotes(w http.ResponseWriter, r *http.Request) {
 	}
 	cleanupNoteAttachmentFiles(attachmentPaths)
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"deleted_count": deleted}})
+}
+
+func (s *server) previewBatchDelete(noteIDs []int) (response, error) {
+	if len(noteIDs) == 0 {
+		return response{
+			"dry_run":          true,
+			"requested_count":  0,
+			"deletable_count":  0,
+			"missing_count":    0,
+			"image_count":      0,
+			"attachment_count": 0,
+			"notes":            []response{},
+		}, nil
+	}
+
+	tx, err := s.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	rows, err := tx.Query(`
+		SELECT id, title
+		FROM Notes
+		WHERE id IN (`+placeholders(len(noteIDs))+`)
+		ORDER BY id`, intsToAny(noteIDs)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	existing := map[int]bool{}
+	notes := []response{}
+	for rows.Next() {
+		var id int
+		var title sql.NullString
+		if err := rows.Scan(&id, &title); err != nil {
+			return nil, err
+		}
+		existing[id] = true
+		notes = append(notes, response{"id": id, "title": nullableString(title)})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	missing := 0
+	for _, noteID := range noteIDs {
+		if !existing[noteID] {
+			missing++
+		}
+	}
+
+	refs, err := noteImageReferences(tx, noteIDs)
+	if err != nil {
+		return nil, err
+	}
+	imageFiles, err := s.previewNoteImageCleanupFiles(tx, refs)
+	if err != nil {
+		return nil, err
+	}
+	attachmentPaths, err := s.noteAttachmentCleanupPaths(tx, noteIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	return response{
+		"dry_run":          true,
+		"requested_count":  len(noteIDs),
+		"deletable_count":  len(notes),
+		"missing_count":    missing,
+		"image_count":      len(imageFiles),
+		"attachment_count": len(attachmentPaths),
+		"notes":            notes,
+	}, nil
 }
 
 func (s *server) getNoteHistory(w http.ResponseWriter, noteID int) {

@@ -366,6 +366,17 @@
 }
 ```
 
+可先用 destructive preview guard 取得 dry-run 結果，不刪 DB row、不刪 upload / attachment 檔：
+
+```json
+{
+  "note_ids": [1, 2, 3],
+  "dry_run": true
+}
+```
+
+`dry_run: true` 回傳 `requested_count`、`deletable_count`、`missing_count`、`image_count`、`attachment_count` 與即將刪除的 note title preview。這不是 auth，也不代表 API 可以公開到 public internet；它只是在本機 / trusted boundary 內給 UI 或外部 Agent 執行 destructive write 前做 preview。
+
 單筆詳情不套用 list preview 截斷；`content` 回傳目前 `Notes.content` 完整欄位。若該 note 已經由長內容自動分離機制轉成附件 preview，前端仍需使用 `/api/notes/<id>/attachments` 與 `/api/attachments/<attachment_id>` lazy-load `is_auto_extracted` 附件全文。
 
 ---

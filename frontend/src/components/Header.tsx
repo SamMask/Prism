@@ -75,14 +75,27 @@ export function Header() {
   const handleDeleteSelected = async () => {
     if (selectedNoteIds.length === 0) return
 
+    let batchDeletePreview
+    try {
+      batchDeletePreview = await api.previewBatchDeleteNotes(selectedNoteIds)
+    } catch {
+      toast.error(t('header.deleteFailed'))
+      return
+    }
+
     if (await confirm({
       title: t('header.batchDeleteTitle'),
-      message: `${t('header.batchDeleteMessage', { count: selectedNoteIds.length })}\n\n${t('header.batchDeleteMediaHint')}`,
+      message: `${t('header.batchDeleteMessage', { count: selectedNoteIds.length })}\n\n${t('header.batchDeletePreview', {
+        deletable: batchDeletePreview.deletable_count,
+        missing: batchDeletePreview.missing_count,
+        images: batchDeletePreview.image_count,
+        attachments: batchDeletePreview.attachment_count,
+      })}\n\n${t('header.batchDeleteMediaHint')}`,
       variant: 'danger',
     })) {
       try {
         await deleteSelectedNotes()
-        toast.success(t('header.batchDeleteSuccess', { count: selectedNoteIds.length }))
+        toast.success(t('header.batchDeleteSuccess', { count: batchDeletePreview.deletable_count }))
       } catch {
         toast.error(t('header.deleteFailed'))
       }

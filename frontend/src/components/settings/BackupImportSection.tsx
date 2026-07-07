@@ -11,12 +11,25 @@ interface BackupImportSectionProps {
 }
 
 type BulkImportStatus = 'created' | 'skipped' | 'failed';
+type BulkImportPreviewStatus = 'create' | 'duplicate' | 'unsupported';
 
 interface BulkImportResult {
   fileName: string;
   status: BulkImportStatus;
   noteId?: number;
   message: string;
+}
+
+interface BulkImportPreviewItem {
+  fileName: string;
+  status: BulkImportPreviewStatus;
+}
+
+interface BulkImportPreview {
+  createCount: number;
+  duplicateCount: number;
+  unsupportedCount: number;
+  items: BulkImportPreviewItem[];
 }
 
 function fileStem(fileName: string): string {
@@ -41,6 +54,29 @@ function errorMessage(error: unknown): string {
     message?: string;
   };
   return shaped.response?.data?.message || shaped.response?.data?.error || shaped.message || 'Import failed';
+}
+
+function buildBulkImportPreview(files: File[]): BulkImportPreview {
+  const seen = new Set<string>();
+  const items = files.map((file) => {
+    const extension = lowerFileExtension(file.name);
+    if (extension !== '.md' && extension !== '.txt') {
+      return { fileName: file.name, status: 'unsupported' as const };
+    }
+    const collisionKey = `${fileStem(file.name).toLowerCase()}::${extension}`;
+    if (seen.has(collisionKey)) {
+      return { fileName: file.name, status: 'duplicate' as const };
+    }
+    seen.add(collisionKey);
+    return { fileName: file.name, status: 'create' as const };
+  });
+
+  return {
+    createCount: items.filter((item) => item.status === 'create').length,
+    duplicateCount: items.filter((item) => item.status === 'duplicate').length,
+    unsupportedCount: items.filter((item) => item.status === 'unsupported').length,
+    items,
+  };
 }
 
 export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps) {
@@ -261,6 +297,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   const bulkCreatedCount = bulkResults.filter((result) => result.status === 'created').length;
   const bulkSkippedCount = bulkResults.filter((result) => result.status === 'skipped').length;
   const bulkFailedCount = bulkResults.filter((result) => result.status === 'failed').length;
+  const bulkPreview = buildBulkImportPreview(bulkFiles);
 
   return (
     <>
@@ -421,6 +458,19 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
               <p className="text-text-muted text-sm">
                 {t('settings.backup.bulkImportSelectedCount', { count: bulkFiles.length })}
               </p>
+              <div
+                className="rounded-lg border border-border-subtle bg-bg-base px-3 py-2 text-sm text-text-secondary"
+                data-testid="bulk-import-dry-run-preview"
+                data-creates={bulkPreview.createCount}
+                data-duplicates={bulkPreview.duplicateCount}
+                data-unsupported={bulkPreview.unsupportedCount}
+              >
+                {t('settings.backup.bulkImportDryRun', {
+                  create: bulkPreview.createCount,
+                  duplicate: bulkPreview.duplicateCount,
+                  unsupported: bulkPreview.unsupportedCount,
+                })}
+              </div>
               <div className="max-h-40 overflow-auto rounded-lg border border-border-subtle divide-y divide-border-subtle">
                 {bulkFiles.map((file) => (
                   <div

@@ -32,7 +32,7 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `KWF-01 Command Palette server-side search`（狀態：`Done`）：Command Palette 已能用既有 `/api/notes?q=...` 做全庫純關鍵字搜尋，且已完成 Pi live deploy evidence。
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已能把目前 query/filter/sort view 保存成瀏覽器本機 Search Workspace，localStorage key `prism.savedSearchWorkspaces.v1`，不改 DB schema。
 - [x] `NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）：已補刪卡片 / 批次刪除確認框與 Settings「清理未使用圖片」copy；runtime 已有 reference-counted cleanup，本輪未改 Go delete/media cleanup semantics。
-- [ ] `KWF-03` 到 `KWF-07`（狀態：`Todo`）：full data snapshot、agent-safe write guards、import dry-run、source URL panel、knowledge quality metadata decision gate，依序等待 promote。
+- [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；未做 Pi deploy、auth、semantic search 或 schema migration。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
 目前沒有 `Doing` item。下一輪若要接續產品工作，優先做 `KWF-03 Full data snapshot export`；不要把 DB-only backup 說成完整資料快照。
@@ -41,9 +41,9 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown/Command Palette / Saved Search 工作流。常用搜尋視圖現在可以保存在本機瀏覽器，之後一鍵回到同一組 query/filter/sort view。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。下一個最適合做的是 `KWF-03 Full data snapshot export`，把 DB、uploads、attachments、notes、config 與 manifest 打成明確的完整資料快照。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除會先做 dry-run preview，Settings 批次匯入會先顯示 create / duplicate / unsupported 預覽，ReadingView 會顯示既有 source URLs 與重複標記。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。下一個最適合做的是本機 release validation / optional Pi deploy gate；不要自動上 Pi 或重包 release。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；若接 `KWF-03`，先明確 full data snapshot 和 DB-only backup 的邊界，優先做 script 或受控 local/desktop action 的 dry-run / fixture data dir smoke，不要碰 live Pi、不新增 auth、不改 public exposure。任何 promoted item 完成後至少跑 `git diff --check`，有 frontend 行為則加 targeted tests/build，並把驗證證據寫回本檔或 `HANDOFF.md`。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；KWF-03..07 已是 local verified slice。下一輪若要讓這批功能進 Pi/live，必須另開 Pi delivery gate，讀 `DEPLOY-PI.md`，跑 artifact deploy / service / migration / changed endpoint / UI smoke evidence；不要自動上 Pi、不新增 auth、不改 public exposure。任何 promoted item 完成後至少跑 `git diff --check`，有 frontend 行為則加 targeted tests/build，並把驗證證據寫回本檔或 `HANDOFF.md`。
 
 ---
 
@@ -115,11 +115,11 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 採納項目與施工順序：
 
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已新增 Search Workspace bar，可保存 / 套用 / 刪除目前 query、category、tag、archived、sort view。保存資料只寫入瀏覽器 localStorage key `prism.savedSearchWorkspaces.v1`，沒有新增 DB migration、Go API、semantic search、auth 或 Pi deploy；若未來要跨裝置，再另開 schema gate。
-- [ ] `KWF-03 Full data snapshot export`（狀態：`Todo`）：新增 script 或受控 local endpoint/desktop action，打包 DB、WAL/SHM safety handling、`static/uploads/`、`docs/attachments/`、`docs/notes/`、config 與必要 manifest。必須明確命名為 full data snapshot，避免和 DB-only backup 混淆；Pi/live 版本需保留 rollback 與 snapshot retention 邊界。
-- [ ] `KWF-04 Agent-safe write guards`（狀態：`Todo`）：為 destructive/bulk/API write 增加小型防手殘機制候選，例如 `dry_run=true` preview、batch delete preview、`expected_updated_at` optimistic guard、`client_request_id` 或 `source=agent_name` 記錄。這不是 auth，不得宣稱能安全 public exposure。
-- [ ] `KWF-05 Import dry-run / collision preview`（狀態：`Todo`）：先做 import preview，回報會建立、跳過、疑似重複與錯誤檔數；不做 watcher、不做 sync daemon、不把單檔 endpoint 偷升成未驗證大批次寫入。
-- [ ] `KWF-06 Source URL panel`（狀態：`Todo`）：利用既有 `Source_Urls` / note `urls`，做來源連結面板：domain 顯示、duplicate URL detection、手動 title、失效檢查候選。避免直接做 full web clipper。
-- [ ] `KWF-07 Knowledge quality metadata decision gate`（狀態：`Todo`）：`status` / `review_state` / `last_verified_at` 需要 schema v18+，排在搜尋工作流、snapshot 與 import preview 後面；啟動前必須先更新 `docs/SCHEMA.md` 與 migration/test contract。
+- [x] `KWF-03 Full data snapshot export`（狀態：`Done`）：新增 `scripts/export_full_data_snapshot.ps1`，支援 `-DryRun` 與 zip export，明確打包 `knowledge.db`、`knowledge.db-wal`、`knowledge.db-shm`、`static/uploads/`、`docs/attachments/`、`docs/notes/`、`config/` 與 `snapshot-manifest.json` sha256 manifest。這是 full data snapshot，不是 DB-only backup；本輪只做 local script / fixture smoke，未碰 live Pi。
+- [x] `KWF-04 Agent-safe write guards`（狀態：`Done`）：`POST /api/notes/batch/delete` 支援 `dry_run: true` destructive preview，回報 requested / deletable / missing / image / attachment counts 與 note title preview；前端批次刪除 confirm 先呼叫 dry-run，再執行真正 batch delete。這不是 auth，不得宣稱能安全 public exposure。
+- [x] `KWF-05 Import dry-run / collision preview`（狀態：`Done`）：Settings 批次 Markdown/TXT 匯入在寫入前顯示本機 dry-run preview，回報 create / duplicate collision / unsupported counts；仍只用既有 `.md` 單檔 import endpoint 與 `.txt` 前端讀檔建立 note，不新增 watcher、sync daemon 或 server-side batch import API。
+- [x] `KWF-06 Source URL panel`（狀態：`Done`）：ReadingView 右側欄利用既有 note `urls` 顯示 source URL panel，包含 domain 顯示、原 URL、duplicate URL detection；未做 web clipper、外網 title fetch 或 link health background check。
+- [x] `KWF-07 Knowledge quality metadata decision gate`（狀態：`Done`）：已收斂為 schema v18 decision gate；`status / review_state / last_verified_at` 仍需要未來明確 schema migration / docs / tests gate。本輪沒有修改 `docs/SCHEMA.md` 的 current Migration v17，也沒有新增 DB 欄位或 migration。
 
 不採納 / deferred：
 
@@ -129,8 +129,7 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 驗收候選：
 
 - KWF-02 已以 `pytest tests/test_kwf02_saved_search_workspace.py tests/test_note_delete_media_ux_copy.py -v`、相關 i18n/Home targeted tests、`cd frontend && npm run build` 與 Browser smoke 驗證 saved view persistence / filter restore 基本路徑；本輪未新增 backend/API/DB contract。Browser smoke 在 `http://127.0.0.1:5173/` 驗證 Home 可載入、Search Workspace bar 可見、保存後 chip 出現、刪除後回到 empty state；Go backend 5004 未啟動，因此 console 有既有 API fetch errors。
-- KWF-03 若只做 script，需有 dry-run / fixture data dir smoke；若做 API/desktop action，需 Go tests + artifact smoke，並清楚證明包含 DB、uploads、attachments、config，且不覆蓋 live data。
-- KWF-04/KWF-05 涉及 API contract 時必須補 `docs/API_REFERENCE.md`、Go tests、frontend regression 與 failure/no-partial-write evidence。
+- KWF-03..07 驗收：`pytest tests/test_kwf03_to_kwf07_workflow.py -v`、`cd go-shadow && go test -run TestBatchDeleteDryRunPreviewsWithoutDeletingRowsOrFiles -count=1`、snapshot script fixture dry-run、frontend build、`git diff --check`；完整 `pytest tests/ -v` 目前仍有 TODO 瘦身後舊 docs-lock regression，需另案清理。
 
 ### [x] NOTE-DELETE-MEDIA-UX-CANDIDATE-01 Deleting notes and unused images copy
 

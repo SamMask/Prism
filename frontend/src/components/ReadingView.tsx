@@ -1,4 +1,4 @@
-import { Archive, Copy, Edit2, GitBranch, ListPlus, ListX, Loader2, Pin, X } from 'lucide-react'
+import { Archive, Copy, Edit2, ExternalLink, GitBranch, ListPlus, ListX, Loader2, Pin, X } from 'lucide-react'
 import { type MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Note, api } from '../services/api'
 import { useAppStore } from '../stores/appStore'
@@ -38,6 +38,14 @@ function collectReadingImages(coverImage: string | null, content: string, title:
 
 function imageSourceMatches(candidate: string, observed: string): boolean {
   return candidate === observed || observed.endsWith(candidate)
+}
+
+function sourceUrlDomain(url: string): string {
+  try {
+    return new URL(url).hostname || url
+  } catch {
+    return url
+  }
 }
 
 export function ReadingView({ note, onClose }: ReadingViewProps) {
@@ -82,6 +90,20 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     t,
     t('reading.uncategorized'),
   )
+  const sourceUrls = (localNote.urls || []).filter((url) => url.trim() !== '')
+  const duplicateSourceUrls = useMemo(() => {
+    const seen = new Set<string>()
+    const duplicates = new Set<string>()
+    sourceUrls.forEach((url) => {
+      const normalized = url.trim().toLowerCase()
+      if (seen.has(normalized)) {
+        duplicates.add(normalized)
+      } else {
+        seen.add(normalized)
+      }
+    })
+    return duplicates
+  }, [sourceUrls])
 
   useEffect(() => {
     let isMounted = true
@@ -445,6 +467,45 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
           </div>
 
           <aside className="flex shrink-0 flex-col gap-3 border-t border-border-subtle bg-bg-elevated/25 p-4 lg:border-l lg:border-t-0">
+            {sourceUrls.length > 0 && (
+              <section
+                className="rounded-md border border-border-subtle bg-bg-base/40 p-3"
+                data-testid="reading-source-url-panel"
+              >
+                <div className="mb-2 text-xs font-medium uppercase tracking-wider text-text-muted">
+                  {t('reading.sourceUrlsTitle', { count: sourceUrls.length })}
+                </div>
+                <div className="flex max-h-40 flex-col gap-2 overflow-y-auto">
+                  {sourceUrls.map((url, index) => {
+                    const normalized = url.trim().toLowerCase()
+                    const isDuplicate = duplicateSourceUrls.has(normalized)
+                    return (
+                      <a
+                        key={`${url}-${index}`}
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex min-w-0 items-start gap-2 rounded-md border border-border-subtle px-2.5 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-primary"
+                        data-testid="reading-source-url"
+                        data-duplicate={isDuplicate}
+                      >
+                        <ExternalLink size={14} className="mt-0.5 shrink-0 text-accent" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-text-primary">{sourceUrlDomain(url)}</span>
+                          <span className="block truncate text-xs text-text-muted">{url}</span>
+                          {isDuplicate && (
+                            <span className="mt-1 inline-flex rounded bg-warning/10 px-1.5 py-0.5 text-[11px] text-warning">
+                              {t('reading.sourceDuplicate')}
+                            </span>
+                          )}
+                        </span>
+                      </a>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
             {contentHeadings.length > 1 && (
               <section
                 className="rounded-md border border-border-subtle bg-bg-base/40 p-3"

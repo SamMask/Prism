@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { api, Note, Category, Tag } from '../services/api'
+import { api, Note, Category, Tag, type BatchDeletePreview } from '../services/api'
 import { type Locale, readStoredLocale, setLocale as persistLocale } from '../i18n'
 
 export type ViewMode = 'grid' | 'list' | 'compact'
@@ -74,7 +74,7 @@ interface AppState {
   selectAllNotes: () => void
   clearSelection: () => void
   deleteNote: (id: number) => Promise<void>
-  deleteSelectedNotes: () => Promise<void>
+  deleteSelectedNotes: () => Promise<BatchDeletePreview>
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -274,20 +274,31 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   deleteSelectedNotes: async () => {
     const { selectedNoteIds } = get()
-    if (selectedNoteIds.length === 0) return
+    if (selectedNoteIds.length === 0) {
+      return {
+        dry_run: true,
+        requested_count: 0,
+        deletable_count: 0,
+        missing_count: 0,
+        image_count: 0,
+        attachment_count: 0,
+        notes: [],
+      }
+    }
+
+    const preview = await api.previewBatchDeleteNotes(selectedNoteIds)
 
     set({ isDeleting: true })
     try {
-      for (const id of selectedNoteIds) {
-        await api.deleteNote(id)
-      }
+      await api.batchDeleteNotes(selectedNoteIds)
       
       set(state => ({
         notes: state.notes.filter(n => !selectedNoteIds.includes(n.id)),
-        totalNotes: state.totalNotes - selectedNoteIds.length,
+        totalNotes: Math.max(0, state.totalNotes - preview.deletable_count),
         selectedNoteIds: [],
         isDeleting: false,
       }))
+      return preview
     } catch (error) {
       console.error('Failed to delete notes:', error)
       set({ isDeleting: false })

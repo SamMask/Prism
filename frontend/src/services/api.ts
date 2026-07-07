@@ -70,6 +70,20 @@ export interface NotesResponse {
   per_page: number;
 }
 
+export interface BatchDeletePreview {
+  dry_run: boolean;
+  requested_count: number;
+  deletable_count: number;
+  missing_count: number;
+  image_count: number;
+  attachment_count: number;
+  notes: Array<{ id: number; title: string }>;
+}
+
+export interface BatchDeleteResult {
+  deleted_count: number;
+}
+
 interface GetNotesParams {
   page?: number;
   per_page?: number;
@@ -291,6 +305,16 @@ export const api = {
 
   deleteNote: async (id: number): Promise<void> => {
     await client.delete(`/notes/${id}`);
+  },
+
+  previewBatchDeleteNotes: async (noteIds: number[]): Promise<BatchDeletePreview> => {
+    const { data } = await client.post("/notes/batch/delete", { note_ids: noteIds, dry_run: true });
+    return data.data;
+  },
+
+  batchDeleteNotes: async (noteIds: number[]): Promise<BatchDeleteResult> => {
+    const { data } = await client.post("/notes/batch/delete", { note_ids: noteIds });
+    return data.data;
   },
 
   // Phase 3.7: Duplicate / Create Variant

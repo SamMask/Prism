@@ -18,7 +18,8 @@ def test_note_delete_confirmation_mentions_reference_counted_media_cleanup():
     assert "t('noteCard.deleteMediaHint')" in note_card
     assert "`${t('noteCard.deleteMessage')}\\n\\n${t('noteCard.deleteMediaHint')}`" in note_card
     assert "t('header.batchDeleteMediaHint')" in header
-    assert "`${t('header.batchDeleteMessage', { count: selectedNoteIds.length })}\\n\\n${t('header.batchDeleteMediaHint')}`" in header
+    assert "t('header.batchDeletePreview'" in header
+    assert "})}\\n\\n${t('header.batchDeleteMediaHint')}`" in header
 
     assert i18n.count("deleteMediaHint:") >= 4
     assert i18n.count("batchDeleteMediaHint:") >= 4

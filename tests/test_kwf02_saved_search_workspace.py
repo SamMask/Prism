@@ -52,6 +52,6 @@ def test_kwf02_docs_close_saved_search_and_recommend_snapshot_next():
     assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in todo
     assert "localStorage key `prism.savedSearchWorkspaces.v1`" in todo
     assert "沒有新增 DB migration、Go API、semantic search、auth 或 Pi deploy" in todo
-    assert "`KWF-03 Full data snapshot export`（狀態：`Todo`）" in todo
+    assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
     assert "KWF-02 Saved Search / Search Workspace 已完成" in handoff
-    assert "下一個建議入口是 `KWF-03 Full data snapshot export`" in handoff
+    assert "下一個建議入口是 local release validation / optional Pi deploy gate" in handoff

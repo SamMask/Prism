@@ -2014,6 +2014,61 @@ func TestNotesDeleteCleansImagesFTSAndAssociations(t *testing.T) {
 	assertFTSCount(t, db, "batchbtoken", 0)
 }
 
+func TestBatchDeleteDryRunPreviewsWithoutDeletingRowsOrFiles(t *testing.T) {
+	dataDir := t.TempDir()
+	uploadsDir := filepath.Join(dataDir, "static", "uploads")
+	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"dry-run.jpg", "dry-run_thumb.webp"} {
+		if err := os.WriteFile(filepath.Join(uploadsDir, name), []byte("image"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	noteID := insertSearchNote(t, db, "Dry Run Delete", "previewtoken ![](/static/uploads/dry-run.jpg)", "", 1)
+	srv := &server{db: db, runtime: runtimeConfig{enableNotesWrite: true, dataDir: dataDir, uploadsDir: uploadsDir}}
+
+	recorder := httptest.NewRecorder()
+	body := fmt.Sprintf(`{"note_ids":[%d,999999],"dry_run":true}`, noteID)
+	srv.handleNoteDetail(recorder, httptest.NewRequest(http.MethodPost, "/api/notes/batch/delete", strings.NewReader(body)))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected dry-run batch delete 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload struct {
+		Data struct {
+			DryRun         bool `json:"dry_run"`
+			RequestedCount int  `json:"requested_count"`
+			DeletableCount int  `json:"deletable_count"`
+			MissingCount   int  `json:"missing_count"`
+			ImageCount     int  `json:"image_count"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if !payload.Data.DryRun || payload.Data.RequestedCount != 2 || payload.Data.DeletableCount != 1 || payload.Data.MissingCount != 1 {
+		t.Fatalf("unexpected dry-run payload: %#v", payload.Data)
+	}
+	if payload.Data.ImageCount != 2 {
+		t.Fatalf("expected original+thumb image preview, got %d", payload.Data.ImageCount)
+	}
+	assertTableCount(t, db, "Notes", noteID, 1)
+	assertFTSCount(t, db, "previewtoken", 1)
+	for _, name := range []string{"dry-run.jpg", "dry-run_thumb.webp"} {
+		if _, err := os.Stat(filepath.Join(uploadsDir, name)); err != nil {
+			t.Fatalf("dry-run should not delete %s: %v", name, err)
+		}
+	}
+}
+
 func insertSearchNote(t *testing.T, db *sql.DB, title, content, remarks string, categoryID int) int {
 	t.Helper()
 	result, err := db.Exec(
