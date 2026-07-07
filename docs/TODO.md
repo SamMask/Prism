@@ -35,7 +35,7 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；未做 Pi deploy、auth、semantic search 或 schema migration。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有 `Doing` item。下一輪若要接續產品工作，優先做 `KWF-03 Full data snapshot export`；不要把 DB-only backup 說成完整資料快照。
+目前沒有 `Doing` item。下一輪若要接續產品工作，優先做 local release validation / optional Pi deploy gate；不要把本機完成、release package 與 Pi live 狀態混成同一件事。
 
 ---
 

@@ -8,6 +8,7 @@ DATA_MANAGER_PATH = ROOT / "frontend" / "src" / "components" / "DataManager.tsx"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def test_starred_tags_storage_contract_is_frontend_only_and_versioned():
@@ -54,6 +55,7 @@ def test_starred_tag_i18n_and_docs_contract_are_recorded():
     i18n = I18N_PATH.read_text(encoding="utf-8")
     contracts = CONTRACTS_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
+    archive = TODO_ARCHIVE_PATH.read_text(encoding="utf-8")
 
     assert i18n.count("starredTagsHint:") >= 4
     assert i18n.count("starTagShortcut:") >= 4
@@ -63,7 +65,6 @@ def test_starred_tag_i18n_and_docs_contract_are_recorded():
     assert "`prism.starredTags.v1`" in contracts
     assert "不新增 DB 欄位、不改 tags API、不做跨裝置同步" in contracts
 
-    assert "[x] **01A Frontend state contract**" in todo
-    assert "[x] **01B Settings tag star control**" in todo
-    assert "[x] **01C Header tag strip integration**" in todo
-    assert "[x] **01D Regression and smoke**" in todo
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in todo
+    assert "Header starred tag shortcuts completed local + Pi verification" in archive
+    assert "`prism.starredTags.v1`" in archive

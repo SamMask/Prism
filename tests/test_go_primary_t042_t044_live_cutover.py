@@ -111,7 +111,8 @@ def test_t042_t043_t044_docs_are_current_and_hand_off_to_t045_t046():
     assert t053_row.endswith("| Done |")
 
     assert "T042-T044 Go primary live cutover, rollback, and soak gates are complete" in architecture
-    assert "Go T042/T043/T044" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
     assert "go_primary_pi_live_ops.ps1" in deploy_pi
     assert "Live Go Primary Cutover, Rollback, and Soak" in readme
     assert "T042/T043/T044 now move Pi live/default ownership to Go primary" in go_report

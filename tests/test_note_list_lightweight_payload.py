@@ -9,6 +9,7 @@ NOTE_CARD_PATH = ROOT / "frontend" / "src" / "components" / "NoteCard.tsx"
 API_REFERENCE_PATH = ROOT / "docs" / "API_REFERENCE.md"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def test_notes_list_backend_projects_preview_without_breaking_detail_or_search():
@@ -55,6 +56,7 @@ def test_note_list_lightweight_contract_is_documented():
     api_reference = API_REFERENCE_PATH.read_text(encoding="utf-8")
     contracts = CONTRACTS_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
+    archive = TODO_ARCHIVE_PATH.read_text(encoding="utf-8")
 
     assert "content_preview" in api_reference
     assert "content_truncated" in api_reference
@@ -66,6 +68,6 @@ def test_note_list_lightweight_contract_is_documented():
     assert "CONTRACT-NOTE-LIST-LIGHTWEIGHT" in contracts
     assert "不得新增 schema migration、cache layer、server-side UI state" in contracts
 
-    assert "[x] **01A Read contract inventory**" in todo
-    assert "[x] **01B Backend list payload gate**" in todo
-    assert "[x] **01C Frontend lazy detail gate**" in todo
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in todo
+    assert "Note list lightweight payload completed local + Pi verification" in archive
+    assert "content_preview" in archive

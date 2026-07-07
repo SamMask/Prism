@@ -140,7 +140,8 @@ def test_t039_t040_t041_docs_are_current_and_hand_off_to_completed_cutover_gate(
         assert contract.name in todo
 
     assert "T039/T040/T041 Go package and Pi staging gate is complete" in architecture
-    assert "Go T039/T040/T041" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
     assert "prism-go-primary-staging.service" in deploy_pi
     assert "Windows Package and Pi Staging" in readme
     assert "T039/T040/T041" in go_report

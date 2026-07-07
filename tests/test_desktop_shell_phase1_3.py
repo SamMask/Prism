@@ -10,6 +10,7 @@ TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 BUILD_SCRIPT = ROOT / "scripts" / "build_desktop_shell.ps1"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def _read(path: Path) -> str:
@@ -58,12 +59,12 @@ def test_desktop_shell_phase1_3_docs_are_closed_without_package_scope():
     todo = _read(TODO_PATH)
     handoff = _read(HANDOFF_PATH)
     contracts = _read(CONTRACTS_PATH)
+    archive = _read(TODO_ARCHIVE_PATH)
 
-    assert "Desktop Shell Phase 0-6、post-package follow-up 與 manual acceptance 已完成" in todo
-    assert "Desktop Shell 目前沒有 active construction item" in todo
-    assert "installer / updater 只有在明確需要" in handoff
-    assert "Desktop Shell / Windows portable baseline 已完成並歸檔" in handoff
-    assert "desktop-portable-release-handoff-20260618.md" in handoff
+    assert "Desktop Shell Phase 0-6" in archive
+    assert "Installer/updater/WebView2 bootstrap/Start Menu/uninstall/update flows remain deferred" in archive
+    assert "Installer/updater/WebView2 bootstrap/shortcut automation 仍 deferred" in handoff
+    assert "desktop-portable-release-handoff-20260618.md" in todo
     assert "CONTRACT-DESKTOP-SHELL-RUNTIME-HOST" in contracts
     assert "CONTRACT-DESKTOP-SHELL-UX-HARDENING" in contracts
 

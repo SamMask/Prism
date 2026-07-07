@@ -372,7 +372,8 @@ def test_t020_t023_contracts_docs_and_active_queue_are_closed():
 
     assert "T020-T023 Go files/uploads gates 已完成" in todo
     assert "T020-T023 Go files/uploads local candidates are complete" in architecture
-    assert "Go T020-T023" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
     assert "Attachments Raw Serving And Uploads" in readme
     assert "T020-T023" in go_report
     assert "T024" in _load_contract("T023")["allowed_next_step"]["id"]

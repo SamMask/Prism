@@ -366,10 +366,12 @@ def test_api_service_global_error_toasts_use_i18n_fallbacks():
 
 def test_i18n_remaining_hardcoded_ui_audit_triages_active_hidden_and_allowed_literals():
     todo = DESKTOP_I18N_ARCHIVE_PATH.read_text(encoding="utf-8")
+    active_todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
     settings = SETTINGS_PATH.read_text(encoding="utf-8")
 
-    assert "desktop-backup-i18n-handoff-20260617.md" in handoff
+    assert "desktop-backup-i18n-handoff-20260617.md" in active_todo
+    assert "長版交接與完成紀錄已移到 `docs/development-history/`" in handoff
     assert "remaining hardcoded UI string audit / hidden legacy settings triage" in todo
     assert "CommandPalette" in todo
     assert "SecuritySection" in todo or "Security" in todo

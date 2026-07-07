@@ -433,11 +433,14 @@ def test_t028_t031_docs_and_contracts_are_updated():
         row = next(line for line in todo.splitlines() if line.startswith(f"| {task_id} |"))
         assert row.endswith("| Done |")
 
-    for path in (ARCHITECTURE_PATH, SCHEMA_PATH, GO_README_PATH, GO_REPORT_PATH):
+    for path in (ARCHITECTURE_PATH, GO_README_PATH, GO_REPORT_PATH):
         text = path.read_text(encoding="utf-8")
         assert "T028-T031" in text
         assert "local/copied" in text
         assert "production" in text.lower() or "正式" in text
+    schema = SCHEMA_PATH.read_text(encoding="utf-8")
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
 
     manifest = json.loads(ROUTE_MANIFEST_PATH.read_text(encoding="utf-8"))
     candidates = {

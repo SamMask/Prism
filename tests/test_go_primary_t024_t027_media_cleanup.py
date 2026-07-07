@@ -398,7 +398,8 @@ def test_t024_t027_contracts_docs_and_route_manifest_are_closed():
 
     assert "T024-T027 Go upload delete/media cleanup gates 已完成" in todo
     assert "T024-T027 Go upload delete/media cleanup local candidates are complete" in architecture
-    assert "Go T024-T027" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
     assert "Upload Delete And Media Cleanup" in readme
     assert "T024-T027" in go_report
     assert "implemented local copied-data upload delete candidate only" in manifest

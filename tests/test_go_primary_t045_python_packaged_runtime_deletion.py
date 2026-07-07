@@ -141,7 +141,8 @@ def test_t045_docs_mark_go_primary_product_startup_and_t046_source_followup():
     assert _text(AGENTS_PATH) == _text(CLAUDE_PATH)
     assert "go-primary-python-packaged-runtime-deletion.json" in todo
     assert "T045 Python packaged runtime deletion gate is complete" in architecture
-    assert "Go T045" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
     assert "prism-go-primary.service" in deploy_pi
     assert "linux-venv" not in deploy_pi
     assert "ExecStart=/home/mask070924/prism/linux-venv/bin/python app.py" not in deploy_pi

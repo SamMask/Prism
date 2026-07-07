@@ -14,6 +14,7 @@ PORTABLE_README = ROOT / "docs" / "desktop" / "README-PORTABLE.md"
 BUILD_SCRIPT = ROOT / "scripts" / "build_desktop_portable.ps1"
 SMOKE_SCRIPT = ROOT / "scripts" / "smoke_desktop_portable.ps1"
 DEPLOY_PI = ROOT / "DEPLOY-PI.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def _read(path: Path) -> str:
@@ -73,14 +74,16 @@ def test_desktop_shell_phase4_6_docs_close_package_decision_and_pi_boundary():
     architecture = _read(ARCHITECTURE_PATH)
     readme = _read(README_PATH)
     deploy_pi = _read(DEPLOY_PI)
+    archive = _read(TODO_ARCHIVE_PATH)
 
     for required in [
-        "Desktop Shell Phase 0-6、post-package follow-up 與 manual acceptance 已完成",
-        "Windows portable current truth",
-        "Desktop Shell post-package manual acceptance",
-        "Desktop Shell 目前沒有 active construction item",
-        "installer/updater 類功能",
+        "Windows portable baseline is complete",
+        "Installer/updater/WebView2 bootstrap/Start Menu/uninstall/update flows remain deferred",
         "PrismData",
+    ]:
+        assert required in archive
+
+    for required in [
         "desktop-portable-release-handoff-20260618.md",
     ]:
         assert required in todo
@@ -92,7 +95,7 @@ def test_desktop_shell_phase4_6_docs_close_package_decision_and_pi_boundary():
     ]:
         assert required in contracts
 
-    assert "Desktop Shell / Windows portable baseline 已完成並歸檔" in handoff
+    assert "Windows desktop current path 是 `Prism.exe` GUI app + WebView2 + same-process Go runtime" in handoff
     assert "exe 同層 `PrismData" in handoff
     assert "build_desktop_portable.ps1" in architecture
     assert "PrismPortable.json" not in architecture

@@ -61,8 +61,9 @@ def test_t051_docs_replace_stale_python_owner_wording_with_current_truth():
     assert "production/default runtime owner 仍是 Python" not in api_reference
     assert "text attachment body search remains Python-owned" not in api_reference
 
-    assert "Go T051" in schema
-    assert "Go T052" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
+    assert "Python `migrations/` source 已於 T053 移除" in schema
     assert "T051 已將 API / route ownership 文件刷新" in deployment
     assert "文件版本**：T052" in deploy_pi
     assert "T051 route ownership / API docs current-truth refresh is complete" in architecture

@@ -244,12 +244,13 @@ def test_t009_t010_docs_mark_done_and_keep_scope_boundaries():
     assert "go-primary-existing-db-migration-runner.json" in row_t009
     assert "go-primary-migration-backup-rollback.json" in row_t010
     assert "T009/T010 Go migration runner safety gate 已完成" in todo
-    assert "未部署 Pi" in todo
+    assert "T042-T044 Go primary live cutover / rollback / soak gates 已完成" in todo
 
     assert "T009/T010 Go migration runner safety gate is complete" in architecture
     assert "backup-before-migrate" in architecture
     assert "does not touch production `knowledge.db`" in architecture
 
-    assert "Go T009/T010" in schema
+    assert "Migration v17" in schema
+    assert "Go runtime 為唯一 migration owner" in schema
     assert "Existing DB Migrations" in readme
     assert "backup-before-migrate" in readme

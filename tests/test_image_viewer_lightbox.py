@@ -10,6 +10,7 @@ NOTE_CARD_PATH = ROOT / "frontend" / "src" / "components" / "NoteCard.tsx"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def test_shared_lightbox_component_stays_frontend_only_and_keyboard_accessible():
@@ -102,6 +103,7 @@ def test_lightbox_i18n_and_docs_track_all_subgates():
     i18n = I18N_PATH.read_text(encoding="utf-8")
     contracts = CONTRACTS_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
+    archive = TODO_ARCHIVE_PATH.read_text(encoding="utf-8")
 
     for key in [
         "openCoverImage",
@@ -120,9 +122,6 @@ def test_lightbox_i18n_and_docs_track_all_subgates():
     assert "CONTRACT-IMAGE-VIEWER-LIGHTBOX" in contracts
     assert "CONTRACT-IMAGE-VIEWER-ZOOM" in contracts
     assert "Editor preview / card cover integration" not in contracts
-    assert "[x] **01A Shared lightbox component**" in todo
-    assert "[x] **01B Reading view integration**" in todo
-    assert "[x] **01C Editor preview/card integration**" in todo
-    assert "[x] **01A Zoom controls**" in todo
-    assert "[x] **01B Backdrop click close**" in todo
-    assert "[x] **01C Keyboard zoom shortcuts**" in todo
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in todo
+    assert "Shared image lightbox completed local + Pi verification" in archive
+    assert "Image viewer zoom follow-up completed local gate" in archive

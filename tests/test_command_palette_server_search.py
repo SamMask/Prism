@@ -52,6 +52,7 @@ def test_kwf_01_docs_record_completion_and_next_entry():
     assert "`KWF-01 Command Palette server-side search`（狀態：`Done`）" in todo
     assert "Command Palette 輸入 `? xxx` 或至少 3 個字元" in todo
     assert "不改後端搜尋引擎" in todo
-    assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Todo`）" in todo
+    assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in todo
+    assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
     assert "KWF-01 Command Palette server-side search 已完成" in handoff
-    assert "下一個建議入口是 `KNOWLEDGE-WORKFLOW-CANDIDATE-01` 的 `KWF-02` Saved Search / Search Workspace" in handoff
+    assert "下一個建議入口是 local release validation / optional Pi deploy gate" in handoff

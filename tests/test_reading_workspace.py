@@ -13,6 +13,7 @@ MAIN_PATH = ROOT / "frontend" / "src" / "main.tsx"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def test_reading_workspace_state_contract_is_frontend_only_and_versioned():
@@ -113,6 +114,7 @@ def test_reading_workspace_i18n_and_docs_record_frontend_only_scope():
     i18n = I18N_PATH.read_text(encoding="utf-8")
     contracts = CONTRACTS_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
+    archive = TODO_ARCHIVE_PATH.read_text(encoding="utf-8")
 
     for key in [
         "addToReadingWorkspace",
@@ -138,8 +140,7 @@ def test_reading_workspace_i18n_and_docs_record_frontend_only_scope():
     assert "改 note API" in contracts
     assert "server persistence" not in contracts
 
-    assert "[x] **01A State contract**" in todo
-    assert "[x] **01B Reading panel switcher**" in todo
-    assert "[x] **01C Home/card entry points**" in todo
-    assert "[x] **01D Scroll restore**" in todo
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in todo
+    assert "Reading list workspace completed Pi delivery" in archive
+    assert "`prism.readingWorkspace.v1`" in archive
     assert "Pi delivery" in todo

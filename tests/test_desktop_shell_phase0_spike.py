@@ -8,6 +8,7 @@ SPIKE_DIR = ROOT / "desktop-spike"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def _read(path: Path) -> str:
@@ -63,12 +64,12 @@ def test_desktop_shell_phase0_win32_surface_matches_contract():
 def test_desktop_shell_phase0_docs_close_current_entry_without_expanding_scope():
     todo = _read(TODO_PATH)
     handoff = _read(HANDOFF_PATH)
+    archive = _read(TODO_ARCHIVE_PATH)
 
-    assert "Desktop Shell Phase 0-6、post-package follow-up 與 manual acceptance 已完成" in todo
+    assert "Desktop Shell Phase 0-6" in archive
     assert "docs/development-history/desktop-portable-release-handoff-20260618.md" in todo
-    assert "Desktop Shell 目前沒有 active construction item" in todo
-    assert "Desktop Shell / Windows portable baseline 已完成並歸檔" in handoff
-    assert "desktop-portable-release-handoff-20260618.md" in handoff
+    assert "Installer/updater/WebView2 bootstrap/Start Menu/uninstall/update flows remain deferred" in archive
+    assert "Windows desktop current path 是 `Prism.exe` GUI app + WebView2 + same-process Go runtime" in handoff
 
 
 def test_desktop_shell_phase0_go_build_and_self_test():

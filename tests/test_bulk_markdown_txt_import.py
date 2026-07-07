@@ -8,6 +8,7 @@ I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 CONTRACTS_PATH = ROOT / "docs" / "CONTRACTS.md"
 API_REFERENCE_PATH = ROOT / "docs" / "API_REFERENCE.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
+TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 
 
 def test_markdown_import_wrapper_stays_single_file_endpoint():
@@ -60,6 +61,7 @@ def test_bulk_import_i18n_and_docs_lock_no_batch_api_contract():
     contracts = CONTRACTS_PATH.read_text(encoding="utf-8")
     api_reference = API_REFERENCE_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
+    archive = TODO_ARCHIVE_PATH.read_text(encoding="utf-8")
 
     for key in [
         "bulkImportTitle",
@@ -83,8 +85,6 @@ def test_bulk_import_i18n_and_docs_lock_no_batch_api_contract():
     assert "`.txt` 檔不走 `/api/notes/import/md`" in api_reference
     assert "使用者可多次從不同資料夾選檔後一次匯入" in api_reference
 
-    assert "[x] **01A Import path lock**" in todo
-    assert "[x] **01B Settings import UI**" in todo
-    assert "[x] **01C Contract/docs cleanup**" in todo
-    assert "[x] **01D Regression and smoke**" in todo
-    assert "跨批選檔累加" in todo
+    assert "todo-handoff-archive-20260619-v2.5-stabilization.md" in todo
+    assert "Batch Markdown/txt import completed local + Pi verification" in archive
+    assert "frontend wrapper over existing single-file APIs" in archive
