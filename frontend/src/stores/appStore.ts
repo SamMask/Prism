@@ -3,6 +3,13 @@ import { api, Note, Category, Tag } from '../services/api'
 import { type Locale, readStoredLocale, setLocale as persistLocale } from '../i18n'
 
 export type ViewMode = 'grid' | 'list' | 'compact'
+export type SearchWorkspaceFilters = {
+  searchQuery: string
+  selectedCategoryId: number | null
+  selectedTagId: number | null
+  sortBy: 'updated' | 'created' | 'custom'
+  showArchived: boolean
+}
 
 const VIEW_MODE_STORAGE_KEY = 'prism.viewMode'
 
@@ -62,6 +69,7 @@ interface AppState {
   setSelectedTag: (id: number | null) => void
   setSortBy: (sort: 'updated' | 'created' | 'custom') => void
   setShowArchived: (showArchived: boolean) => void
+  applySearchWorkspace: (filters: SearchWorkspaceFilters) => void
   toggleNoteSelection: (id: number) => void
   selectAllNotes: () => void
   clearSelection: () => void
@@ -217,6 +225,18 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setShowArchived: (showArchived) => {
     set({ showArchived, selectedCategoryId: null, selectedTagId: null, currentPage: 1 })
+    get().fetchNotes(true)
+  },
+
+  applySearchWorkspace: (filters) => {
+    set({
+      searchQuery: filters.searchQuery,
+      selectedCategoryId: filters.selectedCategoryId,
+      selectedTagId: filters.selectedTagId,
+      sortBy: filters.sortBy,
+      showArchived: filters.showArchived,
+      currentPage: 1,
+    })
     get().fetchNotes(true)
   },
 

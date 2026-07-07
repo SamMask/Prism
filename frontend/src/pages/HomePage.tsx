@@ -1,10 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { useAppStore, type ViewMode } from '../stores/appStore'
+import { useAppStore, type SearchWorkspaceFilters, type ViewMode } from '../stores/appStore'
 import { NoteCard } from '../components/NoteCard'
 import { NoteEditor } from '../components/NoteEditor'
 import { ReadingView } from '../components/ReadingView'
 import { ToastContainer, toast } from '../components/ui/Toast'
-import { Clock, Loader2, Search, X } from 'lucide-react'
+import { Bookmark, Clock, Loader2, Search, Trash2, X } from 'lucide-react'
 import { useTranslation } from '../hooks/useTranslation'
 import {
   DndContext,
@@ -28,6 +28,53 @@ import { getCategoryDisplayName } from '../utils/categoryDisplay'
 
 const RECENT_SEARCHES_STORAGE_KEY = 'prism.recentSearches'
 const MAX_RECENT_SEARCHES = 5
+const SAVED_SEARCH_WORKSPACES_STORAGE_KEY = 'prism.savedSearchWorkspaces.v1'
+const MAX_SAVED_SEARCH_WORKSPACES = 8
+
+type SavedSearchWorkspace = SearchWorkspaceFilters & {
+  id: string
+  label: string
+  createdAt: string
+}
+
+function isSortBy(value: unknown): value is SearchWorkspaceFilters['sortBy'] {
+  return value === 'updated' || value === 'created' || value === 'custom'
+}
+
+function readSavedSearchWorkspaces(): SavedSearchWorkspace[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SAVED_SEARCH_WORKSPACES_STORAGE_KEY) || '[]')
+    if (!Array.isArray(parsed)) return []
+
+    return parsed
+      .filter((item): item is SavedSearchWorkspace => (
+        item
+        && typeof item.id === 'string'
+        && typeof item.label === 'string'
+        && typeof item.searchQuery === 'string'
+        && (typeof item.selectedCategoryId === 'number' || item.selectedCategoryId === null)
+        && (typeof item.selectedTagId === 'number' || item.selectedTagId === null)
+        && typeof item.showArchived === 'boolean'
+        && isSortBy(item.sortBy)
+        && typeof item.createdAt === 'string'
+      ))
+      .slice(0, MAX_SAVED_SEARCH_WORKSPACES)
+  } catch {
+    return []
+  }
+}
+
+function writeSavedSearchWorkspaces(workspaces: SavedSearchWorkspace[]): void {
+  localStorage.setItem(SAVED_SEARCH_WORKSPACES_STORAGE_KEY, JSON.stringify(workspaces))
+}
+
+function sameSearchWorkspace(a: SearchWorkspaceFilters, b: SearchWorkspaceFilters): boolean {
+  return a.searchQuery.trim().toLowerCase() === b.searchQuery.trim().toLowerCase()
+    && a.selectedCategoryId === b.selectedCategoryId
+    && a.selectedTagId === b.selectedTagId
+    && a.sortBy === b.sortBy
+    && a.showArchived === b.showArchived
+}
 
 function readRecentSearches(): string[] {
   try {
@@ -97,6 +144,7 @@ export function HomePage() {
     setSelectedTag,
     setShowArchived,
     showArchived,
+    applySearchWorkspace,
     totalNotes,
     categories,
     tags,
@@ -105,6 +153,7 @@ export function HomePage() {
   const [localNotes, setLocalNotes] = useState<Note[]>([])
   const [mobileSearchValue, setMobileSearchValue] = useState(searchQuery)
   const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches())
+  const [savedSearchWorkspaces, setSavedSearchWorkspaces] = useState<SavedSearchWorkspace[]>(() => readSavedSearchWorkspaces())
   const observerRef = useRef<IntersectionObserver | null>(null)
   
   // Settings State
@@ -201,6 +250,20 @@ export function HomePage() {
   const activeCategoryName = getCategoryDisplayName(activeCategory, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
   const hasActiveFilter = !!selectedCategoryId || !!selectedTagId || showArchived
+  const currentSearchWorkspaceFilters: SearchWorkspaceFilters = {
+    searchQuery: searchQuery.trim(),
+    selectedCategoryId,
+    selectedTagId,
+    sortBy,
+    showArchived,
+  }
+  const currentSearchWorkspaceLabel = [
+    searchQuery.trim() || activeCategoryName || (activeTag ? `#${activeTag.name}` : showArchived ? t('home.archive') : t('home.all')),
+    sortBy !== 'updated' ? t(`home.savedSearch.sort.${sortBy}`) : '',
+  ].filter(Boolean).join(' · ')
+  const hasSavedCurrentSearchWorkspace = savedSearchWorkspaces.some((workspace) => (
+    sameSearchWorkspace(workspace, currentSearchWorkspaceFilters)
+  ))
   const sectionTitle = searchQuery
     ? t('home.searchResults')
     : showArchived
@@ -234,6 +297,37 @@ export function HomePage() {
   const runRecentSearch = (query: string) => {
     setMobileSearchValue(query)
     setSearchQuery(query)
+  }
+  function saveCurrentSearchWorkspace() {
+    const workspace: SavedSearchWorkspace = {
+      ...currentSearchWorkspaceFilters,
+      id: `${Date.now()}`,
+      label: currentSearchWorkspaceLabel,
+      createdAt: new Date().toISOString(),
+    }
+    const nextWorkspaces = [
+      workspace,
+      ...savedSearchWorkspaces.filter((item) => !sameSearchWorkspace(item, workspace)),
+    ].slice(0, MAX_SAVED_SEARCH_WORKSPACES)
+    writeSavedSearchWorkspaces(nextWorkspaces)
+    setSavedSearchWorkspaces(nextWorkspaces)
+    toast.success(t('home.savedSearch.saved', { label: workspace.label }))
+  }
+  const applySavedSearchWorkspace = (workspace: SavedSearchWorkspace) => {
+    applySearchWorkspace({
+      searchQuery: workspace.searchQuery,
+      selectedCategoryId: workspace.selectedCategoryId,
+      selectedTagId: workspace.selectedTagId,
+      sortBy: workspace.sortBy,
+      showArchived: workspace.showArchived,
+    })
+    toast.success(t('home.savedSearch.restored', { label: workspace.label }))
+  }
+  const deleteSavedSearchWorkspace = (id: string) => {
+    const nextWorkspaces = savedSearchWorkspaces.filter((workspace) => workspace.id !== id)
+    writeSavedSearchWorkspaces(nextWorkspaces)
+    setSavedSearchWorkspaces(nextWorkspaces)
+    toast.success(t('home.savedSearch.removed'))
   }
 
   // Render notes grid/list content
@@ -304,6 +398,54 @@ export function HomePage() {
               {sectionSub}
             </p>
           </div>
+        </div>
+      </div>
+
+      <div
+        className="mb-4 rounded-md border border-border-subtle bg-bg-elevated/55 px-3 py-3"
+        data-testid="saved-search-workspace-bar"
+      >
+        <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+          <Bookmark size={14} className="text-primary" />
+          <span className="font-medium text-text-primary">{t('home.savedSearch.title')}</span>
+          <button
+            type="button"
+            onClick={saveCurrentSearchWorkspace}
+            disabled={hasSavedCurrentSearchWorkspace}
+            className="ml-auto rounded-md border border-border-default bg-bg-base px-2.5 py-1.5 text-xs text-text-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+            data-testid="save-search-workspace"
+          >
+            {hasSavedCurrentSearchWorkspace ? t('home.savedSearch.alreadySaved') : t('home.savedSearch.save')}
+          </button>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {savedSearchWorkspaces.length === 0 ? (
+            <span className="text-xs text-text-muted">{t('home.savedSearch.empty')}</span>
+          ) : (
+            savedSearchWorkspaces.map((workspace) => (
+              <span key={workspace.id} className="inline-flex h-8 items-center gap-1 rounded-md border border-border-subtle bg-bg-base text-xs text-text-secondary">
+                <button
+                  type="button"
+                  onClick={() => applySavedSearchWorkspace(workspace)}
+                  className="h-full px-2.5 hover:text-text-primary"
+                  data-testid={`saved-search-workspace-${workspace.id}`}
+                  title={t('home.savedSearch.restore', { label: workspace.label })}
+                >
+                  {workspace.label}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteSavedSearchWorkspace(workspace.id)}
+                  className="h-full rounded-r-md px-2 text-text-muted hover:bg-danger/10 hover:text-danger"
+                  data-testid={`delete-saved-search-workspace-${workspace.id}`}
+                  aria-label={t('home.savedSearch.delete', { label: workspace.label })}
+                  title={t('home.savedSearch.delete', { label: workspace.label })}
+                >
+                  <Trash2 size={13} />
+                </button>
+              </span>
+            ))
+          )}
         </div>
       </div>
 

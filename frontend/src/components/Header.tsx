@@ -77,7 +77,7 @@ export function Header() {
 
     if (await confirm({
       title: t('header.batchDeleteTitle'),
-      message: t('header.batchDeleteMessage', { count: selectedNoteIds.length }),
+      message: `${t('header.batchDeleteMessage', { count: selectedNoteIds.length })}\n\n${t('header.batchDeleteMediaHint')}`,
       variant: 'danger',
     })) {
       try {

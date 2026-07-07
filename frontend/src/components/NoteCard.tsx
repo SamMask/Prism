@@ -102,7 +102,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const handleDelete = async () => {
     if (!await confirm({
       title: t('noteCard.deleteTitle'),
-      message: t('noteCard.deleteMessage'),
+      message: `${t('noteCard.deleteMessage')}\n\n${t('noteCard.deleteMediaHint')}`,
       variant: 'danger',
     })) return
     

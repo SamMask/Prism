@@ -208,7 +208,7 @@ export function DangerZoneSection() {
             <Image size={20} className="text-text-muted" />
             <div>
               <p className="text-text-primary">{t('settings.dangerZone.orphanTitle')}</p>
-              <p className="text-text-muted text-sm">
+              <p className="text-text-muted text-sm" data-testid="orphan-image-cleanup-description">
                 {t('settings.dangerZone.orphanDescription')}
               </p>
             </div>
