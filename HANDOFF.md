@@ -5,7 +5,7 @@
 ## Current State
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已移除，T001-T053 完整紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
-- Prism V2.6 release / annotated tag / portable asset 已對齊 commit `461421db8d6bb21d0adbd58c081047c45e19010e`：https://github.com/SamMask/Prism/releases/tag/V2.6。Windows portable 是 unsigned build；README 與 release notes 已說明 SmartScreen、`Zone.Identifier`、SHA256 驗證與 `Unblock-File`。
+- Prism V2.6.1 release / annotated tag / portable asset 已對齊 commit `80aa35a0d73190c318a78b969b6f51cac74ec3fb`：https://github.com/SamMask/Prism/releases/tag/V2.6.1。既有V2.6 tag/asset未改寫。Windows portable是unsigned build；README與release notes已說明SmartScreen、`Zone.Identifier`、SHA256驗證與`Unblock-File`。
 - Windows desktop current path 是 `Prism.exe` GUI app + WebView2 + same-process Go runtime，預設資料在 exe 同層 `PrismData\`。Installer/updater/WebView2 bootstrap/shortcut automation 仍 deferred。
 - Recent V2.5 UX/runtime gates 已完成並歸檔：Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E。
 - Pi delivery 與 GitHub release packaging 分開處理；Pi 上線必須讀 `DEPLOY-PI.md` 並驗 service/migration/API/UI live evidence。
@@ -34,7 +34,9 @@
 - V2.6 Pi live deploy（2026-07-14）已完成：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed，artifact SHA256 `e650c5a0990d4ed36308d83a06c453b545cb50bb1da7a05b7c42986989685a36`，snapshot `/home/mask070924/prism/backups/go-primary-t042-20260714_010616`。Go active/enabled、legacy `prism.service` inactive/disabled、Caddy active；runtime version 2.6、migration v17 clean、T042 full workflow、5-sample soak、Playwright Home/Search Workspace/Command Palette server search與 browser console均通過。長版證據：`docs/development-history/v2.6-pi-live-deploy-20260714.md`。
 - 2026-07-14 frontend label / research archive gate 已完成：`frontend/index.html` browser title 與 `Sidebar.tsx` brand 均改為 V2.6；2026-07-01 深入研究報告已依 current truth分成已完成／已吸收、候選與不採用事項，歸檔至 `docs/development-history/2026-07-01-深入研究-deep-research-report-Prism.md`。
 - Label/archive fresh verification：36 個相關 pytest與完整 `pytest tests/ -v` 381 passed；`scripts/build_go_runtime.ps1` passed（含 frontend production build與 Go tests）；隔離 Go runtime Playwright smoke確認 Page Title `Prism V2.6`、sidebar `V2.6`、console 0 errors / 0 warnings。
-- 已發布 V2.6 GitHub asset與 Pi live仍是 label 修正前 artifact，所以目前 Pi畫面仍顯示 V2.5；本 gate沒有重發 release或部署 Pi。若要對外送出修正，另開 republish/redeploy gate，不能只手改 live Pi。
+- V2.6.1 label hotfix release / Pi live deploy（2026-07-14）已完成：release commit `80aa35a`、Actions run `29274092387` success、portable zip 21,671,433 bytes、SHA256 `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`，GitHub digest與fresh download hash一致。
+- V2.6.1 Pi evidence：artifact SHA256 `7612012cbeb336f15bf9c97d9b162b27541f8f308e31a84245f931e53d0a27e8`，snapshot `/home/mask070924/prism/backups/go-primary-t042-20260714_022829`，retention keep-5、full workflow與5-sample soak passed；Go active/enabled、legacy inactive/disabled、Caddy active、runtime 2.6.1、migration v17 clean。Live Playwright確認Page Title `Prism V2.6.1`、sidebar `V2.6.1`、console 0 errors/0 warnings。
+- Pi上既有`prism-go-readonly.service`（127.0.0.1:5002）與`prism-go-primary-staging.service`（127.0.0.1:5003）仍保留；Caddy只route至127.0.0.1:5004 live owner，本次label hotfix未擴scope停用輔助service。
 - Product decision（2026-07-14）：Prism 維持個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata 或 schema v18 workflow；除非用途改變，不得重新 promote。
 
 ## Next Entry
@@ -42,7 +44,6 @@
 目前沒有未交付的 active construction item。
 
 - 下一個最低風險候選是另開 test-only gate，把 4,049 行的 `go-shadow/main_test.go` 依目前 bounded-context source layout 拆檔；不得在搬測試時改 fixture、coverage 或 runtime behavior。
-- 若要讓 GitHub portable與 Pi live顯示 V2.6 label fix，必須依 `docs/RELEASE_CHECKLIST.md` 另開 patch republish/redeploy gate；不要修改既有 tag，也不要只手改 live Pi。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。
 - 若要繼續 Markdown 重型支援，只能明確 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 Mermaid decision gate 或 syntax-highlighting dependency review；KaTeX / ABC 目前凍結為備選，不要順手導入 schema/API 變更。
 - 若要處理 governance、完成宣稱、委派或 UI/UX policy，先讀 `docs/GOVERNANCE.md`；需要追溯來源時讀 `docs/development-history/governance-source-20260705/`。

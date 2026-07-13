@@ -32,7 +32,7 @@
 
 ### 本次同步修正
 
-- Browser page title 與 sidebar brand 已由 V2.5 對齊 V2.6；這是 frontend source / local build 修正，不代表已重發 GitHub Release 或重新部署 Pi。
+- Browser page title與sidebar brand已由V2.5對齊V2.6.1；immutable GitHub patch Release與Pi live deploy均於2026-07-14完成，驗證證據見`v2.6.1-release-validation-20260714.md`。
 
 ## 一頁式總結
 

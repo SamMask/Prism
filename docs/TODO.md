@@ -13,11 +13,11 @@
 ## Current Truth（2026-07-14）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
-- Prism V2.6 已發布到 commit `461421db8d6bb21d0adbd58c081047c45e19010e`；annotated tag、GitHub Release 與 `PrismDesktopPortable-v2.6.zip` 已對齊該 commit。
+- Prism V2.6.1 已發布到 commit `80aa35a0d73190c318a78b969b6f51cac74ec3fb`；immutable annotated tag、GitHub Release 與 `PrismDesktopPortable-v2.6.1.zip` 已對齊該 commit。既有 V2.6 tag/asset未改寫。
 - Windows portable current path：`Prism.exe` GUI app + WebView2 + same-process Go runtime；預設資料在 exe 同層 `PrismData\`。`--data-dir` / `PRISM_GO_DATA_DIR` 只作進階/debug override。
-- V2.6 release notes / README 已說明 unsigned portable、Windows SmartScreen、GitHub download Mark-of-the-Web (`Zone.Identifier`)、SHA256 驗證與 `Unblock-File` 流程。沒有購買或加入 code signing。
+- V2.6.1 release notes / README 已說明 unsigned portable、Windows SmartScreen、GitHub download Mark-of-the-Web (`Zone.Identifier`)、SHA256 驗證與 `Unblock-File` 流程。沒有購買或加入 code signing。
 - Pi delivery 與 GitHub release package 是兩條流程。Pi live deploy 必須依 `DEPLOY-PI.md` 使用 Go primary live ops；GitHub Actions 只做 validation，不自動上傳 release asset。
-- 2026-07-14 V2.6 已部署到 `PI5Mask24`：Go primary active/enabled、legacy `prism.service` inactive/disabled、Caddy active，runtime version `2.6`、schema v17 pending empty；full workflow、5-sample soak 與 Playwright live smoke通過。證據見 `docs/development-history/v2.6-pi-live-deploy-20260714.md`。
+- 2026-07-14 V2.6.1 已部署到 `PI5Mask24`：Go primary active/enabled、legacy `prism.service` inactive/disabled、Caddy active，runtime version `2.6.1`、schema v17 pending empty；full workflow、5-sample soak與Playwright live label smoke通過。證據見 `docs/development-history/v2.6.1-release-validation-20260714.md`。
 - Prism 仍沒有內建 auth/token layer；safe boundary 是 localhost、trusted LAN、VPN、SSH tunnel，或外部 auth 保護的 reverse proxy。不得把 API 寫成可直接 public internet 暴露。
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
 - `build/` 只應保留最新 release 產物；不得把 DB、attachments、notes、uploads 等真資料當 build artifact 清理。
@@ -38,18 +38,18 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `RELEASE-V2.6`（狀態：`Done`）：2026-07-08 KWF improvements 與 2026-07-13 Go source decomposition 已發布；local/full/browser/package/privacy/tag/push/Actions/asset/read-back gates 全部通過，並於 2026-07-14 另走 Pi live gate完成部署。
 - [x] `PI-V2.6-LIVE`（狀態：`Done`）：V2.6 artifact、snapshot、service ownership、API/UI smoke與 bounded soak全部通過；唯一 non-blocking finding 是 browser title/sidebar brand仍顯示 V2.5。
 - [x] `FRONTEND-LABEL-AND-RESEARCH-ARCHIVE-01`（狀態：`Done`）：browser title / sidebar brand 已對齊 V2.6；2026-07-01 深入研究報告已完成 current-truth resolution 並移至 development-history。本 gate 未重發 release、未部署 Pi。
-- [ ] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Doing`）：將已驗證的 V2.6 title/sidebar label修正版發布為 immutable patch release `V2.6.1`，再部署到 `PI5Mask24` 並做 live browser smoke；既有 `V2.6` tag/asset不重寫。
+- [x] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Done`）：title/sidebar label修正版已發布為 immutable patch release `V2.6.1`並部署到 `PI5Mask24`；Actions、asset read-back、Pi full workflow、5-sample soak與live Playwright labels均通過，既有 `V2.6` tag/asset未重寫。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前唯一 `Doing` item 是 `RELEASE-V2.6.1-LABEL-HOTFIX`；完成 patch release、Pi live部署與瀏覽器驗證後，下一個最低風險入口才是 test-only `main_test.go` bounded-context split candidate，不得延伸成 runtime redesign。
+目前沒有 `Doing` item。下一個最低風險入口是 test-only `main_test.go` bounded-context split candidate，不得延伸成 runtime redesign。
 
 ---
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.6 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除與匯入都有寫入前 preview，ReadingView 會顯示既有 source URLs 與重複標記。2026-07-13 完成的 Go source split 維持同一 `package main` 與既有 runtime contracts；2026-07-14 V2.6 tag/Actions/portable asset/read-back與 Pi live deploy均完成。Frontend source / local artifact 的 browser title與 sidebar brand已修正為 V2.6；已發布 asset與 Pi live仍是修正前 artifact，直到另行 republish/redeploy。schema仍為 v17，沒有 migration。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.6.1 portable / Pi live 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script可dry-run或輸出zip；批次刪除與匯入都有寫入前preview，ReadingView會顯示既有source URLs與重複標記。2026-07-14 V2.6.1 immutable tag、Actions、portable asset/read-back、Pi cutover/full workflow/5-sample soak與live label smoke均完成；browser title與sidebar brand均為V2.6.1。schema仍為v17，沒有migration。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；V2.6 release、Pi live deploy、GMS、frontend V2.6 label alignment與 2026-07-01 research intake歸檔已完成。Go source assertion應檢查整個 `go-shadow` 非測試 package source，不得再假設所有 handler都位於 `main.go`；route registration仍由 `main.go` 擁有。下一個 maintenance候選是 `main_test.go` test-only split；若要把 label fix送上 GitHub/Pi，另開 republish/redeploy gate。不得重開 schema v18 review metadata，除非產品用途改變。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；V2.6.1 release/Pi live label hotfix、GMS與2026-07-01 research intake歸檔已完成。Go source assertion應檢查整個`go-shadow`非測試package source，不得再假設所有handler都位於`main.go`；route registration仍由`main.go`擁有。下一個maintenance候選是`main_test.go` test-only split；不得重開schema v18 review metadata，除非產品用途改變。
 
 ---
 
@@ -105,16 +105,16 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 ## Open TODO Items
 
-### [ ] RELEASE-V2.6.1-LABEL-HOTFIX Publish and deploy frontend label fix
+### [x] RELEASE-V2.6.1-LABEL-HOTFIX Publish and deploy frontend label fix
 
-狀態：`Doing`
+狀態：`Done`
 
 - [x] `R261-00 Release/live preflight`：Git/gh/remote原先對齊且gh已登入；Pi SSH alias、aarch64、磁碟、Go active/enabled、legacy inactive/disabled、Caddy active、runtime 2.6與migration v17 clean均確認。
 - [x] `R261-01 Version and release evidence`：runtime/docs/package已對齊2.6.1；full gate 382 passed + Go tests、frontend build、9 e2e、Go smokes、portable clean-unzip、packaged version、Playwright labels與privacy sweep全部通過。Zip 21,671,433 bytes，SHA256 `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`。
-- [ ] `R261-02 Commit/tag/push/release`：依 Lore protocol commit，建立 immutable annotated `V2.6.1` tag並push；確認 Actions綠燈，上傳 portable zip並做remote digest/download hash回讀。
-- [ ] `R261-03 Pi cutover`：依 `DEPLOY-PI.md` 執行 `go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5`，保留 pre-cutover snapshot。
-- [ ] `R261-04 Live verification`：確認 Go primary active/enabled、legacy inactive/disabled、Caddy active、version 2.6.1、schema v17 clean，並以 Playwright驗 title/sidebar與browser console。
-- [ ] `R261-05 Closure`：回寫 TODO/HANDOFF與部署證據；既有 `V2.6` tag/release asset不修改。
+- [x] `R261-02 Commit/tag/push/release`：Lore commit `80aa35a`與annotated `V2.6.1` tag已push；Actions run `29274092387` success；Release https://github.com/SamMask/Prism/releases/tag/V2.6.1 已發布。GitHub digest、local hash與重新下載SHA256均為 `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`。
+- [x] `R261-03 Pi cutover`：`go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed；linux/arm64 artifact SHA256 `7612012cbeb336f15bf9c97d9b162b27541f8f308e31a84245f931e53d0a27e8`；pre-cutover snapshot `/home/mask070924/prism/backups/go-primary-t042-20260714_022829`，retention keep-5 passed。
+- [x] `R261-04 Live verification`：Go primary active/enabled、legacy inactive/disabled、Caddy active、version 2.6.1、schema v17 clean、full workflow與5-sample soak passed；Playwright live確認title `Prism V2.6.1`、sidebar `V2.6.1`、console 0 errors/0 warnings。既有localhost-only read-only sidecar 5002與staging 5003不接Caddy流量，本gate未變更。
+- [x] `R261-05 Closure`：TODO/HANDOFF/release validation已回寫；既有 `V2.6` tag/release asset未修改。
 
 ### [x] FRONTEND-LABEL-AND-RESEARCH-ARCHIVE-01 V2.6 顯示修正與研究 intake 歸檔
 

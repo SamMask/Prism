@@ -104,5 +104,5 @@ release flow:
 | Label browser smoke | Passed | Playwright page title `Prism V2.6.1`; sidebar `V2.6.1`; console 0 errors / 0 warnings. |
 | Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
 | V2.6.1 asset hash | Passed | `PrismDesktopPortable-v2.6.1.zip`, 21,671,433 bytes, SHA256 `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`. |
-| GitHub Actions / Release read-back | Pending after push | Must be updated from the actual run, tag, uploaded digest, and fresh download before external closure. |
-| Pi live deploy | Pending after release | Must follow `DEPLOY-PI.md`; GitHub release validation does not substitute for Pi service/migration/browser evidence. |
+| GitHub Actions / Release read-back | Passed | Run `29274092387` success; annotated tag peels to `80aa35a0d73190c318a78b969b6f51cac74ec3fb`; release asset digest and fresh download SHA256 match `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`. |
+| Pi live deploy | Passed | Cutover artifact SHA256 `7612012cbeb336f15bf9c97d9b162b27541f8f308e31a84245f931e53d0a27e8`; snapshot `/home/mask070924/prism/backups/go-primary-t042-20260714_022829`; runtime 2.6.1/schema v17 clean; full workflow, 5-sample soak, exact label Playwright and console smoke passed. |
