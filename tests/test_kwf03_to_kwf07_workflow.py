@@ -84,15 +84,16 @@ def test_kwf06_reading_view_source_url_panel_uses_existing_note_urls():
     assert i18n.count("sourceDuplicate:") >= 4
 
 
-def test_kwf07_quality_metadata_is_documented_decision_gate_not_schema_change():
+def test_kwf07_quality_metadata_is_rejected_for_personal_notebook_scope():
     todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
 
     assert "KWF-07 Knowledge quality metadata decision gate`（狀態：`Done`）" in todo
-    assert "schema v18 decision gate" in todo
-    assert "status / review_state / last_verified_at" in todo
-    assert "KWF-07 Knowledge quality metadata decision gate 已完成" in handoff
+    assert "不採用 `status / review_state / last_verified_at`" in todo
+    assert "除非產品用途明確改變" in todo
+    assert "KWF-07 product decision 已關閉" in handoff
+    assert "不得重新 promote schema v18 workflow" in handoff
     assert "Migration v17" in schema
     assert "| v18+ | （預留） | 下一次 Schema 變更接續此版本號 |" in schema
     assert "review_state" not in schema
