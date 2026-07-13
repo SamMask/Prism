@@ -1,11 +1,13 @@
 import json
 from pathlib import Path
 
+from tests.go_source_assertions import read_go_package_source
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-packaged-runtime-release-candidate.json"
 B_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-python-runtime-ownership-closure.json"
-GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
 GO_TEST_PATH = ROOT / "go-shadow" / "main_test.go"
 BUILD_SCRIPT_PATH = ROOT / "scripts" / "build_go_runtime.ps1"
 SMOKE_SCRIPT_PATH = ROOT / "scripts" / "smoke_go_local_artifact.ps1"
@@ -55,7 +57,7 @@ def test_c_artifact_contract_uses_go_artifacts_external_data_and_no_python_packa
 
 
 def test_go_runtime_adds_read_only_migration_status_for_c_smoke():
-    main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
+    main_go = read_go_package_source(GO_SHADOW_DIR)
     main_test = GO_TEST_PATH.read_text(encoding="utf-8")
 
     assert 'mux.HandleFunc("/api/system/migration-status", srv.handleMigrationStatus)' in main_go

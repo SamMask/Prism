@@ -16,10 +16,11 @@ from pathlib import Path
 import pytest
 
 from tests.go_primary_parity_harness import build_go_shadow_exe
+from tests.go_source_assertions import read_go_package_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
-GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
@@ -423,7 +424,7 @@ def test_t030_t031_export_json_markdown_db_images_and_batch(temp_db, tmp_path):
 
 
 def test_t028_t031_docs_and_contracts_are_updated():
-    main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
+    main_go = read_go_package_source(GO_SHADOW_DIR)
     assert "enable-import-export" in main_go
     assert "PRISM_GO_ENABLE_IMPORT_EXPORT" in main_go
     assert "local-import-export" in main_go

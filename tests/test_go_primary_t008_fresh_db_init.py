@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from tests.go_primary_parity_harness import build_go_shadow_exe
+from tests.go_source_assertions import read_go_package_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,7 +65,7 @@ def test_t008_contract_records_fresh_init_scope_and_boundaries():
 
 
 def test_t008_go_source_locks_fresh_init_entrypoint_after_later_migration_gates():
-    main_go = (GO_SHADOW_DIR / "main.go").read_text(encoding="utf-8")
+    main_go = read_go_package_source(GO_SHADOW_DIR)
     go_tests = (GO_SHADOW_DIR / "main_test.go").read_text(encoding="utf-8")
 
     for snippet in (

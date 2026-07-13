@@ -12,11 +12,11 @@ from pathlib import Path
 import pytest
 
 from tests.go_primary_parity_harness import build_go_shadow_exe
+from tests.go_source_assertions import read_go_package_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
-GO_MAIN_PATH = GO_SHADOW_DIR / "main.go"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
@@ -361,7 +361,7 @@ def _load_contract(task_id):
 
 
 def test_t024_t027_contracts_docs_and_route_manifest_are_closed():
-    main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
+    main_go = read_go_package_source(GO_SHADOW_DIR)
     todo = TODO_PATH.read_text(encoding="utf-8")
     architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")

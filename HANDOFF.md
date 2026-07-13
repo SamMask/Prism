@@ -1,4 +1,4 @@
-# HANDOFF - Prism active entry（2026-07-05）
+# HANDOFF - Prism active entry（2026-07-13）
 
 本檔只放新對話接手需要的最短狀態。長版交接與完成紀錄已移到 `docs/development-history/`；最新 TODO/HANDOFF 瘦身歸檔見 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`。
 
@@ -28,12 +28,14 @@
 - 2026-07-08 KWF-07 Knowledge quality metadata decision gate 已完成：`status / review_state / last_verified_at` 保留為 schema v18 decision gate；本輪未改 `docs/SCHEMA.md` current Migration v17，未新增 DB 欄位或 migration。
 - KWF-03..07 local release validation / Pi deploy gate（2026-07-08）已完成：`.loop/verify-gate.ps1` passed（含 `pytest tests/ -v` 379 passed、`cd go-shadow && go test ./...` passed、mirror check / `git diff --check` passed）；`cd frontend && npm run build` passed（僅既有 Browserslist / chunk-size warning）；Go package smoke、local artifact smoke、desktop portable smoke、browser e2e `python -m pytest e2e -q` 9 passed；tracked privacy sweep 與 portable zip forbidden-entry sweep passed。
 - Pi live deploy（2026-07-08）已完成：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed，evidence `build/go-primary-live/pi/evidence.json`；`prism-go-primary.service` active、legacy `prism.service` inactive、`/api/system/migration-status` current/latest v17 且 pending empty、`/api/server/version` version `2.5`；live batch delete dry-run returned `status: success` without deletion，served JS `/assets/index-DqUfa497.js` contains `previewBatchDeleteNotes`、`bulk-import-dry-run-preview`、`reading-source-url-panel`。
+- 2026-07-13 `GO-MAIN-SPLIT-CANDIDATE-01` / GMS-00..10 已完成：`go-shadow/main.go` 從 10,246 行降到 1,024 行；attachments、taxonomy、migrations、backup/system/options、import/export、uploads/media 與 notes 已依既有責任分到同一 `package main` 的 bounded-context files，沒有新增 package/dependency/API/schema/migration 或 deploy 行為。
+- Go split fresh verification：425 個 top-level declarations AST 比對一致；`cd go-shadow && go test ./...` passed；targeted Go groups passed；`pytest tests/ -v` 379 passed；`scripts/build_go_runtime.ps1` passed；local artifact 與 Windows full-workflow package smoke passed。長版證據見 `docs/development-history/go-main-split-completion-20260713.md`；本輪未部署 Pi、未建立 release/tag。
 
 ## Next Entry
 
 目前沒有未交付的 active construction item。
 
-- 下一個建議入口是 release/tag/package decision：若要把 2026-07-08 KWF 與 Pi gate 對外發版，先依 `docs/RELEASE_CHECKLIST.md` 決定版本號、commit/tag/package/push，並確認 GitHub Actions 綠燈；不要把 Pi live deploy 視為 GitHub release asset 自動完成。
+- 下一個建議入口是 release/tag/package decision：若要把 2026-07-08 KWF 與 2026-07-13 Go source split 對外發版，先依 `docs/RELEASE_CHECKLIST.md` 決定版本號、commit/tag/package/push，並確認 GitHub Actions 綠燈；不要把本機 package smoke 或 Pi live deploy 視為 GitHub release asset 自動完成。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。
 - 若要繼續 Markdown 重型支援，只能明確 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 Mermaid decision gate 或 syntax-highlighting dependency review；KaTeX / ABC 目前凍結為備選，不要順手導入 schema/API 變更。
 - 若要處理 governance、完成宣稱、委派或 UI/UX policy，先讀 `docs/GOVERNANCE.md`；需要追溯來源時讀 `docs/development-history/governance-source-20260705/`。

@@ -2,10 +2,13 @@ import json
 import re
 from pathlib import Path
 
+from tests.go_source_assertions import read_go_package_source
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GATE_PATH = ROOT / "docs" / "contracts" / "phase19-go-readonly-promotion-gate.json"
-MAIN_GO = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
+MAIN_GO = GO_SHADOW_DIR / "main.go"
 
 
 def test_phase19_2_gate_keeps_go_readonly_and_reversible():
@@ -31,6 +34,7 @@ def test_phase19_2_gate_keeps_go_readonly_and_reversible():
 def test_phase19_2_gate_matches_go_runtime_surface():
     gate = json.loads(GATE_PATH.read_text(encoding="utf-8"))
     main_go = MAIN_GO.read_text(encoding="utf-8")
+    go_source = read_go_package_source(GO_SHADOW_DIR)
 
     registered = set(re.findall(r'mux\.HandleFunc\("([^"]+)"', main_go))
     registered.discard("/")
@@ -82,17 +86,17 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     expected = {entry.removeprefix("GET ") for entry in gate["allowed_api_surface"]}
     assert registered == expected
 
-    assert "enableTagWrite" in main_go
-    assert '"enable-tag-write"' in main_go
-    assert "enableAttachmentTextRead" in main_go
-    assert '"enable-attachment-text-read"' in main_go
-    assert '"enable-thumbnail-write"' in main_go
-    assert "Thumbnail write route is disabled" in main_go
-    assert "enableNotesWrite" in main_go
-    assert "Notes write route is disabled" in main_go
+    assert "enableTagWrite" in go_source
+    assert '"enable-tag-write"' in go_source
+    assert "enableAttachmentTextRead" in go_source
+    assert '"enable-attachment-text-read"' in go_source
+    assert '"enable-thumbnail-write"' in go_source
+    assert "Thumbnail write route is disabled" in go_source
+    assert "enableNotesWrite" in go_source
+    assert "Notes write route is disabled" in go_source
     forbidden_methods = ["http.MethodPatch"]
     for method in forbidden_methods:
-        assert method not in main_go
+        assert method not in go_source
 
 
 def test_phase19_2_next_step_is_controlled_read_routing_only():

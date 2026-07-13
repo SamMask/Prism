@@ -1,8 +1,10 @@
 from pathlib import Path
 
+from tests.go_source_assertions import read_go_package_source
+
 
 ROOT = Path(__file__).resolve().parents[1]
-GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
 GO_TEST_PATH = ROOT / "go-shadow" / "main_test.go"
 API_TS_PATH = ROOT / "frontend" / "src" / "services" / "api.ts"
 NOTE_CARD_PATH = ROOT / "frontend" / "src" / "components" / "NoteCard.tsx"
@@ -13,7 +15,7 @@ TODO_ARCHIVE_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archiv
 
 
 def test_notes_list_backend_projects_preview_without_breaking_detail_or_search():
-    go_main = GO_MAIN_PATH.read_text(encoding="utf-8")
+    go_main = read_go_package_source(GO_SHADOW_DIR)
     go_test = GO_TEST_PATH.read_text(encoding="utf-8")
 
     assert "const noteListContentPreviewLength = 500" in go_main

@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+from tests.go_source_assertions import read_go_package_source
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-frontend-route-coverage.json"
@@ -8,7 +10,7 @@ TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completi
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
-GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
 API_TS_PATH = ROOT / "frontend" / "src" / "services" / "api.ts"
 PROMPT_BUILDER_PATH = ROOT / "frontend" / "src" / "hooks" / "usePromptBuilder.ts"
 NOTE_FORM_PATH = ROOT / "frontend" / "src" / "hooks" / "editor" / "useNoteForm.ts"
@@ -61,7 +63,7 @@ def test_frontend_missing_surfaces_have_visible_or_supported_paths():
 
 
 def test_go_primary_registers_frontend_called_missing_routes_and_static_guard():
-    main_go = GO_MAIN_PATH.read_text(encoding="utf-8")
+    main_go = read_go_package_source(GO_SHADOW_DIR)
 
     assert 'mux.HandleFunc("/api/upload/extract-prompt", srv.handleExtractPrompt)' in main_go
     assert 'mux.HandleFunc("/api/system/check-update", srv.handleCheckUpdate)' in main_go

@@ -1,11 +1,13 @@
 from pathlib import Path
 
+from tests.go_source_assertions import read_go_package_source
+
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTE_CARD_PATH = ROOT / "frontend" / "src" / "components" / "NoteCard.tsx"
 READING_VIEW_PATH = ROOT / "frontend" / "src" / "components" / "ReadingView.tsx"
 API_REFERENCE_PATH = ROOT / "docs" / "API_REFERENCE.md"
-GO_MAIN_PATH = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
 GO_TEST_PATH = ROOT / "go-shadow" / "main_test.go"
 
 
@@ -28,7 +30,7 @@ def test_note_card_variant_action_looks_active_and_lineage_is_rendered():
 
 
 def test_notes_list_contract_includes_variant_lineage():
-    go_main = GO_MAIN_PATH.read_text(encoding="utf-8")
+    go_main = read_go_package_source(GO_SHADOW_DIR)
     go_test = GO_TEST_PATH.read_text(encoding="utf-8")
     api_reference = API_REFERENCE_PATH.read_text(encoding="utf-8")
 
@@ -55,7 +57,7 @@ def test_notes_list_contract_includes_variant_lineage():
 
 
 def test_variant_duplicate_preserves_attachments_and_reading_loads_separated_content():
-    go_main = GO_MAIN_PATH.read_text(encoding="utf-8")
+    go_main = read_go_package_source(GO_SHADOW_DIR)
     go_test = GO_TEST_PATH.read_text(encoding="utf-8")
     reading_view = READING_VIEW_PATH.read_text(encoding="utf-8")
 

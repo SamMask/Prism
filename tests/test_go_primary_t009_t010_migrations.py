@@ -12,6 +12,7 @@ from pathlib import Path
 import pytest
 
 from tests.go_primary_parity_harness import build_go_shadow_exe
+from tests.go_source_assertions import read_go_package_source
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -130,7 +131,7 @@ def test_t009_t010_contracts_record_migration_and_rollback_scope():
 
 
 def test_t009_t010_go_source_and_unit_tests_lock_runner_backup_and_rollback():
-    main_go = (GO_SHADOW_DIR / "main.go").read_text(encoding="utf-8")
+    main_go = read_go_package_source(GO_SHADOW_DIR)
     go_tests = (GO_SHADOW_DIR / "main_test.go").read_text(encoding="utf-8")
 
     for snippet in (

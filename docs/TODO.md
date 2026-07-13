@@ -10,7 +10,7 @@
 
 ---
 
-## Current Truth（2026-07-05）
+## Current Truth（2026-07-13）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
 - Prism V2.5 已封版到 commit `42ce747bc273182b045455de49b8be06fd6c051a`；GitHub Release `V2.5` 與 portable zip asset 已對齊該 commit。
@@ -33,17 +33,18 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已能把目前 query/filter/sort view 保存成瀏覽器本機 Search Workspace，localStorage key `prism.savedSearchWorkspaces.v1`，不改 DB schema。
 - [x] `NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）：已補刪卡片 / 批次刪除確認框與 Settings「清理未使用圖片」copy；runtime 已有 reference-counted cleanup，本輪未改 Go delete/media cleanup semantics。
 - [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；2026-07-08 已通過 local release validation 並部署到 Pi live；未做 auth、semantic search 或 schema migration。
+- [x] `GO-MAIN-SPLIT-CANDIDATE-01`（狀態：`Done`）：`GMS-00` 到 `GMS-10` 已完成同 package mechanical extraction；`main.go` 從 10,246 行降到 1,024 行，所有新 bounded-context 檔案均不超過 1,500 行，runtime/API/schema 行為未變。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有 `Doing` item。下一輪若要接續產品工作，優先做 release/tag/package decision 或明確 promote 下一個 decision gate；不要把 Pi live deploy 視為 GitHub release asset 自動完成。
+目前沒有 `Doing` item。`GO-MAIN-SPLIT-CANDIDATE-01` 已完成；下一個建議入口是 release/tag/package decision，不要把本機 package smoke 或既有 Pi live deploy 視為 GitHub release asset 自動完成。
 
 ---
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除會先做 dry-run preview，Settings 批次匯入會先顯示 create / duplicate / unsupported 預覽，ReadingView 會顯示既有 source URLs 與重複標記。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。2026-07-08 已完成 local release validation 與 Pi live deploy gate；下一個最適合做的是 release/tag/package decision，或明確 promote 下一個 decision gate。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除會先做 dry-run preview，Settings 批次匯入會先顯示 create / duplicate / unsupported 預覽，ReadingView 會顯示既有 source URLs 與重複標記。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。2026-07-13 已完成 `GO-MAIN-SPLIT-CANDIDATE-01`：Go runtime 仍是單一 `package main`，但附件、taxonomy、migration、backup、system、options、import/export、uploads/media 與 notes responsibilities 已分檔，`main.go` 只保留 bootstrap/wiring/shared ownership。Release/tag/package decision 仍獨立處理。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；KWF-03..07 已完成 local release validation 與 Pi live deploy gate。下一輪若要對外發版，必須依 `docs/RELEASE_CHECKLIST.md` 做版本號 / commit / tag / package / push / GitHub Actions gate；不要新增 auth、不改 public exposure。任何 promoted item 完成後至少跑 `git diff --check`，有 frontend 行為則加 targeted tests/build，並把驗證證據寫回本檔或 `HANDOFF.md`。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；KWF-03..07 與 `GO-MAIN-SPLIT-CANDIDATE-01` 已完成。Go source assertion 應檢查整個 `go-shadow` 非測試 package source，不得再假設所有 handler 都位於 `main.go`；route registration 仍由 `main.go` 擁有。若要對外發版，仍必須另依 `docs/RELEASE_CHECKLIST.md` 做版本號 / commit / tag / package / push / GitHub Actions gate。
 
 ---
 
@@ -98,6 +99,58 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 ---
 
 ## Open TODO Items
+
+### [x] GO-MAIN-SPLIT-CANDIDATE-01 Incremental `go-shadow/main.go` bounded-context decomposition
+
+狀態：`Done`
+
+來源：2026-07-13 使用者確認要把超過一萬行的 Go runtime 大檔正式規劃進 TODO 並細拆工作；此 candidate 將 `DEEP-SCAN-RISK-CANDIDATE-01` 01H 的 `route-local Go 小整理` 明確化，但不解除「一次性 Go runtime 大拆分」的 `Blocked` 邊界。
+
+實際對照：
+
+- `go-shadow/main.go` 拆分前 baseline 為 **10,246 physical lines / 312,452 bytes**；當時同檔包含 bootstrap、route registration、runtime config、SQLite owner/migrations、system/server、backup/restore、prompt/wizard config、import/export、uploads/media cleanup、taxonomy、attachments、notes/search/actions/history。
+- `go-shadow/main.go:275-354` 的 runtime construction / mux registration 是 central wiring，本 candidate 全程保留在 `main.go`，避免拆檔變成 router/runtime redesign。
+- 現有 `go-shadow/main_test.go` / `restore_test.go` 已覆蓋 migrations、categories/tags、attachments、uploads/SSRF、notes/search/actions/history、backup/WAL/restore、CSRF 與 static boundaries；每一刀先沿用既有 regression，只有發現實際缺口才先補 test。
+- 詳細完成紀錄：`docs/development-history/go-main-split-completion-20260713.md`。
+
+目標與停止條件：
+
+- 只做同一個 `package main` 內的 declaration relocation；新增的是按既有 bounded context 命名的 `.go` 檔，不新增 package directory、service、repository、interface、manager、registry、adapter 或 dependency。
+- 每個 gate 只搬一個可獨立驗收的責任群組；除 per-file imports / `gofmt` 外，不改函式名稱、signature、route registration、SQL、response/error 文字、feature flags、safety limits 或 side effects。
+- 最終讓 `main.go` 只保留 bootstrap、runtime config/connection ownership、route registration、middleware 與真正 shared helpers；降到 **4,000 physical lines 以下即停止**，不得只為追求更低行數繼續碎片化。
+- 任何 gate 若需要 API/schema/DB/data-dir/desktop/package/deploy 行為變更、新抽象或跨 package，立即停止並另開 decision gate；本 candidate 不部署 Pi、不重包 release。
+
+施工順序（一次只 promote 一項）：
+
+- [x] `GMS-00 Baseline and mechanical-split contract lock`（狀態：`Done`）：已新增 `CONTRACT-GO-MAIN-MECHANICAL-SPLIT`，鎖定 10,246 lines / 312,452 bytes baseline 與同 package/no-behavior-change 邊界；拆檔前 `cd go-shadow && go test ./...` passed。
+- [x] `GMS-01 Attachment routes mechanical extraction`（狀態：`Done`）：新增 `go-shadow/attachments.go`（344 行），附件 metadata/text/raw/write 與 path safety declarations 純搬檔完成。
+- [x] `GMS-02 Taxonomy routes mechanical extraction`（狀態：`Done`）：新增 `go-shadow/taxonomy.go`（647 行），categories/tags handlers 與 conflict helpers 純搬檔完成。
+- [x] `GMS-03 Migration lifecycle mechanical extraction`（狀態：`Done`）：新增 `go-shadow/migrations.go`（692 行），ordered migrations、fresh init/seeds、status 與 backup-before-migrate 純搬檔完成；schema 仍為 v17，SQL 未改。
+- [x] `GMS-04 Backup/restore mechanical extraction`（狀態：`Done`）：新增 `go-shadow/backups.go`（526 行），backup/restore/retention/path validation 純搬檔完成。
+- [x] `GMS-05 System/runtime administration mechanical extraction`（狀態：`Done`）：新增 `go-shadow/system.go`（904 行），health/system/server/CSRF/FTS/port/log/restart/version handlers 純搬檔完成；mux registration 仍在 `main.go`。
+- [x] `GMS-06 Prompt/wizard options mechanical extraction`（狀態：`Done`）：新增 `go-shadow/options.go`（532 行），prompt/wizard/data-dir JSON config helpers 純搬檔完成。
+- [x] `GMS-07A Import mechanical extraction`（狀態：`Done`）：新增 `go-shadow/import.go`（750 行），JSON/Markdown import、frontmatter、image restore、rollback cleanup 與 category import helpers 純搬檔完成。
+- [x] `GMS-07B Export mechanical extraction`（狀態：`Done`）：新增 `go-shadow/export.go`（816 行），JSON/Markdown/DB/images/batch export、ZIP 與 filename helpers 純搬檔完成。
+- [x] `GMS-08A Image metadata extraction`（狀態：`Done`）：新增 `go-shadow/image_metadata.go`（243 行），prompt metadata / PNG text parsing 純搬檔完成。
+- [x] `GMS-08B Upload/remote-fetch extraction`（狀態：`Done`）：新增 `go-shadow/uploads.go`（575 行），upload/delete/remote fetch、SSRF/DNS/redirect、MIME/size、thumbnail helpers 純搬檔完成。
+- [x] `GMS-08C Media-cleanup extraction`（狀態：`Done`）：新增 `go-shadow/media_cleanup.go`（873 行），orphan/original/broken-image handlers 與 reference-counted cleanup helpers 純搬檔完成。
+- [x] `GMS-09 Notes/search/actions decomposition decision gate`（狀態：`Done`）：重新依 symbol ownership 拆成 `notes_search.go`（642 行）、`notes_write.go`（478 行）、`notes_media.go`（205 行）、`notes_actions.go`（1,216 行）；每檔均低於 1,500 行，另保留真正 shared declarations 於 `main.go`。
+- [x] `GMS-10 Structural closure and archive`（狀態：`Done`）：`main.go` 已降到 1,024 行；16 個本次 source 檔均 ≤1,500 行。425 個 top-level declarations 經 AST formatting 比對與拆檔前 `HEAD` 完全一致；full Go/Python verification、runtime build、local artifact/package smoke 與 package/privacy sweep 均通過。完成證據見 `docs/development-history/go-main-split-completion-20260713.md`。
+
+每個 code-moving gate 的固定驗收：
+
+- gate-specific targeted Go tests。
+- `cd go-shadow && go test ./...`。
+- `pytest tests/ -v`。
+- `git diff --check`，並人工確認 route registration、handler signatures 與 moved function bodies 沒有邏輯 drift。
+- `GMS-03`、`GMS-06`、`GMS-10` 加跑 `scripts/build_go_runtime.ps1`；本 candidate 不以 docs-only 或單次 compile 取代 runtime regression。
+
+明確不做：
+
+- 不把 Go monolith 改成 microservices、Clean Architecture 或多 package layering。
+- 不新增功能、API、schema/migration、dependency、fallback、compat layer、logging/config/cache layer。
+- 不順手整理 `main_test.go`、前端、i18n、bundle warning、Browserslist、installer/updater、release 或 Pi deploy。
+- 不把「一次性 Go runtime 大拆分」從 `Blocked` 改成可施工；本 candidate 只授權上述依序的小 gate。
 
 ### [ ] KNOWLEDGE-WORKFLOW-CANDIDATE-01 Local-first knowledge workspace improvements after Markdown candidate
 
@@ -166,7 +219,7 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 ## Deferred Candidates
 
-- [ ] `DEEP-SCAN-RISK-CANDIDATE-01` 01H 仍是低優先維護 triage（狀態：`Blocked`；需明確 promote 才可施工）。
+- [ ] `DEEP-SCAN-RISK-CANDIDATE-01` 01H 仍是低優先維護 triage（狀態：`Blocked`）：剩餘 frontend bundle/Browserslist warning、歷史 frozen docs/test wording仍需另行 promote；其中 `go-shadow/main.go` route-local 小整理已明確化為 `GO-MAIN-SPLIT-CANDIDATE-01`，但一次性 runtime 大拆分仍 `Blocked`。
 - [ ] Desktop installer/updater/WebView2 bootstrap/shortcut automation（狀態：`Blocked`；需使用者明確需要 installer/updater 類能力）。
 - [ ] Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）（狀態：`Blocked`；只有日後恢復 render，才於該 gate 同步補四語 key）。
 - [ ] Mermaid 圖表渲染（狀態：`Blocked`；只有 `MARKDOWN-SYNTAX-CANDIDATE-01` 的 `MDS-05` 被明確 promote 後才可施工；不得順手導入 heavy renderer）。

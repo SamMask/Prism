@@ -5,6 +5,7 @@
 | Contract | Boundary |
 |---|---|
 | CONTRACT-GO-PRIMARY-TODO-GOVERNANCE | `docs/TODO.md` 只保留 active roadmap、候選 backlog、下一步入口與歸檔索引；`HANDOFF.md` 只保留最短 current state / next entry；歷史 phase、完成紀錄與長版交接快照移入 `docs/development-history/`。 |
+| CONTRACT-GO-MAIN-MECHANICAL-SPLIT | `go-shadow/main.go` 只可在同一個 `package main` 內按既有 bounded context 逐 gate 搬移 declarations；route registration、handler signature、SQL、API response/error、feature flags、schema/migration content、data-dir/file safety、desktop/package/deploy 行為必須保持不變。不得在拆檔中新增 package/service/repository/interface/manager/registry/adapter、dependency、fallback 或 compatibility layer；每個 gate 必須以 targeted Go tests、`go test ./...`、full pytest 與 `git diff --check` 驗證後才可繼續。 |
 | CONTRACT-AGENT-GOVERNANCE-CURRENT-TRUTH | `docs/GOVERNANCE.md` 是 Prism 的完成宣稱、狀態層級、驗證證據、委派與 UI/UX 治理入口；`docs/development-history/governance-source-20260705/` 只能作為素材來源，不得覆蓋 current source/contracts/tests、不得直接升格成 runtime feature、schema/API 變更或 active roadmap。 |
 | CONTRACT-DESKTOP-SHELL-SPIKE | Desktop Shell Phase 0 只能建立 isolated Windows message-loop spike：空 Win32 視窗 + tray icon + 單一 loop；不得接 WebView2、後端、schema/API/runtime、deploy 或 production data。 |
 | CONTRACT-DESKTOP-SHELL-WEBVIEW2-SPIKE | Desktop Shell Phase 1 只能在 Phase 0 message loop proof 上接入 WebView2 placeholder / URL target；不得接 Prism Go server goroutine、schema/API/runtime、deploy、installer、updater 或 production data。 |

@@ -1,8 +1,10 @@
 from pathlib import Path
 
+from tests.go_source_assertions import read_go_package_source
+
 
 ROOT = Path(__file__).resolve().parents[1]
-MAIN_GO = ROOT / "go-shadow" / "main.go"
+GO_SHADOW_DIR = ROOT / "go-shadow"
 WINDOWS_SHELL = ROOT / "go-shadow" / "desktop_shell_windows.go"
 WINDOWS_TEST = ROOT / "go-shadow" / "desktop_shell_windows_test.go"
 BUILD_DESKTOP = ROOT / "scripts" / "build_desktop_shell.ps1"
@@ -21,7 +23,7 @@ def _read(path: Path) -> str:
 
 
 def test_desktop_default_data_dir_is_exe_neighbor_prismdata_without_picker_or_shortcut():
-	main_go = _read(MAIN_GO)
+	main_go = read_go_package_source(GO_SHADOW_DIR)
 	windows_shell = _read(WINDOWS_SHELL)
 
 	assert "defaultDataDir, err := resolveDesktopDataDir" in main_go
@@ -77,7 +79,7 @@ def test_desktop_no_longer_has_first_run_locale_picker():
 
 
 def test_desktop_package_carries_prompt_builder_seed_config():
-    main_go = _read(MAIN_GO)
+    main_go = read_go_package_source(GO_SHADOW_DIR)
     desktop_script = _read(BUILD_DESKTOP)
     portable_script = _read(BUILD_PORTABLE)
 

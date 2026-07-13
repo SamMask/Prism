@@ -35,6 +35,18 @@ C4Context
       UpdateRelStyle(agent, backend, $textColor="green", $lineColor="green")
 ```
 
+## Go Primary Source Layout
+
+Go primary 仍是單一 executable 與單一 `package main`；2026-07-13 完成的 GMS-00..10 只調整 source ownership，不新增 service/package/interface，也不改 route、API、schema、migration、data-dir、desktop、package 或 deploy contract。
+
+- `main.go`：bootstrap、runtime config / SQLite connection ownership、mux registration、middleware 與真正 shared declarations（1,024 physical lines）。
+- `migrations.go`、`backups.go`、`system.go`、`options.go`：DB lifecycle、backup/restore、system/server administration 與 prompt/wizard config。
+- `taxonomy.go`、`attachments.go`、`uploads.go`、`media_cleanup.go`、`image_metadata.go`：taxonomy、attachments、upload/remote-fetch、media cleanup 與 image metadata。
+- `import.go`、`export.go`：JSON/Markdown/import/export/ZIP 與 rollback helpers。
+- `notes_search.go`、`notes_write.go`、`notes_media.go`、`notes_actions.go`：note reads/search、writes、media coupling、actions/history/batch flows。
+
+所有本次新增 bounded-context source files 均不超過 1,500 physical lines。Static regression 必須以整個非測試 Go package source 作為 handler/contract assertion surface；只有 mux registration ownership 仍應直接檢查 `main.go`。
+
 ## Search Read Path
 
 `GET /api/notes?q=...` 維持單一查詢入口：
