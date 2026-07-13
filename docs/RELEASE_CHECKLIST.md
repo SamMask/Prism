@@ -106,3 +106,17 @@ release flow:
 | V2.6.1 asset hash | Passed | `PrismDesktopPortable-v2.6.1.zip`, 21,671,433 bytes, SHA256 `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`. |
 | GitHub Actions / Release read-back | Passed | Run `29274092387` success; annotated tag peels to `80aa35a0d73190c318a78b969b6f51cac74ec3fb`; release asset digest and fresh download SHA256 match `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`. |
 | Pi live deploy | Passed | Cutover artifact SHA256 `7612012cbeb336f15bf9c97d9b162b27541f8f308e31a84245f931e53d0a27e8`; snapshot `/home/mask070924/prism/backups/go-primary-t042-20260714_022829`; runtime 2.6.1/schema v17 clean; full workflow, 5-sample soak, exact label Playwright and console smoke passed. |
+
+## Fresh Validation Record - 2026-07-14 (V2.6.1 About correction reissue)
+
+| Check | Result | Evidence / Notes |
+|---|---|---|
+| About regression and minimal fix | Passed | New assertions cover title, sidebar, and Settings About fallback; both targeted tests failed before the one-line `2.5` to `2.6.1` correction and passed afterward. |
+| `pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1` | Passed | pytest 382 passed in 261.54s; Go tests, mirror, and whitespace gates passed. |
+| Frontend / Go production build | Passed with warnings | 1,520 modules transformed; existing Browserslist-age and 698.58 kB chunk-size warnings only; Windows and linux/arm64 artifacts built. |
+| Browser e2e / visible labels | Passed | 9 Chromium tests passed; Playwright verified title `Prism V2.6.1`, sidebar `V2.6.1`, About `Version: 2.6.1`, and console 0 errors / 0 warnings. |
+| Go artifact/package and desktop smokes | Passed | Local artifact, Windows full-workflow package, and portable clean-unzip smokes passed; packaged runtime returned `2.6.1`. |
+| Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
+| Corrected V2.6.1 asset | Passed | `PrismDesktopPortable-v2.6.1.zip`, 21,671,554 bytes, SHA256 `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`. |
+| GitHub Actions / replacement tag / Release read-back | Pending | Same-version replacement is explicitly authorized; fill after corrected commit is pushed and CI succeeds. |
+| Pi live cutover / soak / About browser smoke | Pending | Must verify the corrected artifact separately under `DEPLOY-PI.md`. |

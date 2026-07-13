@@ -39,9 +39,10 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `PI-V2.6-LIVE`（狀態：`Done`）：V2.6 artifact、snapshot、service ownership、API/UI smoke與 bounded soak全部通過；唯一 non-blocking finding 是 browser title/sidebar brand仍顯示 V2.5。
 - [x] `FRONTEND-LABEL-AND-RESEARCH-ARCHIVE-01`（狀態：`Done`）：browser title / sidebar brand 已對齊 V2.6；2026-07-01 深入研究報告已完成 current-truth resolution 並移至 development-history。本 gate 未重發 release、未部署 Pi。
 - [x] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Done`）：title/sidebar label修正版已發布為 immutable patch release `V2.6.1`並部署到 `PI5Mask24`；Actions、asset read-back、Pi full workflow、5-sample soak與live Playwright labels均通過，既有 `V2.6` tag/asset未重寫。
+- [ ] `V2.6.1-ABOUT-VERSION-CORRECTION`（狀態：`Doing`）：修正 Settings「關於」仍以 `2.5` 作為缺省版本的遺漏；維持產品版本 V2.6.1，補齊 title/sidebar/About 三處一致性驗收，重建並重發同版 GitHub Release、重新部署 Pi 與執行 live smoke/soak。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有 `Doing` item。下一個最低風險入口是 test-only `main_test.go` bounded-context split candidate，不得延伸成 runtime redesign。
+目前唯一 `Doing` item 是 `V2.6.1-ABOUT-VERSION-CORRECTION`。完成後下一個最低風險入口仍是 test-only `main_test.go` bounded-context split candidate，不得延伸成 runtime redesign。
 
 ---
 
@@ -104,6 +105,23 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 ---
 
 ## Open TODO Items
+
+### [ ] V2.6.1-ABOUT-VERSION-CORRECTION Correct the missed Settings About version surface
+
+狀態：`Doing`
+
+來源：2026-07-14 live 使用畫面顯示 browser title 與 sidebar 已是 V2.6.1，但 Settings「關於」仍顯示 2.5。Source 確認 `SettingsPage.tsx` 的 `stats?.version` 缺省值仍硬編碼為 `2.5`；先前 label smoke 只驗 title/sidebar，沒有覆蓋 About tab。
+
+目標與停止條件：
+
+- [x] `A261-00 Regression lock`：source regression已鎖定title `Prism V2.6.1`、sidebar `V2.6.1`、About fallback `2.6.1`，並禁止三處回退到V2.5/2.5；兩個targeted tests在product edit前如預期失敗，edit後通過。
+- [x] `A261-01 Minimal UI correction`：只把Settings About缺省版本從`2.5`修正為`2.6.1`；沒有新增版本管理抽象、dependency、API、schema、migration或產品功能。
+- [x] `A261-02 Fresh local release validation`：full gate 382 pytest + Go tests、frontend/Go build、9 Chromium e2e、Go artifact/package smoke、portable clean-unzip、packaged runtime version、三處Playwright、privacy gates全部通過。Zip 21,671,554 bytes，SHA256 `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`。
+- [ ] `A261-03 Same-version GitHub reissue`：使用者已明確要求維持 V2.6.1 並重發 Release；以修正後 Lore commit 取代 V2.6.1 annotated tag/release asset，確認 Actions、remote tag、GitHub digest與fresh download SHA256一致。既有 V2.6 tag/release不得修改。
+- [ ] `A261-04 Pi redeploy and live verification`：依 `DEPLOY-PI.md` cutover V2.6.1 修正 artifact；驗 Go primary ownership、schema v17 clean、full workflow、5-sample soak，並以 Playwright 實際進入 Settings/About 確認 title/sidebar/About 全為 V2.6.1且console無錯誤。
+- [ ] `A261-05 Closure`：回寫本檔、`HANDOFF.md`、release checklist/history與GitHub Release body；最終 main/tag/release/asset/Pi runtime evidence一致且工作樹乾淨。
+
+邊界：這是同版顯示遺漏修正，不建立 V2.6.2；不改 API/schema/DB/search/auth/exposure boundary，也不動 Pi 上未接 Caddy live 流量的 readonly/staging輔助service。
 
 ### [x] RELEASE-V2.6.1-LABEL-HOTFIX Publish and deploy frontend label fix
 
