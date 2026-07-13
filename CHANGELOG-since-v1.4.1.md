@@ -1,20 +1,20 @@
-# Prism — V1.4.1 → v2.6 重大演進
+# Prism — V1.4.1 → v2.6.1 重大演進
 
-> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-07-14（v2.6）
+> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-07-14（v2.6.1）
 > **目的**：給「只記得 GitHub 上 V1.4.1」的人一份可讀的重點追溯。
-> **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（current release v2.6）
+> **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（current release v2.6.1）
 
 ---
 
 ## 🎯 一句話總結
 
-V1.4.1 是「**個人 Prompt 管理工具**」，v2.6 是「**Go primary 單一 runtime 的個人 Headless 知識中樞 + Windows portable + 樹莓派常駐服務**」。中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線；v2.5 完成 Go primary、desktop portable 與 schema v17，v2.6 補齊 local-first knowledge workflows，並把 Go source 從單一萬行檔收斂成可維護的 bounded-context layout。
+V1.4.1 是「**個人 Prompt 管理工具**」，v2.6.1 是「**Go primary 單一 runtime 的個人 Headless 知識中樞 + Windows portable + 樹莓派常駐服務**」。中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線；v2.5 完成 Go primary、desktop portable 與 schema v17，v2.6 補齊 local-first knowledge workflows並收斂 Go source，v2.6.1 修正 browser title / sidebar release label。
 
 ---
 
 ## 📊 兩個版本快速對照
 
-| 維度 | V1.4.1 | v2.6 |
+| 維度 | V1.4.1 | v2.6.1 |
 |---|---|---|
 | 前端 | Vanilla JS + Tailwind（無 build） | React 18 + TS + Vite + Zustand + Tailwind |
 | 後端 | Flask 單體 + SQLite FTS5 | Go primary REST API + SQLite WAL / FTS5；Python Flask backend source 已移除 |
@@ -71,12 +71,17 @@ Go primary 已是唯一 product runtime；Python Flask backend source 已於 T05
 
 新增完整資料 snapshot script、批次刪除 dry-run preview、批次匯入 collision preview、ReadingView source URL panel、Command Palette 全庫搜尋與本機 Saved Search Workspace。Go primary runtime 行為與 schema v17 不變，但 `go-shadow/main.go` 從 10,246 行降到 1,024 行，附件、taxonomy、migrations、backup/system、import/export、uploads/media 與 notes 依既有責任拆到同一 `package main`。Prism 維持個人筆記庫定位，不加入 `status` / `review_state` / `last_verified_at` 審核工作流。
 
+### 11. Release label hotfix（v2.6.1, 2026-07-14）
+
+修正 browser page title 與 sidebar brand仍顯示 V2.5 的版本漂移，並把 Go runtime fallback、current docs、Windows portable package與 Pi live artifact對齊 2.6.1。沒有 API/schema/search/runtime功能變更。
+
 ---
 
 ## 📅 版本歷程（精簡）
 
 | 版本 | 日期 | 主軸 |
 |---|---|---|
+| **v2.6.1** | 2026-07-14 | Browser title / sidebar brand release-label hotfix；runtime/docs/package/Pi version alignment |
 | **v2.6** | 2026-07-14 | Local-first knowledge workflows、agent-safe previews、source URL、Go bounded-context source layout |
 | **v2.5** | 2026-06-19 | Go primary sole runtime、Windows desktop portable baseline、recent UX gates、schema v17 default category identity split |
 | **v2.4.9** | 2026-05-26 | Sidebar filter navigation：非首頁點分類 / 標籤會回首頁並套用篩選；notes 查詢改送 `category_id` |

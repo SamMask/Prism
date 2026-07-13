@@ -1,6 +1,6 @@
 # Prism 文檔索引 (INDEX)
 
-> **專案版本**: v2.6
+> **專案版本**: v2.6.1
 > **更新日期**: 2026-07-14
 > **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
@@ -60,6 +60,7 @@
 
 | 文件 | 說明 | 狀態 |
 |------|------|------|
+| [2026-07-01-深入研究-deep-research-report-Prism.md](./development-history/2026-07-01-深入研究-deep-research-report-Prism.md) | **產品架構深入研究** — 2026-07-14 已依 current truth 標記完成／吸收、候選與不採用項；原文保留決策脈絡 | 🗄️ 已歸檔 / 已吸收 |
 | [20260619_Prism_深度掃描報告.md](./development-history/20260619_Prism_深度掃描報告.md) | **深度全面掃描** — API、搜尋、DB、檔案、啟動、安全、測試與可維護性檢查；01A-01G 已收斂，01H 保留為低優先維護 triage | 🗄️ 已歸檔 / 已吸收 |
 | [Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | **Go primary 收尾審查** — 唯讀靜態審查原文；T046-T052 已吸收 findings，T053 前作 Python source 封存/刪除 guardrail | 🗄️ 已歸檔 / 已吸收 |
 | [20260412-cco-綜合分析報告.md](./過期/20260412-cco-綜合分析報告.md) | **體檢報告** — Linus-mode 深度審核，列出 P0/P1/P2 問題與「好品味」段落 | ✅ 已完成 v2.4.2 |

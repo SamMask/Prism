@@ -1,6 +1,6 @@
 # Upload Sequence Diagram
 
-> **版本**: v2.6
+> **版本**: v2.6.1
 > **更新日期**: 2026-06-06
 > **注意**: AI Worker (Ollama/CLIP) 段落已於 v2.3.0 移除。
 

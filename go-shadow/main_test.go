@@ -2377,7 +2377,7 @@ func TestPrismVersionIgnoresLegacyConfigPy(t *testing.T) {
 	}
 
 	t.Setenv("PRISM_VERSION", "")
-	if got := prismVersion(); got != "2.6" {
+	if got := prismVersion(); got != "2.6.1" {
 		t.Fatalf("expected compiled version to ignore stale config.py, got %q", got)
 	}
 

@@ -45,7 +45,7 @@ def test_command_palette_server_search_i18n_exists_for_four_locales():
         assert phrase in i18n
 
 
-def test_kwf_01_docs_record_completion_and_next_entry():
+def test_kwf_01_docs_record_completion_and_current_handoff():
     todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
 
@@ -55,4 +55,5 @@ def test_kwf_01_docs_record_completion_and_next_entry():
     assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in todo
     assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
     assert "KWF-01 Command Palette server-side search 已完成" in handoff
-    assert "下一個低風險維護候選是另開 test-only gate" in handoff
+    assert "## Next Entry" in handoff
+    assert "目前沒有未交付的 active construction item" in handoff

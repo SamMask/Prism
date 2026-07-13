@@ -12,11 +12,36 @@ PORTABLE_README_PATH = ROOT / "docs" / "desktop" / "README-PORTABLE.md"
 TODO_HANDOFF_ARCHIVE_PATH = (
     ROOT / "docs" / "development-history" / "todo-handoff-archive-20260619-v2.5-stabilization.md"
 )
+DEEP_RESEARCH_ARCHIVE_PATH = (
+    ROOT
+    / "docs"
+    / "development-history"
+    / "2026-07-01-深入研究-deep-research-report-Prism.md"
+)
+DEEP_RESEARCH_ROOT_PATH = ROOT / "2026-07-01-深入研究-deep-research-report-Prism.md"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
 CI_PATH = ROOT / ".github" / "workflows" / "ci.yml"
 REQ_PATH = ROOT / "requirements.txt"
 REQ_PI_PATH = ROOT / "requirements-pi.txt"
+
+
+def test_v261_release_version_is_aligned_across_current_surfaces():
+    expected_version = "2.6.1"
+    expected_package = "PrismDesktopPortable-v2.6.1.zip"
+
+    assert f'return "{expected_version}"' in _text(ROOT / "go-shadow" / "system.go")
+    assert f"version-{expected_version}-blue" in _text(README_PATH)
+    assert f"version-{expected_version}-blue" in _text(README_ZH_PATH)
+    for path in (
+        README_PATH,
+        README_ZH_PATH,
+        CONTRIBUTING_PATH,
+        PORTABLE_README_PATH,
+    ):
+        assert expected_package in _text(path)
+    assert f"Prism V{expected_version}" in _text(ROOT / "frontend" / "index.html")
+    assert f">V{expected_version}<" in _text(ROOT / "frontend" / "src" / "components" / "Sidebar.tsx")
 
 
 def _text(path: Path) -> str:
@@ -155,3 +180,19 @@ def test_project_review_hygiene_todo_and_handoff_close_01a_to_01e():
     normalized_docs = "\n".join([todo, handoff, archive]).replace("`", "")
     assert "PROJECT-REVIEW-HYGIENE-CANDIDATE-01 01A-01E 已完成 local gate" in normalized_docs
     assert "01H 仍是低優先維護 triage" in todo
+
+
+def test_deep_research_intake_is_resolved_and_archived():
+    assert not DEEP_RESEARCH_ROOT_PATH.exists()
+    assert DEEP_RESEARCH_ARCHIVE_PATH.exists()
+
+    archive = _text(DEEP_RESEARCH_ARCHIVE_PATH)
+    for required in (
+        "Current-truth resolution",
+        "已完成／已吸收",
+        "部分完成／候選",
+        "明確不採用／Blocked",
+        "GO-MAIN-SPLIT-CANDIDATE-01",
+        "個人筆記庫",
+    ):
+        assert required in archive

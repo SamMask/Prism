@@ -89,3 +89,20 @@ release flow:
 | GitHub Actions | Passed | Run `29266735767` completed successfully: https://github.com/SamMask/Prism/actions/runs/29266735767. The only annotation was GitHub Actions' Node 20 action-runtime deprecation warning; build/tests passed. |
 | GitHub Release / asset read-back | Passed | https://github.com/SamMask/Prism/releases/tag/V2.6; tag targets commit `461421db8d6bb21d0adbd58c081047c45e19010e`; GitHub digest, local hash, and freshly downloaded asset hash match. |
 | Pi live deploy | Not-tested | V2.6 GitHub release packaging does not change Pi delivery state. |
+
+## Fresh Validation Record - 2026-07-14 (V2.6.1)
+
+| Check | Result | Evidence / Notes |
+|---|---|---|
+| `pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1` | Passed | `git diff --check` and AGENTS/CLAUDE mirror passed; pytest 382 passed; Go tests passed. |
+| `cd frontend && npm run build` | Passed with warnings | 1,520 modules transformed; existing Browserslist-age and 698.58 kB chunk-size warnings only. |
+| Browser e2e | Passed | `python -m pytest e2e -q` passed 9 Chromium tests against an isolated Go runtime. |
+| Go artifact/package smokes | Passed | `build/go-local-smoke/evidence.json`, `build/go-primary-package-smoke/windows/evidence.json`, and `evidence/full-workflow.json`. |
+| V2.6.1 desktop portable build | Passed | `pwsh ... scripts/build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6.1`. |
+| Windows desktop portable smoke | Passed | Clean-unzip smoke evidence: `build/desktop-portable-smoke/run-5c0ba0acf0f64105ac92d95c24ca21d9/evidence.json`. |
+| Package version/read-back | Passed | Packaged debug executable served `/api/server/version` = `2.6.1` against isolated build data. |
+| Label browser smoke | Passed | Playwright page title `Prism V2.6.1`; sidebar `V2.6.1`; console 0 errors / 0 warnings. |
+| Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
+| V2.6.1 asset hash | Passed | `PrismDesktopPortable-v2.6.1.zip`, 21,671,433 bytes, SHA256 `7312213255770862BBFD057C568F70AC2F65DB7662CFDCAFC187552A298BD550`. |
+| GitHub Actions / Release read-back | Pending after push | Must be updated from the actual run, tag, uploaded digest, and fresh download before external closure. |
+| Pi live deploy | Pending after release | Must follow `DEPLOY-PI.md`; GitHub release validation does not substitute for Pi service/migration/browser evidence. |

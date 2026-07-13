@@ -45,7 +45,7 @@ def test_kwf02_saved_search_workspace_renders_save_restore_and_delete_controls()
         assert phrase in i18n
 
 
-def test_kwf02_docs_close_saved_search_and_keep_current_next_entry():
+def test_kwf02_docs_close_saved_search_and_keep_current_handoff():
     todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
 
@@ -54,4 +54,5 @@ def test_kwf02_docs_close_saved_search_and_keep_current_next_entry():
     assert "沒有新增 DB migration、Go API、semantic search、auth 或 Pi deploy" in todo
     assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
     assert "KWF-02 Saved Search / Search Workspace 已完成" in handoff
-    assert "下一個低風險維護候選是另開 test-only gate" in handoff
+    assert "## Next Entry" in handoff
+    assert "目前沒有未交付的 active construction item" in handoff

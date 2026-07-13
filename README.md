@@ -5,7 +5,7 @@
 > Local-first, offline-capable personal knowledge management and prompt tooling.
 > Current release path: Go primary runtime, Raspberry Pi service deployment, and Windows desktop portable zip.
 
-![Version](https://img.shields.io/badge/version-2.6-blue)
+![Version](https://img.shields.io/badge/version-2.6.1-blue)
 ![Runtime](https://img.shields.io/badge/runtime-Go%20primary-green)
 ![Frontend](https://img.shields.io/badge/react-18-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
@@ -24,7 +24,7 @@ Prism stores your notes, prompts, attachments, tags, and history in a local SQLi
 
 Use the latest GitHub Release asset:
 
-- `PrismDesktopPortable-v2.6.zip` - Windows desktop portable package
+- `PrismDesktopPortable-v2.6.1.zip` - Windows desktop portable package
 
 Public release, tag, and portable package claims should include fresh validation
 evidence from [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md). Missing
@@ -47,18 +47,18 @@ Mark-of-the-Web (`Zone.Identifier`), so Microsoft Defender SmartScreen can show
 "Windows protected your PC" with an unknown publisher. This is expected for the
 unsigned portable build.
 
-Verify the V2.6 release zip against the SHA256 listed in the GitHub Release
+Verify the V2.6.1 release zip against the SHA256 listed in the GitHub Release
 notes before running it:
 
 ```powershell
-Get-FileHash .\PrismDesktopPortable-v2.6.zip -Algorithm SHA256
+Get-FileHash .\PrismDesktopPortable-v2.6.1.zip -Algorithm SHA256
 ```
 
 After verifying the hash, use **More info** / **Run anyway**, or remove
 Mark-of-the-Web:
 
 ```powershell
-Unblock-File .\PrismDesktopPortable-v2.6.zip
+Unblock-File .\PrismDesktopPortable-v2.6.1.zip
 # or, after extraction:
 Get-ChildItem . -Recurse -File | Unblock-File
 ```
@@ -67,7 +67,7 @@ Get-ChildItem . -Recurse -File | Unblock-File
 
 ### Windows Portable
 
-1. Download `PrismDesktopPortable-v2.6.zip` from Releases.
+1. Download `PrismDesktopPortable-v2.6.1.zip` from Releases.
 2. Extract it anywhere.
 3. Double-click `Prism.exe`.
 
@@ -191,7 +191,7 @@ without SSH, Pi, production DB, uploads, or private-path dependencies.
 Build the Windows portable package:
 
 ```powershell
-.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6.1
 ```
 
 ## License

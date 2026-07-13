@@ -809,7 +809,7 @@ Response：
 
 ```json
 {
-  "current_version": "2.6",
+  "current_version": "2.6.1",
   "latest_version": "v2.7.0",
   "has_update": true,
   "release_url": "https://github.com/.../releases/tag/V2.7",

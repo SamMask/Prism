@@ -31,13 +31,18 @@
 - 2026-07-13 `GO-MAIN-SPLIT-CANDIDATE-01` / GMS-00..10 已完成：`go-shadow/main.go` 從 10,246 行降到 1,024 行；attachments、taxonomy、migrations、backup/system/options、import/export、uploads/media 與 notes 已依既有責任分到同一 `package main` 的 bounded-context files，沒有新增 package/dependency/API/schema/migration 或 deploy 行為。
 - Go split fresh verification：425 個 top-level declarations AST 比對一致；`cd go-shadow && go test ./...` passed；targeted Go groups passed；`pytest tests/ -v` 379 passed；`scripts/build_go_runtime.ps1` passed；local artifact 與 Windows full-workflow package smoke passed。長版證據見 `docs/development-history/go-main-split-completion-20260713.md`；本輪未部署 Pi、未建立 release/tag。
 - V2.6 release（2026-07-14）已完成：fresh verify gate 379 pytest + Go tests passed，frontend build passed with existing warnings，browser e2e 9 passed，Go artifact/package與 desktop clean-unzip smokes passed；GitHub Actions run `29266735767` passed。`PrismDesktopPortable-v2.6.zip` size 21,671,334 bytes，SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`；GitHub digest與重新下載 hash一致，privacy sweep passed。
+- V2.6 Pi live deploy（2026-07-14）已完成：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed，artifact SHA256 `e650c5a0990d4ed36308d83a06c453b545cb50bb1da7a05b7c42986989685a36`，snapshot `/home/mask070924/prism/backups/go-primary-t042-20260714_010616`。Go active/enabled、legacy `prism.service` inactive/disabled、Caddy active；runtime version 2.6、migration v17 clean、T042 full workflow、5-sample soak、Playwright Home/Search Workspace/Command Palette server search與 browser console均通過。長版證據：`docs/development-history/v2.6-pi-live-deploy-20260714.md`。
+- 2026-07-14 frontend label / research archive gate 已完成：`frontend/index.html` browser title 與 `Sidebar.tsx` brand 均改為 V2.6；2026-07-01 深入研究報告已依 current truth分成已完成／已吸收、候選與不採用事項，歸檔至 `docs/development-history/2026-07-01-深入研究-deep-research-report-Prism.md`。
+- Label/archive fresh verification：36 個相關 pytest與完整 `pytest tests/ -v` 381 passed；`scripts/build_go_runtime.ps1` passed（含 frontend production build與 Go tests）；隔離 Go runtime Playwright smoke確認 Page Title `Prism V2.6`、sidebar `V2.6`、console 0 errors / 0 warnings。
+- 已發布 V2.6 GitHub asset與 Pi live仍是 label 修正前 artifact，所以目前 Pi畫面仍顯示 V2.5；本 gate沒有重發 release或部署 Pi。若要對外送出修正，另開 republish/redeploy gate，不能只手改 live Pi。
 - Product decision（2026-07-14）：Prism 維持個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata 或 schema v18 workflow；除非用途改變，不得重新 promote。
 
 ## Next Entry
 
 目前沒有未交付的 active construction item。
 
-- 下一個低風險維護候選是另開 test-only gate，把 4,049 行的 `go-shadow/main_test.go` 依目前 bounded-context source layout 拆檔；不得在搬測試時改 fixture、coverage 或 runtime behavior。
+- 下一個最低風險候選是另開 test-only gate，把 4,049 行的 `go-shadow/main_test.go` 依目前 bounded-context source layout 拆檔；不得在搬測試時改 fixture、coverage 或 runtime behavior。
+- 若要讓 GitHub portable與 Pi live顯示 V2.6 label fix，必須依 `docs/RELEASE_CHECKLIST.md` 另開 patch republish/redeploy gate；不要修改既有 tag，也不要只手改 live Pi。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。
 - 若要繼續 Markdown 重型支援，只能明確 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 Mermaid decision gate 或 syntax-highlighting dependency review；KaTeX / ABC 目前凍結為備選，不要順手導入 schema/API 變更。
 - 若要處理 governance、完成宣稱、委派或 UI/UX policy，先讀 `docs/GOVERNANCE.md`；需要追溯來源時讀 `docs/development-history/governance-source-20260705/`。

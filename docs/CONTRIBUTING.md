@@ -126,14 +126,14 @@ npm run build
 
 ## 打包發布 (Packaging)
 
-> **狀態說明**: v2.6 的穩定主線是 Go primary runtime artifact、Raspberry Pi `prism-go-primary.service` 部署，以及 Windows desktop portable zip。PyInstaller / embedded Python portable path 已由 T045 移除。
+> **狀態說明**: v2.6.1 的穩定主線是 Go primary runtime artifact、Raspberry Pi `prism-go-primary.service` 部署，以及 Windows desktop portable zip。PyInstaller / embedded Python portable path 已由 T045 移除。
 > T052 後，repo 不再追蹤 embedded Python zip、Pillow wheel 或 root empty `package-lock.json`；前端 lockfile 只在 `frontend/package-lock.json`。
 
 ### 版本號 (Single Source of Truth)
 
 ```go
 // go-shadow/system.go
-return "2.6"
+return "2.6.1"
 ```
 
 > ⚠️ **發版前必檢**：Go runtime fallback version、root `README.md` / `README.zh-TW.md` badge、release tag 與 release asset 命名必須同步。
@@ -147,12 +147,12 @@ cd frontend
 npm run build
 
 # 2. 建置 Windows desktop portable package
-.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6.1
 ```
 
 | 產出 | 說明 |
 |------|------|
-| `PrismDesktopPortable-v2.6.zip` | Windows desktop portable package；不包含 DB、uploads、attachments 或 embedded Python runtime |
+| `PrismDesktopPortable-v2.6.1.zip` | Windows desktop portable package；不包含 DB、uploads、attachments 或 embedded Python runtime |
 
 ### Release Checklist（每次發版前必確認）
 

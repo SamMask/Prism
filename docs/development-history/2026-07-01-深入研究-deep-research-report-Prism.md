@@ -1,5 +1,39 @@
 # Prism 深入研究與產品架構審查
 
+## Current-truth resolution（2026-07-14）
+
+**歸檔狀態：已完成研究 intake 與現況對照，本文自此只保留為歷史研究與決策脈絡，不是 current authority。** 原文內的外部引用與當時行數，是 2026-07-01 研究快照；現況以 `docs/TODO.md`、`HANDOFF.md`、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`、runtime source 與 regression tests 為準。
+
+### 已完成／已吸收
+
+- **P1 大檔拆分**：`GO-MAIN-SPLIT-CANDIDATE-01` / GMS-00～GMS-10 已完成。`go-shadow/main.go` 由 10,246 行降至 1,024 行，維持同一 `package main`、route registration 與 runtime/API/schema 行為不變。
+- **P5 備份語義**：server backup 已在 API / deploy 文件明確定義為 DB-only；`scripts/export_full_data_snapshot.ps1` 另提供含 DB/WAL、uploads、attachments、notes、config 與 SHA256 manifest 的 full data snapshot。
+- **P12 安全邊界**：Go primary 已有 Origin/Referer CSRF 保護，Settings 與 current docs 已明示 localhost、trusted LAN/VPN 與 authenticated reverse proxy 邊界；Prism 仍無內建 auth/token layer。
+- **P13 / P14 文件 current truth**：active roadmap、交接、schema/API current truth 與長版歷史已分流到 `docs/development-history/`，舊 release 與 prototype 不再作 runtime authority。
+- **P16 category identity**：`system_key` / `name_override` 已有 fresh-init、migration、rename/display 與 import/export regression 保護。
+- **P19 單一作者知識吸收**：`docs/GOVERNANCE.md`、`docs/CONTRACTS.md`、`HANDOFF.md` 與歸檔機制已成為持續維護入口；不因此引入協作審核流程。
+- **P20 desktop spike 邊界**：`desktop-spike` 已被標示為歷史 proof，current desktop owner 是 Go primary same-process runtime / Windows shell。
+
+### 部分完成／候選
+
+- **P2 / P6 API capability surface**：`/api/server/*` 已有 localhost-only 限制與文件說明，但沒有新增 reader/editor/admin profile。這是候選架構決策，不是本次歸檔後的自動任務。
+- **P3 / P15 search explainability**：純關鍵字搜尋範圍已擴充，但 per-result `match_source` / snippet / attachment-hit 解釋仍未實作；若 promote 會涉及 API 與 UI contract。
+- **P4 import/export symmetry**：full snapshot、import dry-run 與 collision preview 已補強，但 deterministic Prism Markdown round-trip 仍是候選項。
+- **P7 API contract generation**：Go / Python contract regression 與 route manifest 已大幅擴充，但沒有導入 OpenAPI / JSON Schema codegen。
+- **P8 / P9 / P10 frontend state**：搜尋觸發方式、`hasMore` 的固定 20 判定，以及單一 Zustand store 分層，仍只是低優先維護候選。
+- **P11 restart UX**：API service 已有 `waitForHealthy()` helper，但 current UI 仍使用固定 5 秒 reload，因此不得標記完成。
+- **P17 Settings 複雜度**：現行控制項仍保留；只有出現具體使用問題時才另開小幅 UX gate，不做大改版。
+- **P18 portable friction**：unsigned / SmartScreen / hash / `Unblock-File` 說明已補齊，但 code signing、installer 與 updater 仍是 blocked decision gate。
+
+### 明確不採用／Blocked
+
+- **個人筆記庫不採用審核工作流**：Inbox / Review / Evergreen lifecycle，以及 `status`、`review_state`、`last_verified_at` 等 review metadata 不列入 roadmap，避免干擾個人筆記使用；除非產品用途日後明確變更。
+- **維持現有產品邊界**：AI/ML、embedding / semantic search、GraphRAG、auto-writing、cloud sync、multi-user/RBAC、collaboration、內建 public-internet auth、自動 updater 與 heavy renderer 不因本報告被重新開啟。
+
+### 本次同步修正
+
+- Browser page title 與 sidebar brand 已由 V2.5 對齊 V2.6；這是 frontend source / local build 修正，不代表已重發 GitHub Release 或重新部署 Pi。
+
 ## 一頁式總結
 
 先講判斷：**Prism 現在最像的，不是 Obsidian/Logseq 那種 file-first PKM，也不是 AnythingLLM/Khoj 那種 AI-first knowledge chat；它更像一個本機優先、SQLite 為核心、可被其他工具呼叫的「個人知識層」與 card-oriented local API server，外加一個可攜 Windows shell。**這個定位其實有價值，而且已經比很多「想做很多事」的知識工具更清楚。README、架構文件與目前路由面都把它描述成 Go primary runtime + React SPA + SQLite/FTS5 + local file storage；外部工具透過 REST API 使用 Prism，而不是把 Prism 做成雲端協作平台。citeturn37view1turn39view0turn17view2

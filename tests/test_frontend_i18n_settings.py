@@ -1,6 +1,7 @@
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+FRONTEND_INDEX_PATH = ROOT / "frontend" / "index.html"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 STORE_PATH = ROOT / "frontend" / "src" / "stores" / "appStore.ts"
 HOOK_PATH = ROOT / "frontend" / "src" / "hooks" / "useTranslation.ts"
@@ -39,6 +40,16 @@ DESKTOP_I18N_ARCHIVE_PATH = (
     / "development-history"
     / "desktop-backup-i18n-handoff-20260617.md"
 )
+
+
+def test_v261_browser_title_and_sidebar_brand_are_aligned():
+    frontend_index = FRONTEND_INDEX_PATH.read_text(encoding="utf-8")
+    sidebar = SIDEBAR_PATH.read_text(encoding="utf-8")
+
+    assert "<title>Prism V2.6.1</title>" in frontend_index
+    assert "Prism V2.5" not in frontend_index
+    assert ">V2.6.1<" in sidebar
+    assert ">V2.5<" not in sidebar
 
 
 def test_i18n_exposes_four_locales_and_pure_translate_api():

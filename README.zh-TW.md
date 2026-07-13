@@ -5,7 +5,7 @@
 > 本地優先、離線可用的個人知識中樞與 Prompt 工具。
 > 目前發行主路徑：Go primary runtime、Raspberry Pi service 部署、Windows desktop portable zip。
 
-![Version](https://img.shields.io/badge/version-2.6-blue)
+![Version](https://img.shields.io/badge/version-2.6.1-blue)
 ![Runtime](https://img.shields.io/badge/runtime-Go%20primary-green)
 ![Frontend](https://img.shields.io/badge/react-18-61dafb)
 ![License](https://img.shields.io/badge/license-MIT-yellow)
@@ -24,7 +24,7 @@ Prism 把筆記、Prompt、附件、標籤與歷史版本存在本機 SQLite。�
 
 請使用最新 GitHub Release asset：
 
-- `PrismDesktopPortable-v2.6.zip` - Windows desktop portable package
+- `PrismDesktopPortable-v2.6.1.zip` - Windows desktop portable package
 
 public release、tag 與 portable package 宣稱都應附上
 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md) 的新鮮驗證證據；
@@ -47,16 +47,16 @@ Portable package 內容：
 SmartScreen 可能顯示「Windows 已保護您的電腦」與「不明的發行者」。這是
 unsigned portable build 的預期行為。
 
-執行前請先用 GitHub Release notes 內列出的 SHA256 核對 V2.6 release zip：
+執行前請先用 GitHub Release notes 內列出的 SHA256 核對 V2.6.1 release zip：
 
 ```powershell
-Get-FileHash .\PrismDesktopPortable-v2.6.zip -Algorithm SHA256
+Get-FileHash .\PrismDesktopPortable-v2.6.1.zip -Algorithm SHA256
 ```
 
 hash 正確後，可按 **其他資訊** / **仍要執行**，或先移除 Mark-of-the-Web：
 
 ```powershell
-Unblock-File .\PrismDesktopPortable-v2.6.zip
+Unblock-File .\PrismDesktopPortable-v2.6.1.zip
 # 或已解壓後，在解壓資料夾內執行：
 Get-ChildItem . -Recurse -File | Unblock-File
 ```
@@ -65,7 +65,7 @@ Get-ChildItem . -Recurse -File | Unblock-File
 
 ### Windows Portable
 
-1. 從 Releases 下載 `PrismDesktopPortable-v2.6.zip`。
+1. 從 Releases 下載 `PrismDesktopPortable-v2.6.1.zip`。
 2. 解壓到任意資料夾。
 3. 雙擊 `Prism.exe`。
 
@@ -187,7 +187,7 @@ verification gate；不依賴 SSH、Pi、production DB、uploads 或 private pat
 建置 Windows portable package：
 
 ```powershell
-.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6.1
 ```
 
 ## 授權
