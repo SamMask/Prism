@@ -34,9 +34,10 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）：已補刪卡片 / 批次刪除確認框與 Settings「清理未使用圖片」copy；runtime 已有 reference-counted cleanup，本輪未改 Go delete/media cleanup semantics。
 - [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；2026-07-08 已通過 local release validation 並部署到 Pi live；未做 auth、semantic search 或 schema migration。
 - [x] `GO-MAIN-SPLIT-CANDIDATE-01`（狀態：`Done`）：`GMS-00` 到 `GMS-10` 已完成同 package mechanical extraction；`main.go` 從 10,246 行降到 1,024 行，所有新 bounded-context 檔案均不超過 1,500 行，runtime/API/schema 行為未變。
+- [ ] `RELEASE-V2.6`（狀態：`Doing`）：發布 2026-07-08 KWF improvements 與 2026-07-13 Go source decomposition；依 release checklist 執行 version/package/smoke/privacy/tag/push/Actions/asset gates。本輪不部署 Pi。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有 `Doing` item。`GO-MAIN-SPLIT-CANDIDATE-01` 已完成；下一個建議入口是 release/tag/package decision，不要把本機 package smoke 或既有 Pi live deploy 視為 GitHub release asset 自動完成。
+目前唯一 `Doing` item 是 `RELEASE-V2.6`；release commit/tag、push、GitHub Actions 與 portable asset 必須逐層驗證，不要把本機 package smoke 或既有 Pi live deploy 視為 GitHub release asset 自動完成。
 
 ---
 
@@ -152,9 +153,9 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 - 不順手整理 `main_test.go`、前端、i18n、bundle warning、Browserslist、installer/updater、release 或 Pi deploy。
 - 不把「一次性 Go runtime 大拆分」從 `Blocked` 改成可施工；本 candidate 只授權上述依序的小 gate。
 
-### [ ] KNOWLEDGE-WORKFLOW-CANDIDATE-01 Local-first knowledge workspace improvements after Markdown candidate
+### [x] KNOWLEDGE-WORKFLOW-CANDIDATE-01 Local-first knowledge workspace improvements after Markdown candidate
 
-狀態：`Todo`
+狀態：`Done`
 
 來源：2026-07-05 使用者貼上的 ChatGPT 優先序建議；依 Prism current docs/source 實際狀態評估後吸收到 TODO。Markdown syntax support 仍列優先，本 candidate 排在 Markdown 之後。
 
@@ -172,7 +173,7 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 - [x] `KWF-04 Agent-safe write guards`（狀態：`Done`）：`POST /api/notes/batch/delete` 支援 `dry_run: true` destructive preview，回報 requested / deletable / missing / image / attachment counts 與 note title preview；前端批次刪除 confirm 先呼叫 dry-run，再執行真正 batch delete。這不是 auth，不得宣稱能安全 public exposure。
 - [x] `KWF-05 Import dry-run / collision preview`（狀態：`Done`）：Settings 批次 Markdown/TXT 匯入在寫入前顯示本機 dry-run preview，回報 create / duplicate collision / unsupported counts；仍只用既有 `.md` 單檔 import endpoint 與 `.txt` 前端讀檔建立 note，不新增 watcher、sync daemon 或 server-side batch import API。
 - [x] `KWF-06 Source URL panel`（狀態：`Done`）：ReadingView 右側欄利用既有 note `urls` 顯示 source URL panel，包含 domain 顯示、原 URL、duplicate URL detection；未做 web clipper、外網 title fetch 或 link health background check。
-- [x] `KWF-07 Knowledge quality metadata decision gate`（狀態：`Done`）：已收斂為 schema v18 decision gate；`status / review_state / last_verified_at` 仍需要未來明確 schema migration / docs / tests gate。本輪沒有修改 `docs/SCHEMA.md` 的 current Migration v17，也沒有新增 DB 欄位或 migration。
+- [x] `KWF-07 Knowledge quality metadata decision gate`（狀態：`Done`）：2026-07-14 使用者決策為不採用 `status / review_state / last_verified_at` 與 schema v18 審核工作流。Prism 是個人筆記庫，不需要內容審核狀態干擾；除非產品用途明確改變，否則不得重新 promote 此 metadata/schema gate。`docs/SCHEMA.md` 維持 current Migration v17。
 
 不採納 / deferred：
 
@@ -230,7 +231,14 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 ## Release / GitHub / Pi Maintenance
 
-- [ ] Release / GitHub maintenance（狀態：`Blocked`）：目前沒有未交付的 release construction item。若要重新發佈或更新 V2.5 以後的版本，先依 `docs/RELEASE_CHECKLIST.md` 重跑 fresh evidence，再 commit / tag / package；push 後必須確認 GitHub Actions workflow 綠燈。
+- [ ] `RELEASE-V2.6`（狀態：`Doing`）：使用者已明確授權 GMS commit 與 V2.6 release/tag/package/push。
+  - [x] `R26-00 GMS closure commit`（狀態：`Done`）：GMS mechanical split 已提交為 `b9955c6`；非本次 scope 的既有 TODO checkbox 保留到 release docs normalization。
+  - [x] `R26-01 Version and release wording`（狀態：`Done`）：current runtime fallback、tests、README、portable README、docs index/API/packaging wording與 changelog已更新到 2.6；歷史 v2.5 evidence/contracts 未改寫。
+  - [x] `R26-02 Full local verification`（狀態：`Done`）：`.loop/verify-gate.ps1` passed（pytest 379 passed、Go tests passed、mirror/diff passed）；frontend build passed with existing warnings；隔離 Go runtime 下 browser e2e 9 passed。
+  - [x] `R26-03 Portable/package/privacy gate`（狀態：`Done`）：local artifact、Go full-workflow package、desktop clean-unzip smoke passed；zip 7 entries、21,671,334 bytes、privacy sweep passed，SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`。
+  - [ ] `R26-04 Release commit/tag/push`（狀態：`Doing`）：建立 Lore release commit與 annotated `V2.6` tag，push `main` 與 tag；不得 force push。
+  - [ ] `R26-05 GitHub validation and asset`（狀態：`Todo`）：確認 GitHub Actions 綠燈後建立 GitHub Release、上傳 portable zip，read-back tag/commit/asset/hash。
+  - [ ] `R26-06 Evidence closure`（狀態：`Todo`）：把 Actions/release URL 與 final evidence 寫回 HANDOFF/TODO/history，再建立 closure commit並 push；本輪不做 Pi deploy。
 - [x] Pi delivery（狀態：`Done`）：2026-07-08 已依 `DEPLOY-PI.md` 使用 Go primary live ops Cutover 部署到 `PI5Mask24`。驗證：`prism-go-primary.service` active、legacy `prism.service` inactive、migration current/latest v17 pending empty、`/api/server/version` version `2.5`、batch delete dry-run API success、served JS contains batch preview / import preview / source URL panel hooks。Pi delivery 不是 release notes / GitHub asset 的自動副作用；未來任何 Pi 上線仍需另開 gate 重跑 service / migration / changed endpoint / UI evidence。
 
 ---

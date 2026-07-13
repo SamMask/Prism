@@ -72,3 +72,18 @@ release flow:
 - Do not claim public-internet readiness; Prism still has no built-in auth/token layer.
 - Do not publish a portable package until WebView2 behavior and the desktop smoke result are recorded.
 - If any required row is `Not-tested`, describe that gap in the release notes instead of implying full validation.
+
+## Fresh Validation Record - 2026-07-14 (V2.6)
+
+| Check | Result | Evidence / Notes |
+|---|---|---|
+| `pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1` | Passed | `git diff --check` and AGENTS/CLAUDE mirror passed; pytest 379 passed; Go tests passed. |
+| `cd frontend && npm run build` | Passed with warnings | 1,520 modules transformed; existing Browserslist-age and 698.58 kB chunk-size warnings only. |
+| Browser e2e | Passed after prerequisite correction | Initial run failed only because localhost:5000 was not running. Started isolated Go runtime under `build/e2e-browser-smoke-v26/`; rerun `python -m pytest e2e -q` passed 9 tests. |
+| Go artifact/package smokes | Passed | `build/go-local-smoke/evidence.json`, `build/go-primary-package-smoke/windows/evidence.json`, and `evidence/full-workflow.json`. |
+| V2.6 desktop portable build | Passed | `pwsh ... scripts/build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6`. |
+| Windows desktop portable smoke | Passed | Clean-unzip smoke evidence: `build/desktop-portable-smoke/run-3032cf1f8b8d445f948b9ad02125a516/evidence.json`. |
+| Package version/read-back | Passed | Packaged debug executable served `/api/server/version` = `2.6` against isolated build data. |
+| Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
+| V2.6 asset hash | Passed | `PrismDesktopPortable-v2.6.zip`, 21,671,334 bytes, SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`. |
+| Pi live deploy | Not-tested | V2.6 GitHub release packaging does not change Pi delivery state. |

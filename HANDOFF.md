@@ -30,6 +30,8 @@
 - Pi live deploy（2026-07-08）已完成：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed，evidence `build/go-primary-live/pi/evidence.json`；`prism-go-primary.service` active、legacy `prism.service` inactive、`/api/system/migration-status` current/latest v17 且 pending empty、`/api/server/version` version `2.5`；live batch delete dry-run returned `status: success` without deletion，served JS `/assets/index-DqUfa497.js` contains `previewBatchDeleteNotes`、`bulk-import-dry-run-preview`、`reading-source-url-panel`。
 - 2026-07-13 `GO-MAIN-SPLIT-CANDIDATE-01` / GMS-00..10 已完成：`go-shadow/main.go` 從 10,246 行降到 1,024 行；attachments、taxonomy、migrations、backup/system/options、import/export、uploads/media 與 notes 已依既有責任分到同一 `package main` 的 bounded-context files，沒有新增 package/dependency/API/schema/migration 或 deploy 行為。
 - Go split fresh verification：425 個 top-level declarations AST 比對一致；`cd go-shadow && go test ./...` passed；targeted Go groups passed；`pytest tests/ -v` 379 passed；`scripts/build_go_runtime.ps1` passed；local artifact 與 Windows full-workflow package smoke passed。長版證據見 `docs/development-history/go-main-split-completion-20260713.md`；本輪未部署 Pi、未建立 release/tag。
+- V2.6 release candidate local gate（2026-07-14）已完成：runtime/readmes/docs 已對齊 2.6；fresh verify gate 379 pytest + Go tests passed，frontend build passed with existing warnings，browser e2e 9 passed，Go artifact/package與 desktop clean-unzip smokes passed。`PrismDesktopPortable-v2.6.zip` SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`，privacy sweep passed；GitHub commit/tag/Actions/release asset 尚待完成。
+- Product decision（2026-07-14）：Prism 維持個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata 或 schema v18 workflow；除非用途改變，不得重新 promote。
 
 ## Next Entry
 

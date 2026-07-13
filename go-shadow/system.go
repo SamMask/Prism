@@ -900,5 +900,5 @@ func prismVersion() string {
 	if value := strings.TrimSpace(os.Getenv("PRISM_VERSION")); value != "" {
 		return value
 	}
-	return "2.5"
+	return "2.6"
 }

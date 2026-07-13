@@ -1,20 +1,20 @@
-# Prism — V1.4.1 → v2.5 重大演進
+# Prism — V1.4.1 → v2.6 重大演進
 
-> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-06-19（v2.5 本地 / Pi）
+> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-07-14（v2.6）
 > **目的**：給「只記得 GitHub 上 V1.4.1」的人一份可讀的重點追溯。
-> **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（仍停在 V1.4.1）
+> **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（current release v2.6）
 
 ---
 
 ## 🎯 一句話總結
 
-V1.4.1 是「**個人 Prompt 管理工具**」，v2.5 是「**Go primary 單一 runtime 的個人 Headless 知識中樞 + Windows portable + 樹莓派常駐服務**」。中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線；v2.4.8–v2.4.9 收斂 Preview / Sidebar 工作流，v2.5 則完成 Go primary、desktop portable、schema v17 category identity 與近期 UX 穩定化。
+V1.4.1 是「**個人 Prompt 管理工具**」，v2.6 是「**Go primary 單一 runtime 的個人 Headless 知識中樞 + Windows portable + 樹莓派常駐服務**」。中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線；v2.5 完成 Go primary、desktop portable 與 schema v17，v2.6 補齊 local-first knowledge workflows，並把 Go source 從單一萬行檔收斂成可維護的 bounded-context layout。
 
 ---
 
 ## 📊 兩個版本快速對照
 
-| 維度 | V1.4.1 | v2.5 |
+| 維度 | V1.4.1 | v2.6 |
 |---|---|---|
 | 前端 | Vanilla JS + Tailwind（無 build） | React 18 + TS + Vite + Zustand + Tailwind |
 | 後端 | Flask 單體 + SQLite FTS5 | Go primary REST API + SQLite WAL / FTS5；Python Flask backend source 已移除 |
@@ -67,12 +67,17 @@ Preview 模式從純閱讀面板變成可互動編輯面：文字區塊可在 Pr
 
 Go primary 已是唯一 product runtime；Python Flask backend source 已於 T053 移除。Windows desktop portable 走 `Prism.exe` + exe 同層 `PrismData\`，Pi live 走 `prism-go-primary.service` + Caddy。近期完成 Reading workspace、Image lightbox、Header starred tags、Batch Markdown/txt import、Note list lightweight payload、Variant attachment preservation、Version 2.5 display，以及 migration v17 的 default category identity split（`system_key` / `name_override`）。本線仍不新增 AI、semantic search、多使用者 auth 或雲端同步。
 
+### 10. Local-first workflows / Go source maintainability（v2.6, 2026-07-14）
+
+新增完整資料 snapshot script、批次刪除 dry-run preview、批次匯入 collision preview、ReadingView source URL panel、Command Palette 全庫搜尋與本機 Saved Search Workspace。Go primary runtime 行為與 schema v17 不變，但 `go-shadow/main.go` 從 10,246 行降到 1,024 行，附件、taxonomy、migrations、backup/system、import/export、uploads/media 與 notes 依既有責任拆到同一 `package main`。Prism 維持個人筆記庫定位，不加入 `status` / `review_state` / `last_verified_at` 審核工作流。
+
 ---
 
 ## 📅 版本歷程（精簡）
 
 | 版本 | 日期 | 主軸 |
 |---|---|---|
+| **v2.6** | 2026-07-14 | Local-first knowledge workflows、agent-safe previews、source URL、Go bounded-context source layout |
 | **v2.5** | 2026-06-19 | Go primary sole runtime、Windows desktop portable baseline、recent UX gates、schema v17 default category identity split |
 | **v2.4.9** | 2026-05-26 | Sidebar filter navigation：非首頁點分類 / 標籤會回首頁並套用篩選；notes 查詢改送 `category_id` |
 | **v2.4.8** | 2026-05-26 | Preview Editing UX：Preview 可就地編輯文字區塊、移除 Markdown / HTML 圖片引用，並共用圖片引用移除 helper |

@@ -1,6 +1,6 @@
-# Entity Relationship Diagram (Prism v2.5 / Migration v17)
+# Entity Relationship Diagram (Prism v2.6 / Migration v17)
 
-> **版本**: v2.5 (Migration v17)
+> **版本**: v2.6 (Migration v17)
 > **更新日期**: 2026-06-19
 > **注意**: 本圖以 `docs/SCHEMA.md` 的現行 Go primary schema 為準。AI 相關欄位與 `Embeddings` / `AI_Tasks` 已於 v14 移除；五個系統分類身份已於 v17 改由 `Categories.system_key` 表示，使用者改名只寫 `name_override`。
 

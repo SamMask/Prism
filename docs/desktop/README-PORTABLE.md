@@ -15,18 +15,18 @@ Windows may attach a `Zone.Identifier` Mark-of-the-Web stream to the zip and
 extracted files. Microsoft Defender SmartScreen can then show "Windows protected
 your PC" and list the publisher as unknown.
 
-For the V2.5 GitHub Release, verify the downloaded zip hash against the SHA256
+For the V2.6 GitHub Release, verify the downloaded zip hash against the SHA256
 listed in the GitHub Release notes before running it:
 
 ```powershell
-Get-FileHash .\PrismDesktopPortable-v2.5.zip -Algorithm SHA256
+Get-FileHash .\PrismDesktopPortable-v2.6.zip -Algorithm SHA256
 ```
 
 After verifying the hash, either click **More info** / **Run anyway** in the
 SmartScreen prompt, or remove Mark-of-the-Web before running:
 
 ```powershell
-Unblock-File .\PrismDesktopPortable-v2.5.zip
+Unblock-File .\PrismDesktopPortable-v2.6.zip
 ```
 
 If the package is already extracted, run this inside the extracted folder:

@@ -164,7 +164,7 @@ def test_t032_server_status_gate_and_system_shapes(temp_db, tmp_path):
 
         status, payload, _ = _request_json(base, "/api/server/version")
         assert status == 200
-        assert payload["data"]["version"] == "2.5"
+        assert payload["data"]["version"] == "2.6"
         assert payload["data"]["go_runtime"]["api_surface"] == "get-read-only+local-server-system"
 
         status, payload, _ = _request_json(base, "/api/system/stats")
