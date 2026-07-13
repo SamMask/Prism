@@ -118,5 +118,5 @@ release flow:
 | Go artifact/package and desktop smokes | Passed | Local artifact, Windows full-workflow package, and portable clean-unzip smokes passed; packaged runtime returned `2.6.1`. |
 | Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
 | Corrected V2.6.1 asset | Passed | `PrismDesktopPortable-v2.6.1.zip`, 21,671,554 bytes, SHA256 `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`. |
-| GitHub Actions / replacement tag / Release read-back | Pending | Same-version replacement is explicitly authorized; fill after corrected commit is pushed and CI succeeds. |
-| Pi live cutover / soak / About browser smoke | Pending | Must verify the corrected artifact separately under `DEPLOY-PI.md`. |
+| GitHub Actions / replacement tag / Release read-back | Passed | Actions run `29276993209` success; V2.6.1 tag peels to `7f5469c16cac2a8412bb5f2524cc4e9884256db3`; GitHub digest, local hash, and fresh download SHA256 match `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`. Existing V2.6 is unchanged. |
+| Pi live cutover / soak / About browser smoke | Passed | Artifact SHA256 `1c1ff025f8653a48e97d87cbb29afa09d09e9ca8e020fef329d1e395e2fce01d`; latest snapshot `/home/mask070924/prism/backups/go-primary-t044-20260714_031146`; runtime 2.6.1/schema v17 clean; full workflow and 5-sample soak passed; live Playwright verified title/sidebar/About and console 0/0. |

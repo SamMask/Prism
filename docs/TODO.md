@@ -13,11 +13,11 @@
 ## Current Truth（2026-07-14）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
-- Prism V2.6.1 已發布到 commit `80aa35a0d73190c318a78b969b6f51cac74ec3fb`；immutable annotated tag、GitHub Release 與 `PrismDesktopPortable-v2.6.1.zip` 已對齊該 commit。既有 V2.6 tag/asset未改寫。
+- Prism V2.6.1 已依使用者明確決策完成同版顯示遺漏重發：annotated tag、GitHub Release與`PrismDesktopPortable-v2.6.1.zip`均對齊修正commit `7f5469c16cac2a8412bb5f2524cc4e9884256db3`；既有V2.6 tag/asset未改寫，沒有建立V2.6.2。
 - Windows portable current path：`Prism.exe` GUI app + WebView2 + same-process Go runtime；預設資料在 exe 同層 `PrismData\`。`--data-dir` / `PRISM_GO_DATA_DIR` 只作進階/debug override。
 - V2.6.1 release notes / README 已說明 unsigned portable、Windows SmartScreen、GitHub download Mark-of-the-Web (`Zone.Identifier`)、SHA256 驗證與 `Unblock-File` 流程。沒有購買或加入 code signing。
 - Pi delivery 與 GitHub release package 是兩條流程。Pi live deploy 必須依 `DEPLOY-PI.md` 使用 Go primary live ops；GitHub Actions 只做 validation，不自動上傳 release asset。
-- 2026-07-14 V2.6.1 已部署到 `PI5Mask24`：Go primary active/enabled、legacy `prism.service` inactive/disabled、Caddy active，runtime version `2.6.1`、schema v17 pending empty；full workflow、5-sample soak與Playwright live label smoke通過。證據見 `docs/development-history/v2.6.1-release-validation-20260714.md`。
+- 2026-07-14 修正後V2.6.1已重新部署到`PI5Mask24`：Go primary active/enabled、legacy `prism.service` inactive/disabled、Caddy active，runtime `2.6.1`、schema v17 pending empty；full workflow、5-sample soak與Playwright title/sidebar/About live smoke通過。證據見`docs/development-history/v2.6.1-about-version-correction-20260714.md`。
 - Prism 仍沒有內建 auth/token layer；safe boundary 是 localhost、trusted LAN、VPN、SSH tunnel，或外部 auth 保護的 reverse proxy。不得把 API 寫成可直接 public internet 暴露。
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
 - `build/` 只應保留最新 release 產物；不得把 DB、attachments、notes、uploads 等真資料當 build artifact 清理。
@@ -39,10 +39,10 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `PI-V2.6-LIVE`（狀態：`Done`）：V2.6 artifact、snapshot、service ownership、API/UI smoke與 bounded soak全部通過；唯一 non-blocking finding 是 browser title/sidebar brand仍顯示 V2.5。
 - [x] `FRONTEND-LABEL-AND-RESEARCH-ARCHIVE-01`（狀態：`Done`）：browser title / sidebar brand 已對齊 V2.6；2026-07-01 深入研究報告已完成 current-truth resolution 並移至 development-history。本 gate 未重發 release、未部署 Pi。
 - [x] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Done`）：title/sidebar label修正版已發布為 immutable patch release `V2.6.1`並部署到 `PI5Mask24`；Actions、asset read-back、Pi full workflow、5-sample soak與live Playwright labels均通過，既有 `V2.6` tag/asset未重寫。
-- [ ] `V2.6.1-ABOUT-VERSION-CORRECTION`（狀態：`Doing`）：修正 Settings「關於」仍以 `2.5` 作為缺省版本的遺漏；維持產品版本 V2.6.1，補齊 title/sidebar/About 三處一致性驗收，重建並重發同版 GitHub Release、重新部署 Pi 與執行 live smoke/soak。
+- [x] `V2.6.1-ABOUT-VERSION-CORRECTION`（狀態：`Done`）：Settings「關於」缺省版本已從`2.5`修正為`2.6.1`；title/sidebar/About三處一致性、同版GitHub Release重發、Pi重新部署與live smoke/soak均已驗證。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前唯一 `Doing` item 是 `V2.6.1-ABOUT-VERSION-CORRECTION`。完成後下一個最低風險入口仍是 test-only `main_test.go` bounded-context split candidate，不得延伸成 runtime redesign。
+目前沒有`Doing` item。下一個最低風險入口仍是test-only `main_test.go` bounded-context split candidate，不得延伸成runtime redesign。
 
 ---
 
@@ -106,9 +106,9 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 ## Open TODO Items
 
-### [ ] V2.6.1-ABOUT-VERSION-CORRECTION Correct the missed Settings About version surface
+### [x] V2.6.1-ABOUT-VERSION-CORRECTION Correct the missed Settings About version surface
 
-狀態：`Doing`
+狀態：`Done`
 
 來源：2026-07-14 live 使用畫面顯示 browser title 與 sidebar 已是 V2.6.1，但 Settings「關於」仍顯示 2.5。Source 確認 `SettingsPage.tsx` 的 `stats?.version` 缺省值仍硬編碼為 `2.5`；先前 label smoke 只驗 title/sidebar，沒有覆蓋 About tab。
 
@@ -117,9 +117,9 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 - [x] `A261-00 Regression lock`：source regression已鎖定title `Prism V2.6.1`、sidebar `V2.6.1`、About fallback `2.6.1`，並禁止三處回退到V2.5/2.5；兩個targeted tests在product edit前如預期失敗，edit後通過。
 - [x] `A261-01 Minimal UI correction`：只把Settings About缺省版本從`2.5`修正為`2.6.1`；沒有新增版本管理抽象、dependency、API、schema、migration或產品功能。
 - [x] `A261-02 Fresh local release validation`：full gate 382 pytest + Go tests、frontend/Go build、9 Chromium e2e、Go artifact/package smoke、portable clean-unzip、packaged runtime version、三處Playwright、privacy gates全部通過。Zip 21,671,554 bytes，SHA256 `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`。
-- [ ] `A261-03 Same-version GitHub reissue`：使用者已明確要求維持 V2.6.1 並重發 Release；以修正後 Lore commit 取代 V2.6.1 annotated tag/release asset，確認 Actions、remote tag、GitHub digest與fresh download SHA256一致。既有 V2.6 tag/release不得修改。
-- [ ] `A261-04 Pi redeploy and live verification`：依 `DEPLOY-PI.md` cutover V2.6.1 修正 artifact；驗 Go primary ownership、schema v17 clean、full workflow、5-sample soak，並以 Playwright 實際進入 Settings/About 確認 title/sidebar/About 全為 V2.6.1且console無錯誤。
-- [ ] `A261-05 Closure`：回寫本檔、`HANDOFF.md`、release checklist/history與GitHub Release body；最終 main/tag/release/asset/Pi runtime evidence一致且工作樹乾淨。
+- [x] `A261-03 Same-version GitHub reissue`：V2.6.1 annotated tag已取代到修正commit`7f5469c`；Actions run `29276993209` success。Release asset 21,671,554 bytes，GitHub digest、local與fresh download SHA256均為`8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`；既有V2.6未修改。
+- [x] `A261-04 Pi redeploy and live verification`：依`DEPLOY-PI.md`完成Cutover與Soak；artifact SHA256 `1c1ff025f8653a48e97d87cbb29afa09d09e9ca8e020fef329d1e395e2fce01d`，latest snapshot `/home/mask070924/prism/backups/go-primary-t044-20260714_031146`。Go active/enabled、legacy inactive/disabled、Caddy active、schema v17 clean、full workflow與5-sample soak通過；live Playwright確認title/sidebar/About全為V2.6.1且console 0 errors/0 warnings。
+- [x] `A261-05 Closure`：TODO/HANDOFF/release checklist/history與GitHub Release body已回寫；main/tag/release/asset/Pi runtime evidence一致，沒有建立V2.6.2。
 
 邊界：這是同版顯示遺漏修正，不建立 V2.6.2；不改 API/schema/DB/search/auth/exposure boundary，也不動 Pi 上未接 Caddy live 流量的 readonly/staging輔助service。
 
