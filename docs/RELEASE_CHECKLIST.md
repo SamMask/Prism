@@ -86,4 +86,6 @@ release flow:
 | Package version/read-back | Passed | Packaged debug executable served `/api/server/version` = `2.6` against isolated build data. |
 | Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
 | V2.6 asset hash | Passed | `PrismDesktopPortable-v2.6.zip`, 21,671,334 bytes, SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`. |
+| GitHub Actions | Passed | Run `29266735767` completed successfully: https://github.com/SamMask/Prism/actions/runs/29266735767. The only annotation was GitHub Actions' Node 20 action-runtime deprecation warning; build/tests passed. |
+| GitHub Release / asset read-back | Passed | https://github.com/SamMask/Prism/releases/tag/V2.6; tag targets commit `461421db8d6bb21d0adbd58c081047c45e19010e`; GitHub digest, local hash, and freshly downloaded asset hash match. |
 | Pi live deploy | Not-tested | V2.6 GitHub release packaging does not change Pi delivery state. |

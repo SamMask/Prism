@@ -10,12 +10,12 @@
 
 ---
 
-## Current Truth（2026-07-13）
+## Current Truth（2026-07-14）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
-- Prism V2.5 已封版到 commit `42ce747bc273182b045455de49b8be06fd6c051a`；GitHub Release `V2.5` 與 portable zip asset 已對齊該 commit。
+- Prism V2.6 已發布到 commit `461421db8d6bb21d0adbd58c081047c45e19010e`；annotated tag、GitHub Release 與 `PrismDesktopPortable-v2.6.zip` 已對齊該 commit。
 - Windows portable current path：`Prism.exe` GUI app + WebView2 + same-process Go runtime；預設資料在 exe 同層 `PrismData\`。`--data-dir` / `PRISM_GO_DATA_DIR` 只作進階/debug override。
-- V2.5 release notes / README 已說明 unsigned portable、Windows SmartScreen、GitHub download Mark-of-the-Web (`Zone.Identifier`)、SHA256 驗證與 `Unblock-File` 流程。沒有購買或加入 code signing。
+- V2.6 release notes / README 已說明 unsigned portable、Windows SmartScreen、GitHub download Mark-of-the-Web (`Zone.Identifier`)、SHA256 驗證與 `Unblock-File` 流程。沒有購買或加入 code signing。
 - Pi delivery 與 GitHub release package 是兩條流程。Pi live deploy 必須依 `DEPLOY-PI.md` 使用 Go primary live ops；GitHub Actions 只做 validation，不自動上傳 release asset。
 - Prism 仍沒有內建 auth/token layer；safe boundary 是 localhost、trusted LAN、VPN、SSH tunnel，或外部 auth 保護的 reverse proxy。不得把 API 寫成可直接 public internet 暴露。
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
@@ -32,20 +32,20 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `KWF-01 Command Palette server-side search`（狀態：`Done`）：Command Palette 已能用既有 `/api/notes?q=...` 做全庫純關鍵字搜尋，且已完成 Pi live deploy evidence。
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已能把目前 query/filter/sort view 保存成瀏覽器本機 Search Workspace，localStorage key `prism.savedSearchWorkspaces.v1`，不改 DB schema。
 - [x] `NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）：已補刪卡片 / 批次刪除確認框與 Settings「清理未使用圖片」copy；runtime 已有 reference-counted cleanup，本輪未改 Go delete/media cleanup semantics。
-- [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel、knowledge quality metadata schema v18 decision gate 已完成；2026-07-08 已通過 local release validation 並部署到 Pi live；未做 auth、semantic search 或 schema migration。
+- [x] `KWF-03` 到 `KWF-07`（狀態：`Done`）：full data snapshot script、batch delete dry-run write guard、import dry-run/collision preview、ReadingView source URL panel 已完成；knowledge quality metadata 已依個人筆記庫定位明確不採用。2026-07-08 已通過 local release validation並部署到 Pi live；未做 auth、semantic search 或 schema migration。
 - [x] `GO-MAIN-SPLIT-CANDIDATE-01`（狀態：`Done`）：`GMS-00` 到 `GMS-10` 已完成同 package mechanical extraction；`main.go` 從 10,246 行降到 1,024 行，所有新 bounded-context 檔案均不超過 1,500 行，runtime/API/schema 行為未變。
-- [ ] `RELEASE-V2.6`（狀態：`Doing`）：發布 2026-07-08 KWF improvements 與 2026-07-13 Go source decomposition；依 release checklist 執行 version/package/smoke/privacy/tag/push/Actions/asset gates。本輪不部署 Pi。
+- [x] `RELEASE-V2.6`（狀態：`Done`）：2026-07-08 KWF improvements 與 2026-07-13 Go source decomposition 已發布；local/full/browser/package/privacy/tag/push/Actions/asset/read-back gates 全部通過。本輪未部署 Pi。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前唯一 `Doing` item 是 `RELEASE-V2.6`；release commit/tag、push、GitHub Actions 與 portable asset 必須逐層驗證，不要把本機 package smoke 或既有 Pi live deploy 視為 GitHub release asset 自動完成。
+目前沒有 `Doing` item。V2.6 release 已完成；下一個建議入口是另開 test-only `main_test.go` bounded-context split candidate，不得直接延伸成 runtime redesign。
 
 ---
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.5 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除會先做 dry-run preview，Settings 批次匯入會先顯示 create / duplicate / unsupported 預覽，ReadingView 會顯示既有 source URLs 與重複標記。刪除 note 時的提示文字也已補上：Go primary 會嘗試清理已偵測且未被其他 note 引用的 upload 圖片與縮圖，但 shared/未偵測/孤兒檔仍應透過圖片管理或 Settings「清理未使用圖片」確認。2026-07-13 已完成 `GO-MAIN-SPLIT-CANDIDATE-01`：Go runtime 仍是單一 `package main`，但附件、taxonomy、migration、backup、system、options、import/export、uploads/media 與 notes responsibilities 已分檔，`main.go` 只保留 bootstrap/wiring/shared ownership。Release/tag/package decision 仍獨立處理。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.6 portable、Pi live deploy 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script 可 dry-run 或輸出 zip；批次刪除與匯入都有寫入前 preview，ReadingView 會顯示既有 source URLs 與重複標記。2026-07-13 完成的 Go source split 維持同一 `package main` 與既有 runtime contracts；2026-07-14 V2.6 tag/Actions/portable asset/read-back 已完成。本輪沒有 Pi deploy 或 schema migration。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；KWF-03..07 與 `GO-MAIN-SPLIT-CANDIDATE-01` 已完成。Go source assertion 應檢查整個 `go-shadow` 非測試 package source，不得再假設所有 handler 都位於 `main.go`；route registration 仍由 `main.go` 擁有。若要對外發版，仍必須另依 `docs/RELEASE_CHECKLIST.md` 做版本號 / commit / tag / package / push / GitHub Actions gate。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；V2.6 release 與 GMS 已完成。Go source assertion 應檢查整個 `go-shadow` 非測試 package source，不得再假設所有 handler 都位於 `main.go`；route registration 仍由 `main.go` 擁有。下一個 maintenance 若被 promote，優先做 `main_test.go` test-only split；不得重開 schema v18 review metadata，除非產品用途改變。
 
 ---
 
@@ -231,14 +231,14 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 ## Release / GitHub / Pi Maintenance
 
-- [ ] `RELEASE-V2.6`（狀態：`Doing`）：使用者已明確授權 GMS commit 與 V2.6 release/tag/package/push。
+- [x] `RELEASE-V2.6`（狀態：`Done`）：使用者已明確授權並完成 GMS commit 與 V2.6 release/tag/package/push。
   - [x] `R26-00 GMS closure commit`（狀態：`Done`）：GMS mechanical split 已提交為 `b9955c6`；非本次 scope 的既有 TODO checkbox 保留到 release docs normalization。
   - [x] `R26-01 Version and release wording`（狀態：`Done`）：current runtime fallback、tests、README、portable README、docs index/API/packaging wording與 changelog已更新到 2.6；歷史 v2.5 evidence/contracts 未改寫。
   - [x] `R26-02 Full local verification`（狀態：`Done`）：`.loop/verify-gate.ps1` passed（pytest 379 passed、Go tests passed、mirror/diff passed）；frontend build passed with existing warnings；隔離 Go runtime 下 browser e2e 9 passed。
   - [x] `R26-03 Portable/package/privacy gate`（狀態：`Done`）：local artifact、Go full-workflow package、desktop clean-unzip smoke passed；zip 7 entries、21,671,334 bytes、privacy sweep passed，SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`。
-  - [ ] `R26-04 Release commit/tag/push`（狀態：`Doing`）：建立 Lore release commit與 annotated `V2.6` tag，push `main` 與 tag；不得 force push。
-  - [ ] `R26-05 GitHub validation and asset`（狀態：`Todo`）：確認 GitHub Actions 綠燈後建立 GitHub Release、上傳 portable zip，read-back tag/commit/asset/hash。
-  - [ ] `R26-06 Evidence closure`（狀態：`Todo`）：把 Actions/release URL 與 final evidence 寫回 HANDOFF/TODO/history，再建立 closure commit並 push；本輪不做 Pi deploy。
+  - [x] `R26-04 Release commit/tag/push`（狀態：`Done`）：release commit `461421d` 與 annotated `V2.6` tag 已 push；remote main/tag read-back通過，未 force push。
+  - [x] `R26-05 GitHub validation and asset`（狀態：`Done`）：GitHub Actions run `29266735767` success；Release https://github.com/SamMask/Prism/releases/tag/V2.6 已發布，asset size/digest與重新下載 SHA256一致。
+  - [x] `R26-06 Evidence closure`（狀態：`Done`）：Actions/release URL、final evidence與 product boundary已寫回 HANDOFF/TODO/history；本輪未做 Pi deploy。
 - [x] Pi delivery（狀態：`Done`）：2026-07-08 已依 `DEPLOY-PI.md` 使用 Go primary live ops Cutover 部署到 `PI5Mask24`。驗證：`prism-go-primary.service` active、legacy `prism.service` inactive、migration current/latest v17 pending empty、`/api/server/version` version `2.5`、batch delete dry-run API success、served JS contains batch preview / import preview / source URL panel hooks。Pi delivery 不是 release notes / GitHub asset 的自動副作用；未來任何 Pi 上線仍需另開 gate 重跑 service / migration / changed endpoint / UI evidence。
 
 ---

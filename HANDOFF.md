@@ -1,11 +1,11 @@
-# HANDOFF - Prism active entry（2026-07-13）
+# HANDOFF - Prism active entry（2026-07-14）
 
 本檔只放新對話接手需要的最短狀態。長版交接與完成紀錄已移到 `docs/development-history/`；最新 TODO/HANDOFF 瘦身歸檔見 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`。
 
 ## Current State
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已移除，T001-T053 完整紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
-- Prism V2.5 release / tag / portable asset 已對齊 commit `42ce747bc273182b045455de49b8be06fd6c051a`。Windows portable 是 unsigned build；README 與 release notes 已說明 SmartScreen、`Zone.Identifier`、SHA256 驗證與 `Unblock-File`。
+- Prism V2.6 release / annotated tag / portable asset 已對齊 commit `461421db8d6bb21d0adbd58c081047c45e19010e`：https://github.com/SamMask/Prism/releases/tag/V2.6。Windows portable 是 unsigned build；README 與 release notes 已說明 SmartScreen、`Zone.Identifier`、SHA256 驗證與 `Unblock-File`。
 - Windows desktop current path 是 `Prism.exe` GUI app + WebView2 + same-process Go runtime，預設資料在 exe 同層 `PrismData\`。Installer/updater/WebView2 bootstrap/shortcut automation 仍 deferred。
 - Recent V2.5 UX/runtime gates 已完成並歸檔：Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E。
 - Pi delivery 與 GitHub release packaging 分開處理；Pi 上線必須讀 `DEPLOY-PI.md` 並驗 service/migration/API/UI live evidence。
@@ -25,23 +25,23 @@
 - 2026-07-08 KWF-04 Agent-safe write guards 已完成：`POST /api/notes/batch/delete` 支援 `dry_run: true` preview；前端批次刪除 confirm 會先顯示 deletable / missing / image / attachment counts，再執行真正 batch delete。這不是 auth，也不改 public exposure boundary。
 - 2026-07-08 KWF-05 Import dry-run / collision preview 已完成：Settings 批次 Markdown/TXT 匯入會先顯示本機 create / duplicate / unsupported preview；仍只用既有單檔 import / create-note 路徑，沒有 server-side batch import API、watcher 或 sync daemon。
 - 2026-07-08 KWF-06 Source URL panel 已完成：ReadingView 使用既有 note `urls` 顯示 source URL panel、domain 與 duplicate URL 標記；未做 web clipper、外網 title fetch 或 link health 背景檢查。
-- 2026-07-08 KWF-07 Knowledge quality metadata decision gate 已完成：`status / review_state / last_verified_at` 保留為 schema v18 decision gate；本輪未改 `docs/SCHEMA.md` current Migration v17，未新增 DB 欄位或 migration。
+- 2026-07-14 KWF-07 product decision 已關閉：Prism 是個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata；除非用途改變，不得重新 promote schema v18 workflow。`docs/SCHEMA.md` 維持 Migration v17。
 - KWF-03..07 local release validation / Pi deploy gate（2026-07-08）已完成：`.loop/verify-gate.ps1` passed（含 `pytest tests/ -v` 379 passed、`cd go-shadow && go test ./...` passed、mirror check / `git diff --check` passed）；`cd frontend && npm run build` passed（僅既有 Browserslist / chunk-size warning）；Go package smoke、local artifact smoke、desktop portable smoke、browser e2e `python -m pytest e2e -q` 9 passed；tracked privacy sweep 與 portable zip forbidden-entry sweep passed。
 - Pi live deploy（2026-07-08）已完成：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -DeploySnapshotKeep 5` passed，evidence `build/go-primary-live/pi/evidence.json`；`prism-go-primary.service` active、legacy `prism.service` inactive、`/api/system/migration-status` current/latest v17 且 pending empty、`/api/server/version` version `2.5`；live batch delete dry-run returned `status: success` without deletion，served JS `/assets/index-DqUfa497.js` contains `previewBatchDeleteNotes`、`bulk-import-dry-run-preview`、`reading-source-url-panel`。
 - 2026-07-13 `GO-MAIN-SPLIT-CANDIDATE-01` / GMS-00..10 已完成：`go-shadow/main.go` 從 10,246 行降到 1,024 行；attachments、taxonomy、migrations、backup/system/options、import/export、uploads/media 與 notes 已依既有責任分到同一 `package main` 的 bounded-context files，沒有新增 package/dependency/API/schema/migration 或 deploy 行為。
 - Go split fresh verification：425 個 top-level declarations AST 比對一致；`cd go-shadow && go test ./...` passed；targeted Go groups passed；`pytest tests/ -v` 379 passed；`scripts/build_go_runtime.ps1` passed；local artifact 與 Windows full-workflow package smoke passed。長版證據見 `docs/development-history/go-main-split-completion-20260713.md`；本輪未部署 Pi、未建立 release/tag。
-- V2.6 release candidate local gate（2026-07-14）已完成：runtime/readmes/docs 已對齊 2.6；fresh verify gate 379 pytest + Go tests passed，frontend build passed with existing warnings，browser e2e 9 passed，Go artifact/package與 desktop clean-unzip smokes passed。`PrismDesktopPortable-v2.6.zip` SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`，privacy sweep passed；GitHub commit/tag/Actions/release asset 尚待完成。
+- V2.6 release（2026-07-14）已完成：fresh verify gate 379 pytest + Go tests passed，frontend build passed with existing warnings，browser e2e 9 passed，Go artifact/package與 desktop clean-unzip smokes passed；GitHub Actions run `29266735767` passed。`PrismDesktopPortable-v2.6.zip` size 21,671,334 bytes，SHA256 `33A23644F664EEE74B9449A19EAA54AEBA758CDE199D2A8E6D22182240D24F74`；GitHub digest與重新下載 hash一致，privacy sweep passed。
 - Product decision（2026-07-14）：Prism 維持個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata 或 schema v18 workflow；除非用途改變，不得重新 promote。
 
 ## Next Entry
 
 目前沒有未交付的 active construction item。
 
-- 下一個建議入口是 release/tag/package decision：若要把 2026-07-08 KWF 與 2026-07-13 Go source split 對外發版，先依 `docs/RELEASE_CHECKLIST.md` 決定版本號、commit/tag/package/push，並確認 GitHub Actions 綠燈；不要把本機 package smoke 或 Pi live deploy 視為 GitHub release asset 自動完成。
+- 下一個低風險維護候選是另開 test-only gate，把 4,049 行的 `go-shadow/main_test.go` 依目前 bounded-context source layout 拆檔；不得在搬測試時改 fixture、coverage 或 runtime behavior。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。
 - 若要繼續 Markdown 重型支援，只能明確 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 Mermaid decision gate 或 syntax-highlighting dependency review；KaTeX / ABC 目前凍結為備選，不要順手導入 schema/API 變更。
 - 若要處理 governance、完成宣稱、委派或 UI/UX policy，先讀 `docs/GOVERNANCE.md`；需要追溯來源時讀 `docs/development-history/governance-source-20260705/`。
-- 若要發佈新版或重包，先依 `docs/RELEASE_CHECKLIST.md` 重跑 fresh validation，再 commit / tag / package；push 後確認 GitHub Actions 綠燈。
+- 若要再次發佈或重包，仍須依 `docs/RELEASE_CHECKLIST.md` 重跑 fresh validation，再 commit / tag / package；push 後確認 GitHub Actions 綠燈。
 - 若要處理維護項，只能 promote `DEEP-SCAN-RISK-CANDIDATE-01` 01H 的低優先小整理，不要擴成大重構。
 - 不要自動開 AI、semantic search、installer、updater、public-internet auth 或 Pi deploy。
 
