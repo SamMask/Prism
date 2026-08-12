@@ -2,7 +2,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { Database, FolderOpen, Info, Palette, Shield, Wrench, ArchiveRestore } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
-import { ToastContainer } from '../components/ui/Toast';
 import { DataManager } from '../components/DataManager';
 import { SystemMaintenance } from '../components/SystemMaintenance';
 import { useAppStore } from '../stores/appStore';
@@ -35,7 +34,7 @@ interface SettingsTabConfig {
 const SETTINGS_TABS: SettingsTabConfig[] = [
   { id: 'appearance', label: '外觀', labelKey: 'settings.tabs.appearance', icon: <Palette size={16} /> },
   { id: 'organization', label: '組織', labelKey: 'settings.tabs.organization', icon: <FolderOpen size={16} /> },
-  { id: 'backup', label: '備份與還原', labelKey: 'settings.tabs.backup', icon: <ArchiveRestore size={16} /> },
+  { id: 'backup', label: '資料與復原', labelKey: 'settings.tabs.backup', icon: <ArchiveRestore size={16} /> },
   { id: 'maintenance', label: '維護與健康', labelKey: 'settings.tabs.maintenance', icon: <Wrench size={16} /> },
   { id: 'access', label: '存取與系統', labelKey: 'settings.tabs.access', icon: <Shield size={16} /> },
   { id: 'about', label: '關於', labelKey: 'settings.tabs.about', icon: <Info size={16} /> },
@@ -171,7 +170,15 @@ export function SettingsPage() {
               {/* 「部署安全邊界」「端口設定」「版本更新」暫時隱藏：封裝成 .exe 視窗程式後對使用者無用，
                   在 Pi 上也僅資訊性。元件檔仍保留於 components/settings（PortConfigSection / UpdateSection）。
                   隱藏理由與復原方式見 docs/TODO.md「設定精簡（hidden sections）」。 */}
-              <ServerDashboardSection />
+              <details className="glass rounded-lg" data-testid="maintenance-advanced">
+                <summary className="cursor-pointer px-5 py-4 font-medium text-text-primary">
+                  {t('settings.maintenance.advancedTitle')}
+                </summary>
+                <div className="border-t border-border-subtle p-5">
+                  <p className="mb-4 text-sm text-text-muted">{t('settings.maintenance.advancedDescription')}</p>
+                  <ServerDashboardSection />
+                </div>
+              </details>
             </>
           )}
 
@@ -201,7 +208,6 @@ export function SettingsPage() {
         </div>
       </div>
 
-      <ToastContainer />
     </>
   );
 }

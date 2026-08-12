@@ -11,10 +11,11 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Note, api } from '../services/api'
+import { Note, api, type SearchDiagnostics } from '../services/api'
 import { useAppStore } from '../stores/appStore'
 import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
+import { SearchDiagnosticsNotice } from './SearchDiagnosticsNotice'
 
 const SERVER_SEARCH_MIN_CHARS = 3
 const SERVER_SEARCH_LIMIT = 8
@@ -76,6 +77,7 @@ export function CommandPalette() {
   const [serverSearchTotal, setServerSearchTotal] = useState(0)
   const [isServerSearchLoading, setIsServerSearchLoading] = useState(false)
   const [serverSearchFailed, setServerSearchFailed] = useState(false)
+  const [serverSearchDiagnostics, setServerSearchDiagnostics] = useState<SearchDiagnostics | null>(null)
   const serverSearchTerm = useMemo(() => getServerSearchTerm(query), [query])
 
   const closePalette = () => {
@@ -268,6 +270,7 @@ export function CommandPalette() {
       setServerSearchTotal(0)
       setIsServerSearchLoading(false)
       setServerSearchFailed(false)
+      setServerSearchDiagnostics(null)
       return
     }
 
@@ -286,12 +289,14 @@ export function CommandPalette() {
           if (!isCurrent) return
           setServerSearchNotes(response.notes)
           setServerSearchTotal(response.total)
+          setServerSearchDiagnostics(response.searchDiagnostics ?? null)
         })
         .catch(() => {
           if (!isCurrent) return
           setServerSearchNotes([])
           setServerSearchTotal(0)
           setServerSearchFailed(true)
+          setServerSearchDiagnostics(null)
         })
         .finally(() => {
           if (isCurrent) setIsServerSearchLoading(false)
@@ -395,6 +400,7 @@ export function CommandPalette() {
                     : t('commandPalette.serverSearch.count', { query: serverSearchTerm, count: serverSearchTotal })}
             </div>
           )}
+          <SearchDiagnosticsNotice diagnostics={serverSearchDiagnostics} className="mb-1" />
           {filteredCommands.length === 0 ? (
             <div className="px-4 py-10 text-center text-sm text-text-muted">
               {t('commandPalette.empty')}

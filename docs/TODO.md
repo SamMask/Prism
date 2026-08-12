@@ -10,7 +10,7 @@
 
 ---
 
-## Current Truth（2026-07-14）
+## Current Truth（2026-08-12）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
 - Prism V2.6.1 已依使用者明確決策完成同版顯示遺漏重發：annotated tag、GitHub Release與`PrismDesktopPortable-v2.6.1.zip`均對齊修正commit `7f5469c16cac2a8412bb5f2524cc4e9884256db3`；既有V2.6 tag/asset未改寫，沒有建立V2.6.2。
@@ -22,6 +22,7 @@
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
 - `build/` 只應保留最新 release 產物；不得把 DB、attachments、notes、uploads 等真資料當 build artifact 清理。
 - `docs/GOVERNANCE.md` 是完成宣稱、狀態層級、驗證證據、委派與 UI/UX governance 的 current entry；新版治理素材已保留到 `docs/development-history/governance-source-20260705/`，正式文檔不依賴暫存素材目錄。
+- 2026-08-12 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md` 已完成全 repo 唯讀產品／UX／技術審查；其中 `PRISM-OPT-01` 到 `PRISM-OPT-06` P0 已完成本機實作、完整測試與隔離 desktop/390px browser 驗收。P1 `PRISM-OPT-07` 到 `PRISM-OPT-14` 尚未施工；本輪未碰正式 DB、release 或 Pi deploy。
 
 Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA.md`, `docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
 
@@ -40,17 +41,18 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `FRONTEND-LABEL-AND-RESEARCH-ARCHIVE-01`（狀態：`Done`）：browser title / sidebar brand 已對齊 V2.6；2026-07-01 深入研究報告已完成 current-truth resolution 並移至 development-history。本 gate 未重發 release、未部署 Pi。
 - [x] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Done`）：title/sidebar label修正版已發布為 immutable patch release `V2.6.1`並部署到 `PI5Mask24`；Actions、asset read-back、Pi full workflow、5-sample soak與live Playwright labels均通過，既有 `V2.6` tag/asset未重寫。
 - [x] `V2.6.1-ABOUT-VERSION-CORRECTION`（狀態：`Done`）：Settings「關於」缺省版本已從`2.5`修正為`2.6.1`；title/sidebar/About三處一致性、同版GitHub Release重發、Pi重新部署與live smoke/soak均已驗證。
+- [ ] `PROJECT-OPTIMIZATION-ROADMAP-2026-08-12`（狀態：`Todo`）：14 個 `PRISM-OPT-*` 中，P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成；P1 recovery/IA、Prompt continuation、N+1、custom reorder、route lazy loading 與 test portfolio 仍待後續逐項 promote。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有`Doing` item。下一個最低風險入口仍是test-only `main_test.go` bounded-context split candidate，不得延伸成runtime redesign。
+目前沒有 `Doing` item。P0 已 local/browser verified，下一個施工入口是 `PRISM-OPT-07 Data & Recovery IA and DB-only truth`；只重組既有 Settings recovery workflow 與邊界文案，不改 backup format/backend。`main_test.go` test-only split 降為 `PRISM-OPT-14` 之後再依 test inventory 決定，不得先做 mechanical split。
 
 ---
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.6.1 portable / Pi live 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。完整資料快照已有本機 script可dry-run或輸出zip；批次刪除與匯入都有寫入前preview，ReadingView會顯示既有source URLs與重複標記。2026-07-14 V2.6.1 immutable tag、Actions、portable asset/read-back、Pi cutover/full workflow/5-sample soak與live label smoke均完成；browser title與sidebar brand均為V2.6.1。schema仍為v17，沒有migration。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.6.1 portable / Pi live 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。2026-08-12 已先完成資料健康真值、mobile/accessibility、view action parity、selection/search trust 與搜尋 recovery 六項 P0；下一輪從 recovery IA 開始處理 P1。schema 仍為 v17；本 roadmap 不授權 migration、AI、auth、release 或 Pi deploy。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`；V2.6.1 release/Pi live label hotfix、GMS與2026-07-01 research intake歸檔已完成。Go source assertion應檢查整個`go-shadow`非測試package source，不得再假設所有handler都位於`main.go`；route registration仍由`main.go`擁有。下一個maintenance候選是`main_test.go` test-only split；不得重開schema v18 review metadata，除非產品用途改變。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`。P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成；下一入口是 `PRISM-OPT-07`。一次只 promote 一個 P1，不得把 review 建議擴成 schema v18、資料自動修復、AI、內建 auth、runtime redesign、release 或 Pi deploy。
 
 ---
 
@@ -105,6 +107,53 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 ---
 
 ## Open TODO Items
+
+### [ ] PROJECT-OPTIMIZATION-ROADMAP-2026-08-12 Evidence-backed product optimization roadmap
+
+狀態：`Todo`
+
+來源：`docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`。2026-08-12 使用者明確要求讀取 `AGENTS.md`，並把審查結果依 Prism current architecture / governance 規劃寫入本檔。審查已完成 source、SQLite、build/test 與 desktop/390px browser evidence；本 roadmap 只吸收高信心 P0/P1，不自動升格 P2/P3/Future。
+
+目標：先提高資料可信度、核心工作流一致性與 mobile 可用性，再處理 recovery、IA、已證明的 query/bundle/test 維護成本。每個子項必須可單獨開 branch、單獨 commit、單獨驗收；一次只允許一個 `Doing`。
+
+固定邊界：
+
+- 不新增 schema/migration、AI/ML、semantic search、cloud sync、多人協作、內建 auth、public-internet exposure、CDN、背景 daemon 或新 state framework。
+- 不重寫 frontend、Go runtime、SQLite owner、router 或 deployment；優先重用既有 component、Zustand store、API client、Go handler 與 snapshot script。
+- 所有 API 變更必須 additive / backward-compatible；`PRISM-OPT-01` 只做 read-only diagnostics，禁止順手刪除、修復或 migration 正式資料。
+- Recovery 工作先說清楚 DB-only 邊界，再做 full snapshot export；本 roadmap 不授權 automatic full-data restore。
+- UI 任務需依 `docs/GOVERNANCE.md` 驗 loading / empty / error / success / disabled / keyboard / focus，並做 desktop + 390px browser evidence。
+- 任一子項若擴散到 schema、breaking API、資料 repair、package/release 或 Pi deploy，立即停止並另開 decision gate。
+
+施工順序（一次只 promote 一項）：
+
+#### P0 — 可信度與核心 UX（已完成）
+
+- [x] `PRISM-OPT-01 Data consistency diagnostics truth`（狀態：`Done`；對應 `DATA-01`）：`/api/system/check-consistency` 以唯讀 `PRAGMA foreign_key_check` 回報 total/table counts，實際 violation 判為 critical；Settings 分開顯示 enforcement 與資料違規。隔離 browser healthy fixture 為 0，orphan attachment/history/source URL fixture 為 3。
+- [x] `PRISM-OPT-02 Mobile navigation and accessible names`（狀態：`Done`；對應 `UX-01`）：Sidebar 在 390px 為具 focus trap、ESC、focus return 的 off-canvas drawer；核心 icon controls 具可存取名稱，desktop 導航保持可見。390px drawer 與 selection header 均無橫向溢位。
+- [x] `PRISM-OPT-03 Note view action parity`（狀態：`Done`；對應 `UX-02`）：grid/list/compact 共用 selection control 與 actions menu；Reading、workspace、edit、pin、copy、variant、archive、export、delete 均重用既有 handler。browser smoke 三種 view 各驗 20 筆，ESC 可回復 menu trigger focus。
+- [x] `PRISM-OPT-04 Selection scope and single delete preview`（狀態：`Done`；對應 `UX-03` / `API-01`）：search/category/tag/archive/sort/saved workspace 變更清空 selection；全選明示已載入 N 筆；Header 的 dry-run preview 直接交給 store。browser network smoke 確認一次 dry-run、取消時零次 delete write，filter change 清空 selection。
+- [x] `PRISM-OPT-05 Search partial diagnostics surface`（狀態：`Done`；對應 `SEARCH-01`）：typed API/store 保留 backend `search_diagnostics`，Home / Command Palette 共用 non-blocking notice 顯示 partial reason、scanned files/bytes 與 files/bytes/duration limits；complete scan 不顯示。Go partial/non-partial regression 與 browser mock smoke 通過。
+- [x] `PRISM-OPT-06 Latest search request wins`（狀態：`Done`；對應 `SEARCH-01`）：notes request sequence 取代 `isLoading` early-return；stale success/failure 不覆寫 current state，latest reset failure 清除過期結果並顯示 inline Retry。throttled browser mock 確認 fast response 保留、slow response 不覆寫，500 後 Retry 成功。
+
+P0 共通驗證：`pytest tests/ -v` 389 passed；`cd go-shadow && go test ./...` passed；`scripts/build_go_runtime.ps1` passed（僅既有 Browserslist outdated / Vite chunk-size warnings）；隔離 Go data-dir 的 desktop + 390px Playwright smoke 通過。未讀寫正式 `knowledge.db`，未做 release / package publish / Pi deploy。
+
+#### P1 — 下一階段產品整合與可證明的技術成本
+
+- [x] `PRISM-OPT-07 Data & Recovery IA and DB-only truth`（狀態：`Done`）：Settings 同頁整合 export/import/restore point create/list/restore/delete，DB-only exclusion 明示；WAL/FTS 與 server details 收入 Advanced。Desktop/390px 無橫向溢位 smoke 通過。
+- [x] `PRISM-OPT-08 Full data snapshot product entry`（狀態：`Done`）：新增 localhost-only `GET /api/export/full-snapshot` 與 `CONTRACT-FULL-DATA-SNAPSHOT-V1`；isolated data-dir ZIP 含 consistent DB、uploads/attachments/notes/config、manifest size/SHA-256，atomic completion、temp cleanup、DB read-back通過。v1 仍為 manual restore，無 automatic restore。
+- [x] `PRISM-OPT-09 Prompt save continuation`（狀態：`Done`）：typed API + `system_key='prompt'` 儲存，更新 store；shared Toast 提供 Open note / View in Library。isolated save-to-open browser flow 通過。
+- [x] `PRISM-OPT-10 Route-aware filters and saved-view empty state`（狀態：`Done`）：FilterStrip 只在 `/`，empty saved view 縮為 secondary CTA；Prompt/Settings direct-load 無多餘 strip。
+- [x] `PRISM-OPT-11 Batch hydrate note tags and URLs`（狀態：`Done`）：100-note page relation hydrate 固定兩個 query；response/schema/pagination不變。
+- [x] `PRISM-OPT-12 Bound custom reorder scope`（狀態：`Done`）：custom + unfiltered + all-loaded 才 render DnD；partial/filtered 顯示原因且 handler guard 不送 reorder。26-note isolated browser fixture驗 disabled reason。
+- [x] `PRISM-OPT-13 Route-level lazy loading`（狀態：`Done`）：Home eager，Prompt Builder / Settings lazy；shared loading/error retry。production main JS 由 P0 baseline 706.22 kB / gzip 218.34 kB 降為 598.03 kB / gzip 201.27 kB，另產生 Prompt 32.10 kB 與 Settings 88.59 kB chunks。
+- [x] `PRISM-OPT-14 Test portfolio inventory and current browser smoke`（狀態：`Done`）：`docs/TEST_PORTFOLIO.md` 分類 Behavior / Contract / Governance / Historical；只移除兩個 feature tests 對無關 HANDOFF 句子的重複 assertion。5 條 current Chromium smoke 全使用 temporary data-dir/fresh DB/current Go artifact。
+
+P1 共通驗證：targeted frontend/docs 41 passed；最終 full `pytest tests/ -v` 396 passed；`cd go-shadow && go test ./...` passed；production build passed，main JS 598.02 kB / gzip 201.27 kB；isolated Chromium 5 passed；AGENTS/CLAUDE mirror 與 `git diff --check` passed（僅 Windows line-ending warning）。未讀寫正式 `knowledge.db`，未做 release / package publish / Pi deploy。
+
+P2/P3/Future 保留在審查報告，不進 active roadmap：`UX-04` Preview/Edit 語意、`PERF-03` Reading Workspace lazy detail、`DOC-01` current docs 收斂、`TECH-02` flags/`go-shadow` 命名，以及 collaboration/cloud/AI/analytics/monetization。只有另有證據與使用者明確 promote 才能寫入可施工 TODO。
+
+下一步入口：目前沒有已授權 active construction item。P2/P3/Future 仍只在 review report，必須由使用者另行 promote；不要自動開 schema、automatic restore、release 或 Pi deploy。
 
 ### [x] V2.6.1-ABOUT-VERSION-CORRECTION Correct the missed Settings About version surface
 

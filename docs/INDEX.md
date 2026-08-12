@@ -27,6 +27,8 @@
 |------|------|----------|
 | [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-06-19) |
 | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) | public GitHub release、tag、portable package 前的 fresh validation evidence template | ✅ 已建立 |
+| [TEST_PORTFOLIO.md](./TEST_PORTFOLIO.md) | 測試資產分類、完成權限、isolated Go browser smoke 與歷史 assertions 邊界 | ✅ 已建立 (2026-08-12) |
+| [contracts/full-data-snapshot-v1.md](./contracts/full-data-snapshot-v1.md) | 完整資料快照 v1：local-only、consistent DB、五類檔案、manifest hash、manual restore 邊界 | ✅ 已建立 (2026-08-12) |
 | [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 新 UI 參考檔 + Go shadow backend 路線整合規劃；前端改版與重構前必讀 | 📋 規劃中 |
 | [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
 | [contracts/api-readonly-manifest.json](./contracts/api-readonly-manifest.json) | Phase 18 read-only API manifest；Go shadow backend 與工具 surface 的機器可讀草稿 | ✅ 已建立 |

@@ -5,13 +5,17 @@ import { IconButton } from './IconButton'
 import { t as translate } from '../../i18n'
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info'
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
 
 // Public API — same call signature as before, no import changes needed in callers
 export const toast = {
-  success: (message: string) => useToastStore.getState().add('success', message),
-  error:   (message: string) => useToastStore.getState().add('error',   message),
-  warning: (message: string) => useToastStore.getState().add('warning', message),
-  info:    (message: string) => useToastStore.getState().add('info',    message),
+  success: (message: string, actions?: ToastAction[]) => useToastStore.getState().add('success', message, actions),
+  error:   (message: string, actions?: ToastAction[]) => useToastStore.getState().add('error',   message, actions),
+  warning: (message: string, actions?: ToastAction[]) => useToastStore.getState().add('warning', message, actions),
+  info:    (message: string, actions?: ToastAction[]) => useToastStore.getState().add('info',    message, actions),
 }
 
 export function ToastContainer() {
@@ -50,7 +54,26 @@ export function ToastContainer() {
             `}
           >
             <Icon size={18} />
-            <span className="text-sm font-medium text-text-primary">{t.message}</span>
+            <div className="min-w-0 flex-1">
+              <span className="text-sm font-medium text-text-primary">{t.message}</span>
+              {t.actions && t.actions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {t.actions.map((action) => (
+                    <button
+                      key={action.label}
+                      type="button"
+                      className="rounded border border-current/30 px-2 py-1 text-xs font-medium hover:bg-white/10"
+                      onClick={() => {
+                        dismiss(t.id)
+                        action.onClick()
+                      }}
+                    >
+                      {action.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <IconButton
               size="xs"
               onClick={() => dismiss(t.id)}

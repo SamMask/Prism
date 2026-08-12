@@ -7,18 +7,14 @@ import {
   MemoryStick,
   Thermometer,
   RefreshCw,
-  Download,
-  RotateCcw,
   FileText,
   Clock,
   AlertTriangle,
-  CheckCircle,
   Power,
   ChevronDown,
   ChevronUp,
   Shield,
   Tag,
-  Trash2,
 } from 'lucide-react';
 import { Button } from '../ui';
 import { api } from '../../services/api';
@@ -72,12 +68,6 @@ interface VersionInfo {
   is_frozen: boolean;
   v2_mode: boolean;
   platform: string;
-}
-
-interface BackupInfo {
-  filename: string;
-  size_mb: number;
-  created_at: string;
 }
 
 // ===================================================================
@@ -166,18 +156,13 @@ export function ServerDashboardSection() {
   const { locale, t } = useTranslation();
   const [hardware, setHardware] = useState<HardwareStatus | null>(null);
   const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
-  const [backups, setBackups] = useState<BackupInfo[]>([]);
-  const [backupTotalMb, setBackupTotalMb] = useState(0);
   const [logs, setLogs] = useState<string[]>([]);
   const [logLevel, setLogLevel] = useState<'ALL' | 'WARNING' | 'ERROR'>('ALL');
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingLogs, setIsLoadingLogs] = useState(false);
-  const [isBackingUp, setIsBackingUp] = useState(false);
-  const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
   const [isRestarting, setIsRestarting] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
   const [showChangelog, setShowChangelog] = useState(false);
-  const [showBackups, setShowBackups] = useState(false);
 
   // Fetch hardware status
   const fetchHardware = useCallback(async () => {
@@ -202,17 +187,6 @@ export function ServerDashboardSection() {
     }
   }, []);
 
-  // Fetch backups
-  const fetchBackups = useCallback(async () => {
-    try {
-      const data = await api.listBackups();
-      setBackups(data.backups);
-      setBackupTotalMb(data.total_size_mb);
-    } catch (error: any) {
-      console.error('Failed to fetch backups:', error);
-    }
-  }, []);
-
   // Fetch logs
   const fetchLogs = useCallback(async (level?: 'ALL' | 'WARNING' | 'ERROR') => {
     setIsLoadingLogs(true);
@@ -225,52 +199,6 @@ export function ServerDashboardSection() {
       setIsLoadingLogs(false);
     }
   }, [logLevel]);
-
-  // Handle backup download
-  const handleDownloadBackup = async () => {
-    try {
-      await api.downloadBackup();
-      toast.success(t('settings.serverDashboard.dbDownloadStarted'));
-      await fetchBackups();
-    } catch (error: any) {
-      toast.error(t('settings.serverDashboard.dbDownloadFailed', { message: error?.message || t('settings.serverDashboard.unknownError') }));
-    }
-  };
-
-  // Handle backup rotation
-  const handleRotateBackups = async () => {
-    setIsBackingUp(true);
-    try {
-      const result = await api.rotateBackups(3);
-      toast.success(t('settings.serverDashboard.restorePointCreated', { name: result.new_backup, count: result.kept_backups.length }));
-      if (result.deleted_backups.length > 0) {
-        toast.info(t('settings.serverDashboard.oldRestorePointsDeleted', { count: result.deleted_backups.length }));
-      }
-      fetchBackups();
-    } catch (error: any) {
-      toast.error(t('settings.serverDashboard.createRestorePointFailed', { message: error?.response?.data?.message || error?.message || t('settings.serverDashboard.unknownError') }));
-    } finally {
-      setIsBackingUp(false);
-    }
-  };
-
-  const handleDeleteBackup = async (backup: BackupInfo) => {
-    if (!await confirm({
-      title: t('settings.serverDashboard.deleteRestorePointTitle'),
-      message: t('settings.serverDashboard.deleteRestorePointMessage', { name: backup.filename }),
-      variant: 'danger',
-    })) return;
-    setDeletingBackup(backup.filename);
-    try {
-      await api.deleteBackup(backup.filename);
-      toast.success(t('settings.serverDashboard.restorePointDeleted'));
-      fetchBackups();
-    } catch (error: any) {
-      toast.error(t('settings.serverDashboard.deleteRestorePointFailed', { message: error?.response?.data?.message || error?.message || t('settings.serverDashboard.unknownError') }));
-    } finally {
-      setDeletingBackup(null);
-    }
-  };
 
   // Handle service restart
   const handleRestart = async () => {
@@ -301,8 +229,7 @@ export function ServerDashboardSection() {
   useEffect(() => {
     fetchHardware();
     fetchVersion();
-    fetchBackups();
-  }, [fetchHardware, fetchVersion, fetchBackups]);
+  }, [fetchHardware, fetchVersion]);
 
   const canManageService = hardware?.service_management?.available === true;
   const hasCpuTemperature = hardware?.cpu_temp != null;
@@ -322,7 +249,7 @@ export function ServerDashboardSection() {
           {t('settings.serverDashboard.title')}
         </h2>
         <Button
-          onClick={() => { fetchHardware(); fetchVersion(); fetchBackups(); }}
+          onClick={() => { fetchHardware(); fetchVersion(); }}
           variant="ghost"
           className="text-sm"
           disabled={isLoading}
@@ -502,85 +429,6 @@ export function ServerDashboardSection() {
             )}
           </div>
         </div>
-      </div>
-
-      {/* ============================================================= */}
-      {/* Restore Point Management */}
-      {/* ============================================================= */}
-      <div className="bg-bg-elevated rounded-lg p-4 mb-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Shield size={16} className="text-emerald-400" />
-            <span className="text-text-secondary text-sm font-medium">{t('settings.serverDashboard.restorePoints')}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={handleDownloadBackup}
-              variant="ghost"
-              className="text-xs"
-            >
-              <Download size={14} />
-              {t('settings.serverDashboard.downloadCurrentDb')}
-            </Button>
-            <Button
-              onClick={handleRotateBackups}
-              variant="ghost"
-              className="text-xs"
-              disabled={isBackingUp}
-            >
-              <RotateCcw size={14} className={isBackingUp ? 'animate-spin' : ''} />
-              {isBackingUp ? t('settings.serverDashboard.creating') : t('settings.serverDashboard.createRestorePoint')}
-            </Button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-text-muted mb-2">
-          <span>{t('settings.serverDashboard.restorePointDescription')}</span>
-          <button
-            onClick={() => { setShowBackups(!showBackups); if (!showBackups) fetchBackups(); }}
-            className="text-text-muted hover:text-text-secondary flex items-center gap-1"
-          >
-            {showBackups ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-            {t('settings.serverDashboard.restorePointCount', { count: backups.length, mb: backupTotalMb })}
-          </button>
-        </div>
-
-        {showBackups && backups.length > 0 && (
-          <div className="space-y-1 mt-2">
-            {backups.map((backup, i) => (
-              <div key={backup.filename} className="flex items-center justify-between text-xs bg-bg-base rounded p-2">
-                <div className="flex items-center gap-2">
-                  {i === 0 ? (
-                    <CheckCircle size={12} className="text-emerald-400" />
-                  ) : (
-                    <FileText size={12} className="text-text-muted" />
-                  )}
-                  <span className="font-mono text-text-secondary">{backup.filename}</span>
-                </div>
-                <div className="flex items-center gap-3 text-text-muted">
-                  <span>{backup.size_mb} MB</span>
-                  <span>{new Date(backup.created_at).toLocaleDateString(locale)}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteBackup(backup)}
-                    disabled={deletingBackup === backup.filename}
-                    className="inline-flex h-7 w-7 items-center justify-center rounded text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300 disabled:cursor-not-allowed disabled:opacity-50"
-                    aria-label={t('settings.serverDashboard.deleteRestorePointLabel', { name: backup.filename })}
-                    title={t('settings.serverDashboard.deleteRestorePointTitle')}
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {showBackups && backups.length === 0 && (
-          <div className="text-xs text-text-muted text-center py-2">
-            {t('settings.serverDashboard.noRestorePoints')}
-          </div>
-        )}
       </div>
 
       {/* ============================================================= */}

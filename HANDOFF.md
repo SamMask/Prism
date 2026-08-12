@@ -1,4 +1,4 @@
-# HANDOFF - Prism active entry（2026-07-14）
+# HANDOFF - Prism active entry（2026-08-12）
 
 本檔只放新對話接手需要的最短狀態。長版交接與完成紀錄已移到 `docs/development-history/`；最新 TODO/HANDOFF 瘦身歸檔見 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`。
 
@@ -38,12 +38,15 @@
 - 修正後Pi evidence：artifact SHA256`1c1ff025f8653a48e97d87cbb29afa09d09e9ca8e020fef329d1e395e2fce01d`，latest snapshot`/home/mask070924/prism/backups/go-primary-t044-20260714_031146`，retention keep-5、full workflow與5-sample soak passed；Go active/enabled、legacy inactive/disabled、Caddy active、runtime 2.6.1、migration v17 clean。Live Playwright確認Page Title`Prism V2.6.1`、sidebar`V2.6.1`、About`Version: 2.6.1`、console 0 errors/0 warnings。
 - Pi上既有`prism-go-readonly.service`（127.0.0.1:5002）與`prism-go-primary-staging.service`（127.0.0.1:5003）仍保留；Caddy只route至127.0.0.1:5004 live owner，本次label hotfix未擴scope停用輔助service。
 - Product decision（2026-07-14）：Prism 維持個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata 或 schema v18 workflow；除非用途改變，不得重新 promote。
+- 2026-08-12 深度產品／UX／技術審查已完成，報告為 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`；P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成本機實作與隔離 desktop/390px browser 驗收。內容包含 FK violation 真值、mobile drawer/accessibility、三種 note view action parity、selection scope/單次 delete preview、search partial diagnostics 與 latest-request-wins/Retry。完整 `pytest tests/ -v` 389 passed、Go tests passed、production build passed；未碰正式 DB、release 或 Pi deploy。
+- 2026-08-12 P1 `PRISM-OPT-07` 到 `PRISM-OPT-14` 已完成本機實作：Data & Recovery/DB-only truth、full snapshot v1、Prompt save continuation、Home-only filters、安全 custom reorder、note relation batch queries、lazy routes與 test portfolio/current e2e。完整 snapshot 明確只支援 manual restore；未新增 schema/AI/cloud/auth。
+- P1 fresh local evidence：targeted frontend/docs 41 passed；full pytest 396 passed；Go tests與production build passed；main JS由706.22 kB降至598.02 kB；isolated Chromium 5 passed（含fresh DB、26 notes、Prompt save-to-open、Settings desktop/390px）；mirror與diff check passed。未碰正式 DB、release或Pi deploy。
 
 ## Next Entry
 
-目前沒有未交付的 active construction item。
+目前沒有未交付的 active construction item，也沒有 `Doing` item；product optimization P0/P1 已完成本機施工與驗證，尚未 commit/release/deploy。
 
-- 下一個最低風險候選是另開 test-only gate，把 4,049 行的 `go-shadow/main_test.go` 依目前 bounded-context source layout 拆檔；不得在搬測試時改 fixture、coverage 或 runtime behavior。
+- P2/P3/Future 只留在 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`，必須由使用者明確 promote；不要自動實作 Preview/Edit 語意、Reading Workspace lazy detail、flags命名、schema、automatic restore或大重構。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。
 - 若要繼續 Markdown 重型支援，只能明確 promote `MARKDOWN-SYNTAX-CANDIDATE-01` 的 Mermaid decision gate 或 syntax-highlighting dependency review；KaTeX / ABC 目前凍結為備選，不要順手導入 schema/API 變更。
 - 若要處理 governance、完成宣稱、委派或 UI/UX policy，先讀 `docs/GOVERNANCE.md`；需要追溯來源時讀 `docs/development-history/governance-source-20260705/`。

@@ -1,4 +1,4 @@
-import { Search, Plus, LayoutGrid, List, AlignJustify, X, ArrowUpDown, Trash2, CheckSquare, Square, Command, BookOpen } from 'lucide-react'
+import { Search, Plus, LayoutGrid, List, AlignJustify, X, ArrowUpDown, Trash2, CheckSquare, Square, Command, BookOpen, Menu } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
@@ -10,7 +10,11 @@ import { getCategoryDisplayName } from '../utils/categoryDisplay'
 import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { api } from '../services/api'
 
-export function Header() {
+interface HeaderProps {
+  onOpenMobileNav: () => void
+}
+
+export function Header({ onOpenMobileNav }: HeaderProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -94,7 +98,7 @@ export function Header() {
       variant: 'danger',
     })) {
       try {
-        await deleteSelectedNotes()
+        await deleteSelectedNotes(batchDeletePreview)
         toast.success(t('header.batchDeleteSuccess', { count: batchDeletePreview.deletable_count }))
       } catch {
         toast.error(t('header.deleteFailed'))
@@ -149,16 +153,29 @@ export function Header() {
       : t('header.settingsMeta')
 
   return (
-    <header className="h-[60px] shrink-0 bg-bg-base border-b border-border-subtle px-4 lg:px-6 flex items-center gap-3" data-testid="header">
+    <header className="h-[60px] shrink-0 bg-bg-base border-b border-border-subtle px-3 sm:px-4 lg:px-6 flex items-center gap-2 sm:gap-3" data-testid="header">
+      <IconButton
+        onClick={onOpenMobileNav}
+        aria-label={t('sidebar.openNavigation')}
+        className="shrink-0 md:hidden"
+        data-testid="open-mobile-navigation"
+      >
+        <Menu size={20} />
+      </IconButton>
       {isSelectionMode ? (
         // Selection Mode Header
         <>
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             <IconButton onClick={clearSelection} aria-label={t('header.cancelSelection')}>
               <X size={20} />
             </IconButton>
-            <span className="text-text-primary font-medium">
-              {t('header.selectedCount', { count: selectedNoteIds.length })}
+            <span className="whitespace-nowrap text-text-primary font-medium">
+              <span className="sm:hidden">
+                {t('header.selectedCountShort', { count: selectedNoteIds.length })}
+              </span>
+              <span className="hidden sm:inline">
+                {t('header.selectedCount', { count: selectedNoteIds.length })}
+              </span>
             </span>
           </div>
 
@@ -172,24 +189,31 @@ export function Header() {
                 selectAllNotes()
               }
             }}
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+            aria-label={t('header.selectLoaded', { count: notes.length })}
+            className="flex shrink-0 items-center gap-1 px-2 py-2 sm:gap-2 sm:px-3 rounded-lg text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             {selectedNoteIds.length === notes.length ? (
               <CheckSquare size={18} />
             ) : (
               <Square size={18} />
             )}
-            {t('header.selectAll')}
+            <span className="sm:hidden">
+              {t('header.selectLoadedShort', { count: notes.length })}
+            </span>
+            <span className="hidden sm:inline">
+              {t('header.selectLoaded', { count: notes.length })}
+            </span>
           </button>
 
           <Button
             onClick={handleDeleteSelected}
             variant="secondary"
-            className="text-danger border-danger/30 hover:bg-danger/10"
+            className="shrink-0 px-2 text-danger border-danger/30 hover:bg-danger/10 sm:px-4"
             disabled={isDeleting}
+            aria-label={t('common.delete')}
           >
             <Trash2 size={18} />
-            {t('common.delete')}
+            <span className="hidden sm:inline">{t('common.delete')}</span>
           </Button>
         </>
       ) : (
@@ -234,6 +258,7 @@ export function Header() {
                   <button
                     type="button"
                     onClick={handleClearSearch}
+                    aria-label={t('header.clearSearch')}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted
                                hover:text-text-primary transition-colors"
                   >
@@ -249,6 +274,7 @@ export function Header() {
           <div className="relative hidden sm:block">
             <button
               onClick={() => setShowSortMenu(!showSortMenu)}
+              aria-label={t('header.sortNotes')}
               className="flex items-center gap-2 px-3 py-2 rounded-md bg-bg-elevated
                          text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors text-sm"
             >
@@ -343,7 +369,7 @@ export function Header() {
           )}
 
           {/* New Note Button */}
-          <Button onClick={() => openEditor(null)} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button">
+          <Button onClick={() => openEditor(null)} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button" aria-label={t('header.addNote')}>
             <Plus size={18} />
             <span className="hidden sm:inline">{t('header.addNote')}</span>
           </Button>

@@ -403,8 +403,13 @@ func (s *server) handleCheckConsistency(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	fkViolationsTotal, fkViolationsByTable, err := s.foreignKeyViolations()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	health := "healthy"
-	if orphanNoteTags >= 5 {
+	if fkViolationsTotal > 0 || orphanNoteTags >= 5 {
 		health = "critical"
 	} else if orphanNoteTags > 0 {
 		health = "warning"
@@ -412,14 +417,40 @@ func (s *server) handleCheckConsistency(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusOK, response{
 		"status": "success",
 		"data": response{
-			"orphan_note_tags": orphanNoteTags,
-			"unused_tags":      unusedTags,
-			"null_category_id": nullCategoryID,
-			"fk_status":        fkStatus,
-			"fk_enabled":       fkStatus == 1,
-			"health":           health,
+			"orphan_note_tags":                orphanNoteTags,
+			"unused_tags":                     unusedTags,
+			"null_category_id":                nullCategoryID,
+			"fk_status":                       fkStatus,
+			"fk_enabled":                      fkStatus == 1,
+			"foreign_key_violations_total":    fkViolationsTotal,
+			"foreign_key_violations_by_table": fkViolationsByTable,
+			"health":                          health,
 		},
 	})
+}
+
+func (s *server) foreignKeyViolations() (int, map[string]int, error) {
+	rows, err := s.db.Query("PRAGMA foreign_key_check")
+	if err != nil {
+		return 0, nil, err
+	}
+	defer rows.Close()
+
+	total := 0
+	byTable := map[string]int{}
+	for rows.Next() {
+		var tableName, parentTable string
+		var rowID, foreignKeyID any
+		if err := rows.Scan(&tableName, &rowID, &parentTable, &foreignKeyID); err != nil {
+			return 0, nil, err
+		}
+		total++
+		byTable[tableName]++
+	}
+	if err := rows.Err(); err != nil {
+		return 0, nil, err
+	}
+	return total, byTable, nil
 }
 
 func (s *server) handleSearchIntegrity(w http.ResponseWriter, r *http.Request) {

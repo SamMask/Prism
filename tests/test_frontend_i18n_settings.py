@@ -285,7 +285,7 @@ def test_settings_deep_components_use_i18n_for_extracted_strings():
     assert "t('settings.backup.exportTitle')" in files["BackupImportSection.tsx"]
     assert "t('settings.backup.confirmRestoreTitle')" in files["BackupImportSection.tsx"]
     assert "t('settings.serverDashboard.title')" in files["ServerDashboardSection.tsx"]
-    assert "t('settings.serverDashboard.deleteRestorePointMessage'" in files["ServerDashboardSection.tsx"]
+    assert "t('settings.backup.deleteRestorePointMessage'" in files["BackupImportSection.tsx"]
     assert "t('settings.maintenance.consistencyDescription')" in files["SystemMaintenance.tsx"]
     assert "t('settings.systemStats.title')" in files["SystemStatsSection.tsx"]
 

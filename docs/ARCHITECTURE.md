@@ -47,6 +47,13 @@ Go primary 仍是單一 executable 與單一 `package main`；2026-07-13 完成�
 
 所有本次新增 bounded-context source files 均不超過 1,500 physical lines。Static regression 必須以整個非測試 Go package source 作為 handler/contract assertion surface；只有 mux registration ownership 仍應直接檢查 `main.go`。
 
+## 2026-08 P1 Product Integration
+
+- Settings 的 Data & Recovery 是 DB copy、JSON/Markdown import/export、restore-point lifecycle 與 full-data snapshot 的單一產品入口。DB download / restore points 維持 DB-only；完整 snapshot 才收集 consistent DB、uploads、attachments、notes 與 config，且 v1 只支援 manual restore。
+- `GET /api/export/full-snapshot` 是 additive localhost-only Go route；staging 與 atomic ZIP 都限制在 external data-dir，契約見 `docs/contracts/full-data-snapshot-v1.md`。
+- Notes list 仍維持既有 response；當頁 notes 的 tags / source URLs 改成兩個固定 batch queries hydrate，不新增 cache、schema 或 denormalization。
+- React Home route 維持 eager；Prompt Builder / Settings 使用 route-level lazy chunks與可 retry fallback。FilterStrip 只屬 Home shell，Toast host 則在 shared Layout，確保 lazy routes 仍可顯示後續動作。
+
 ## Search Read Path
 
 `GET /api/notes?q=...` 維持單一查詢入口：

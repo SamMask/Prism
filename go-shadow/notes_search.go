@@ -88,6 +88,18 @@ func (s *server) handleNotes(w http.ResponseWriter, r *http.Request) {
 		applyNoteListContentPreview(note)
 		items = append(items, note)
 	}
+	if err := rows.Err(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := rows.Close(); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := s.hydrateNoteRelations(items); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	payload := response{
 		"status": "success",
 		"data":   items,
@@ -553,14 +565,6 @@ func (s *server) scanNoteRow(row noteScanner) (response, error) {
 	if err := row.Scan(&id, &title, &content, &categoryName, &remarks, &coverImage, &coverPosition, &editorLayout, &isPinned, &isArchived, &categoryID, &createdAt, &updatedAt, &parentID, &parentTitle, &variantsCount); err != nil {
 		return nil, err
 	}
-	tags, err := s.noteTags(id)
-	if err != nil {
-		return nil, err
-	}
-	urls, err := s.noteURLs(id)
-	if err != nil {
-		return nil, err
-	}
 	note := response{
 		"id": id, "title": nullableString(title), "content": nullableString(content),
 		"type": nullableString(categoryName), "category_name": nullableString(categoryName),
@@ -568,11 +572,101 @@ func (s *server) scanNoteRow(row noteScanner) (response, error) {
 		"cover_position": nullableString(coverPosition), "editor_layout": nullableString(editorLayout),
 		"is_pinned": isPinned != 0, "is_archived": isArchived != 0,
 		"category_id": nullableIntOrNil(categoryID), "created_at": nullableString(createdAt),
-		"updated_at": nullableString(updatedAt), "tags": tags, "urls": urls,
+		"updated_at": nullableString(updatedAt), "tags": []tagRef{}, "urls": []string{},
 		"parent_id": nullableIntOrNil(parentID), "parent_title": nullableStringOrNil(parentTitle),
 		"variants_count": variantsCount,
 	}
 	return note, nil
+}
+
+func (s *server) hydrateNoteRelations(notes []response) error {
+	if len(notes) == 0 {
+		return nil
+	}
+	noteIDs := make([]int, 0, len(notes))
+	for _, note := range notes {
+		noteID, ok := note["id"].(int)
+		if ok {
+			noteIDs = append(noteIDs, noteID)
+		}
+	}
+	tagsByNote, err := s.noteTagsBatch(noteIDs)
+	if err != nil {
+		return err
+	}
+	urlsByNote, err := s.noteURLsBatch(noteIDs)
+	if err != nil {
+		return err
+	}
+	for _, note := range notes {
+		noteID, _ := note["id"].(int)
+		note["tags"] = tagsByNote[noteID]
+		note["urls"] = urlsByNote[noteID]
+	}
+	return nil
+}
+
+func (s *server) noteTagsBatch(noteIDs []int) (map[int][]tagRef, error) {
+	tagsByNote := make(map[int][]tagRef, len(noteIDs))
+	for _, noteID := range noteIDs {
+		tagsByNote[noteID] = []tagRef{}
+	}
+	if len(noteIDs) == 0 {
+		return tagsByNote, nil
+	}
+	if s.queryObserver != nil {
+		s.queryObserver("note_tags_batch")
+	}
+	rows, err := s.db.Query(`
+		SELECT nt.note_id, t.id, t.name
+		FROM Note_Tags nt
+		JOIN Tags t ON nt.tag_id = t.id
+		WHERE nt.note_id IN (`+placeholders(len(noteIDs))+`)
+		ORDER BY nt.note_id, t.id`, intsToAny(noteIDs)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var noteID int
+		var tag tagRef
+		if err := rows.Scan(&noteID, &tag.ID, &tag.Name); err != nil {
+			return nil, err
+		}
+		tagsByNote[noteID] = append(tagsByNote[noteID], tag)
+	}
+	return tagsByNote, rows.Err()
+}
+
+func (s *server) noteURLsBatch(noteIDs []int) (map[int][]string, error) {
+	urlsByNote := make(map[int][]string, len(noteIDs))
+	for _, noteID := range noteIDs {
+		urlsByNote[noteID] = []string{}
+	}
+	if len(noteIDs) == 0 {
+		return urlsByNote, nil
+	}
+	if s.queryObserver != nil {
+		s.queryObserver("note_urls_batch")
+	}
+	rows, err := s.db.Query(`
+		SELECT note_id, url
+		FROM Source_Urls
+		WHERE note_id IN (`+placeholders(len(noteIDs))+`)
+		ORDER BY note_id, id`, intsToAny(noteIDs)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var noteID int
+		var url string
+		if err := rows.Scan(&noteID, &url); err != nil {
+			return nil, err
+		}
+		urlsByNote[noteID] = append(urlsByNote[noteID], url)
+	}
+	return urlsByNote, rows.Err()
 }
 
 func applyNoteListContentPreview(note response) {

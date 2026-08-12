@@ -55,4 +55,3 @@ def test_kwf02_docs_close_saved_search_and_keep_current_handoff():
     assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
     assert "KWF-02 Saved Search / Search Workspace 已完成" in handoff
     assert "## Next Entry" in handoff
-    assert "目前沒有未交付的 active construction item" in handoff

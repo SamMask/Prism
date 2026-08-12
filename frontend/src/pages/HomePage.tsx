@@ -3,8 +3,9 @@ import { useAppStore, type SearchWorkspaceFilters, type ViewMode } from '../stor
 import { NoteCard } from '../components/NoteCard'
 import { NoteEditor } from '../components/NoteEditor'
 import { ReadingView } from '../components/ReadingView'
-import { ToastContainer, toast } from '../components/ui/Toast'
-import { Bookmark, Clock, Loader2, Search, Trash2, X } from 'lucide-react'
+import { SearchDiagnosticsNotice } from '../components/SearchDiagnosticsNotice'
+import { toast } from '../components/ui/Toast'
+import { AlertTriangle, Bookmark, Clock, Loader2, Search, Trash2, X } from 'lucide-react'
 import { useTranslation } from '../hooks/useTranslation'
 import {
   DndContext,
@@ -148,6 +149,9 @@ export function HomePage() {
     totalNotes,
     categories,
     tags,
+    searchDiagnostics,
+    notesError,
+    retryFetchNotes,
   } = useAppStore()
 
   const [localNotes, setLocalNotes] = useState<Note[]>([])
@@ -189,6 +193,7 @@ export function HomePage() {
 
   // Handle drag end
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (!isDragEnabled) return
     const { active, over } = event
 
     if (over && active.id !== over.id) {
@@ -244,8 +249,9 @@ export function HomePage() {
     observerRef.current = observer
   }, [autoLoadMore, handleLoadMore])
 
-  // Only enable drag when sortBy is 'custom'
-  const isDragEnabled = sortBy === 'custom'
+  const isUnfilteredLibrary = !searchQuery.trim() && !selectedCategoryId && !selectedTagId && !showArchived
+  const isAllNotesLoaded = localNotes.length === totalNotes
+  const isDragEnabled = sortBy === 'custom' && isUnfilteredLibrary && isAllNotesLoaded
   const activeCategory = categories.find((category) => category.id === selectedCategoryId)
   const activeCategoryName = getCategoryDisplayName(activeCategory, t)
   const activeTag = tags.find((tag) => tag.id === selectedTagId)
@@ -401,28 +407,26 @@ export function HomePage() {
         </div>
       </div>
 
-      <div
-        className="mb-4 rounded-md border border-border-subtle bg-bg-elevated/55 px-3 py-3"
-        data-testid="saved-search-workspace-bar"
-      >
-        <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
-          <Bookmark size={14} className="text-primary" />
-          <span className="font-medium text-text-primary">{t('home.savedSearch.title')}</span>
-          <button
-            type="button"
-            onClick={saveCurrentSearchWorkspace}
-            disabled={hasSavedCurrentSearchWorkspace}
-            className="ml-auto rounded-md border border-border-default bg-bg-base px-2.5 py-1.5 text-xs text-text-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
-            data-testid="save-search-workspace"
-          >
-            {hasSavedCurrentSearchWorkspace ? t('home.savedSearch.alreadySaved') : t('home.savedSearch.save')}
-          </button>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          {savedSearchWorkspaces.length === 0 ? (
-            <span className="text-xs text-text-muted">{t('home.savedSearch.empty')}</span>
-          ) : (
-            savedSearchWorkspaces.map((workspace) => (
+      {savedSearchWorkspaces.length > 0 ? (
+        <div
+          className="mb-4 rounded-md border border-border-subtle bg-bg-elevated/55 px-3 py-3"
+          data-testid="saved-search-workspace-bar"
+        >
+          <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
+            <Bookmark size={14} className="text-primary" />
+            <span className="font-medium text-text-primary">{t('home.savedSearch.title')}</span>
+            <button
+              type="button"
+              onClick={saveCurrentSearchWorkspace}
+              disabled={hasSavedCurrentSearchWorkspace}
+              className="ml-auto rounded-md border border-border-default bg-bg-base px-2.5 py-1.5 text-xs text-text-primary hover:bg-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="save-search-workspace"
+            >
+              {hasSavedCurrentSearchWorkspace ? t('home.savedSearch.alreadySaved') : t('home.savedSearch.save')}
+            </button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            {savedSearchWorkspaces.map((workspace) => (
               <span key={workspace.id} className="inline-flex h-8 items-center gap-1 rounded-md border border-border-subtle bg-bg-base text-xs text-text-secondary">
                 <button
                   type="button"
@@ -444,10 +448,22 @@ export function HomePage() {
                   <Trash2 size={13} />
                 </button>
               </span>
-            ))
-          )}
+            ))}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="mb-4 flex justify-end" data-testid="saved-search-empty-cta">
+          <button
+            type="button"
+            onClick={saveCurrentSearchWorkspace}
+            className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-text-muted hover:bg-bg-elevated hover:text-text-primary"
+            data-testid="save-search-workspace"
+          >
+            <Bookmark size={14} />
+            {t('home.savedSearch.saveCurrent')}
+          </button>
+        </div>
+      )}
 
       {searchQuery && (
         <div className="mb-4 rounded-md border border-border-subtle bg-bg-elevated/70 px-3 py-3" data-testid="search-context-bar">
@@ -460,6 +476,7 @@ export function HomePage() {
               {t('home.clearSearch')}
             </button>
           </div>
+          <SearchDiagnosticsNotice diagnostics={searchDiagnostics} className="mt-3" />
           {recentSearches.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1 text-xs text-text-muted">
@@ -482,6 +499,11 @@ export function HomePage() {
       )}
 
       {/* Notes Grid/List with optional DnD */}
+      {sortBy === 'custom' && !isDragEnabled && localNotes.length > 0 && (
+        <div className="mb-4 rounded-md border border-warning/25 bg-warning/10 px-3 py-2 text-xs text-text-secondary" data-testid="custom-reorder-disabled-reason">
+          {isUnfilteredLibrary ? t('home.reorderLoadAll') : t('home.reorderUnfilteredOnly')}
+        </div>
+      )}
       {isDragEnabled ? (
         <DndContext
           sensors={sensors}
@@ -499,6 +521,20 @@ export function HomePage() {
         notesContent
       )}
 
+      {notesError && (
+        <div
+          className="mt-4 flex flex-wrap items-center gap-2 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger"
+          role="alert"
+          data-testid="notes-load-error"
+        >
+          <AlertTriangle size={16} className="shrink-0" />
+          <span>{t('home.loadFailed')}</span>
+          <button type="button" onClick={retryFetchNotes} className="ml-auto font-medium text-primary hover:text-primary-light">
+            {t('home.retry')}
+          </button>
+        </div>
+      )}
+
       {/* Loading State */}
       {isLoading && (
         <div className="flex justify-center py-8">
@@ -507,7 +543,7 @@ export function HomePage() {
       )}
 
       {/* Empty State */}
-      {!isLoading && localNotes.length === 0 && (
+      {!isLoading && !notesError && localNotes.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-full bg-bg-elevated flex items-center justify-center mb-4">
             <span className="text-3xl">📝</span>
@@ -586,8 +622,6 @@ export function HomePage() {
         <ReadingView note={readingNote} onClose={closeReading} />
       )}
 
-      {/* Toast Notifications */}
-      <ToastContainer />
     </>
   )
 }

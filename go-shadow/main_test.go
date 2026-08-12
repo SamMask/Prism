@@ -1,9 +1,11 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"crypto/md5"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -28,6 +30,191 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
+func TestNotesListBatchHydratesTagsAndURLsWithTwoRelationQueries(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	for index := 0; index < 99; index++ {
+		noteID := insertSearchNote(t, db, fmt.Sprintf("Batch Note %03d", index), "body", "", 1)
+		if _, err := db.Exec("INSERT OR IGNORE INTO Tags (name) VALUES (?)", fmt.Sprintf("tag-%d", index%5)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec("INSERT INTO Note_Tags (note_id, tag_id) SELECT ?, id FROM Tags WHERE name = ?", noteID, fmt.Sprintf("tag-%d", index%5)); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := db.Exec("INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)", noteID, fmt.Sprintf("https://example.test/%d", index)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	relationQueries := []string{}
+	srv := &server{
+		db:      db,
+		runtime: runtimeConfig{sqliteQueryOnly: true},
+		queryObserver: func(name string) {
+			relationQueries = append(relationQueries, name)
+		},
+	}
+	recorder := httptest.NewRecorder()
+	srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, "/api/notes?per_page=100", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected notes list 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if got := strings.Join(relationQueries, ","); got != "note_tags_batch,note_urls_batch" {
+		t.Fatalf("expected exactly two relation batch queries, got %q", got)
+	}
+	var payload struct {
+		Data []struct {
+			Tags []tagRef `json:"tags"`
+			URLs []string `json:"urls"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if len(payload.Data) != 100 {
+		t.Fatalf("expected 100 notes, got %d", len(payload.Data))
+	}
+	relatedNotes := 0
+	for _, note := range payload.Data {
+		if len(note.Tags) == 1 && len(note.URLs) == 1 {
+			relatedNotes++
+		}
+	}
+	if relatedNotes != 99 {
+		t.Fatalf("expected 99 fixture notes with hydrated relations, got %d", relatedNotes)
+	}
+}
+
+func TestFullDataSnapshotExportIsLocalAtomicAndManifestVerified(t *testing.T) {
+	dataDir := t.TempDir()
+	dbPath := filepath.Join(dataDir, "snapshot_runtime_test.db")
+	if _, err := copyFileAtomic(createSpikeDB(t), dbPath); err != nil {
+		t.Fatal(err)
+	}
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	fixtures := map[string]string{
+		"static/uploads/image.txt":        "upload fixture",
+		"docs/attachments/attachment.txt": "attachment fixture",
+		"docs/notes/note.txt":             "note fixture",
+		"config/prompt_options.json":      `{"fixture":true}`,
+	}
+	for relativePath, content := range fixtures {
+		absolutePath := filepath.Join(dataDir, filepath.FromSlash(relativePath))
+		if err := os.MkdirAll(filepath.Dir(absolutePath), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(absolutePath, []byte(content), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{
+		dataDir: dataDir, dbPath: dbPath, enableImportExport: true, enableServerSystem: true,
+	}}
+	request := httptest.NewRequest(http.MethodGet, "/api/export/full-snapshot", nil)
+	request.RemoteAddr = "127.0.0.1:54321"
+	recorder := httptest.NewRecorder()
+	srv.handleExportFullSnapshot(recorder, request)
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected full snapshot 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if recorder.Header().Get("X-Prism-Snapshot-Manifest-Version") != "1" {
+		t.Fatalf("missing snapshot manifest version header")
+	}
+
+	reader, err := zip.NewReader(bytes.NewReader(recorder.Body.Bytes()), int64(recorder.Body.Len()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	entries := map[string][]byte{}
+	for _, file := range reader.File {
+		handle, err := file.Open()
+		if err != nil {
+			t.Fatal(err)
+		}
+		content, err := io.ReadAll(handle)
+		_ = handle.Close()
+		if err != nil {
+			t.Fatal(err)
+		}
+		entries[file.Name] = content
+	}
+	for _, expected := range []string{
+		"database/knowledge.db", "static/uploads/image.txt", "docs/attachments/attachment.txt",
+		"docs/notes/note.txt", "config/prompt_options.json", "snapshot-manifest.json",
+	} {
+		if _, ok := entries[expected]; !ok {
+			t.Fatalf("snapshot missing %s", expected)
+		}
+	}
+	var manifest struct {
+		Version               int  `json:"version"`
+		ManualRestoreRequired bool `json:"manual_restore_required"`
+		Files                 []struct {
+			Path      string `json:"path"`
+			SizeBytes int64  `json:"size_bytes"`
+			SHA256    string `json:"sha256"`
+		} `json:"files"`
+	}
+	if err := json.Unmarshal(entries["snapshot-manifest.json"], &manifest); err != nil {
+		t.Fatal(err)
+	}
+	if manifest.Version != 1 {
+		t.Fatalf("unexpected manifest version %d", manifest.Version)
+	}
+	if !manifest.ManualRestoreRequired {
+		t.Fatal("snapshot manifest must require explicit manual restore")
+	}
+	for _, file := range manifest.Files {
+		content, ok := entries[file.Path]
+		if !ok {
+			t.Fatalf("manifest references missing file %s", file.Path)
+		}
+		hash := fmt.Sprintf("%x", sha256.Sum256(content))
+		if int64(len(content)) != file.SizeBytes || hash != file.SHA256 {
+			t.Fatalf("manifest mismatch for %s", file.Path)
+		}
+	}
+	databaseReadBackPath := filepath.Join(t.TempDir(), "knowledge.db")
+	if err := os.WriteFile(databaseReadBackPath, entries["database/knowledge.db"], 0600); err != nil {
+		t.Fatal(err)
+	}
+	readBackDB, err := sql.Open("sqlite", databaseReadBackPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer readBackDB.Close()
+	var schemaVersion string
+	if err := readBackDB.QueryRow("SELECT value FROM Schema_Meta WHERE key = 'schema_version'").Scan(&schemaVersion); err != nil {
+		t.Fatalf("snapshot database read-back failed: %v", err)
+	}
+	if schemaVersion != "17" {
+		t.Fatalf("unexpected snapshot database schema version %q", schemaVersion)
+	}
+
+	remoteRequest := httptest.NewRequest(http.MethodGet, "/api/export/full-snapshot", nil)
+	remoteRequest.RemoteAddr = "203.0.113.7:54321"
+	remoteRecorder := httptest.NewRecorder()
+	srv.handleExportFullSnapshot(remoteRecorder, remoteRequest)
+	if remoteRecorder.Code != http.StatusForbidden {
+		t.Fatalf("remote full snapshot should be forbidden, got %d", remoteRecorder.Code)
+	}
+
+	if matches, err := filepath.Glob(filepath.Join(dataDir, ".prism-full-snapshot-*")); err != nil || len(matches) != 0 {
+		t.Fatalf("snapshot temp artifacts leaked: %v err=%v", matches, err)
+	}
+}
 
 func createSpikeDB(t *testing.T) string {
 	t.Helper()
@@ -1633,6 +1820,46 @@ func TestAttachmentBodySearchReportsPartialWhenScanLimitIsHit(t *testing.T) {
 	diag := payload.SearchDiagnostics.AttachmentBodyScan
 	if !diag.Partial || (diag.Reason != "file_limit" && diag.Reason != "time_limit") || diag.ScannedFiles <= 0 || diag.ScannedFiles > maxAttachmentScanFiles {
 		t.Fatalf("unexpected attachment scan diagnostics: %+v", diag)
+	}
+}
+
+func TestAttachmentBodySearchOmitsDiagnosticsWhenScanCompletes(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	dataDir := t.TempDir()
+	attachmentsDir := filepath.Join(dataDir, "docs", "attachments")
+	if err := os.MkdirAll(attachmentsDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	noteID := insertSearchNote(t, db, "complete scan", "plain body", "", 1)
+	content := "complete attachment needle"
+	if err := os.WriteFile(filepath.Join(attachmentsDir, "complete.md"), []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		"INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes) VALUES (?, 'docs/attachments/complete.md', 'md', 'complete', ?)",
+		noteID, len(content),
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: dataDir, sqliteQueryOnly: false}}
+	recorder := httptest.NewRecorder()
+	srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, "/api/notes?q=needle&per_page=100", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected notes search 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := payload["search_diagnostics"]; exists {
+		t.Fatalf("complete attachment scan must not emit partial diagnostics: %#v", payload)
 	}
 }
 

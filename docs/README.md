@@ -71,6 +71,7 @@ docs/
 ├── GOVERNANCE.md      # 開發治理、完成宣稱、驗證證據與 UI/UX 準則
 ├── TODO.md            # Active roadmap / next entry only
 ├── CONTRACTS.md       # Active task contract index
+├── TEST_PORTFOLIO.md  # Behavior / Contract / Governance / Historical 測試資產分類
 ├── RELEASE_CHECKLIST.md # Public release/tag/package validation evidence template
 ├── SCHEMA.md          # DB Schema + Migration 歷程
 ├── ARCHITECTURE.md    # C4 架構圖與 Go primary boundary

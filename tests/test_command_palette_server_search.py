@@ -56,4 +56,3 @@ def test_kwf_01_docs_record_completion_and_current_handoff():
     assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
     assert "KWF-01 Command Palette server-side search 已完成" in handoff
     assert "## Next Entry" in handoff
-    assert "目前沒有未交付的 active construction item" in handoff

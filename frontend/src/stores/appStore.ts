@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { api, Note, Category, Tag, type BatchDeletePreview } from '../services/api'
+import { api, Note, Category, Tag, type BatchDeletePreview, type SearchDiagnostics } from '../services/api'
 import { type Locale, readStoredLocale, setLocale as persistLocale } from '../i18n'
 
 export type ViewMode = 'grid' | 'list' | 'compact'
@@ -12,6 +12,7 @@ export type SearchWorkspaceFilters = {
 }
 
 const VIEW_MODE_STORAGE_KEY = 'prism.viewMode'
+let notesRequestSequence = 0
 
 function readSavedViewMode(): ViewMode {
   const savedMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
@@ -27,6 +28,9 @@ interface AppState {
   totalNotes: number
   currentPage: number
   hasMore: boolean
+  searchDiagnostics: SearchDiagnostics | null
+  notesError: string | null
+  notesRetryReset: boolean
 
   // UI State
   locale: Locale
@@ -53,6 +57,7 @@ interface AppState {
 
   // Actions
   fetchNotes: (reset?: boolean) => Promise<void>
+  retryFetchNotes: () => Promise<void>
   fetchCategories: () => Promise<void>
   fetchTags: () => Promise<void>
   setLocale: (locale: Locale) => void
@@ -74,7 +79,7 @@ interface AppState {
   selectAllNotes: () => void
   clearSelection: () => void
   deleteNote: (id: number) => Promise<void>
-  deleteSelectedNotes: () => Promise<BatchDeletePreview>
+  deleteSelectedNotes: (preview: BatchDeletePreview) => Promise<BatchDeletePreview>
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -84,6 +89,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   totalNotes: 0,
   currentPage: 1,
   hasMore: true,
+  searchDiagnostics: null,
+  notesError: null,
+  notesRetryReset: true,
 
   locale: readStoredLocale(),
   viewMode: readSavedViewMode(),
@@ -107,10 +115,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // Actions
   fetchNotes: async (reset = false) => {
+    const requestId = ++notesRequestSequence
     const state = get()
-    if (state.isLoading) return
-
-    set({ isLoading: true })
+    set({ isLoading: true, notesError: null })
 
     try {
       const page = reset ? 1 : state.currentPage
@@ -142,18 +149,35 @@ export const useAppStore = create<AppState>((set, get) => ({
       
       const response = await api.getNotes(params)
 
+      if (requestId !== notesRequestSequence) return
+
       set({
-        notes: reset ? response.notes : [...state.notes, ...response.notes],
+        notes: reset ? response.notes : [...get().notes, ...response.notes],
         totalNotes: response.total,
         currentPage: page + 1,
         hasMore: response.notes.length === 20,
+        searchDiagnostics: response.searchDiagnostics ?? null,
         isLoading: false,
+        notesRetryReset: false,
       })
     } catch (error) {
+      if (requestId !== notesRequestSequence) return
       console.error('Failed to fetch notes:', error)
-      set({ isLoading: false })
+      set({
+        isLoading: false,
+        notesError: 'fetch_failed',
+        notesRetryReset: reset,
+        ...(reset ? {
+          notes: [],
+          totalNotes: 0,
+          hasMore: false,
+          searchDiagnostics: null,
+        } : {}),
+      })
     }
   },
+
+  retryFetchNotes: () => get().fetchNotes(get().notesRetryReset),
 
   fetchCategories: async () => {
     try {
@@ -204,27 +228,27 @@ export const useAppStore = create<AppState>((set, get) => ({
   toggleCommandPalette: () => set((state) => ({ isCommandPaletteOpen: !state.isCommandPaletteOpen })),
 
   setSearchQuery: (query) => {
-    set({ searchQuery: query, currentPage: 1 })
+    set({ searchQuery: query, currentPage: 1, selectedNoteIds: [] })
     get().fetchNotes(true)
   },
 
   setSelectedCategory: (id) => {
-    set({ selectedCategoryId: id, selectedTagId: null, showArchived: false, currentPage: 1 })
+    set({ selectedCategoryId: id, selectedTagId: null, showArchived: false, currentPage: 1, selectedNoteIds: [] })
     get().fetchNotes(true)
   },
 
   setSelectedTag: (id) => {
-    set({ selectedTagId: id, selectedCategoryId: null, showArchived: false, currentPage: 1 })
+    set({ selectedTagId: id, selectedCategoryId: null, showArchived: false, currentPage: 1, selectedNoteIds: [] })
     get().fetchNotes(true)
   },
 
   setSortBy: (sort) => {
-    set({ sortBy: sort, currentPage: 1 })
+    set({ sortBy: sort, currentPage: 1, selectedNoteIds: [] })
     get().fetchNotes(true)
   },
 
   setShowArchived: (showArchived) => {
-    set({ showArchived, selectedCategoryId: null, selectedTagId: null, currentPage: 1 })
+    set({ showArchived, selectedCategoryId: null, selectedTagId: null, currentPage: 1, selectedNoteIds: [] })
     get().fetchNotes(true)
   },
 
@@ -236,6 +260,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       sortBy: filters.sortBy,
       showArchived: filters.showArchived,
       currentPage: 1,
+      selectedNoteIds: [],
     })
     get().fetchNotes(true)
   },
@@ -272,21 +297,11 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  deleteSelectedNotes: async () => {
+  deleteSelectedNotes: async (preview) => {
     const { selectedNoteIds } = get()
     if (selectedNoteIds.length === 0) {
-      return {
-        dry_run: true,
-        requested_count: 0,
-        deletable_count: 0,
-        missing_count: 0,
-        image_count: 0,
-        attachment_count: 0,
-        notes: [],
-      }
+      return preview
     }
-
-    const preview = await api.previewBatchDeleteNotes(selectedNoteIds)
 
     set({ isDeleting: true })
     try {

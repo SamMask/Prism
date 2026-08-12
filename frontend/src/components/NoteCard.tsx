@@ -2,7 +2,6 @@ import { Note, api } from '../services/api'
 import { useAppStore, type ViewMode } from '../stores/appStore'
 import { Pin, MoreHorizontal, Edit2, Trash2, Copy, Archive, Check, GitBranch, Download, BookOpen, Maximize2, ListPlus } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
-import { IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
@@ -22,6 +21,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const [isCoverLightboxOpen, setIsCoverLightboxOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuButtonRef = useRef<HTMLButtonElement>(null)
   const isSelected = selectedNoteIds.includes(note.id)
   const isSelectionMode = selectedNoteIds.length > 0
 
@@ -32,9 +32,19 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         setShowMenu(false)
       }
     }
+    const handleMenuKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowMenu(false)
+        menuButtonRef.current?.focus()
+      }
+    }
     if (showMenu) {
       document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      document.addEventListener('keydown', handleMenuKeyDown)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+        document.removeEventListener('keydown', handleMenuKeyDown)
+      }
     }
   }, [showMenu])
 
@@ -271,6 +281,84 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     ) : null
   )
 
+  const renderSelectionControl = () => (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.stopPropagation()
+        toggleNoteSelection(note.id)
+      }}
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 transition-colors
+        ${isSelected
+          ? 'border-primary bg-primary text-white'
+          : 'border-border-default bg-bg-surface/80 text-transparent hover:border-primary'}`}
+      aria-label={isSelected
+        ? t('noteCard.deselectNote', { title: note.title || t('noteCard.untitled') })
+        : t('noteCard.selectNote', { title: note.title || t('noteCard.untitled') })}
+      aria-pressed={isSelected}
+      data-testid={`note-card-select-${note.id}`}
+    >
+      <Check size={14} />
+    </button>
+  )
+
+  const renderActionsMenu = () => (
+    <div ref={menuRef} className="relative shrink-0" onClick={(event) => event.stopPropagation()}>
+      <button
+        ref={menuButtonRef}
+        type="button"
+        onClick={() => setShowMenu(!showMenu)}
+        className="rounded-md p-2 text-text-muted opacity-70 transition-colors hover:bg-bg-hover hover:text-text-primary hover:opacity-100 focus:bg-bg-hover focus:text-text-primary focus:opacity-100"
+        aria-label={t('noteCard.moreActions')}
+        aria-haspopup="menu"
+        aria-expanded={showMenu}
+        data-testid={`note-card-actions-${note.id}`}
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {showMenu && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full z-20 mt-1 min-w-[190px] max-h-[min(70vh,28rem)] overflow-y-auto rounded-lg border border-border-default bg-bg-elevated py-1 shadow-xl shadow-black/30"
+        >
+          <button onClick={handleOpenReading} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+            <BookOpen size={14} /> {t('noteCard.openReading')}
+          </button>
+          <button onClick={handleAddToReadingWorkspace} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary" data-testid={`note-card-add-reading-workspace-${note.id}`}>
+            <ListPlus size={14} /> {t('noteCard.addToReadingWorkspace')}
+          </button>
+          <button onClick={handleOpenEditorFromMenu} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+            <Edit2 size={14} /> {t('common.edit')}
+          </button>
+          <button onClick={handleTogglePin} className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${note.is_pinned ? 'text-warning' : 'text-text-secondary'} hover:bg-bg-hover hover:text-text-primary`}>
+            <Pin size={14} /> {note.is_pinned ? t('noteCard.unpin') : t('noteCard.pin')}
+          </button>
+          <button onClick={handleCopy} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+            <Copy size={14} /> {t('noteCard.copyContent')}
+          </button>
+          <button onClick={handleCreateVariant} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+            <GitBranch size={14} /> {t('noteCard.createVariant')}
+          </button>
+          {variantCount > 0 && (
+            <button onClick={handleOpenVariants} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+              <GitBranch size={14} /> {t('noteCard.viewVariants')}
+            </button>
+          )}
+          <button onClick={handleToggleArchive} className={`w-full flex items-center gap-2 px-3 py-2 text-sm ${note.is_archived ? 'text-warning' : 'text-text-secondary'} hover:bg-bg-hover hover:text-text-primary`}>
+            <Archive size={14} /> {note.is_archived ? t('noteCard.unarchive') : t('noteCard.archive')}
+          </button>
+          <button onClick={handleExportImages} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary">
+            <Download size={14} /> {t('noteCard.exportImages')}
+          </button>
+          <div className="my-1 border-t border-border-subtle" />
+          <button onClick={handleDelete} disabled={isDeleting} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger/10 disabled:opacity-50">
+            <Trash2 size={14} /> {isDeleting ? t('noteCard.deleting') : t('common.delete')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+
   if (viewMode === 'compact') {
     return (
       <div
@@ -285,12 +373,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
         `}
       >
-        {isSelectionMode && (
-          <div className={`w-4 h-4 rounded border-2 flex shrink-0 items-center justify-center
-                          ${isSelected ? 'bg-primary border-primary' : 'border-border-default'}`}>
-            {isSelected && <Check size={12} className="text-white" />}
-          </div>
-        )}
+        {renderSelectionControl()}
 
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {note.is_pinned && <Pin size={13} className="shrink-0 text-warning" />}
@@ -322,6 +405,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           <span>{t('noteCard.wordCount', { count: formattedContentLength })}</span>
           <span>{new Date(note.updated_at).toLocaleDateString(locale)}</span>
         </div>
+        {renderActionsMenu()}
       </div>
     )
   }
@@ -341,13 +425,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
           `}
         >
-          {/* Selection Checkbox */}
-          {isSelectionMode && (
-            <div className={`w-5 h-5 rounded border-2 flex items-center justify-center
-                            ${isSelected ? 'bg-primary border-primary' : 'border-border-default'}`}>
-              {isSelected && <Check size={14} className="text-white" />}
-            </div>
-          )}
+          {renderSelectionControl()}
 
           {/* Thumbnail */}
           {coverImage && (
@@ -393,6 +471,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           <div className="text-xs text-text-muted">
             {new Date(note.updated_at).toLocaleDateString(locale)}
           </div>
+          {renderActionsMenu()}
         </div>
         {renderCoverLightbox()}
       </>
@@ -414,20 +493,6 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           ${isSelected ? 'ring-2 ring-primary bg-primary/5' : ''}
         `}
       >
-        {/* Selection Checkbox (top-left) */}
-        <div
-          className={`absolute top-2 left-2 z-10 w-6 h-6 rounded border-2 flex items-center justify-center
-                      transition-all duration-200
-                      ${isSelectionMode || isSelected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}
-                      ${isSelected ? 'bg-primary border-primary' : 'bg-bg-surface/80 border-border-default hover:border-primary'}`}
-          onClick={(e) => {
-            e.stopPropagation()
-            toggleNoteSelection(note.id)
-          }}
-        >
-          {isSelected && <Check size={14} className="text-white" />}
-        </div>
-
         {/* Cover Image */}
         {coverImage && (
           <div className="relative aspect-video overflow-hidden bg-bg-elevated rounded-t-xl">
@@ -448,6 +513,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
         <div className="p-[var(--prism-card-padding)]">
         {/* Title */}
         <div className="flex items-start justify-between gap-2">
+          {renderSelectionControl()}
           <div className="flex items-center gap-2 min-w-0">
             {note.is_pinned && (
               <Pin size={14} className="text-warning flex-shrink-0" />
@@ -457,18 +523,7 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
             </h3>
           </div>
 
-          {/* Actions Menu */}
-          <IconButton
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation()
-              setShowMenu(!showMenu)
-            }}
-            className="opacity-0 group-hover:opacity-100"
-            aria-label={t('noteCard.moreActions')}
-          >
-            <MoreHorizontal size={16} />
-          </IconButton>
+          {renderActionsMenu()}
         </div>
 
         {/* Preview */}
@@ -533,103 +588,6 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
           </span>
         </div>
         </div>
-
-        {/* Dropdown Menu */}
-        {showMenu && (
-          <div
-            ref={menuRef}
-            onClick={(e) => e.stopPropagation()}
-            className="absolute top-2 right-2 z-20
-                       bg-bg-elevated border border-border-default rounded-lg
-                       shadow-xl shadow-black/30 py-1 min-w-[140px]"
-          >
-          <button
-            onClick={handleOpenReading}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-text-secondary
-                       hover:bg-bg-hover hover:text-text-primary"
-          >
-            <BookOpen size={14} /> {t('noteCard.openReading')}
-          </button>
-          <button
-            onClick={handleAddToReadingWorkspace}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-text-secondary
-                       hover:bg-bg-hover hover:text-text-primary"
-            data-testid={`note-card-add-reading-workspace-${note.id}`}
-          >
-            <ListPlus size={14} /> {t('noteCard.addToReadingWorkspace')}
-          </button>
-          <button 
-            onClick={handleOpenEditorFromMenu}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-text-secondary
-                       hover:bg-bg-hover hover:text-text-primary"
-          >
-            <Edit2 size={14} /> {t('common.edit')}
-          </button>
-          <button 
-            onClick={handleTogglePin}
-            className={`w-full flex items-center gap-2 px-3 py-2
-                       text-sm ${note.is_pinned ? 'text-warning' : 'text-text-secondary'}
-                       hover:bg-bg-hover hover:text-text-primary`}
-          >
-            <Pin size={14} /> {note.is_pinned ? t('noteCard.unpin') : t('noteCard.pin')}
-          </button>
-          <button 
-            onClick={handleCopy}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-text-secondary
-                       hover:bg-bg-hover hover:text-text-primary"
-          >
-            <Copy size={14} /> {t('noteCard.copyContent')}
-          </button>
-          <button 
-            onClick={handleCreateVariant}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-text-secondary
-                       hover:bg-bg-hover hover:text-text-primary"
-          >
-            <GitBranch size={14} /> {t('noteCard.createVariant')}
-          </button>
-          {variantCount > 0 && (
-            <button
-              onClick={handleOpenVariants}
-              className="w-full flex items-center gap-2 px-3 py-2
-                         text-sm text-text-secondary
-                         hover:bg-bg-hover hover:text-text-primary"
-            >
-              <GitBranch size={14} /> {t('noteCard.viewVariants')}
-            </button>
-          )}
-          <button 
-            onClick={handleToggleArchive}
-            className={`w-full flex items-center gap-2 px-3 py-2
-                       text-sm ${note.is_archived ? 'text-warning' : 'text-text-secondary'}
-                       hover:bg-bg-hover hover:text-text-primary`}
-          >
-            <Archive size={14} /> {note.is_archived ? t('noteCard.unarchive') : t('noteCard.archive')}
-          </button>
-          <button 
-            onClick={handleExportImages}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-text-secondary
-                       hover:bg-bg-hover hover:text-text-primary"
-          >
-            <Download size={14} /> {t('noteCard.exportImages')}
-          </button>
-          <div className="border-t border-border-subtle my-1" />
-          <button 
-            onClick={handleDelete}
-            disabled={isDeleting}
-            className="w-full flex items-center gap-2 px-3 py-2
-                       text-sm text-danger
-                       hover:bg-danger/10 disabled:opacity-50"
-          >
-            <Trash2 size={14} /> {isDeleting ? t('noteCard.deleting') : t('common.delete')}
-          </button>
-          </div>
-        )}
       </div>
       {renderCoverLightbox()}
     </>

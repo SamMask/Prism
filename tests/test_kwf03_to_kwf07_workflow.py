@@ -46,9 +46,11 @@ def test_kwf04_batch_delete_uses_server_dry_run_preview_before_write():
     assert "previewBatchDeleteNotes" in api
     assert 'client.post("/notes/batch/delete", { note_ids: noteIds, dry_run: true })' in api
     assert "batchDeleteNotes: async (noteIds: number[]): Promise" in api
-    assert "await api.previewBatchDeleteNotes(selectedNoteIds)" in store
+    assert "api.previewBatchDeleteNotes" not in store
+    assert "deleteSelectedNotes: (preview: BatchDeletePreview)" in store
     assert "await api.batchDeleteNotes(selectedNoteIds)" in store
     assert "batchDeletePreview" in header
+    assert "await deleteSelectedNotes(batchDeletePreview)" in header
     assert "header.batchDeletePreview" in header
     assert "`dry_run: true`" in reference
     assert "不是 auth" in reference

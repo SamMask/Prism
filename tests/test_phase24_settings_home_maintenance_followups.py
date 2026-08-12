@@ -93,7 +93,7 @@ def test_settings_deploy_controls_explain_port_update_and_hide_local_service_man
 
 def test_category_counts_and_backup_delete_controls_are_locked():
     data_manager = DATA_MANAGER_PATH.read_text(encoding="utf-8")
-    server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
+    backup_import = (ROOT / "frontend" / "src" / "components" / "settings" / "BackupImportSection.tsx").read_text(encoding="utf-8")
     api = API_PATH.read_text(encoding="utf-8")
     i18n = I18N_PATH.read_text(encoding="utf-8")
 
@@ -103,10 +103,10 @@ def test_category_counts_and_backup_delete_controls_are_locked():
     assert "flex w-16 shrink-0 justify-end gap-1" in data_manager
     assert "Prism 內建還原點" in i18n
     assert "下載目前資料庫是一次性副本；建立還原點會保留最近 3 份供資料庫還原使用" in i18n
-    assert "t('settings.serverDashboard.restorePoints')" in server_dashboard
-    assert "t('settings.serverDashboard.restorePointDescription')" in server_dashboard
-    assert "handleDeleteBackup" in server_dashboard
-    assert "api.deleteBackup(backup.filename)" in server_dashboard
+    assert 'data-testid="restore-point-lifecycle"' in backup_import
+    assert "t('settings.backup.createRestorePoint')" in backup_import
+    assert "handleDeleteBackup" in backup_import
+    assert "api.deleteBackup(backup.filename)" in backup_import
     assert "deleteBackup: async (filename: string)" in api
 
 
@@ -116,7 +116,7 @@ def test_core_ux_settings_tabs_and_backup_restore_copy_are_locked():
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
     i18n = I18N_PATH.read_text(encoding="utf-8")
 
-    for label in ["外觀", "組織", "備份與還原", "維護與健康", "存取與系統", "關於"]:
+    for label in ["外觀", "組織", "資料與復原", "維護與健康", "存取與系統", "關於"]:
         assert f"label: '{label}'" in settings
 
     assert "Flask + SQLite" not in settings
@@ -128,8 +128,9 @@ def test_core_ux_settings_tabs_and_backup_restore_copy_are_locked():
     assert "建立還原點失敗" in i18n
     assert "t('settings.backup.exportDescription')" in backup_import
     assert "t('settings.backup.importJsonDescription')" in backup_import
-    assert "t('settings.serverDashboard.dbDownloadFailed'" in server_dashboard
-    assert "t('settings.serverDashboard.createRestorePointFailed'" in server_dashboard
+    assert "t('settings.backup.dbDownloadFailed'" in backup_import
+    assert "t('settings.backup.restorePointCreateFailed'" in backup_import
+    assert "api.downloadBackup" not in server_dashboard
 
 
 def test_todo_records_phase24_settings_home_followup_scope():

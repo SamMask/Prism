@@ -196,6 +196,45 @@ def test_t032_server_status_gate_and_system_shapes(temp_db, tmp_path):
         _stop(proc)
 
 
+def test_data_consistency_reports_foreign_key_violations_by_table(temp_db, tmp_path):
+    go_db = _copy_db(temp_db, tmp_path / "go_consistency_orphans.db")
+    go_data = tmp_path / "go_consistency_data"
+    conn = sqlite3.connect(go_db)
+    try:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        orphan_note_id = 999_999
+        conn.execute(
+            "INSERT INTO Note_Attachments (note_id, file_path) VALUES (?, ?)",
+            (orphan_note_id, "docs/attachments/orphan.md"),
+        )
+        conn.execute(
+            "INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, ?, ?)",
+            (orphan_note_id, "orphan history", "fixture"),
+        )
+        conn.execute(
+            "INSERT INTO Source_Urls (note_id, url) VALUES (?, ?)",
+            (orphan_note_id, "https://example.invalid/orphan"),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    proc, base = _start_go(go_db, go_data, tmp_path, "--enable-server-system")
+    try:
+        status, payload, _ = _request_json(base, "/api/system/check-consistency")
+        assert status == 200
+        assert payload["data"]["fk_enabled"] is True
+        assert payload["data"]["foreign_key_violations_total"] == 3
+        assert payload["data"]["foreign_key_violations_by_table"] == {
+            "Note_Attachments": 1,
+            "Note_History": 1,
+            "Source_Urls": 1,
+        }
+        assert payload["data"]["health"] == "critical"
+    finally:
+        _stop(proc)
+
+
 def test_t033_backup_list_download_rotate_delete_and_path_safety(temp_db, tmp_path):
     go_db = _copy_db(temp_db, tmp_path / "go_t033.db")
     go_data = tmp_path / "go_data"

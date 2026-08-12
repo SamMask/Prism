@@ -10,6 +10,8 @@ interface ConsistencyData {
   unused_tags: number
   null_category_id: number
   fk_enabled: boolean
+  foreign_key_violations_total: number
+  foreign_key_violations_by_table: Record<string, number>
   health: 'healthy' | 'warning' | 'critical'
 }
 
@@ -153,42 +155,6 @@ export function SystemMaintenance() {
         </div>
       </div>
 
-      {/* WAL Checkpoint */}
-      <div className="p-4 rounded-lg bg-bg-elevated">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <HardDrive size={18} className="text-primary" />
-            <span className="font-medium text-text-primary">{t('settings.maintenance.walTitle')}</span>
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleWalCheckpoint}
-            disabled={isWalRunning}
-          >
-            {isWalRunning ? (
-              <>
-                <Loader2 size={14} className="animate-spin mr-1" />
-                {t('settings.maintenance.running')}
-              </>
-            ) : (
-              t('settings.maintenance.run')
-            )}
-          </Button>
-        </div>
-        <p className="text-xs text-text-muted mb-2">
-          {t('settings.maintenance.walDescription')}
-        </p>
-        {walResult && (
-          <div className="text-xs text-text-secondary bg-bg-surface rounded p-2 mt-2">
-            {t('settings.maintenance.walResult', {
-              size: (walResult.wal_size_before / 1024).toFixed(1),
-              count: walResult.pages_checkpointed,
-            })}
-          </div>
-        )}
-      </div>
-
       {/* Consistency Check */}
       <div className="p-4 rounded-lg bg-bg-elevated">
         <div className="flex items-center justify-between mb-3">
@@ -241,12 +207,62 @@ export function SystemMaintenance() {
                   {consistencyResult.fk_enabled ? t('settings.maintenance.enabled') : t('settings.maintenance.disabled')}
                 </span>
               </div>
+              <div className="flex justify-between bg-bg-surface rounded p-2">
+                <span className="text-text-muted">{t('settings.maintenance.foreignKeyViolations')}</span>
+                <span className={consistencyResult.foreign_key_violations_total > 0 ? 'text-danger' : 'text-success'}>
+                  {consistencyResult.foreign_key_violations_total}
+                </span>
+              </div>
             </div>
+            {consistencyResult.foreign_key_violations_total > 0 && (
+              <div className="rounded bg-danger/10 p-2 text-xs text-danger" role="status">
+                {t('settings.maintenance.foreignKeyViolationTables', {
+                  tables: Object.entries(consistencyResult.foreign_key_violations_by_table)
+                    .sort(([left], [right]) => left.localeCompare(right))
+                    .map(([table, count]) => `${table}: ${count}`)
+                    .join(', '),
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      <div className="rounded-lg bg-bg-elevated p-4" data-testid="search-integrity-card">
+      <details className="rounded-lg border border-border-subtle bg-bg-elevated/50" data-testid="maintenance-advanced-diagnostics">
+        <summary className="cursor-pointer px-4 py-3 font-medium text-text-primary">
+          {t('settings.maintenance.advancedTitle')}
+        </summary>
+        <div className="space-y-4 border-t border-border-subtle p-4">
+          <p className="text-xs text-text-muted">{t('settings.maintenance.advancedDescription')}</p>
+
+          {/* WAL Checkpoint */}
+          <div className="rounded-lg bg-bg-elevated p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <HardDrive size={18} className="text-primary" />
+                <span className="font-medium text-text-primary">{t('settings.maintenance.walTitle')}</span>
+              </div>
+              <Button size="sm" variant="secondary" onClick={handleWalCheckpoint} disabled={isWalRunning}>
+                {isWalRunning ? (
+                  <>
+                    <Loader2 size={14} className="mr-1 animate-spin" />
+                    {t('settings.maintenance.running')}
+                  </>
+                ) : t('settings.maintenance.run')}
+              </Button>
+            </div>
+            <p className="mb-2 text-xs text-text-muted">{t('settings.maintenance.walDescription')}</p>
+            {walResult && (
+              <div className="mt-2 rounded bg-bg-surface p-2 text-xs text-text-secondary">
+                {t('settings.maintenance.walResult', {
+                  size: (walResult.wal_size_before / 1024).toFixed(1),
+                  count: walResult.pages_checkpointed,
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-lg bg-bg-elevated p-4" data-testid="search-integrity-card">
         <div className="mb-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Search size={18} className="text-primary" />
@@ -290,7 +306,9 @@ export function SystemMaintenance() {
             </div>
           </div>
         )}
-      </div>
+          </div>
+        </div>
+      </details>
     </div>
   )
 }

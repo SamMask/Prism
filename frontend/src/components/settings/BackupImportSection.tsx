@@ -1,8 +1,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Download, Upload, Loader2, RotateCcw, Database, X } from 'lucide-react';
+import { Download, Upload, Loader2, RotateCcw, Database, X, Trash2, PackageCheck, ShieldCheck } from 'lucide-react';
 import { Button, toast } from '../ui';
-import { api, type BackupItem } from '../../services/api';
+import { confirm } from '../ui/ConfirmDialog';
+import { api, type BackupItem, type FullSnapshotDownload } from '../../services/api';
 import { useAppStore } from '../../stores/appStore';
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -80,7 +81,7 @@ function buildBulkImportPreview(files: File[]): BulkImportPreview {
 }
 
 export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps) {
-  const { t } = useTranslation();
+  const { locale, t } = useTranslation();
   const fetchNotes = useAppStore((state) => state.fetchNotes);
   const fetchCategories = useAppStore((state) => state.fetchCategories);
   const fetchTags = useAppStore((state) => state.fetchTags);
@@ -97,18 +98,25 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
 
   // Restore-from-backup state
   const [backups, setBackups] = useState<BackupItem[]>([]);
+  const [backupTotalMb, setBackupTotalMb] = useState(0);
   const [loadingBackups, setLoadingBackups] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<BackupItem | null>(null);
   const [isRestarting, setIsRestarting] = useState(false);
+  const [isCreatingRestorePoint, setIsCreatingRestorePoint] = useState(false);
+  const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
+  const [isExportingFullSnapshot, setIsExportingFullSnapshot] = useState(false);
+  const [fullSnapshotSummary, setFullSnapshotSummary] = useState<FullSnapshotDownload | null>(null);
 
   const loadBackups = async () => {
     setLoadingBackups(true);
     try {
       const res = await api.listBackups();
       setBackups(res.backups || []);
+      setBackupTotalMb(res.total_size_mb || 0);
     } catch {
       // Server-management API is localhost-only; silently show an empty list off-box.
       setBackups([]);
+      setBackupTotalMb(0);
     } finally {
       setLoadingBackups(false);
     }
@@ -117,6 +125,63 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   useEffect(() => {
     loadBackups();
   }, []);
+
+  const handleDownloadDBBackup = async () => {
+    try {
+      await api.downloadBackup();
+      toast.success(t('settings.backup.dbDownloadStarted'));
+    } catch {
+      toast.error(t('settings.backup.dbDownloadFailed'));
+    }
+  };
+
+  const handleCreateRestorePoint = async () => {
+    setIsCreatingRestorePoint(true);
+    try {
+      await api.rotateBackups(3);
+      await loadBackups();
+      toast.success(t('settings.backup.restorePointCreated'));
+    } catch {
+      toast.error(t('settings.backup.restorePointCreateFailed'));
+    } finally {
+      setIsCreatingRestorePoint(false);
+    }
+  };
+
+  const handleDeleteBackup = async (backup: BackupItem) => {
+    const accepted = await confirm({
+      title: t('settings.backup.deleteRestorePointTitle'),
+      message: t('settings.backup.deleteRestorePointMessage', { name: backup.filename }),
+      confirmText: t('settings.backup.deleteRestorePoint'),
+      cancelText: t('common.cancel'),
+      variant: 'danger',
+    });
+    if (!accepted) return;
+
+    setDeletingBackup(backup.filename);
+    try {
+      await api.deleteBackup(backup.filename);
+      await loadBackups();
+      toast.success(t('settings.backup.deleteRestorePointSuccess'));
+    } catch {
+      toast.error(t('settings.backup.deleteRestorePointFailed'));
+    } finally {
+      setDeletingBackup(null);
+    }
+  };
+
+  const handleFullSnapshot = async () => {
+    setIsExportingFullSnapshot(true);
+    try {
+      const snapshot = await api.downloadFullSnapshot();
+      setFullSnapshotSummary(snapshot);
+      toast.success(t('settings.backup.fullSnapshotSuccess'));
+    } catch {
+      toast.error(t('settings.backup.fullSnapshotFailed'));
+    } finally {
+      setIsExportingFullSnapshot(false);
+    }
+  };
 
   // Confirm → stage restore → server restarts → poll until it is back → reload.
   const handleRestore = async () => {
@@ -300,7 +365,20 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   const bulkPreview = buildBulkImportPreview(bulkFiles);
 
   return (
-    <>
+    <div className="space-y-5" data-testid="data-recovery-section">
+      <div
+        className="rounded-xl border border-warning/30 bg-warning/10 p-4"
+        data-testid="db-only-recovery-scope"
+      >
+        <div className="flex items-start gap-3">
+          <ShieldCheck size={20} className="mt-0.5 shrink-0 text-warning" />
+          <div>
+            <p className="font-medium text-text-primary">{t('settings.backup.dbOnlyScopeTitle')}</p>
+            <p className="mt-1 text-sm text-text-secondary">{t('settings.backup.dbOnlyScopeDescription')}</p>
+          </div>
+        </div>
+      </div>
+
       {/* Export Copies */}
       <div className="glass rounded-xl p-6">
         <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
@@ -546,8 +624,37 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
         </div>
       </div>
 
+      <div className="glass rounded-xl p-6" data-testid="full-data-snapshot-export">
+        <h2 className="mb-2 flex items-center gap-2 text-lg font-semibold text-text-primary">
+          <PackageCheck size={20} className="text-primary" />
+          {t('settings.backup.fullSnapshotTitle')}
+        </h2>
+        <p className="text-sm text-text-muted">{t('settings.backup.fullSnapshotDescription')}</p>
+        <p className="mt-3 text-sm text-text-secondary">
+          <strong className="text-text-primary">{t('settings.backup.fullSnapshotContents')}</strong>
+        </p>
+        <p className="mt-2 text-sm text-warning">{t('settings.backup.fullSnapshotManualRestore')}</p>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button variant="primary" onClick={handleFullSnapshot} disabled={isExportingFullSnapshot}>
+            {isExportingFullSnapshot ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+            {isExportingFullSnapshot
+              ? t('settings.backup.fullSnapshotCreating')
+              : t('settings.backup.fullSnapshotAction')}
+          </Button>
+          {fullSnapshotSummary && (
+            <p className="text-xs text-text-muted" data-testid="full-data-snapshot-summary">
+              {t('settings.backup.fullSnapshotSummary', {
+                name: fullSnapshotSummary.filename,
+                size: new Intl.NumberFormat(locale, { maximumFractionDigits: 1 }).format(fullSnapshotSummary.sizeBytes / 1024 / 1024),
+                version: fullSnapshotSummary.manifestVersion,
+              })}
+            </p>
+          )}
+        </div>
+      </div>
+
       {/* Restore from DB backup */}
-      <div className="glass rounded-xl p-6">
+      <div className="glass rounded-xl p-6" data-testid="restore-point-lifecycle">
         <h2 className="text-lg font-semibold text-text-primary mb-2 flex items-center gap-2">
           <Database size={20} className="text-warning" />
           {t('settings.backup.restoreTitle')}
@@ -557,6 +664,22 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <strong className="text-text-primary">{t('settings.backup.restoreRestartEmphasis')}</strong>
           {t('settings.backup.restoreDescriptionSuffix')}
         </p>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={handleDownloadDBBackup} disabled={isRestarting}>
+            <Download size={16} />
+            {t('settings.backup.downloadCurrentDb')}
+          </Button>
+          <Button variant="secondary" onClick={handleCreateRestorePoint} disabled={isRestarting || isCreatingRestorePoint}>
+            {isCreatingRestorePoint ? <Loader2 size={16} className="animate-spin" /> : <Database size={16} />}
+            {isCreatingRestorePoint
+              ? t('settings.backup.creatingRestorePoint')
+              : t('settings.backup.createRestorePoint')}
+          </Button>
+          <span className="self-center text-xs text-text-muted">
+            {t('settings.backup.restorePointStorage', { size: backupTotalMb })}
+          </span>
+        </div>
 
         {loadingBackups ? (
           <div className="flex items-center gap-2 text-text-muted text-sm">
@@ -578,14 +701,26 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
                     {b.filename} · {b.size_mb} MB
                   </p>
                 </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => setRestoreTarget(b)}
-                  disabled={isRestarting}
-                >
-                  <RotateCcw size={16} />
-                  {t('settings.backup.restoreAction')}
-                </Button>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setRestoreTarget(b)}
+                    disabled={isRestarting || deletingBackup === b.filename}
+                  >
+                    <RotateCcw size={16} />
+                    {t('settings.backup.restoreAction')}
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleDeleteBackup(b)}
+                    disabled={isRestarting || deletingBackup === b.filename}
+                  >
+                    {deletingBackup === b.filename
+                      ? <Loader2 size={16} className="animate-spin" />
+                      : <Trash2 size={16} />}
+                    {t('settings.backup.deleteRestorePoint')}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>
@@ -638,7 +773,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       )}
 
       {/* Import Modal */}
-      {showImportModal && importData && (
+      {showImportModal && importData !== null && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-bg-elevated rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
             <h3 className="text-lg font-semibold text-text-primary mb-4">
@@ -707,6 +842,6 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

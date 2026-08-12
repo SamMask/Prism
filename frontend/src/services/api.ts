@@ -68,6 +68,23 @@ export interface NotesResponse {
   total: number;
   page: number;
   per_page: number;
+  searchDiagnostics?: SearchDiagnostics;
+}
+
+export interface AttachmentScanDiagnostics {
+  partial: boolean;
+  reason: 'file_limit' | 'byte_limit' | 'time_limit' | 'scan_error' | null;
+  scanned_files: number;
+  scanned_bytes: number;
+  limits: {
+    files: number;
+    bytes: number;
+    duration_ms: number;
+  };
+}
+
+export interface SearchDiagnostics {
+  attachment_body_scan: AttachmentScanDiagnostics;
 }
 
 export interface BatchDeletePreview {
@@ -187,6 +204,14 @@ export interface RestoreBackupResponse {
   supervised: boolean;
 }
 
+export interface FullSnapshotDownload {
+  filename: string;
+  sizeBytes: number;
+  createdAt: string;
+  contents: string[];
+  manifestVersion: number;
+}
+
 export interface RestartServiceResponse {
   status: 'success' | 'error';
   message: string;
@@ -285,6 +310,7 @@ export const api = {
       total: data.pagination?.total || 0,
       page: data.pagination?.page || params.page || 1,
       per_page: data.pagination?.per_page || params.per_page || 20,
+      searchDiagnostics: data.search_diagnostics,
     };
   },
 
@@ -639,6 +665,32 @@ export const api = {
     window.location.href = `${API_BASE_URL}/export/markdown`;
   },
 
+  downloadFullSnapshot: async (): Promise<FullSnapshotDownload> => {
+    const response = await client.get("/export/full-snapshot", { responseType: "blob" });
+    const disposition = response.headers["content-disposition"] || "";
+    const filename = disposition.match(/filename="?([^";]+)"?/i)?.[1]
+      || `prism_full_data_snapshot_${Date.now()}.zip`;
+    const blob = new Blob([response.data], { type: "application/zip" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    return {
+      filename,
+      sizeBytes: Number(response.headers["content-length"] || blob.size),
+      createdAt: response.headers["x-prism-snapshot-created-at"] || new Date().toISOString(),
+      contents: String(response.headers["x-prism-snapshot-contents"] || "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+      manifestVersion: Number(response.headers["x-prism-snapshot-manifest-version"] || 1),
+    };
+  },
+
   // Export images as ZIP
   exportImages: async (images: string[], noteTitle: string): Promise<void> => {
     const response = await client.post(
@@ -759,6 +811,8 @@ export const api = {
     unused_tags: number;
     null_category_id: number;
     fk_enabled: boolean;
+    foreign_key_violations_total: number;
+    foreign_key_violations_by_table: Record<string, number>;
     health: 'healthy' | 'warning' | 'critical';
   }> => {
     const { data } = await client.get("/system/check-consistency");

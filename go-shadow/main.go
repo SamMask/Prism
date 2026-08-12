@@ -80,6 +80,8 @@ type server struct {
 	runtime     runtimeConfig
 	csrfEnabled atomic.Bool
 	httpServer  *http.Server
+	// queryObserver is test-only instrumentation for bounded query-count regressions.
+	queryObserver func(string)
 	// restart, when set, performs the process restart for a staged DB restore.
 	// main wires it to triggerRestart; tests override it to avoid os.Exit.
 	restart func()
@@ -321,6 +323,7 @@ func newRuntimeServer(cfg runtimeConfig) (*server, func(), error) {
 	mux.HandleFunc("/api/export/json", srv.handleExportJSON)
 	mux.HandleFunc("/api/export/markdown", srv.handleExportMarkdown)
 	mux.HandleFunc("/api/export/db", srv.handleExportDB)
+	mux.HandleFunc("/api/export/full-snapshot", srv.handleExportFullSnapshot)
 	mux.HandleFunc("/api/export/images", srv.handleExportImages)
 	mux.HandleFunc("/api/import/json", srv.handleImportJSON)
 	mux.HandleFunc("/api/upload/delete", srv.handleUploadDelete)

@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -14,10 +15,27 @@ import (
 	"path/filepath"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
 )
+
+type fullSnapshotManifestFile struct {
+	Path      string `json:"path"`
+	SizeBytes int64  `json:"size_bytes"`
+	SHA256    string `json:"sha256"`
+}
+
+type fullSnapshotManifest struct {
+	Format                string                     `json:"format"`
+	Version               int                        `json:"version"`
+	CreatedAt             string                     `json:"created_at"`
+	Contents              []string                   `json:"contents"`
+	TotalSizeBytes        int64                      `json:"total_size_bytes"`
+	ManualRestoreRequired bool                       `json:"manual_restore_required"`
+	Files                 []fullSnapshotManifestFile `json:"files"`
+}
 
 func (s *server) handleExportJSON(w http.ResponseWriter, r *http.Request) {
 	if !requireGET(w, r) {
@@ -121,6 +139,215 @@ func (s *server) handleExportDB(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
 	http.ServeFile(w, r, s.runtime.dbPath)
+}
+
+func (s *server) handleExportFullSnapshot(w http.ResponseWriter, r *http.Request) {
+	if !requireGET(w, r) || !requireLocalhostRequest(w, r) {
+		return
+	}
+	if !s.runtime.enableImportExport {
+		writeError(w, http.StatusMethodNotAllowed, "Import/export route is disabled")
+		return
+	}
+	if !fileExists(s.runtime.dbPath) {
+		writeError(w, http.StatusNotFound, "Database file not found")
+		return
+	}
+
+	stageRoot, err := os.MkdirTemp(s.runtime.dataDir, ".prism-full-snapshot-*")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer os.RemoveAll(stageRoot)
+
+	createdAt := time.Now().UTC()
+	manifest, zipPath, err := s.buildFullSnapshot(stageRoot, createdAt)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	info, err := os.Stat(zipPath)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	filename := "prism_full_data_snapshot_" + createdAt.Format("20060102_150405") + ".zip"
+	w.Header().Set("Content-Type", "application/zip")
+	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
+	w.Header().Set("Content-Length", strconv.FormatInt(info.Size(), 10))
+	w.Header().Set("X-Prism-Snapshot-Manifest-Version", strconv.Itoa(manifest.Version))
+	w.Header().Set("X-Prism-Snapshot-Created-At", manifest.CreatedAt)
+	w.Header().Set("X-Prism-Snapshot-Contents", strings.Join(manifest.Contents, ","))
+	http.ServeFile(w, r, zipPath)
+}
+
+func (s *server) buildFullSnapshot(stageRoot string, createdAt time.Time) (fullSnapshotManifest, string, error) {
+	payloadRoot := filepath.Join(stageRoot, "payload")
+	if err := os.MkdirAll(payloadRoot, 0755); err != nil {
+		return fullSnapshotManifest{}, "", err
+	}
+	databaseTarget := filepath.Join(payloadRoot, "database", "knowledge.db")
+	if err := s.writeConsistentDBBackup(databaseTarget); err != nil {
+		return fullSnapshotManifest{}, "", err
+	}
+
+	type snapshotRoot struct {
+		source      string
+		destination string
+	}
+	roots := []snapshotRoot{
+		{snapshotRuntimeDir(s.runtime.uploadsDir, s.runtime.dataDir, "static", "uploads"), "static/uploads"},
+		{snapshotRuntimeDir(s.runtime.attachmentsDir, s.runtime.dataDir, "docs", "attachments"), "docs/attachments"},
+		{snapshotRuntimeDir(s.runtime.notesDir, s.runtime.dataDir, "docs", "notes"), "docs/notes"},
+		{snapshotRuntimeDir(s.runtime.configDir, s.runtime.dataDir, "config"), "config"},
+	}
+	for _, root := range roots {
+		if err := copySnapshotTree(root.source, filepath.Join(payloadRoot, filepath.FromSlash(root.destination))); err != nil {
+			return fullSnapshotManifest{}, "", err
+		}
+	}
+
+	manifest := fullSnapshotManifest{
+		Format:                "prism.full_data_snapshot.v1",
+		Version:               1,
+		CreatedAt:             createdAt.Format(time.RFC3339Nano),
+		Contents:              []string{"database", "uploads", "attachments", "notes", "config"},
+		ManualRestoreRequired: true,
+		Files:                 []fullSnapshotManifestFile{},
+	}
+	err := filepath.WalkDir(payloadRoot, func(filePath string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			return nil
+		}
+		relativePath, err := filepath.Rel(payloadRoot, filePath)
+		if err != nil {
+			return err
+		}
+		content, err := os.ReadFile(filePath)
+		if err != nil {
+			return err
+		}
+		manifest.Files = append(manifest.Files, fullSnapshotManifestFile{
+			Path:      filepath.ToSlash(relativePath),
+			SizeBytes: int64(len(content)),
+			SHA256:    fmt.Sprintf("%x", sha256.Sum256(content)),
+		})
+		manifest.TotalSizeBytes += int64(len(content))
+		return nil
+	})
+	if err != nil {
+		return fullSnapshotManifest{}, "", err
+	}
+	sort.Slice(manifest.Files, func(left, right int) bool {
+		return manifest.Files[left].Path < manifest.Files[right].Path
+	})
+	manifestBytes, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return fullSnapshotManifest{}, "", err
+	}
+	if err := os.WriteFile(filepath.Join(payloadRoot, "snapshot-manifest.json"), manifestBytes, 0644); err != nil {
+		return fullSnapshotManifest{}, "", err
+	}
+
+	zipPath := filepath.Join(stageRoot, "snapshot.zip")
+	if err := zipDirectory(payloadRoot, zipPath); err != nil {
+		return fullSnapshotManifest{}, "", err
+	}
+	return manifest, zipPath, nil
+}
+
+func snapshotRuntimeDir(configured, dataDir string, parts ...string) string {
+	if strings.TrimSpace(configured) != "" {
+		return configured
+	}
+	allParts := append([]string{dataDir}, parts...)
+	return filepath.Join(allParts...)
+}
+
+func copySnapshotTree(sourceRoot, destinationRoot string) error {
+	info, err := os.Stat(sourceRoot)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("snapshot source is not a directory: %s", sourceRoot)
+	}
+	return filepath.WalkDir(sourceRoot, func(sourcePath string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.Type()&os.ModeSymlink != 0 {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if entry.IsDir() {
+			return nil
+		}
+		relativePath, err := filepath.Rel(sourceRoot, sourcePath)
+		if err != nil {
+			return err
+		}
+		_, err = copyFileAtomic(sourcePath, filepath.Join(destinationRoot, relativePath))
+		return err
+	})
+}
+
+func zipDirectory(sourceRoot, destination string) error {
+	target, err := os.OpenFile(destination+".tmp", os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	zipWriter := zip.NewWriter(target)
+	walkErr := filepath.WalkDir(sourceRoot, func(filePath string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || entry.Type()&os.ModeSymlink != 0 {
+			return nil
+		}
+		relativePath, err := filepath.Rel(sourceRoot, filePath)
+		if err != nil {
+			return err
+		}
+		writer, err := zipWriter.Create(filepath.ToSlash(relativePath))
+		if err != nil {
+			return err
+		}
+		source, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+		_, copyErr := io.Copy(writer, source)
+		closeErr := source.Close()
+		if copyErr != nil {
+			return copyErr
+		}
+		return closeErr
+	})
+	zipCloseErr := zipWriter.Close()
+	fileCloseErr := target.Close()
+	if walkErr != nil || zipCloseErr != nil || fileCloseErr != nil {
+		_ = os.Remove(destination + ".tmp")
+		if walkErr != nil {
+			return walkErr
+		}
+		if zipCloseErr != nil {
+			return zipCloseErr
+		}
+		return fileCloseErr
+	}
+	_ = os.Remove(destination)
+	return os.Rename(destination+".tmp", destination)
 }
 
 func (s *server) handleExportImages(w http.ResponseWriter, r *http.Request) {

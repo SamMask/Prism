@@ -139,6 +139,7 @@
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
 - 文字附件內容搜尋是 request-time bounded scan：最多 200 個附件檔、5 MiB、250 ms。若超限，回應會加上 optional `search_diagnostics.attachment_body_scan.partial=true`，並標出 `reason`（`file_limit` / `byte_limit` / `time_limit` / `scan_error`）。
 - 列表回應是 Home/card 輕量 payload：`content` 為相容用 preview（與 `content_preview` 相同），`content_truncated=true` 代表前端若要編輯、複製全文、匯出內容或閱讀完整內容，必須再呼叫 `GET /api/notes/<id>`；`content_length` 提供完整 `Notes.content` 字數供卡片 metadata 顯示；`content_first_image` 是從完整內容抽出的第一張圖片 URL，供卡片在不預載全文時維持「無手動封面時用第一張圖」的 fallback。
+- list response shape 不變；Go primary 會先取得當頁 Notes，再各用一個 batch query hydrate tags 與 source URLs。relation query 數不隨 page note 數增加，避免 per-note N+1。
 - 列表回應包含 `parent_id` / `parent_title`，供 Home 卡片直接顯示 variant 上一代來源；非 variant 為 `null`。
 - `parent_id` query filter 只回直接 child variants，不回整棵樹；列表與詳情回應的 `variants_count` 是該 note 的直接 child variant 數量。
 - 排序永遠先把 `is_pinned=1` 的筆記排前面，再套用 `sort`。
@@ -737,6 +738,8 @@ Response 每筆欄位：
   "null_category_id": 0,
   "fk_status": 1,
   "fk_enabled": true,
+  "foreign_key_violations_total": 0,
+  "foreign_key_violations_by_table": {},
   "health": "healthy"
 }
 ```
@@ -744,6 +747,8 @@ Response 每筆欄位：
 注意：
 
 - 舊文件中的 `type_category_mismatch` 已移除
+- `fk_enabled` 只表示目前連線有啟用外鍵 enforcement；資料是否一致以唯讀 `PRAGMA foreign_key_check` 的 `foreign_key_violations_total` / `foreign_key_violations_by_table` 為準。
+- 任一實際外鍵違規會把 `health` 標為 `critical`；端點只回報，不會刪除、修復或遷移資料。
 
 ### GET `/api/system/search-integrity`
 
@@ -893,7 +898,24 @@ Current owner: Go primary runtime。T028-T031 原本是 local/copied candidate�
 
 ### GET `/api/export/db`
 
-下載 SQLite DB 檔。
+下載 SQLite DB 檔。這是 **DB-only** 副本，不包含 `static/uploads`、`docs/attachments`、`docs/notes` 或 `config`。
+
+### GET `/api/export/full-snapshot`
+
+建立並下載完整資料 ZIP。此端點只接受 localhost request，且 import/export surface 必須啟用。
+
+包含：
+
+- consistent SQLite backup：`database/knowledge.db`
+- `static/uploads/**`
+- `docs/attachments/**`
+- `docs/notes/**`
+- `config/**`
+- `snapshot-manifest.json`
+
+manifest format 是 `prism.full_data_snapshot.v1`，每個 payload file 都有 `size_bytes` 與 SHA-256；response 同時提供 manifest version、建立時間與內容類別 headers。ZIP 只在 staging、manifest 與壓縮全部完成後回傳，暫存檔會清除。
+
+這是下載／留存入口，**不提供自動還原**。完整契約見 [`contracts/full-data-snapshot-v1.md`](./contracts/full-data-snapshot-v1.md)。
 
 ### GET `/api/export/markdown`
 
