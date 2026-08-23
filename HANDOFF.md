@@ -1,4 +1,4 @@
-# HANDOFF - Prism active entry（2026-08-12）
+# HANDOFF - Prism active entry（2026-08-23）
 
 本檔只放新對話接手需要的最短狀態。長版交接與完成紀錄已移到 `docs/development-history/`；最新 TODO/HANDOFF 瘦身歸檔見 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`。
 
@@ -9,6 +9,7 @@
 - Windows desktop current path 是 `Prism.exe` GUI app + WebView2 + same-process Go runtime，預設資料在 exe 同層 `PrismData\`。Installer/updater/WebView2 bootstrap/shortcut automation 仍 deferred。
 - Recent V2.5 UX/runtime gates 已完成並歸檔：Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E。
 - Pi delivery 與 GitHub release packaging 分開處理；Pi 上線必須讀 `DEPLOY-PI.md` 並驗 service/migration/API/UI live evidence。
+- 2026-08-17 `PI-PATH-MIGRATION-01` 已完成：Pi live root/service user 已收斂為 `/home/mask0709/prism` / `mask0709`；Go primary active+enabled 且唯一監聽 5004，legacy `prism.service` 與 `prism-go-readonly.service` inactive+disabled，weekly backup 改依賴 Go primary。pre-change config backup 在 `/home/mask0709/prism/backups/pi-path-migration-20260817T061420/` 且 checksum 全綠；手動 DB backup、reboot、同 artifact Go cutover→previous-Go rollback→2-sample soak均通過。Caddy原 hash已還原，Prism/Vespera/Murmur均正常。Local deployment tests 13 passed、full pytest 397 passed；未跑 frontend build/browser，因本輪未改 UI。
 - Prism 沒有內建 auth/token layer；safe boundary 是 localhost、trusted LAN、VPN、SSH tunnel 或外部 auth 保護的 reverse proxy。
 - Note deletion media behavior 已校正到 TODO：Go primary 目前會在刪 note 時嘗試清理已偵測且未被其他 note 引用的 `static/uploads` 圖片與縮圖；Settings「清理未使用圖片」仍是孤兒圖片的明確補救/清理入口。未做的是 UX copy 或未來 opt-in decision gate；不要改 runtime deletion semantics。
 - 2026-07-05 governance intake 已完成：`docs/GOVERNANCE.md` 是完成宣稱、狀態層級、驗證證據、委派與 UI/UX 治理入口；原暫存素材已複製到 `docs/development-history/governance-source-20260705/`。
@@ -36,15 +37,16 @@
 - Label/archive fresh verification：36 個相關 pytest與完整 `pytest tests/ -v` 381 passed；`scripts/build_go_runtime.ps1` passed（含 frontend production build與 Go tests）；隔離 Go runtime Playwright smoke確認 Page Title `Prism V2.6`、sidebar `V2.6`、console 0 errors / 0 warnings。
 - V2.6.1 About correction release / Pi live redeploy（2026-07-14）已完成：release commit`7f5469c`、Actions run`29276993209` success；GitHub digest與fresh download hash均為`8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`。
 - 修正後Pi evidence：artifact SHA256`1c1ff025f8653a48e97d87cbb29afa09d09e9ca8e020fef329d1e395e2fce01d`，latest snapshot`/home/mask070924/prism/backups/go-primary-t044-20260714_031146`，retention keep-5、full workflow與5-sample soak passed；Go active/enabled、legacy inactive/disabled、Caddy active、runtime 2.6.1、migration v17 clean。Live Playwright確認Page Title`Prism V2.6.1`、sidebar`V2.6.1`、About`Version: 2.6.1`、console 0 errors/0 warnings。
-- Pi上既有`prism-go-readonly.service`（127.0.0.1:5002）與`prism-go-primary-staging.service`（127.0.0.1:5003）仍保留；Caddy只route至127.0.0.1:5004 live owner，本次label hotfix未擴scope停用輔助service。
+- Pi 上 `prism-go-readonly.service` 與 `prism-go-primary-staging.service` unit/file仍保留作歷史/隔離驗證，但兩者均 inactive+disabled；Caddy只 route 至 127.0.0.1:5004 Go primary。不得重新 enable readonly sidecar或讓它依賴 legacy Python。
 - Product decision（2026-07-14）：Prism 維持個人筆記庫，不加入 `status` / `review_state` / `last_verified_at` 審核 metadata 或 schema v18 workflow；除非用途改變，不得重新 promote。
 - 2026-08-12 深度產品／UX／技術審查已完成，報告為 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`；P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成本機實作與隔離 desktop/390px browser 驗收。內容包含 FK violation 真值、mobile drawer/accessibility、三種 note view action parity、selection scope/單次 delete preview、search partial diagnostics 與 latest-request-wins/Retry。完整 `pytest tests/ -v` 389 passed、Go tests passed、production build passed；未碰正式 DB、release 或 Pi deploy。
 - 2026-08-12 P1 `PRISM-OPT-07` 到 `PRISM-OPT-14` 已完成本機實作：Data & Recovery/DB-only truth、full snapshot v1、Prompt save continuation、Home-only filters、安全 custom reorder、note relation batch queries、lazy routes與 test portfolio/current e2e。完整 snapshot 明確只支援 manual restore；未新增 schema/AI/cloud/auth。
 - P1 fresh local evidence：targeted frontend/docs 41 passed；full pytest 396 passed；Go tests與production build passed；main JS由706.22 kB降至598.02 kB；isolated Chromium 5 passed（含fresh DB、26 notes、Prompt save-to-open、Settings desktop/390px）；mirror與diff check passed。未碰正式 DB、release或Pi deploy。
+- 2026-08-23 `EDITOR-COPY-CONTENT-01` 已完成：note 詳情編輯器工具列在「歷史」與 Preview/Edit 切換之間新增一鍵複製，複製目前表單正文（含未儲存編輯），沿用既有四語系 copy/toast。390px 以可換行 header 與 icon-only History/Save labels 避免溢位；full pytest 399 passed、Go runtime build passed、隔離 desktop/390px browser flow 與 console gate passed。未改 Preview 可編輯語意、Reading Workspace、API/schema、release 或 Pi deploy。
 
 ## Next Entry
 
-目前沒有未交付的 active construction item，也沒有 `Doing` item；product optimization P0/P1 已完成本機施工與驗證，尚未 commit/release/deploy。
+目前沒有未交付的 active construction item，也沒有 `Doing` item；`EDITOR-COPY-CONTENT-01` 已完成本機施工與驗證。`PI-PATH-MIGRATION-01` 已完成 repo + Pi live 收斂；product optimization P0/P1 已完成本機施工與驗證，尚未 commit/release/deploy。
 
 - P2/P3/Future 只留在 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`，必須由使用者明確 promote；不要自動實作 Preview/Edit 語意、Reading Workspace lazy detail、flags命名、schema、automatic restore或大重構。
 - 若要更改 note 刪除時的圖片刪除行為，只能另開 opt-in decision gate；不要順手改 Go delete/media cleanup runtime。

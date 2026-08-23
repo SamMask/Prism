@@ -10,7 +10,7 @@ CONTRACTS = {
 }
 OPS_SCRIPT = ROOT / "scripts" / "go_primary_pi_live_ops.ps1"
 GO_SMOKE = ROOT / "scripts" / "go_primary_full_workflow_smoke.py"
-PYTHON_SMOKE = ROOT / "scripts" / "python_live_workflow_smoke.py"
+PI_SETUP = ROOT / "deploy" / "raspberry_pi" / "setup.sh"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
@@ -62,28 +62,42 @@ def test_t042_t043_t044_contracts_record_live_cutover_rollback_and_soak():
 def test_live_ops_scripts_keep_backup_restore_and_no_public_bind_boundaries():
     ops_script = OPS_SCRIPT.read_text(encoding="utf-8")
     go_smoke = GO_SMOKE.read_text(encoding="utf-8")
-    python_smoke = PYTHON_SMOKE.read_text(encoding="utf-8")
 
+    assert '[ValidateSet("Cutover", "Rollback", "Soak")]' in ops_script
+    assert '[string]$Mode = "Cutover"' in ops_script
     assert 'HostAlias = "PI5Mask24"' in ops_script
+    assert 'RemoteRoot = "/home/mask0709/prism"' in ops_script
+    assert 'RemoteUser = "mask0709"' in ops_script
     assert "prism-go-primary.service" in ops_script
     assert "--addr 127.0.0.1:$PORT" in ops_script
     assert "PRISM_GO_ALLOW_PUBLIC_BIND" not in ops_script
     assert "PRISM_GO_ALLOW_PROD_DB=1" in ops_script
     assert "X-Prism-Go-Primary hit" in ops_script
-    assert "X-Prism-Python-Rollback hit" in ops_script
+    assert "X-Prism-Python-Rollback hit" not in ops_script
+    assert "python_live_workflow_smoke.py" not in ops_script
+    assert "sudo systemctl start prism.service" not in ops_script
+    assert "prism-go-runtime-linux-arm64.previous" in ops_script
+    assert '"rollback_target": "previous Go artifact and pre-cutover snapshot"' in ops_script
     assert "sqlite3.connect(sys.argv[1])" in ops_script
     assert "src.backup(dst)" in ops_script
     assert "data-files.tar.gz" in ops_script
     assert "db_matches_backup" in ops_script
     assert "journalctl -u \"$SERVICE_NAME\"" in ops_script
-    assert "not_higher_than_retained_python_baseline" in ops_script
+    assert "retained_python_baseline" not in ops_script
 
-    for smoke in (go_smoke, python_smoke):
-        assert "import flask" not in smoke.lower()
-        assert "from app import" not in smoke
-        assert "--insecure" in smoke
-        assert "deleted_after_download" in smoke
-        assert "/api/server/backup/" in smoke
+    assert "import flask" not in go_smoke.lower()
+    assert "from app import" not in go_smoke
+    assert "--insecure" in go_smoke
+    assert "deleted_after_download" in go_smoke
+    assert "/api/server/backup/" in go_smoke
+
+
+def test_pi_setup_refuses_to_overwrite_an_existing_shared_caddyfile():
+    setup_script = PI_SETUP.read_text(encoding="utf-8")
+
+    assert "Refusing to overwrite existing Caddyfile" in setup_script
+    assert 'if [[ ! -s "/etc/caddy/Caddyfile" ]]' in setup_script
+    assert 'sudo tee "$CADDY_FILE"' in setup_script
 
 
 def test_t042_t043_t044_docs_are_current_and_hand_off_to_t045_t046():
@@ -111,9 +125,15 @@ def test_t042_t043_t044_docs_are_current_and_hand_off_to_t045_t046():
     assert t053_row.endswith("| Done |")
 
     assert "T042-T044 Go primary live cutover, rollback, and soak gates are complete" in architecture
+    assert "Pi rollback is also Go-only" in architecture
     assert "Migration v17" in schema
     assert "Go runtime 為唯一 migration owner" in schema
     assert "go_primary_pi_live_ops.ps1" in deploy_pi
+    assert "/home/mask0709/prism" in deploy_pi
+    assert "-Mode All" not in deploy_pi
+    assert "Wants=prism-go-primary.service" in deploy_pi
+    assert "Wants=prism.service" not in deploy_pi
+    assert "上一版 Go artifact" in deploy_pi
     assert "Live Go Primary Cutover, Rollback, and Soak" in readme
     assert "T042/T043/T044 now move Pi live/default ownership to Go primary" in go_report
     assert "T045 removes the Python packaged runtime/startup path" in go_report

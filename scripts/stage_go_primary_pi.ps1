@@ -1,8 +1,8 @@
 param(
     [string]$HostAlias = "PI5Mask24",
-    [string]$RemoteRoot = "/home/mask070924/prism",
+    [string]$RemoteRoot = "/home/mask0709/prism",
     [string]$StageName = "go-primary-staging",
-    [string]$RemoteUser = "mask070924",
+    [string]$RemoteUser = "mask0709",
     [int]$Port = 5003,
     [string]$BuildOutputDir = "build/go-runtime",
     [string]$LocalEvidenceRoot = "build/go-primary-staging/pi",

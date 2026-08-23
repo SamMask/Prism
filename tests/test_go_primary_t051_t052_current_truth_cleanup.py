@@ -65,7 +65,8 @@ def test_t051_docs_replace_stale_python_owner_wording_with_current_truth():
     assert "Go runtime 為唯一 migration owner" in schema
     assert "Python `migrations/` source 已於 T053 移除" in schema
     assert "T051 已將 API / route ownership 文件刷新" in deployment
-    assert "文件版本**：T052" in deploy_pi
+    assert "文件版本**：PI-PATH-MIGRATION-01" in deploy_pi
+    assert "/home/mask0709/prism" in deploy_pi
     assert "T051 route ownership / API docs current-truth refresh is complete" in architecture
     assert "T052 stale packaging/root artifact cleanup is complete" in architecture
     assert "T051/T052 refreshed current-truth docs" in go_readme

@@ -216,7 +216,7 @@ Phase 23.0 將 Go 重構重新定為 active roadmap 主線，但只做 plan-only
 
 ## Go Primary Runtime Migration Target
 
-This section is the structural basis for the Go replacement roadmap recorded in `docs/TODO.md`. The roadmap (T001-T053) is complete: Pi live/default ownership and product startup are Go primary, and T053 removed the Python backend source and converged the retained-Python wording. Go primary is the sole runtime; there is no Python main path.
+This section is the structural basis for the Go replacement roadmap recorded in `docs/TODO.md`. The roadmap (T001-T053) is complete: Pi live/default ownership and product startup are Go primary, and T053 removed the Python backend source and converged the retained-Python wording. Go primary is the sole runtime; there is no Python main path. Since `PI-PATH-MIGRATION-01`, Pi rollback is also Go-only: every cutover preserves the previous Go artifact, SQLite backup, uploads/attachments snapshot, Caddyfile, and Go systemd unit; rollback restores that exact set and keeps legacy `prism.service` plus `prism-go-readonly.service` inactive/disabled. The shared Pi Caddyfile must be updated in-place or left unchanged when the Prism route is already correct; deployment setup must never overwrite unrelated sites.
 
 | ID | Structural Basis | Requirement |
 |---|---|---|
@@ -229,7 +229,7 @@ This section is the structural basis for the Go replacement roadmap recorded in 
 | ARCH-GO-PRIMARY-06 | Server/system | Go must own version/status/hardware/logs/backup/port/config/service availability surfaces before Python service can stop being runtime-critical. |
 | ARCH-GO-PRIMARY-07 | Static and upload serving | SPA/static/upload serving must have an explicit Go/Caddy split; API failures must not fall through to SPA fallback. |
 | ARCH-GO-PRIMARY-08 | Security | Go must preserve local/public exposure boundaries and block path traversal, SSRF, unsafe MIME, unsafe size, and unauthenticated public deployment risks. CSRF is enforced by the `csrfGate` middleware (Origin/Referer same-origin on POST/PUT/DELETE; anonymous non-browser clients pass), runtime-toggleable via `GET/POST /api/system/csrf-protection` (default on, persisted by the `.csrf_disabled` marker). |
-| ARCH-GO-PRIMARY-09 | Deployment cutover | Pi cutover must prove staged Go primary, live Caddy/systemd switch, full workflow smoke, rollback drill, and soak evidence. |
+| ARCH-GO-PRIMARY-09 | Deployment cutover | Pi cutover must prove staged Go primary, live Caddy/systemd switch, full workflow smoke, previous-Go artifact/data rollback, and soak evidence without starting a Python runtime or overwriting unrelated shared Caddy sites. |
 | ARCH-GO-PRIMARY-10 | Python deletion | Python packaged runtime can be removed only after Go primary cutover, rollback, soak, and package smoke prove no production startup path depends on Python. |
 - Frontend backlog is no longer the active default queue. Future frontend work requires a concrete user-selected candidate or fresh browser evidence, not automatic polish hunting.
 

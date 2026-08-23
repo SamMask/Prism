@@ -2,7 +2,7 @@
 
 > **目前 live owner**: Go primary runtime
 > **Pi 主機名稱**: `PI5Mask24`
-> **Pi 路徑**: `/home/mask070924/prism/`
+> **Pi 路徑**: `/home/mask0709/prism/`
 > **存取網址**: `https://prism.local`
 
 > ⚠️ **安全邊界**: Prism API / Go runtime has no built-in auth/token layer，沒有內建 API Token、Bearer Token 或使用者認證。Pi + Caddy 部署預設是 `localhost` / trusted LAN / VPN 用途；不要將 Caddy 或 Go 入口直接 port-forward 到 public internet。遠端存取請放在 VPN、SSH tunnel 或受認證保護的 reverse proxy 後面。
@@ -11,7 +11,7 @@
 
 ## 快速更新（日常使用）
 
-日常 live 部署使用 Go primary ops script；它會建置 linux/arm64 artifact、上傳到 Pi、建立 pre-cutover backup/data snapshot、更新 `prism-go-primary.service`，並讓 Caddy 繼續指向 `127.0.0.1:5004`。部署 snapshot 位於 `/home/mask070924/prism/backups/go-primary-*/data-files.tar.gz`，預設只保留最新 5 份；舊 snapshot 會在 cutover smoke 通過後自動清理。
+日常 live 部署使用 Go primary ops script；它會建置 linux/arm64 artifact、上傳到 Pi、建立 pre-cutover backup/data snapshot、更新 `prism-go-primary.service`，並讓 Caddy 繼續指向 `127.0.0.1:5004`。部署 snapshot 位於 `/home/mask0709/prism/backups/go-primary-*/data-files.tar.gz`，預設只保留最新 5 份；舊 snapshot 會在 cutover smoke 通過後自動清理。
 
 ```powershell
 # 在 Windows repo root 執行
@@ -43,24 +43,24 @@ ssh PI5Mask24 "sudo journalctl -u prism-go-primary.service -n 80 --no-pager"
 
 ## 首次設定（只需執行一次）
 
-首次設定也以 Go primary 為唯一產品啟動路徑。建議優先從 Windows repo root 執行完整 live ops：
+首次設定也以 Go primary 為唯一產品啟動路徑。建議優先從 Windows repo root 執行 Go cutover：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode All
+powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Cutover
 ```
 
-如需在 Pi 上重新建立 mDNS / Caddy / systemd 範本，可在 artifact 已存在於 `/home/mask070924/prism/go-primary-live/bin/prism-go-runtime-linux-arm64` 後執行：
+如需在 Pi 上重新建立 mDNS / Caddy / systemd 範本，可在 artifact 已存在於 `/home/mask0709/prism/go-primary-live/bin/prism-go-runtime-linux-arm64` 後執行：
 
 ```bash
-ssh PI5Mask24 "cd /home/mask070924/prism && bash deploy/raspberry_pi/setup.sh"
+ssh PI5Mask24 "cd /home/mask0709/prism && bash deploy/raspberry_pi/setup.sh"
 ```
 
 `deploy/raspberry_pi/setup.sh` 會：
 
 - 安裝 / 設定 `avahi-daemon`
-- 安裝 / 設定 Caddy，將 `https://prism.local` proxy 到 `127.0.0.1:5004`
+- 首次安裝時建立 Prism Caddy route；若已有共用 Caddyfile，只在既有 `prism.local → 127.0.0.1:5004` route 正確時保留不動，否則拒絕覆寫並要求人工合併
 - 建立並啟用 `prism-go-primary.service`
-- 停用 legacy `prism.service`，只保留為 T053 前的 rollback/source context
+- 停用 legacy `prism.service`；rollback 只回到上一版 Go artifact 與 pre-cutover snapshot
 
 ---
 
@@ -79,27 +79,29 @@ powershell -ExecutionPolicy Bypass -File scripts/stage_go_primary_pi.ps1
 
 ---
 
-## Go primary live（T042-T044）
+## Go primary live（Go-only cutover / rollback / soak）
 
-T042-T044 使用 `scripts/go_primary_pi_live_ops.ps1` 執行 live cutover、rollback drill、再切回 Go primary 並做 bounded soak。
+`scripts/go_primary_pi_live_ops.ps1` 預設執行 `Cutover`。它先保留目前 Go binary、DB、uploads/attachments、Caddyfile 與 Go systemd unit，再安裝新 artifact。`Rollback` 只還原該 pre-cutover snapshot 與上一版 Go binary，不會啟動 Python。`Soak` 只檢查目前已在 live 的 Go primary，不再隱含執行第二次 cutover。
 
 ```powershell
-# 完整 cutover -> rollback -> cutover/soak
-powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode All
-
-# 單獨操作
+# 日常部署（也是預設 mode）
 powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Cutover -SkipBuild
+
+# 回到最近一次 Cutover 保存的上一版 Go artifact + data snapshot
 powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Rollback -SkipBuild
+
+# 對目前 live Go primary 做 bounded soak
 powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mode Soak -SkipBuild
 ```
 
 目前 final live state：
 
 - `prism-go-primary.service`: active/enabled，監聽 `127.0.0.1:5004`
-- `prism.service`: inactive，僅為 T053 前的 rollback/source context
+- `prism.service`: inactive/disabled，不是 rollback target
+- `prism-go-readonly.service`: inactive/disabled；Caddy 與備份皆不依賴它
 - Caddy `https://prism.local`: proxy 到 Go primary，回應帶 `X-Prism-Go-Primary: hit`
 - `PRISM_GO_ALLOW_PUBLIC_BIND` 未啟用；仍只適合 trusted LAN/VPN/proxy-auth 邊界
-- Python packaged runtime 與 product startup path 已由 T045 移除；Python backend source 是否刪除/封存留給 T053
+- Python packaged runtime、product startup path 與 backend source 已由 T045/T053 移除
 - T051/T052 已同步 route/API/docs current truth 並清理 tracked stale packaging artifacts；Pi data paths 仍不被 package/deploy 覆蓋
 
 證據會回收到本機：
@@ -109,6 +111,8 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 - `build/go-primary-live/pi/t043-rollback.json`
 - `build/go-primary-live/pi/t044-soak.json`
 
+`Rollback` 必須找到最近一次新制 `Cutover` evidence 中登記的 previous Go binary 與 snapshot；舊版只保存 Python rollback evidence 的 T042/T043 snapshot 不符合條件時會安全拒絕，不會猜測還原來源。
+
 ---
 
 ## 自動備份排程
@@ -116,16 +120,16 @@ powershell -ExecutionPolicy Bypass -File scripts/go_primary_pi_live_ops.ps1 -Mod
 每週日 03:00 透過 Go primary server backup API 下載 DB backup 並輪替。這是 SQLite 一致 DB snapshot，會包含 request 當下 active WAL 的最新 DB 交易；但它仍只是 `knowledge.db` 備份，與部署前的 `go-primary-*/data-files.tar.gz` snapshot 不同。DB backup 不包含 `static/uploads/` / `docs/attachments/`，不能還原已從檔案系統刪掉的圖片或附件檔。
 
 ```bash
-ssh PI5Mask24 "sudo tee /home/mask070924/prism/scripts/auto-backup.sh > /dev/null <<'SCRIPT'
+ssh PI5Mask24 "sudo tee /home/mask0709/prism/scripts/auto-backup.sh > /dev/null <<'SCRIPT'
 #!/bin/bash
 set -e
-BACKUP_DIR=/home/mask070924/prism/backups
+BACKUP_DIR=/home/mask0709/prism/backups
 TS=\$(date +%Y%m%d_%H%M%S)
 curl -sk --http1.1 --fail -o \"\$BACKUP_DIR/prism_backup_\$TS.db\" https://prism.local/api/server/backup/download
 curl -sk --http1.1 --fail -X POST -H 'Content-Type: application/json' -H 'Origin: https://prism.local' -d '{\"keep_count\":3}' https://prism.local/api/server/backup/rotate
 SCRIPT
-sudo chmod +x /home/mask070924/prism/scripts/auto-backup.sh
-sudo chown mask070924:mask070924 /home/mask070924/prism/scripts/auto-backup.sh"
+sudo chmod +x /home/mask0709/prism/scripts/auto-backup.sh
+sudo chown mask0709:mask0709 /home/mask0709/prism/scripts/auto-backup.sh"
 
 ssh PI5Mask24 "sudo tee /etc/systemd/system/prism-backup.service > /dev/null <<'EOF'
 [Unit]
@@ -135,9 +139,9 @@ Wants=prism-go-primary.service
 
 [Service]
 Type=oneshot
-User=mask070924
-WorkingDirectory=/home/mask070924/prism
-ExecStart=/home/mask070924/prism/scripts/auto-backup.sh
+User=mask0709
+WorkingDirectory=/home/mask0709/prism
+ExecStart=/home/mask0709/prism/scripts/auto-backup.sh
 StandardOutput=journal
 StandardError=journal
 EOF
@@ -161,7 +165,7 @@ sudo systemctl enable --now prism-backup.timer"
 
 ```bash
 ssh PI5Mask24 "sudo systemctl stop prism-go-primary.service"
-ssh PI5Mask24 "cp /home/mask070924/prism/backups/prism_backup_YYYYMMDD_HHMMSS.db /home/mask070924/prism/knowledge.db && rm -f /home/mask070924/prism/knowledge.db-wal /home/mask070924/prism/knowledge.db-shm"
+ssh PI5Mask24 "cp /home/mask0709/prism/backups/prism_backup_YYYYMMDD_HHMMSS.db /home/mask0709/prism/knowledge.db && rm -f /home/mask0709/prism/knowledge.db-wal /home/mask0709/prism/knowledge.db-shm"
 ssh PI5Mask24 "sudo systemctl start prism-go-primary.service"
 ```
 
@@ -199,6 +203,9 @@ ssh PI5Mask24 "sudo systemctl status caddy --no-pager"
 
 # 查看 route header
 ssh PI5Mask24 "curl -skI https://prism.local/api/server/version | tr -d '\r' | grep -Ei 'HTTP|x-prism'"
+
+# 正式 runtime owner 應只有 5004；5000/5002 不應監聽
+ssh PI5Mask24 "systemctl is-active prism-go-primary.service; systemctl is-active prism.service prism-go-readonly.service || true"
 ```
 
 ---
@@ -222,9 +229,9 @@ ssh PI5Mask24 "sudo systemctl status prism-go-primary.service --no-pager"
 
 ```bash
 ssh PI5Mask24 "sudo journalctl -u prism-go-primary.service -n 120 --no-pager"
-ssh PI5Mask24 "ls -l /home/mask070924/prism/go-primary-live/bin/prism-go-runtime-linux-arm64 /home/mask070924/prism/knowledge.db"
+ssh PI5Mask24 "ls -l /home/mask0709/prism/go-primary-live/bin/prism-go-runtime-linux-arm64 /home/mask0709/prism/knowledge.db"
 ```
 
 ---
 
-**文件版本**：T052 / 2026-06-13
+**文件版本**：PI-PATH-MIGRATION-01 / 2026-08-17

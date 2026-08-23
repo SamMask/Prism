@@ -110,7 +110,8 @@ def test_pi_staging_script_writes_only_staging_unit_and_hash_guards_live_assets(
     script = PI_STAGING_SCRIPT.read_text(encoding="utf-8")
 
     assert 'HostAlias = "PI5Mask24"' in script
-    assert 'RemoteRoot = "/home/mask070924/prism"' in script
+    assert 'RemoteRoot = "/home/mask0709/prism"' in script
+    assert 'RemoteUser = "mask0709"' in script
     assert 'StageName = "go-primary-staging"' in script
     assert "prism-go-primary-staging.service" in script
     assert "knowledge_t041_staging.db" in script

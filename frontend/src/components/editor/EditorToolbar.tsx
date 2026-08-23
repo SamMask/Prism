@@ -1,6 +1,6 @@
 
 
-import { Check, ListPlus, Loader2, History, Edit3, Eye, Save, X } from 'lucide-react';
+import { Check, Copy, ListPlus, Loader2, History, Edit3, Eye, Save, X } from 'lucide-react';
 import { Button, IconButton } from '../ui';
 import { useTranslation } from '../../hooks/useTranslation';
 
@@ -16,6 +16,9 @@ interface EditorToolbarProps {
   // History
   isLoadingHistory: boolean;
   onLoadHistory: () => void;
+
+  // Copy
+  onCopyContent: () => void;
 
   // View Mode
   isPreview: boolean;
@@ -34,6 +37,7 @@ export function EditorToolbar({
   onAddToReadingWorkspace,
   isLoadingHistory,
   onLoadHistory,
+  onCopyContent,
   isPreview,
   onTogglePreview,
   isSaving,
@@ -43,11 +47,11 @@ export function EditorToolbar({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
+    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
       <h2 className="text-lg font-semibold text-text-primary">
         {isEditing ? t('editor.toolbar.editNote') : t('editor.toolbar.newNote')}
       </h2>
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
         {canAddToReadingWorkspace && (
           <button
             onClick={onAddToReadingWorkspace}
@@ -70,7 +74,7 @@ export function EditorToolbar({
           <button
             onClick={onLoadHistory}
             disabled={isLoadingHistory}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm
+            className={`flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-lg text-sm
                        transition-all duration-200
                        ${
                          isLoadingHistory
@@ -84,9 +88,21 @@ export function EditorToolbar({
             ) : (
               <History size={16} />
             )}
-            {t('editor.toolbar.history')}
+            <span className="hidden sm:inline">{t('editor.toolbar.history')}</span>
           </button>
         )}
+
+        {/* Copy current content */}
+        <button
+          type="button"
+          onClick={onCopyContent}
+          className="p-2 rounded-lg text-text-muted transition-colors hover:bg-bg-hover hover:text-text-primary"
+          title={t('noteCard.copyContent')}
+          aria-label={t('noteCard.copyContent')}
+          data-testid="editor-copy-content"
+        >
+          <Copy size={18} />
+        </button>
 
         {/* Preview Toggle */}
         <button
@@ -102,9 +118,17 @@ export function EditorToolbar({
         </button>
 
         {/* Save Button */}
-        <Button onClick={onSave} variant="primary" disabled={isSaving}>
+        <Button
+          onClick={onSave}
+          variant="primary"
+          disabled={isSaving}
+          aria-label={isSaving ? t('editor.toolbar.saving') : t('common.save')}
+          title={isSaving ? t('editor.toolbar.saving') : t('common.save')}
+        >
           <Save size={16} />
-          {isSaving ? t('editor.toolbar.saving') : t('common.save')}
+          <span className="hidden sm:inline">
+            {isSaving ? t('editor.toolbar.saving') : t('common.save')}
+          </span>
         </Button>
 
         {/* Close Button */}

@@ -44,6 +44,15 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
     )
   }
 
+  const handleCopyContent = async () => {
+    try {
+      await navigator.clipboard.writeText(form.content)
+      toast.success(t('noteCard.copied'))
+    } catch {
+      toast.error(t('noteCard.copyFailed'))
+    }
+  }
+
   // Load attachments on mount (editing mode only)
   useEffect(() => {
     if (form.isEditing) attachments.loadAttachments()
@@ -78,6 +87,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
             onAddToReadingWorkspace={handleAddToReadingWorkspace}
             isLoadingHistory={history.isLoadingHistory}
             onLoadHistory={history.loadHistory}
+            onCopyContent={handleCopyContent}
             isPreview={form.isPreview}
             onTogglePreview={() => form.setIsPreview(!form.isPreview)}
             isSaving={form.isSaving}

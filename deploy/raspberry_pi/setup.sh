@@ -72,7 +72,9 @@ if ! command -v caddy >/dev/null 2>&1; then
     sudo apt-get install -y caddy
 fi
 
-sudo tee /etc/caddy/Caddyfile >/dev/null <<EOF
+CADDY_FILE="/etc/caddy/Caddyfile"
+if [[ ! -s "/etc/caddy/Caddyfile" ]]; then
+sudo tee "$CADDY_FILE" >/dev/null <<EOF
 http://${PRISM_HOSTNAME}.local {
     redir https://${PRISM_HOSTNAME}.local{uri} permanent
 }
@@ -84,8 +86,14 @@ https://${PRISM_HOSTNAME}.local {
     }
 }
 EOF
+elif sudo grep -q "https://${PRISM_HOSTNAME}\.local" "$CADDY_FILE" \
+    && sudo grep -Eq "(127\.0\.0\.1|localhost):${PRISM_PORT}" "$CADDY_FILE"; then
+    info "Existing shared Caddyfile already contains the Prism Go route; leaving it unchanged."
+else
+    error "Refusing to overwrite existing Caddyfile. Merge the Prism route manually, validate it, and rerun setup."
+fi
 
-sudo caddy validate --config /etc/caddy/Caddyfile
+sudo caddy validate --config "$CADDY_FILE"
 sudo systemctl enable caddy
 sudo systemctl restart caddy
 info "Caddy routes https://${PRISM_HOSTNAME}.local to 127.0.0.1:${PRISM_PORT}"
@@ -120,10 +128,12 @@ EOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now prism-go-primary.service
 
-if sudo systemctl list-unit-files prism.service >/dev/null 2>&1; then
-    sudo systemctl disable --now prism.service >/dev/null 2>&1 || true
-    warn "Disabled legacy prism.service; keep it only as a rollback artifact until T046."
-fi
+for legacy_service in prism.service prism-go-readonly.service; do
+    if sudo systemctl list-unit-files "$legacy_service" >/dev/null 2>&1; then
+        sudo systemctl disable --now "$legacy_service" >/dev/null 2>&1 || true
+    fi
+done
+warn "Disabled legacy Python and read-only sidecar services; current rollback remains Go-only."
 
 section "Verify"
 sudo systemctl is-active prism-go-primary.service

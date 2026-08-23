@@ -17,6 +17,7 @@
 - Windows portable current path：`Prism.exe` GUI app + WebView2 + same-process Go runtime；預設資料在 exe 同層 `PrismData\`。`--data-dir` / `PRISM_GO_DATA_DIR` 只作進階/debug override。
 - V2.6.1 release notes / README 已說明 unsigned portable、Windows SmartScreen、GitHub download Mark-of-the-Web (`Zone.Identifier`)、SHA256 驗證與 `Unblock-File` 流程。沒有購買或加入 code signing。
 - Pi delivery 與 GitHub release package 是兩條流程。Pi live deploy 必須依 `DEPLOY-PI.md` 使用 Go primary live ops；GitHub Actions 只做 validation，不自動上傳 release asset。
+- 2026-08-17 `PI-PATH-MIGRATION-01` 已收斂 Pi 帳號/home 搬移：live root 為 `/home/mask0709/prism`、service user 為 `mask0709`；Go primary 是唯一 Prism listener/runtime owner，legacy Python 與 read-only sidecar inactive/disabled；weekly backup 依賴 Go primary。部署 rollback 現在只還原上一版 Go artifact 與 pre-cutover data/Caddy/systemd snapshot，setup 不得覆寫共用 Caddyfile。
 - 2026-07-14 修正後V2.6.1已重新部署到`PI5Mask24`：Go primary active/enabled、legacy `prism.service` inactive/disabled、Caddy active，runtime `2.6.1`、schema v17 pending empty；full workflow、5-sample soak與Playwright title/sidebar/About live smoke通過。證據見`docs/development-history/v2.6.1-about-version-correction-20260714.md`。
 - Prism 仍沒有內建 auth/token layer；safe boundary 是 localhost、trusted LAN、VPN、SSH tunnel，或外部 auth 保護的 reverse proxy。不得把 API 寫成可直接 public internet 暴露。
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
@@ -30,6 +31,7 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 
 ## Progress At A Glance
 
+- [x] `EDITOR-COPY-CONTENT-01`（狀態：`Done`）：既有 note 詳情編輯器工具列已在「歷史」與 Preview/Edit 切換之間加入一鍵複製；複製目前表單正文並沿用既有 i18n/toast，390px 工具列不溢位。不改 schema、API、Preview 可編輯語意或 Reading Workspace 預載。
 - [x] `MARKDOWN-SYNTAX-CANDIDATE-01`（狀態：`Done`）：已完成低風險 Markdown renderer / preview slice，包含 GFM table/task list/code copy/heading anchor/ReadingView outline，以及 GitHub alert、footnote、`==highlight==`、MarkForge box/details prose extensions。
 - [x] `KWF-01 Command Palette server-side search`（狀態：`Done`）：Command Palette 已能用既有 `/api/notes?q=...` 做全庫純關鍵字搜尋，且已完成 Pi live deploy evidence。
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已能把目前 query/filter/sort view 保存成瀏覽器本機 Search Workspace，localStorage key `prism.savedSearchWorkspaces.v1`，不改 DB schema。
@@ -41,10 +43,11 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `FRONTEND-LABEL-AND-RESEARCH-ARCHIVE-01`（狀態：`Done`）：browser title / sidebar brand 已對齊 V2.6；2026-07-01 深入研究報告已完成 current-truth resolution 並移至 development-history。本 gate 未重發 release、未部署 Pi。
 - [x] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Done`）：title/sidebar label修正版已發布為 immutable patch release `V2.6.1`並部署到 `PI5Mask24`；Actions、asset read-back、Pi full workflow、5-sample soak與live Playwright labels均通過，既有 `V2.6` tag/asset未重寫。
 - [x] `V2.6.1-ABOUT-VERSION-CORRECTION`（狀態：`Done`）：Settings「關於」缺省版本已從`2.5`修正為`2.6.1`；title/sidebar/About三處一致性、同版GitHub Release重發、Pi重新部署與live smoke/soak均已驗證。
+- [x] `PI-PATH-MIGRATION-01`（狀態：`Done`）：固定 `/home/mask0709/prism` 與 `mask0709` defaults；live ops 改為 Go-only Cutover/previous-Go Rollback/Soak；setup 保護共用 Caddy；weekly backup 與 sidecar dependency 已收斂。Pi config pre-change backup：`/home/mask0709/prism/backups/pi-path-migration-20260817T061420/`（`SHA256SUMS` 全部通過）；手動 DB backup/keep-3 rotation、reboot、等版本 Go cutover→rollback→2-sample soak均通過。Final：5004 only、Python/readonly inactive+disabled、schema v17 pending empty、Prism/Vespera/Murmur/Caddy正常。Local verification：deployment targeted 13 passed、full pytest 397 passed、PowerShell/Bash parse與`git diff --check` passed。本任務未改 API/schema/frontend/release。
 - [ ] `PROJECT-OPTIMIZATION-ROADMAP-2026-08-12`（狀態：`Todo`）：14 個 `PRISM-OPT-*` 中，P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成；P1 recovery/IA、Prompt continuation、N+1、custom reorder、route lazy loading 與 test portfolio 仍待後續逐項 promote。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
-目前沒有 `Doing` item。P0 已 local/browser verified，下一個施工入口是 `PRISM-OPT-07 Data & Recovery IA and DB-only truth`；只重組既有 Settings recovery workflow 與邊界文案，不改 backup format/backend。`main_test.go` test-only split 降為 `PRISM-OPT-14` 之後再依 test inventory 決定，不得先做 mechanical split。
+目前沒有 `Doing` item；後續入口回到既有產品 roadmap，不得把本次部署維護擴成 API/schema/frontend/release 變更。
 
 ---
 
@@ -57,6 +60,16 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 ---
 
 ## Completed Items Kept In This Active File
+
+### [x] EDITOR-COPY-CONTENT-01 Add one-click copy to the note editor toolbar
+
+狀態：`Done`
+
+來源：2026-08-23 使用者明確要求在點開卡片後，於「歷史」與 Preview/Edit 模式切換之間加入一鍵複製。
+
+範圍：只改既有 `NoteEditor` / `EditorToolbar` 與針對性 regression；複製目前表單正文（包含尚未儲存的編輯），沿用既有 `noteCard.copyContent`、`noteCard.copied`、`noteCard.copyFailed`。不改標題／附件複製格式、Preview 可編輯語意、Reading Workspace 預載、API 型別、schema、release 或 Pi deploy。
+
+驗收：按鈕位於歷史與模式切換之間，具 tooltip / accessible name；clipboard 成功與失敗都有既有 toast。`tests/test_editor_copy_content.py` 2 passed；完整 `pytest tests/ -v` 399 passed；`scripts/build_go_runtime.ps1` passed（僅既有 Browserslist / chunk-size warnings）。隔離 Go runtime 的 desktop + 390px Playwright flow 確認未儲存正文可觸發 `Content copied`、工具列無水平溢位且 console 0 error / 0 warning。本輪未讀寫正式 DB、未 commit / release / Pi deploy。
 
 ### [x] MARKDOWN-SYNTAX-CANDIDATE-01 Port MarkForge-MD supported Markdown syntax into Prism
 
