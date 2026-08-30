@@ -10,7 +10,7 @@
 
 ---
 
-## Current Truth（2026-08-12）
+## Current Truth（2026-08-23）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
 - Prism V2.6.1 已依使用者明確決策完成同版顯示遺漏重發：annotated tag、GitHub Release與`PrismDesktopPortable-v2.6.1.zip`均對齊修正commit `7f5469c16cac2a8412bb5f2524cc4e9884256db3`；既有V2.6 tag/asset未改寫，沒有建立V2.6.2。
@@ -23,7 +23,7 @@
 - V2.5 近期完成項已歸檔到 `docs/development-history/todo-handoff-archive-20260619-v2.5-stabilization.md`，包含 Reading workspace、variant tracking、note-list preview、image lightbox/zoom、batch import、starred tags、category identity、deep scan 01A-01G、project review hygiene 01A-01E 與 release/package evidence。
 - `build/` 只應保留最新 release 產物；不得把 DB、attachments、notes、uploads 等真資料當 build artifact 清理。
 - `docs/GOVERNANCE.md` 是完成宣稱、狀態層級、驗證證據、委派與 UI/UX governance 的 current entry；新版治理素材已保留到 `docs/development-history/governance-source-20260705/`，正式文檔不依賴暫存素材目錄。
-- 2026-08-12 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md` 已完成全 repo 唯讀產品／UX／技術審查；其中 `PRISM-OPT-01` 到 `PRISM-OPT-06` P0 已完成本機實作、完整測試與隔離 desktop/390px browser 驗收。P1 `PRISM-OPT-07` 到 `PRISM-OPT-14` 尚未施工；本輪未碰正式 DB、release 或 Pi deploy。
+- 2026-08-12 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md` 已完成全 repo 唯讀產品／UX／技術審查；`PRISM-OPT-01` 到 `PRISM-OPT-14` 的 P0/P1 已完成本機實作、完整測試與隔離 desktop/390px browser 驗收，並以 commit `d6115e1` 收斂。這批變更已包含在 2026-08-23 Pi artifact 中，但未逐項重跑完整 live UX flow；未碰正式 DB、release 或 tag。
 
 Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA.md`, `docs/API_REFERENCE.md` 與實際 source/runtime 為準。不得因歷史報告曾討論過，就直接擴 scope 成 AI、semantic search、GraphRAG、auto-writing、schema/API/runtime 或 Pi deploy 變更。
 
@@ -44,7 +44,7 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 - [x] `RELEASE-V2.6.1-LABEL-HOTFIX`（狀態：`Done`）：title/sidebar label修正版已發布為 immutable patch release `V2.6.1`並部署到 `PI5Mask24`；Actions、asset read-back、Pi full workflow、5-sample soak與live Playwright labels均通過，既有 `V2.6` tag/asset未重寫。
 - [x] `V2.6.1-ABOUT-VERSION-CORRECTION`（狀態：`Done`）：Settings「關於」缺省版本已從`2.5`修正為`2.6.1`；title/sidebar/About三處一致性、同版GitHub Release重發、Pi重新部署與live smoke/soak均已驗證。
 - [x] `PI-PATH-MIGRATION-01`（狀態：`Done`）：固定 `/home/mask0709/prism` 與 `mask0709` defaults；live ops 改為 Go-only Cutover/previous-Go Rollback/Soak；setup 保護共用 Caddy；weekly backup 與 sidecar dependency 已收斂。Pi config pre-change backup：`/home/mask0709/prism/backups/pi-path-migration-20260817T061420/`（`SHA256SUMS` 全部通過）；手動 DB backup/keep-3 rotation、reboot、等版本 Go cutover→rollback→2-sample soak均通過。Final：5004 only、Python/readonly inactive+disabled、schema v17 pending empty、Prism/Vespera/Murmur/Caddy正常。Local verification：deployment targeted 13 passed、full pytest 397 passed、PowerShell/Bash parse與`git diff --check` passed。本任務未改 API/schema/frontend/release。
-- [ ] `PROJECT-OPTIMIZATION-ROADMAP-2026-08-12`（狀態：`Todo`）：14 個 `PRISM-OPT-*` 中，P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成；P1 recovery/IA、Prompt continuation、N+1、custom reorder、route lazy loading 與 test portfolio 仍待後續逐項 promote。
+- [x] `PROJECT-OPTIMIZATION-ROADMAP-2026-08-12`（狀態：`Done`）：14 個 `PRISM-OPT-*` 的 P0/P1 均已完成本機實作與驗證；P2/P3/Future 未升格，仍需使用者明確 promote。
 - [ ] Heavy renderer / installer / updater / AI 類項目（狀態：`Blocked`）：只有使用者明確重新開啟需求或 decision gate，才可施工。
 
 目前沒有 `Doing` item；後續入口回到既有產品 roadmap，不得把本次部署維護擴成 API/schema/frontend/release 變更。
@@ -53,9 +53,9 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 
 ## Remaining Work Summary
 
-人類版：Prism 目前主線已經穩定在 Go primary、V2.6.1 portable / Pi live 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。2026-08-12 已先完成資料健康真值、mobile/accessibility、view action parity、selection/search trust 與搜尋 recovery 六項 P0；下一輪從 recovery IA 開始處理 P1。schema 仍為 v17；本 roadmap 不授權 migration、AI、auth、release 或 Pi deploy。
+人類版：Prism 目前主線已經穩定在 Go primary、V2.6.1 portable / Pi live 與基本 Markdown / Command Palette / Saved Search / snapshot / import preview / source URL 工作流。2026-08-12 產品優化 roadmap 的 P0/P1 十四項均已完成本機實作與驗證；目前沒有已授權 active construction item。schema 仍為 v17；P2/P3/Future、migration、AI、auth、release 或 Pi deploy 都需要另行授權。
 
-LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`。P0 `PRISM-OPT-01` 到 `PRISM-OPT-06` 已完成；下一入口是 `PRISM-OPT-07`。一次只 promote 一個 P1，不得把 review 建議擴成 schema v18、資料自動修復、AI、內建 auth、runtime redesign、release 或 Pi deploy。
+LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本檔、`docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md`、`docs/API_REFERENCE.md`。P0/P1 `PRISM-OPT-01` 到 `PRISM-OPT-14` 均已完成；目前沒有已授權 active construction item。P2/P3/Future 只能一次明確 promote 一項，不得把 review 建議擴成 schema v18、資料自動修復、AI、內建 auth、runtime redesign、release 或 Pi deploy。
 
 ---
 
@@ -119,11 +119,11 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 ---
 
-## Open TODO Items
+## Completed Roadmap Closure Kept In This Active File
 
-### [ ] PROJECT-OPTIMIZATION-ROADMAP-2026-08-12 Evidence-backed product optimization roadmap
+### [x] PROJECT-OPTIMIZATION-ROADMAP-2026-08-12 Evidence-backed product optimization roadmap
 
-狀態：`Todo`
+狀態：`Done`
 
 來源：`docs/PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md`。2026-08-12 使用者明確要求讀取 `AGENTS.md`，並把審查結果依 Prism current architecture / governance 規劃寫入本檔。審查已完成 source、SQLite、build/test 與 desktop/390px browser evidence；本 roadmap 只吸收高信心 P0/P1，不自動升格 P2/P3/Future。
 
