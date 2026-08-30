@@ -10,7 +10,7 @@
 
 ---
 
-## Current Truth（2026-08-23）
+## Current Truth（2026-08-30）
 
 - Go primary 是唯一 current runtime owner；Python Flask backend source 已於 T053 移除。完整完成紀錄見 `docs/development-history/go-primary-runtime-completion-20260617.md`。
 - Prism V2.6.1 已依使用者明確決策完成同版顯示遺漏重發：annotated tag、GitHub Release與`PrismDesktopPortable-v2.6.1.zip`均對齊修正commit `7f5469c16cac2a8412bb5f2524cc4e9884256db3`；既有V2.6 tag/asset未改寫，沒有建立V2.6.2。
@@ -31,7 +31,7 @@ Current truth 仍以本檔、`HANDOFF.md`、`docs/ARCHITECTURE.md`, `docs/SCHEMA
 
 ## Progress At A Glance
 
-- [x] `EDITOR-COPY-CONTENT-01`（狀態：`Done`）：既有 note 詳情編輯器工具列已在「歷史」與 Preview/Edit 切換之間加入一鍵複製；複製目前表單正文並沿用既有 i18n/toast，390px 工具列不溢位。不改 schema、API、Preview 可編輯語意或 Reading Workspace 預載。Commit `70f04e7` 已於 2026-08-23 部署 Pi live；未建立 release/tag、未 push。
+- [x] `EDITOR-COPY-CONTENT-01`（狀態：`Done`）：既有 note 詳情編輯器工具列已在「歷史」與 Preview/Edit 切換之間加入一鍵複製；複製目前表單正文並沿用既有 i18n/toast，390px 工具列不溢位。不改 schema、API、Preview 可編輯語意或 Reading Workspace 預載。Commit `70f04e7` 已於 2026-08-23 部署 Pi live，並於 2026-08-30 推送 `origin/main`；未建立新 release/tag。
 - [x] `MARKDOWN-SYNTAX-CANDIDATE-01`（狀態：`Done`）：已完成低風險 Markdown renderer / preview slice，包含 GFM table/task list/code copy/heading anchor/ReadingView outline，以及 GitHub alert、footnote、`==highlight==`、MarkForge box/details prose extensions。
 - [x] `KWF-01 Command Palette server-side search`（狀態：`Done`）：Command Palette 已能用既有 `/api/notes?q=...` 做全庫純關鍵字搜尋，且已完成 Pi live deploy evidence。
 - [x] `KWF-02 Saved Search / Search Workspace`（狀態：`Done`）：Home 已能把目前 query/filter/sort view 保存成瀏覽器本機 Search Workspace，localStorage key `prism.savedSearchWorkspaces.v1`，不改 DB schema。
@@ -69,7 +69,7 @@ LLM 接續版：先讀 `AGENTS.md`、`HANDOFF.md`、`docs/GOVERNANCE.md`、本�
 
 範圍：只改既有 `NoteEditor` / `EditorToolbar` 與針對性 regression；複製目前表單正文（包含尚未儲存的編輯），沿用既有 `noteCard.copyContent`、`noteCard.copied`、`noteCard.copyFailed`。不改標題／附件複製格式、Preview 可編輯語意、Reading Workspace 預載、API 型別、schema、release 或 Pi deploy。
 
-驗收：按鈕位於歷史與模式切換之間，具 tooltip / accessible name；clipboard 成功與失敗都有既有 toast。`tests/test_editor_copy_content.py` 2 passed；完整 `pytest tests/ -v` 399 passed；`scripts/build_go_runtime.ps1` passed（僅既有 Browserslist / chunk-size warnings）。隔離 Go runtime 的 desktop + 390px Playwright flow 確認未儲存正文可觸發 `Content copied`、工具列無水平溢位且 console 0 error / 0 warning。2026-08-23 commit `70f04e7` 以 Go primary Cutover 部署 Pi：artifact SHA256 `606056dcdbe53435957e2456ac09bc50db4d82236f9b0f20906011e012658ff1`，snapshot `/home/mask0709/prism/backups/go-primary-t042-20260823_153951/`，full workflow、post-smoke hash restore、5-sample soak、live desktop/390px Copy UI 與 console gate均通過；schema v17 pending empty，Go primary/Caddy active、legacy/readonly inactive，只有 5004 監聽。本輪未建立 release/tag、未 push。
+驗收：按鈕位於歷史與模式切換之間，具 tooltip / accessible name；clipboard 成功與失敗都有既有 toast。`tests/test_editor_copy_content.py` 2 passed；完整 `pytest tests/ -v` 399 passed；`scripts/build_go_runtime.ps1` passed（僅既有 Browserslist / chunk-size warnings）。隔離 Go runtime 的 desktop + 390px Playwright flow 確認未儲存正文可觸發 `Content copied`、工具列無水平溢位且 console 0 error / 0 warning。2026-08-23 commit `70f04e7` 以 Go primary Cutover 部署 Pi：artifact SHA256 `606056dcdbe53435957e2456ac09bc50db4d82236f9b0f20906011e012658ff1`，snapshot `/home/mask0709/prism/backups/go-primary-t042-20260823_153951/`，full workflow、post-smoke hash restore、5-sample soak、live desktop/390px Copy UI 與 console gate均通過；schema v17 pending empty，Go primary/Caddy active、legacy/readonly inactive，只有 5004 監聽。相關 commits 已於 2026-08-30 推送 `origin/main`；未建立新 release/tag。
 
 ### [x] MARKDOWN-SYNTAX-CANDIDATE-01 Port MarkForge-MD supported Markdown syntax into Prism
 
