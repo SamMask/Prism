@@ -45,6 +45,7 @@
 - `/api/server/*`、`GET /api/export/full-snapshot` 與 `POST /api/system/inline-separated-notes` 有「直接連線 peer 的 loopback 檢查」：只看 TCP 連線的 `RemoteAddr` 是否為 `127.0.0.1` / `::1`，不讀 `X-Forwarded-For`。
   - 經同機 reverse proxy（例如 Pi 的 Caddy `reverse_proxy 127.0.0.1:5004`）轉進來的請求，在 Go 看來都來自 loopback，所以能連到 proxy 的 LAN 使用者也能呼叫這些端點；這不是 auth。
   - CSRF 檢查由 `csrfGate` 在路由之前執行：只有帶 `Origin` / `Referer` 而且兩者都不同源時才擋；沒有這兩個 header 的請求放行；CSRF 防護可整體關閉。
+  - 2026-10-07 決定（PRISM-OPT-29）：不在程式內收緊這個檢查（例如不信任 `X-Forwarded-For`、不加 `--allow-lan-admin`）。Prism 的安全前提是信任的區網；需要時，在 reverse proxy 加認證（例如 Caddy `basic_auth`）。見 `DEPLOY-PI.md` 的安全邊界。
 
 ### 歷史相容層
 

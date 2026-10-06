@@ -327,6 +327,13 @@
     - 背景沒有 `inert`／`aria-hidden`，螢幕閱讀器的虛擬游標仍能讀到背景。
     - Settings、Wizard、BackupImport 自己的 fixed div 不在本單範圍。
     - StrictMode 在 dev 下的行為是推論，沒有實跑。
+- `PRISM-OPT-29`（docs-only；第二階段依使用者決策不收緊）：
+  - `DEPLOY-PI.md` 的安全邊界新增「管理端點對 LAN 的實際範圍」：
+    - 經 Caddy 轉發的 LAN 請求在 Go 看來是 loopback，所以能連到 `prism.local` 的裝置可以使用 `/api/server/*`、full snapshot 與合併長文。
+    - 筆記 API 本來就沒有限制。
+    - 若 LAN 內有不信任的裝置，改用 Caddy `basic_auth`。
+  - `docs/API_REFERENCE.md`：既有的「直接連線 peer 的 loopback 檢查」說明（PRISM-OPT-20 已改寫）後面，補上 2026-10-07 的不收緊決策。
+  - 驗證：相關文件測試 22 passed；`git diff --check` 通過；鏡像一致。
 
 ### P1 — 下一輪
 
@@ -340,8 +347,8 @@
 | PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Todo | — | TECH-04 |
 | PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Todo | 建議在 15、18、19 之後 | TECH-02 |
 | PRISM-OPT-27 | 治理文件瘦身、修正斷鏈、解除 docs-lock 測試耦合 | Done | — | TECH-03 |
-| PRISM-OPT-28 | 桌面版每日自動還原點 | Todo | — | OPS-02 |
-| PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Todo | 第二階段已決定不收緊 | OPS-04 |
+| PRISM-OPT-28 | 桌面版每日自動還原點 | Doing | — | OPS-02 |
+| PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Done | 第二階段已決定不收緊 | OPS-04 |
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |

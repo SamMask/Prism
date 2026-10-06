@@ -6,6 +6,11 @@
 > **存取網址**: `https://prism.local`
 
 > ⚠️ **安全邊界**: Prism API / Go runtime has no built-in auth/token layer，沒有內建 API Token、Bearer Token 或使用者認證。Pi + Caddy 部署預設是 `localhost` / trusted LAN / VPN 用途；不要將 Caddy 或 Go 入口直接 port-forward 到 public internet。遠端存取請放在 VPN、SSH tunnel 或受認證保護的 reverse proxy 後面。
+>
+> **管理端點對 LAN 的實際範圍（PRISM-OPT-29）**：
+> - Go 的 loopback 檢查只看 TCP 連線的 peer。Caddy 以 `reverse_proxy 127.0.0.1:5004` 轉進來的請求一律來自 loopback，所以能連到 `prism.local` 的 LAN 裝置也能使用以下功能：`/api/server/*`（備份下載、建立、還原、刪除，log，重新啟動，硬體與版本資訊）、`GET /api/export/full-snapshot`、`POST /api/system/inline-separated-notes`。
+> - 筆記的讀寫、刪除、JSON 匯出與 DB 下載本來就沒有限制。
+> - 2026-10-07 使用者決定不在程式內收緊。若 LAN 內有不信任的裝置（訪客 Wi-Fi、共用網路），請在 Caddy 加上 `basic_auth`；這樣筆記與管理功能會一起受到保護。
 
 ---
 
