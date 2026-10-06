@@ -209,10 +209,38 @@ def test_new_note_first_ctrl_s_switches_editor_to_the_created_note():
     create = save.index("const { note_id } = await api.createNote(payload)")
     assert create < save.index("createdNoteId.current = note_id")
     assert create < save.index("await api.getNote(note_id)")
-    assert save.index("await api.getNote(note_id)") < save.index("openEditor(created)")
+    assert save.index("await api.getNote(note_id)") < save.index("openEditor(created, { inPlace: true })")
     # The attachment reload for a note this form just created must not block the next Ctrl+S.
     setter = form[form.index("const setFullContentState = useCallback"):form.index("// ---- Unsaved changes detection ----")]
     assert "noteId !== undefined && noteId === createdNoteId.current" in setter
+
+
+def test_open_editor_never_rebinds_an_open_form_to_another_note():
+    # PRISM-OPT-59: NoteEditor has no key, so its form keeps the note it was loaded from. While it is
+    # open, an outside openEditor (palette open/new note, background controls reached by Tab) must be
+    # a no-op instead of pointing that form at another note id; only the create -> edit switch passes.
+    store = _read("stores/appStore.ts")
+    palette = _read("components/CommandPalette.tsx")
+    open_editor = store[store.index("  openEditor: (note, options) =>"):store.index("  closeEditor: () => set(")]
+
+    assert "options?: { preview?: boolean; inPlace?: boolean }" in store
+    assert "if (get().isEditorOpen && !options?.inPlace) return" in open_editor
+    assert open_editor.index("if (get().isEditorOpen") < open_editor.index("set({")
+    in_place_callers = [
+        path.relative_to(FRONTEND).as_posix()
+        for path in FRONTEND.rglob("*.ts*")
+        if "inPlace: true" in path.read_text(encoding="utf-8")
+    ]
+    assert in_place_callers == ["hooks/editor/useNoteForm.ts"]
+    # Inside the editor Ctrl+K inserts a link; it must not also open a palette hidden behind the modal.
+    shortcut = palette[palette.index("if (isPaletteShortcut) {"):palette.index("toggleCommandPalette()\n")]
+    assert "if (useAppStore.getState().isEditorOpen) return" in shortcut
+    # Leaving `/` (browser Back) unmounts HomePage's editor; its open state must go too, or the guard
+    # would refuse every later editor. Keyed on the route, not a HomePage cleanup (StrictMode remounts
+    # HomePage right after Header's navigate('/') + openEditor(null)).
+    layout = _read("components/Layout.tsx")
+    assert "if (!isLibraryRoute) closeEditor()" in layout
+    assert "}, [isLibraryRoute, closeEditor])" in layout
 
 
 def test_beforeunload_is_registered_only_while_there_are_unsaved_changes():

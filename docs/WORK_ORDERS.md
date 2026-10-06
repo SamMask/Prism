@@ -106,6 +106,7 @@ git diff --check
 | PRISM-OPT-56 | B | M | prism-builder | prism-verifier |
 | PRISM-OPT-57 | V | S | 主代理 | prism-verifier |
 | PRISM-OPT-62 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-63 | F | L | prism-engineer | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -491,6 +492,26 @@ git diff --check
 - **驗收**：desktop 實測——有未存變更時關閉視窗會出現確認，選取消就保留編輯；沒有未存變更時直接關閉；tray 的結束行為與現在一致。
 - **驗證**：`cd go-shadow && go test ./...`；desktop shell 的 smoke（`--desktop-shell-smoke` 與手動關閉視窗的實測）；`cd frontend && npm run build`。
 
+### PRISM-OPT-63 — app 內導覽時保護未存變更
+
+- **Finding**：PRISM-OPT-59 驗收時發現（2026-10-07）｜ **優先級**：P1
+- **目標**：編輯器有未存變更時，任何 app 內導覽都先詢問，不會無聲地丟掉編輯內容。導覽包括瀏覽器上一頁／下一頁、側欄或 Header 的連結、palette 的導覽指令。
+- **原因**：
+  - PRISM-OPT-21 的 `beforeunload` 只在整頁卸載（關分頁、重新整理）時觸發；React Router 的 SPA 導覽不會觸發它。
+  - 編輯器只掛在 HomePage，離開 `/` 時編輯中的內容直接消失。PRISM-OPT-59 之後，離開時會清掉編輯器狀態，但內容仍然沒有被保存或提示。
+  - 這是使用者主要使用方式（Pi 上的瀏覽器）最常走到的路徑。
+- **修改範圍**：
+  - 先確認 router 的型態（`BrowserRouter` + `<Routes>`，或 data router）。`useBlocker` 需要 data router；若要換 router，評估影響後再決定。
+  - 最小做法候選：
+    - 有未存變更時攔截導覽，沿用編輯器現有的「未存變更」確認文案。
+    - 或在 popstate 與連結點擊處攔截。
+  - 不得與 PRISM-OPT-61（桌面關窗）、PRISM-OPT-62（focus trap）重複實作確認邏輯。
+- **不要修改**：`beforeunload` 的行為；API；存檔流程（PRISM-OPT-19／21）。
+- **驗收**：
+  - browser smoke（desktop 與 390px）：有未存變更時按瀏覽器上一頁、點背景導覽連結、palette 導覽，都會先詢問；取消就留在編輯器且內容保留；確認離開才丟棄。
+  - 沒有未存變更時照常導覽；OPT-17、21、22、59 的流程不退化。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；browser smoke。
+
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
 - **來源**：使用者需求（2026-10-06）｜ **優先級**：P1
@@ -733,7 +754,10 @@ git diff --check
 
 ### PRISM-OPT-62 — 對話框無障礙：role、focus trap、歸還 focus
 
-- **Finding**：PRISM-OPT-20、22 驗收時發現（2026-10-07）｜ **優先級**：P2
+- **Finding**：PRISM-OPT-20、22 驗收時發現（2026-10-07）｜ **優先級**：P1（2026-10-07 由 P2 提升）
+- **提升理由**：PRISM-OPT-59 的實測證實，沒有 focus trap 會造成資料遺失。
+  - Tab 可以移到背景的 Sidebar／Header 導覽連結，按 Enter 會讓 HomePage unmount，編輯中的內容就無聲消失；這時 `isEditorOpen` 仍是 true，回到 `/` 會重新開啟原始內容。
+  - OPT-59 的 store guard 擋住了 `openEditor` 這條路徑，但導覽連結這條只能靠 focus trap 或 `inert` 解決。驗收要包含「Tab 無法到達背景導覽連結」。
 - **目標**：所有對話框（編輯器、確認框等）對鍵盤與螢幕閱讀器都是真正的 modal dialog。
 - **原因**：
   - `frontend/src/components/ui/Modal.tsx` 與 `ConfirmDialog` 沒有 `role="dialog"`／`aria-modal`，也沒有 focus trap。Tab 可以離開對話框，關閉後 focus 也不會回到開啟它的元素。

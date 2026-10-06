@@ -316,6 +316,8 @@ export function CommandPalette() {
     const handleKeyDown = (event: KeyboardEvent) => {
       const isPaletteShortcut = (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k'
       if (isPaletteShortcut) {
+        // In the editor Ctrl+K inserts a link; the palette would open hidden behind it (PRISM-OPT-59).
+        if (useAppStore.getState().isEditorOpen) return
         event.preventDefault()
         toggleCommandPalette()
         return

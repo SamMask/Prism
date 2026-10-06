@@ -173,7 +173,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
           // close instead of risking a duplicate create.
           createdNoteId.current = note_id
           const created = await api.getNote(note_id).catch(() => null)
-          if (created) openEditor(created)
+          if (created) openEditor(created, { inPlace: true })
           else close = true
         }
       }

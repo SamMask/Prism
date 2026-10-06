@@ -229,6 +229,33 @@
       - 反向對照：HEAD 版前端同一支腳本失敗，打字會改到標題。
     - 指令：`npm run build` 通過、pytest 417 passed、`git diff --check` 通過。
   - 已知：`Modal` 沒有 `role="dialog"` 與 focus trap，Tab 可以離開對話框。另開 PRISM-OPT-62。
+- `PRISM-OPT-59`（本機驗證；未發版、未部署 Pi）：
+  - **重現結果（HEAD，隔離 runtime 的 headless Chromium，1280 與 390 一致）**：
+    - 前提：筆記 A 在編輯器中、有未存修改時，`Ctrl+K` 開出的 palette 在編輯器 modal 的**下方**（兩者都是 z-50，modal 用 portal 蓋在上面）。畫面上看不到，但在預覽模式（預設的 cardOpenMode）下 palette 會拿到 focus。
+    - 預覽模式：`Ctrl+K` → 輸入 B 的標題 → Enter → 切到 Edit → `Ctrl+S`，結果 **B 被寫成 A 的標題加上剛編輯的內容**，B 的歷史多一筆舊內容，A 不變。
+    - 編輯模式：要按 Tab 數十次才進得了 palette，選 B 後結果相同。
+    - palette 的「New note」，以及用 Tab 移到背景 Header 的「New note」再按 Enter：用 A 的表單**新建一筆**，A 的編輯沒有存回 A。
+    - B 是已拆分筆記時：A 的表單內容被 B 的全文蓋掉，A 的編輯無聲消失。
+  - 修正：
+    - `appStore.openEditor` 在編輯器已開啟時是 no-op，除非帶了新增的 `inPlace` 選項。只有 OPT-21 的「建立後轉為編輯」使用 `inPlace`。
+    - 編輯器開著時 `Ctrl+K` 不開 palette；在編輯器內 `Ctrl+K` 仍是插入連結。
+    - `Layout` 在路由離開 `/` 時清掉編輯器的開啟狀態，否則按瀏覽器上一頁之後，guard 會一直擋住後續開啟。
+      - 不放在 HomePage 的 unmount cleanup：React StrictMode 會在開發模式下假 unmount，把 OPT-17「從 Settings 按 New」剛開的編輯器關掉，已在 vite dev 實測。
+  - 驗證：
+    - pytest 的 source-lock 測試在 HEAD 上失敗。
+    - 實作代理比較三個 build（HEAD、第一版修正、最終版），1280 與 390：
+      - 修正後 A、B 的內容與歷史都正確，B 不變；拆分的 B 不會蓋掉 A 的表單；筆記總數不變。
+      - 上一頁之後 palette、開 B、Header New 都正常，回到 `/` 也不再出現舊的 A。
+      - OPT-17、21、22 沒有退化。
+    - prism-verifier 獨立驗收 (i)(ii)(iii)，並以 HEAD build 重現原 bug：
+      - (i) 表單不會存進別則筆記。
+      - (ii) 這些路徑不會無聲丟掉 A 的編輯。
+      - (iii) OPT-21 原地轉換不會 remount。
+      - 上一頁殘留狀態的退化是它發現的，已由上述 `Layout` 修正處理。
+    - 指令：`npm run build` 通過、pytest 418 passed、`git diff --check` 通過。
+  - 已知、另開工單：
+    - 沒有 focus trap 時，Tab 可以移到背景的導覽連結或 palette 按鈕，導覽後編輯內容會消失。PRISM-OPT-62 已提升為 P1。
+    - app 內導覽（上一頁、連結）時，未存的編輯仍會消失。另開 PRISM-OPT-63（P1）。
 
 ### P1 — 下一輪
 
@@ -246,8 +273,10 @@
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Todo | 第二階段需要決策 | OPS-04 |
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
-| PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Todo | — | OPT-19 追蹤 |
+| PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Todo | 21 | OPT-21 追蹤 |
+| PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Todo | — | OPT-22 追蹤 |
+| PRISM-OPT-63 | 編輯器有未存變更時，app 內導覽（上一頁、連結、palette 導覽）先詢問 | Todo | — | OPT-59 追蹤 |
 
 完成證據（2026-10-06）：
 
@@ -282,7 +311,6 @@
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Todo | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
-| PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Todo | — | OPT-22 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 

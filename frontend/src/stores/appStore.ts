@@ -62,7 +62,7 @@ interface AppState {
   fetchTags: () => Promise<void>
   setLocale: (locale: Locale) => void
   setViewMode: (mode: ViewMode) => void
-  openEditor: (note: Note | null, options?: { preview?: boolean }) => void
+  openEditor: (note: Note | null, options?: { preview?: boolean; inPlace?: boolean }) => void
   closeEditor: () => void
   openReading: (note: Note) => void
   closeReading: () => void
@@ -207,13 +207,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ viewMode: mode })
   },
 
-  openEditor: (note, options) => set({
-    isEditorOpen: true,
-    editingNote: note,
-    editorStartsInPreview: !!options?.preview,
-    isReadingOpen: false,
-    readingNote: null,
-  }),
+  openEditor: (note, options) => {
+    // The open form belongs to the note it was loaded from (it doesn't remount); only its own
+    // create -> edit switch may rebind it. Other callers must wait until it closes (PRISM-OPT-59).
+    if (get().isEditorOpen && !options?.inPlace) return
+    set({
+      isEditorOpen: true,
+      editingNote: note,
+      editorStartsInPreview: !!options?.preview,
+      isReadingOpen: false,
+      readingNote: null,
+    })
+  },
 
   closeEditor: () => set({ isEditorOpen: false, editingNote: null, editorStartsInPreview: false }),
 

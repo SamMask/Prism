@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { CommandPalette } from './CommandPalette'
 import { FilterStrip } from './FilterStrip'
@@ -9,10 +9,15 @@ import { useTranslation } from '../hooks/useTranslation'
 import { ToastContainer } from './ui/Toast'
 
 export function Layout() {
-  const { totalNotes, tags } = useAppStore()
+  const { totalNotes, tags, closeEditor } = useAppStore()
   const { t } = useTranslation()
   const location = useLocation()
   const isLibraryRoute = location.pathname === '/'
+  // The editor lives in HomePage, so leaving `/` (e.g. browser Back) unmounts it; drop its open state
+  // too, or the openEditor guard would keep refusing new editors (PRISM-OPT-59).
+  useEffect(() => {
+    if (!isLibraryRoute) closeEditor()
+  }, [isLibraryRoute, closeEditor])
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const openMobileNav = useCallback(() => setIsMobileNavOpen(true), [])
   const closeMobileNav = useCallback(() => setIsMobileNavOpen(false), [])
