@@ -374,6 +374,21 @@
     - 匯入後的拆分筆記只有預覽，橫幅仍寫「點擊附件可查看」，但其實沒有附件。前端提示見 PRISM-OPT-65，`API_REFERENCE.md` 已說明。
     - 用 skip mode 匯回原 DB 時，一般附件列會重複新增，屬於 PRISM-OPT-64。
     - `scratchpad/opt58-plan` 的刪除被權限擋下，裡面沒有正式資料，保留未刪。
+- `PRISM-OPT-25`（本機驗證；CI 結果見 push 後的 GitHub Actions）：
+  - 移出版控與刪除的範圍：
+    - `git rm -r --cached frontend/node_modules`（3,890 檔）：只動 index，本機資料夾保留，`.gitignore` 本來就已忽略。
+    - 刪除 `resources/`、`static/{js,css,lib,locales,fonts}`（舊 Vue 前端）、`tools/`，以及 5 個死 script。其中 `clean_test_data.py` 會不經確認清空 `./knowledge.db` 的筆記。
+    - 移除 `.vscode/launch.json` 的 Flask 設定、`vite.config.ts` 中 Go 已不提供的 `/prompt-builder.html` 與 `/templates` proxy，以及 `index.html` 指向不存在檔案的 favicon。
+    - 總共 3,944 筆刪除，約 100 MB。
+  - `static/config`、`static/uploads`、`knowledge.db`、`desktop-spike/`、`install.*`、`requirements-pi.txt` 都沒有碰。不需要修改任何測試。
+  - 驗證：
+    - prism-verifier 用刪除後的追蹤清單做乾淨複本：`npm ci && npm run build` 成功，裝得到 `dompurify`；用複本的 dist 執行 `go build ./...` 也成功。
+    - 對全部 tracked script／程式／CI／tests 做引用掃描，沒有 live 引用；只剩歷史文件中的提及。
+    - 指令：pytest 422 passed、`go test ./...` ok、`npm run build` 通過；`e2e/test_note_flow.py` 5 passed，會跑 `scripts/build_go_runtime.ps1`，證明 build script 不依賴已刪的路徑；`git diff --check` 通過。
+  - 已知（低）：
+    - `.vscode/launch.json` 還有無作用的 Flask 時代環境變數。
+    - `.gitignore` 裡 `resources/` 的兩條忽略規則還在。
+    - `scripts/start_v2_dev.bat` 與 `install.sh` 用 `npm install`，可以考慮改成 `npm ci`。
 
 ### P1 — 下一輪
 
@@ -384,7 +399,7 @@
 | PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Done | 建議在 21 之後 | UX-03 |
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |
 | PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Todo | — | TECH-01 |
-| PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Todo | — | TECH-04 |
+| PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Done | — | TECH-04 |
 | PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Todo | 建議在 15、18、19 之後 | TECH-02 |
 | PRISM-OPT-27 | 治理文件瘦身、修正斷鏈、解除 docs-lock 測試耦合 | Done | — | TECH-03 |
 | PRISM-OPT-28 | 桌面版每日自動還原點 | Done | — | OPS-02 |

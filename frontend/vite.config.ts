@@ -22,15 +22,6 @@ export default defineConfig({
         target: 'http://127.0.0.1:5004',
         changeOrigin: true,
       },
-      // Proxy legacy static routes to the active backend.
-      '/prompt-builder.html': {
-        target: 'http://127.0.0.1:5004',
-        changeOrigin: true,
-      },
-      '/templates': {
-        target: 'http://127.0.0.1:5004',
-        changeOrigin: true,
-      },
     },
   },
   build: {

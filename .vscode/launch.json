@@ -14,19 +14,6 @@
       }
     },
     {
-      "name": "Debug Flask (V2 Mode)",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "${workspaceFolder}/app.py",
-      "console": "integratedTerminal",
-      "env": {
-        "PRISM_V2": "true",
-        "FLASK_DEBUG": "True",
-        "FLASK_ENV": "development"
-      },
-      "justMyCode": false
-    },
-    {
       "name": "Debug E2E (Playwright)",
       "type": "debugpy",
       "request": "launch",
