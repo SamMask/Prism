@@ -335,6 +335,7 @@ const zhTW = {
     toolbar: {
       editNote: '編輯筆記',
       newNote: '新增筆記',
+      previewNote: '預覽筆記',
       copyAiPrompt: '複製 AI 提示詞',
       extractImagePrompt: '提取圖片提示詞',
       history: '歷史',
@@ -1300,6 +1301,7 @@ const en: TranslationDict = {
     toolbar: {
       editNote: 'Edit note',
       newNote: 'New note',
+      previewNote: 'Preview note',
       copyAiPrompt: 'Copy AI prompt',
       extractImagePrompt: 'Extract image prompt',
       history: 'History',
@@ -2262,6 +2264,7 @@ const ja: TranslationDict = {
     toolbar: {
       editNote: 'ノートを編集',
       newNote: '新規ノート',
+      previewNote: 'ノートをプレビュー',
       copyAiPrompt: 'AIプロンプトをコピー',
       extractImagePrompt: '画像プロンプトを抽出',
       history: '履歴',
@@ -3224,6 +3227,7 @@ const ko: TranslationDict = {
     toolbar: {
       editNote: '노트 편집',
       newNote: '새 노트',
+      previewNote: '노트 미리보기',
       copyAiPrompt: 'AI 프롬프트 복사',
       extractImagePrompt: '이미지 프롬프트 추출',
       history: '기록',

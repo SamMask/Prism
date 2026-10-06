@@ -25,6 +25,7 @@ interface EditorToolbarProps {
   onTogglePreview: () => void;
 
   // Save/Close
+  hasUnsavedChanges: boolean;
   isSaving: boolean;
   onSave: () => void;
   onClose: () => void;
@@ -40,6 +41,7 @@ export function EditorToolbar({
   onCopyContent,
   isPreview,
   onTogglePreview,
+  hasUnsavedChanges,
   isSaving,
   onSave,
   onClose,
@@ -49,7 +51,9 @@ export function EditorToolbar({
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6">
       <h2 className="text-lg font-semibold text-text-primary">
-        {isEditing ? t('editor.toolbar.editNote') : t('editor.toolbar.newNote')}
+        {isPreview
+          ? t('editor.toolbar.previewNote')
+          : isEditing ? t('editor.toolbar.editNote') : t('editor.toolbar.newNote')}
       </h2>
       <div className="ml-auto flex items-center gap-1 sm:gap-2">
         {canAddToReadingWorkspace && (
@@ -117,19 +121,21 @@ export function EditorToolbar({
           {isPreview ? <Edit3 size={18} /> : <Eye size={18} />}
         </button>
 
-        {/* Save Button */}
-        <Button
-          onClick={onSave}
-          variant="primary"
-          disabled={isSaving}
-          aria-label={isSaving ? t('editor.toolbar.saving') : t('common.save')}
-          title={isSaving ? t('editor.toolbar.saving') : t('common.save')}
-        >
-          <Save size={16} />
-          <span className="hidden sm:inline">
-            {isSaving ? t('editor.toolbar.saving') : t('common.save')}
-          </span>
-        </Button>
+        {/* Save Button: hidden in a clean preview */}
+        {(!isPreview || hasUnsavedChanges) && (
+          <Button
+            onClick={onSave}
+            variant="primary"
+            disabled={isSaving}
+            aria-label={isSaving ? t('editor.toolbar.saving') : t('common.save')}
+            title={isSaving ? t('editor.toolbar.saving') : t('common.save')}
+          >
+            <Save size={16} />
+            <span className="hidden sm:inline">
+              {isSaving ? t('editor.toolbar.saving') : t('common.save')}
+            </span>
+          </Button>
+        )}
 
         {/* Close Button */}
         <IconButton onClick={onClose} aria-label={t('editor.toolbar.close')}>

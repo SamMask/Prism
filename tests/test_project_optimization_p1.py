@@ -238,3 +238,24 @@ def test_restore_on_save_drops_the_deleted_auto_attachment_from_the_open_panel()
     assert "attachments.setAttachments(" in sync
     assert "a.is_auto_extracted" in sync
     assert "loadAttachments" not in sync[:sync.index("}, [form.restoredCount")]
+
+
+def test_preview_mode_shows_a_heading_not_a_focused_title_input_and_hides_clean_save():
+    import re
+
+    editor = _read("components/NoteEditor.tsx")
+    toolbar = _read("components/editor/EditorToolbar.tsx")
+    i18n = _read("i18n/index.ts")
+
+    # The title input is rendered only outside preview; preview shows a heading and focuses the dialog.
+    preview_branch = editor[editor.index("{form.isPreview ? (\n                <h3"):]
+    assert preview_branch.index("<h3") < preview_branch.index(") : (") < preview_branch.index("<input")
+    assert preview_branch.index("autoFocus") > preview_branch.index(") : (")
+    assert "tabIndex={-1}" in editor and "dialogRef.current?.focus()" in editor
+    assert "if (initialPreview)" in editor
+    # Save shows when editing or when there are unsaved changes (e.g. an EditablePreview block edit).
+    assert "hasUnsavedChanges={form.hasUnsavedChanges}" in editor
+    assert "(!isPreview || hasUnsavedChanges) && (" in toolbar
+    assert "t('editor.toolbar.previewNote')" in toolbar
+    # New heading key exists in all four locales.
+    assert len(re.findall(r"^      previewNote: '[^']+',$", i18n, re.M)) == 4

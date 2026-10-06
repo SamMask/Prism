@@ -211,6 +211,24 @@
   - 已知：
     - 桌面版（WebView2）關閉視窗時沒有保護，另開 PRISM-OPT-61。
     - PRISM-OPT-59 若要為 `NoteEditor` 加 `key`，必須在「建立後轉為編輯」時保持不變，已寫進 OPT-59 的規格。
+- `PRISM-OPT-22`（本機驗證；未發版、未部署 Pi）：
+  - 預覽態：
+    - heading 顯示「預覽筆記」，新增 i18n key `editor.toolbar.previewNote`，四語：預覽筆記／Preview note／ノートをプレビュー／노트 미리보기。
+    - 標題以 `<h3>` 呈現，不渲染 input，也沒有 autofocus。
+    - 開啟時 focus 落在 dialog 容器（`tabIndex={-1}`）。
+    - Save 只在 Edit 模式或有未存變更時顯示。
+  - 「Edit this block」、`cardOpenMode`、ReadingView、卡片的點擊目標都沒有改；`useNoteForm` 沒有 diff，OPT-21 與 OPT-19/60/20 的存檔行為不變。
+  - 驗證：
+    - pytest 的 source-lock 測試在 HEAD 上失敗。
+    - 實作代理：隔離 runtime 在 1280 與 390 跑 17 項，全部通過。
+    - prism-verifier：自寫 Playwright，涵蓋 1280／390 × zh-TW／en，124 項 0 失敗。
+      - 預覽態沒有 focus 的 input，focus 在 dialog 內；按鍵不會改到標題，DOM 與 GET 都確認過。
+      - Edit 與 Preview 來回切換正常；「Edit this block」後 Save 出現並能存檔。
+      - 預覽態按 `Ctrl+S` 存檔並留在編輯器。
+      - edit 模式開啟與新增筆記的行為不變；Escape 與未存確認正常。
+      - 反向對照：HEAD 版前端同一支腳本失敗，打字會改到標題。
+    - 指令：`npm run build` 通過、pytest 417 passed、`git diff --check` 通過。
+  - 已知：`Modal` 沒有 `role="dialog"` 與 focus trap，Tab 可以離開對話框。另開 PRISM-OPT-62。
 
 ### P1 — 下一輪
 
@@ -218,7 +236,7 @@
 |---|---|---|---|---|
 | PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Done | 19、60 | FEAT-02、PERF-01 |
 | PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Done | — | UX-02 |
-| PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Todo | 建議在 21 之後 | UX-03 |
+| PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Done | 建議在 21 之後 | UX-03 |
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |
 | PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Todo | — | TECH-01 |
 | PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Todo | — | TECH-04 |
@@ -264,6 +282,7 @@
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Todo | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
+| PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Todo | — | OPT-22 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 

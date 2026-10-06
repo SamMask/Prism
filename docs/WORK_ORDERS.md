@@ -105,6 +105,7 @@ git diff --check
 | PRISM-OPT-55 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-56 | B | M | prism-builder | prism-verifier |
 | PRISM-OPT-57 | V | S | 主代理 | prism-verifier |
+| PRISM-OPT-62 | F | M | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -729,6 +730,21 @@ git diff --check
   - 結果記錄在 `docs/TODO.md`。
   - 任何環境失敗時，另開修正工單。
 - **驗證**：截圖或 DOM 檢查的紀錄；desktop shell 使用隔離的 `PrismData`。
+
+### PRISM-OPT-62 — 對話框無障礙：role、focus trap、歸還 focus
+
+- **Finding**：PRISM-OPT-20、22 驗收時發現（2026-10-07）｜ **優先級**：P2
+- **目標**：所有對話框（編輯器、確認框等）對鍵盤與螢幕閱讀器都是真正的 modal dialog。
+- **原因**：
+  - `frontend/src/components/ui/Modal.tsx` 與 `ConfirmDialog` 沒有 `role="dialog"`／`aria-modal`，也沒有 focus trap。Tab 可以離開對話框，關閉後 focus 也不會回到開啟它的元素。
+  - PRISM-OPT-22 只把開啟時的初始 focus 放進對話框。
+- **修改範圍**：`Modal.tsx`、`ConfirmDialog`。
+  - 加上 `role="dialog"`、`aria-modal="true"`，並以 `aria-labelledby` 指向標題。
+  - 開啟時 focus 進入對話框；Tab／Shift+Tab 在對話框內循環；關閉後歸還 focus。
+  - 不新增 dependency，用最小的自寫 focus trap。
+- **不要修改**：對話框的版面與文案；Escape 與未存提醒的語意（PRISM-OPT-21、22）。
+- **驗收**：browser smoke（desktop 與 390px）——Tab／Shift+Tab 不會離開對話框；關閉後 focus 回到觸發元素；巢狀情境（編輯器上再開確認框）正常；console 沒有錯誤。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；browser smoke。
 
 ---
 

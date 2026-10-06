@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Modal } from './ui'
 import { Note } from '../services/api'
 import { Image, X, History, RotateCcw } from 'lucide-react'
@@ -30,6 +30,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
   const history = useNoteHistory(note, form.setContent)
   const attachments = useNoteAttachments(note, form.setContent, form.updateOriginalContent, form.setFullContentState)
   const drag = useDragDrop(note?.id, form.setContent, attachments.setAttachments)
+  const dialogRef = useRef<HTMLDivElement>(null)
   const [galleryLightboxIndex, setGalleryLightboxIndex] = useState<number | null>(null)
   const isInReadingWorkspace = note?.id ? workspace.noteIds.includes(note.id) : false
 
@@ -52,6 +53,11 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
       toast.error(t('noteCard.copyFailed'))
     }
   }
+
+  // Opened in preview: put keyboard focus on the dialog, not on a field.
+  useEffect(() => {
+    if (initialPreview) dialogRef.current?.focus()
+  }, [initialPreview])
 
   // Load attachments on mount (editing mode only)
   useEffect(() => {
@@ -87,7 +93,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
   return (
     <>
       <Modal isOpen onClose={form.handleClose} size="full">
-        <div className="flex h-[min(86vh,920px)] flex-col overflow-hidden" data-testid="note-editor">
+        <div ref={dialogRef} tabIndex={-1} className="flex h-[min(86vh,920px)] flex-col overflow-hidden outline-none" data-testid="note-editor">
 
           {/* Toolbar */}
           <EditorToolbar
@@ -100,6 +106,7 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
             onCopyContent={handleCopyContent}
             isPreview={form.isPreview}
             onTogglePreview={() => form.setIsPreview(!form.isPreview)}
+            hasUnsavedChanges={form.hasUnsavedChanges}
             isSaving={form.isSaving}
             onSave={form.handleSave}
             onClose={form.handleClose}
@@ -168,14 +175,20 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
                 </div>
               )}
 
-              <input
-                type="text"
-                value={form.title}
-                onChange={(e) => form.setTitle(e.target.value)}
-                placeholder={t('editor.noteEditor.titlePlaceholder')}
-                autoFocus
-                className="mb-4 w-full bg-transparent text-2xl font-semibold leading-tight text-text-primary placeholder-text-muted outline-none"
-              />
+              {form.isPreview ? (
+                <h3 className="mb-4 text-2xl font-semibold leading-tight text-text-primary break-words">
+                  {form.title || t('editor.noteEditor.titlePlaceholder')}
+                </h3>
+              ) : (
+                <input
+                  type="text"
+                  value={form.title}
+                  onChange={(e) => form.setTitle(e.target.value)}
+                  placeholder={t('editor.noteEditor.titlePlaceholder')}
+                  autoFocus
+                  className="mb-4 w-full bg-transparent text-2xl font-semibold leading-tight text-text-primary placeholder-text-muted outline-none"
+                />
+              )}
 
               {form.isPreview ? (
                 <div
