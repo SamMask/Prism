@@ -1042,6 +1042,26 @@
       "current_owner_note": "Manual-only FTS rebuild. It does not run VACUUM, change Notes rows, change attachment rows, delete files, or run automatically from agents/UI diagnostics."
     },
     {
+      "rule": "/api/system/inline-separated-notes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.inline_separated_notes",
+      "python_handler": "none; added after T053 in Go primary (PRISM-OPT-20)",
+      "production_owner": "go-primary",
+      "go_primary_owner": "go-primary runtime route",
+      "go_candidate": "implemented explicit server/system maintenance route",
+      "db_side_effects": [
+        "write a consistent restore point with VACUUM INTO before any change",
+        "per note: delete the auto-extracted Note_Attachments row and either update Notes.content (merge) or insert one Note_History row (history)"
+      ],
+      "file_side_effects": [
+        "create backups/separated-notes-<ts>/ with restore_point.db, plan.json, moves.tsv, result.json",
+        "rename docs/notes/note_<id>.<ext> into the quarantine folder after the note's commit; never delete or overwrite"
+      ],
+      "current_owner_note": "Manual-only, dry-run by default; only an explicit dry_run:false executes. Rows it cannot prove safe are listed and left untouched. Never runs automatically; schema, export format and updated_at are unchanged."
+    },
+    {
       "rule": "/api/system/check-update",
       "methods": [
         "GET"

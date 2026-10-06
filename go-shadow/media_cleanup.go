@@ -65,6 +65,9 @@ func (s *server) deleteOrphanImages(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "No filenames provided")
 		return
 	}
+	// The deleted/errors lists have no size bound, so the reply is written after unlock.
+	unlock := s.lockNoteFiles()
+	defer unlock()
 
 	orphans, _, err := s.orphanUploadImages()
 	if err != nil {
@@ -125,6 +128,7 @@ func (s *server) deleteOrphanImages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	unlock()
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
 		"deleted":       deleted,
 		"deleted_count": len(deleted),
@@ -168,6 +172,8 @@ func (s *server) getOriginalImages(w http.ResponseWriter) {
 }
 
 func (s *server) deleteAllOriginals(w http.ResponseWriter) {
+	s.noteFilesMu.Lock() // no request body; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	originals, _, err := s.originalUploadImages()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -293,6 +299,8 @@ func (s *server) getBrokenImages(w http.ResponseWriter) {
 }
 
 func (s *server) fixBrokenImages(w http.ResponseWriter) {
+	s.noteFilesMu.Lock() // no request body; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	rows, err := s.db.Query("SELECT id, content, cover_image FROM Notes")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -537,8 +545,16 @@ type brokenImageReference struct {
 }
 
 func (s *server) referencedUploadFilenames() (map[string]bool, error) {
+	return s.referencedUploadFilenamesFrom(s.db, nil, nil)
+}
+
+// referencedUploadFilenamesFrom collects upload references from Notes and from the files of
+// attachment rows not listed in excludeAttachmentIDs. q may be a transaction, so the
+// separated-notes maintenance action can judge protection from the current DB; fileRefs, when
+// non-nil, caches each attachment file's references for the duration of one scan.
+func (s *server) referencedUploadFilenamesFrom(q sqlQueryer, excludeAttachmentIDs map[int]bool, fileRefs map[string][]string) (map[string]bool, error) {
 	referenced := map[string]bool{}
-	rows, err := s.db.Query("SELECT content, cover_image FROM Notes")
+	rows, err := q.Query("SELECT content, cover_image FROM Notes")
 	if err != nil {
 		return nil, err
 	}
@@ -565,17 +581,18 @@ func (s *server) referencedUploadFilenames() (map[string]bool, error) {
 	}
 	rows.Close()
 
-	attachmentRows, err := s.db.Query("SELECT file_path FROM Note_Attachments")
+	attachmentRows, err := q.Query("SELECT id, file_path FROM Note_Attachments")
 	if err != nil {
 		return referenced, nil
 	}
 	defer attachmentRows.Close()
 	for attachmentRows.Next() {
+		var id int
 		var filePath sql.NullString
-		if err := attachmentRows.Scan(&filePath); err != nil {
+		if err := attachmentRows.Scan(&id, &filePath); err != nil {
 			return nil, err
 		}
-		if !filePath.Valid || filePath.String == "" {
+		if excludeAttachmentIDs[id] || !filePath.Valid || filePath.String == "" {
 			continue
 		}
 		if strings.Contains(filePath.String, "/static/uploads/") {
@@ -586,14 +603,19 @@ func (s *server) referencedUploadFilenames() (map[string]bool, error) {
 		if !ok {
 			continue
 		}
-		content, err := os.ReadFile(resolved)
-		if err != nil {
-			continue
-		}
-		for _, match := range staticUploadReferencePattern.FindAllStringSubmatch(string(content), -1) {
-			if len(match) > 1 {
-				addReferencedUploadFilename(referenced, match[1])
+		refs, cached := fileRefs[resolved]
+		if !cached {
+			content, err := os.ReadFile(resolved)
+			if err != nil {
+				continue
 			}
+			refs = uploadReferencesInText(string(content))
+			if fileRefs != nil {
+				fileRefs[resolved] = refs
+			}
+		}
+		for _, ref := range refs {
+			addReferencedUploadFilename(referenced, ref)
 		}
 	}
 	return referenced, attachmentRows.Err()
@@ -642,25 +664,29 @@ func (s *server) orphanUploadImages() ([]uploadImageFile, int64, error) {
 	orphans := []uploadImageFile{}
 	var totalSize int64
 	for _, file := range files {
-		if expandedReferenced[file.Filename] {
+		if uploadProtected(file.Filename, referenced, expandedReferenced) {
 			continue
-		}
-		if strings.Contains(file.Filename, "_thumb") {
-			protected := false
-			for _, original := range possibleOriginalsForThumb(file.Filename) {
-				if referenced[original] {
-					protected = true
-					break
-				}
-			}
-			if protected {
-				continue
-			}
 		}
 		orphans = append(orphans, file)
 		totalSize += file.Size
 	}
 	return orphans, totalSize, nil
+}
+
+// uploadProtected is the orphan-cleanup protection rule: referenced directly or via its
+// thumbnail variants, or a thumbnail whose original is referenced.
+func uploadProtected(filename string, referenced, expanded map[string]bool) bool {
+	if expanded[filename] {
+		return true
+	}
+	if strings.Contains(filename, "_thumb") {
+		for _, original := range possibleOriginalsForThumb(filename) {
+			if referenced[original] {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func (s *server) originalUploadImages() ([]originalUploadImage, int, error) {

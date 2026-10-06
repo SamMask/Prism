@@ -285,6 +285,8 @@ func (s *server) checkSeparation(w http.ResponseWriter, noteID int) {
 func (s *server) separateContent(w http.ResponseWriter, r *http.Request, noteID int) {
 	payload := map[string]any{}
 	_ = json.NewDecoder(r.Body).Decode(&payload)
+	s.noteFilesMu.Lock() // body already read; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	previewLen, ok := intField(payload, "preview_length")
 	if !ok || previewLen <= 0 {
 		previewLen = separationPreviewLength
@@ -386,19 +388,33 @@ func (s *server) separateContent(w http.ResponseWriter, r *http.Request, noteID 
 }
 
 func (s *server) restoreSeparatedContent(w http.ResponseWriter, noteID int) {
+	// Responses here are constant or short error strings, so the deferred unlock runs before
+	// net/http sends anything.
+	s.noteFilesMu.Lock()
+	defer s.noteFilesMu.Unlock()
 	tx, err := s.db.Begin()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	defer tx.Rollback()
+	// Claim exactly one auto row with the first statement: a write takes the database write lock
+	// up front instead of upgrading a read snapshot later (SQLITE_BUSY_SNAPSHOT under concurrent
+	// writers). A missing file or any later failure rolls the claim back.
 	var attachmentID int
 	var filePath sql.NullString
-	if err := tx.QueryRow("SELECT id, file_path FROM Note_Attachments WHERE note_id = ? AND is_auto_extracted = 1", noteID).Scan(&attachmentID, &filePath); err != nil {
+	err = tx.QueryRow(`DELETE FROM Note_Attachments
+		WHERE id = (SELECT id FROM Note_Attachments WHERE note_id = ? AND is_auto_extracted = 1 ORDER BY id LIMIT 1)
+		RETURNING id, file_path`, noteID).Scan(&attachmentID, &filePath)
+	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "No auto-extracted attachment found for this note")
 			return
 		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := s.fireTestHook("restore_after_claim", noteID); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -410,16 +426,6 @@ func (s *server) restoreSeparatedContent(w http.ResponseWriter, noteID int) {
 	content, err := os.ReadFile(resolved)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "Attachment file not found on disk")
-		return
-	}
-	// The row must still be this note's auto attachment; a concurrent restore may have taken it.
-	deleted, err := tx.Exec("DELETE FROM Note_Attachments WHERE id = ? AND note_id = ? AND is_auto_extracted = 1", attachmentID, noteID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if n, err := deleted.RowsAffected(); err != nil || n != 1 {
-		writeError(w, http.StatusNotFound, "No auto-extracted attachment found for this note")
 		return
 	}
 	restored := normalizeTextContent(string(content))
@@ -486,9 +492,16 @@ func isAutoSeparatedPreview(content, fileContent string) bool {
 // noteFileSharedByOtherRow reports whether an attachment row other than attachmentID points
 // at the same file, by normalized path or by physical identity (case-insensitive
 // filesystems). A case-variant row whose identity cannot be checked counts as shared.
+//
+// Identity comes from an open handle (openFileIdentity), not os.Stat: on Windows os.SameFile
+// loads os.Stat's file ID lazily and reports false when that fails. The EqualFold prefilter is
+// kept on purpose because this runs on every first save of a split note while holding the
+// write lock; aliases with a different name (hard links, 8.3 short names) are therefore not
+// detected here. No Prism code path creates such rows. The separated-notes maintenance action
+// (PRISM-OPT-20) compares every row's identity without a prefilter before it moves a file.
 func noteFileSharedByOtherRow(tx *sql.Tx, dataDir string, attachmentID int, relativePath, resolved string) (bool, error) {
 	cleaned, _ := noteAttachmentCleanupRelativePath(relativePath)
-	target, targetErr := os.Stat(resolved)
+	target, targetErr := openFileIdentity(resolved)
 	rows, err := tx.Query("SELECT file_path FROM Note_Attachments WHERE id <> ?", attachmentID)
 	if err != nil {
 		return false, err
@@ -514,7 +527,7 @@ func noteFileSharedByOtherRow(tx *sql.Tx, dataDir string, attachmentID int, rela
 		if !ok || targetErr != nil {
 			return true, nil
 		}
-		if info, err := os.Stat(otherPath); err != nil || os.SameFile(target, info) {
+		if info, err := openFileIdentity(otherPath); err != nil || os.SameFile(target, info) {
 			return true, nil
 		}
 	}
@@ -762,6 +775,8 @@ func (s *server) toggleNoteBool(w http.ResponseWriter, r *http.Request, noteID i
 func (s *server) duplicateNote(w http.ResponseWriter, r *http.Request, noteID int) {
 	payload := map[string]any{}
 	_ = json.NewDecoder(r.Body).Decode(&payload)
+	s.noteFilesMu.Lock() // body already read; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	asVariant, _ := payload["as_variant"].(bool)
 	titleSuffix := stringField(payload, "title_suffix")
 	if titleSuffix == "" {
@@ -1034,6 +1049,8 @@ func (s *server) batchDeleteNotes(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, response{"status": "success", "data": preview})
 		return
 	}
+	s.noteFilesMu.Lock() // body already read; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	tx, err := s.db.Begin()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

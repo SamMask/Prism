@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -85,6 +86,23 @@ type server struct {
 	// restart, when set, performs the process restart for a staged DB restore.
 	// main wires it to triggerRestart; tests override it to avoid os.Exit.
 	restart func()
+	// noteFilesMu serializes everything that writes or deletes docs/notes files, attachment
+	// files or auto-extracted attachment rows, so the separated-notes maintenance action
+	// (PRISM-OPT-20) sees a stable set of rows and files. Take it before any DB transaction
+	// and never hold it while reading a request body or writing an unbounded response.
+	noteFilesMu sync.Mutex
+	// testHook is test-only instrumentation: named sync points inside the maintenance action
+	// and restore. It is nil in production.
+	testHook func(stage string, noteID int) error
+}
+
+// lockNoteFiles takes noteFilesMu and returns an idempotent unlock, so a handler can release
+// the lock explicitly before writing a response of unbounded size and still defer the release
+// for its early error returns.
+func (s *server) lockNoteFiles() func() {
+	s.noteFilesMu.Lock()
+	var once sync.Once
+	return func() { once.Do(s.noteFilesMu.Unlock) }
 }
 
 // csrfDisabledMarker, when present in the data dir, turns CSRF protection off.
@@ -301,6 +319,7 @@ func newRuntimeServer(cfg runtimeConfig) (*server, func(), error) {
 	mux.HandleFunc("/api/system/check-consistency", srv.handleCheckConsistency)
 	mux.HandleFunc("/api/system/search-integrity/rebuild-fts", srv.handleSearchIntegrityRebuildFTS)
 	mux.HandleFunc("/api/system/search-integrity", srv.handleSearchIntegrity)
+	mux.HandleFunc("/api/system/inline-separated-notes", srv.handleInlineSeparatedNotes)
 	mux.HandleFunc("/api/system/port-config", srv.handlePortConfig)
 	mux.HandleFunc("/api/server/hardware", srv.handleServerHardware)
 	mux.HandleFunc("/api/server/logs", srv.handleServerLogs)

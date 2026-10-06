@@ -22,25 +22,19 @@
 - 2026-10-06：
   - 完成全專案審查（`docs/PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md`）。所有 findings 已轉為工單 PRISM-OPT-15～51：看板在 `docs/TODO.md`，規格在 `docs/WORK_ORDERS.md`。
   - 同日完成治理文件瘦身（PRISM-OPT-27）。`.loop/verify-gate.ps1` 通過：pytest 399 passed、`go test ./...` ok、mirror 與 diff check 通過。證據記錄於 `docs/TODO.md`。
-  - 2026-10-06 的變更（`e77a631`、`2bb38a7`）已 fast-forward 合併到 `main` 並推送 `origin/main`；未建立 release/tag，未部署 Pi。
-
-  - P0 已完成兩張，都已合併到 `main` 並推送；驗證證據記錄於 `docs/TODO.md`：
-    - PRISM-OPT-15：`GET /api/export/db` 改為送出一致快照。
-    - PRISM-OPT-16：附件檢視改為純文字輸出，附件項目可以用鍵盤操作。
-    - PRISM-OPT-17：Header 的 New 與搜尋在任何 route 都導向 Library 並生效。
-    - PRISM-OPT-18：中文／日文子字串搜尋；palette 對 CJK 輸入 2 字即查詢。
-    - PRISM-OPT-19：不再拆分新的長文；已拆分筆記存檔時先收回 DB。P0 全部完成。
-    - PRISM-OPT-60：修正 OPT-19 的回歸，restore 前保存分歧內容，共用檔判斷改用 `os.SameFile`。
+- 2026-10-06～07：
+  - PRISM-OPT-15～20 與 60 已完成，都合併到 `main` 並推送；P0 全部完成。逐張的證據見 `docs/TODO.md`。
+  - PRISM-OPT-20 的「合併長文回筆記」尚未在正式資料上執行；執行前建議先下載 full snapshot。
+  - 未建立 release／tag，未部署 Pi。
 
 ## Next Entry
 
-1. 施工 PRISM-OPT-20（P1，資料搬移 XL）：
-   - 流程：prism-critical 兩段式施工。依使用者要求，計畫與實際改動都交給 Codex astra（`gpt-6-astra`，`codex exec -s read-only`）獨立復審；Codex sol 只在需要幫手時才用。
-   - 開工時在 `docs/TODO.md` 標 `Doing`。
+1. 施工 PRISM-OPT-21（P1）：`Ctrl+S` 存檔後留在編輯器，未存變更以 `beforeunload` 保護。開工時在 `docs/TODO.md` 標 `Doing`。
+   - 最高風險（X／XL）的工單，計畫與實際改動另外交給 Codex astra 復審：用 `codex exec -m gpt-6-astra -s read-only`，範圍收窄並限時，因為它容易走偏、過度驗證。Codex sol 只在需要幫手時才用。
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。
    - 使用者 2026-10-06 授權：工單審查與測試都通過後，直接 commit、fast-forward 合併回 `main` 並 push，不需再問。這項授權不包含 release、tag 或 Pi deploy。
    - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。
-2. 其他 P1：21、58、59 等。PRISM-OPT-28（自動還原點的預設值）與 29 的第二階段（LAN 管理 API）需要使用者先決策。P2 的 53～57 是驗收時發現的已知問題，之後處理。
+2. 其他 P1：58、59 等。PRISM-OPT-28（自動還原點的預設值）與 29 的第二階段（LAN 管理 API）需要使用者先決策。P2 的 53～57 是驗收時發現的已知問題，之後處理。
 3. P3／Future 工單維持 `Blocked`；只有啟動條件成立、且使用者明確 promote，才能施工。
 4. 不要自動做 release、Pi deploy、schema 升版、AI、semantic search、內建 auth。
 

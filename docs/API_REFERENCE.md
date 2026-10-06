@@ -42,7 +42,9 @@
   - 有 `Origin` / `Referer` 時必須同源；本機 dev server `localhost:5173/5174` 已在白名單，否則回 `403`
   - 無 `Origin` / `Referer` 的請求（curl / MCP / 外部 Agent，無法被瀏覽器 CSRF）放行，不受影響
   - 可在 **設定 > 資料 > CSRF 防護** 或 `/api/system/csrf-protection` 即時開關，預設開啟（關閉狀態以 data dir 的 `.csrf_disabled` marker 持久化）
-- `/api/server/*` 僅允許 `127.0.0.1` 或 `::1` 存取，遠端 Agent 不可直接呼叫。
+- `/api/server/*`、`GET /api/export/full-snapshot` 與 `POST /api/system/inline-separated-notes` 有「直接連線 peer 的 loopback 檢查」：只看 TCP 連線的 `RemoteAddr` 是否為 `127.0.0.1` / `::1`，不讀 `X-Forwarded-For`。
+  - 經同機 reverse proxy（例如 Pi 的 Caddy `reverse_proxy 127.0.0.1:5004`）轉進來的請求，在 Go 看來都來自 loopback，所以能連到 proxy 的 LAN 使用者也能呼叫這些端點；這不是 auth。
+  - CSRF 檢查由 `csrfGate` 在路由之前執行：只有帶 `Origin` / `Referer` 而且兩者都不同源時才擋；沒有這兩個 header 的請求放行；CSRF 防護可整體關閉。
 
 ### 歷史相容層
 
@@ -641,6 +643,8 @@ Response 每筆欄位：
 
 自 PRISM-OPT-19 起，前端存檔不再呼叫 `separate`；編輯已拆分的筆記時，會先呼叫 `restore` 再 PUT。這三個端點保留以維持 API 相容。若同一個 `docs/notes` 檔仍被其他筆記的附件引用，`restore` 不會刪除該檔。
 
+`restore` 交易的第一個語句就會認領（刪除）這則筆記的一個 auto 附件列；檔案不存在或之後任何一步失敗都會整筆 rollback，回應與狀態碼不變。既有已拆分筆記的一次性合併見 `POST /api/system/inline-separated-notes`。
+
 ---
 
 ## 10. Cleanup API
@@ -795,6 +799,72 @@ Response：
   }
 }
 ```
+
+### POST `/api/system/inline-separated-notes`
+
+把舊版「長文自動拆分」留下的筆記合併回 `Notes.content`（PRISM-OPT-20）。手動維護動作，不會自動執行。
+
+Gate：`POST`；直接連線 peer 的 loopback 檢查（見「安全限制」）；server-system 必須啟用（停用時 `405`）。
+
+Request：
+
+```json
+{ "dry_run": true }
+```
+
+- body 為空、`{}`、沒有 `dry_run` 或 `"dry_run": null` → dry-run，不寫入任何東西。
+- 只有明確的布林 `"dry_run": false` 才執行。
+- body 必須是單一 JSON object（上限 1 MiB）；非 object、尾隨資料、重複的 `dry_run`、非布林值都回 `400`。
+
+分類（每個 `is_auto_extracted = 1` 的附件列一筆）：
+
+- `merge`：DB 內容等於檔案全文，或是它自動產生的預覽（橫幅結尾、橫幅前是全文的非空嚴格前綴）。這是啟發式判斷：保證 DB 文字可由檔案推導，不證明檔案歸屬；「保留橫幅並從預覽尾端刪字」的編輯意圖可能遺失，還原點保有原樣。合併寫入 `normalizeTextContent(檔案)`，**不改 `updated_at`**，不寫版本歷史。
+- `history`：DB 內容沒有橫幅且不等於檔案全文（例如 OPT-19 前改短後存檔）。保留 DB 內容，把檔案全文寫成一筆 `Note_History`（`diff_summary`：「合併長文：保留附件全文」）。檔案全文引用的 `/static/uploads/...` 若在執行後不再受孤兒清理保護，改列為 `media_unprotected`。
+- 其餘只列出、不修改：`missing_file`、`dangling_row`（檔案不存在；懸空列永不刪除）、`too_large`（超過 1 MiB）、`preview_mismatch`、`invalid_path`、`unsafe_path`（路徑經 symlink／junction 或不是一般檔案）、`nonstandard_path`（不是 `docs/notes/note_<自己的 id>.md|markdown|txt`，保守的自動處理邊界，請手動處理）、`shared_file`（另一個附件列以相同路徑或相同檔案身分引用）、`identity_unverified`（任何其他附件列的檔案身分無法讀取，或自己的檔案身分無法讀取）、`unreadable`、`multiple_auto_rows`、`note_missing`；執行期間才出現的 `changed_during_run`。
+- 另列 `orphan_files`（`docs/notes` 中沒有任何附件列引用的檔案）、`shared_files`、`unverified_rows`。
+
+執行（`dry_run: false`，且有可處理項目）：
+
+1. 建立 `backups/separated-notes-<時間戳>/`，以 `writeConsistentDBBackup` 寫入 `restore_point.db`（含 WAL 中已提交的資料）。
+2. 寫入不可變的 `plan.json` 與 `moves.tsv`（回滾預檢用的 tab 分隔檔）。
+3. 每筆一個交易：先刪附件列（第一句即寫入），再於交易內重驗 DB 內容、共用狀態與（history）媒體保護，然後寫入；commit 後才把檔案 rename 進隔離資料夾。搬移失敗時檔案留在原處，下次 dry-run 列為孤兒檔。
+4. 寫入 `result.json`。這個資料夾永不自動刪除，也不在 full snapshot 內。
+
+Response（dry-run 與執行同形狀，節錄）：
+
+```json
+{
+  "status": "success",
+  "data": {
+    "dry_run": false,
+    "counts": { "actionable": 3, "merge": 2, "history": 1, "merged": 2, "historied": 1, "move_failed": 0, "failed": 0, "skipped": 1, "skipped_by_reason": { "missing_file": 1 }, "orphan_files": 0, "shared_files": 0, "unverified_rows": 0 },
+    "merge": [{ "note_id": 2, "title": "長文 A", "attachment_id": 1, "file_path": "docs/notes/note_2.md", "size_bytes": 18234 }],
+    "history": [],
+    "results": [{ "note_id": 2, "action": "merge", "status": "merged", "reason": "", "moved_to": "backups/separated-notes-20261007_120000_000000000/docs/notes/note_2.md", "move_error": "", "error": "" }],
+    "skipped": [{ "note_id": 4, "attachment_id": 3, "file_path": "docs/notes/note_4.md", "size_bytes": null, "reason": "missing_file", "detail": "" }],
+    "orphan_files": [], "shared_files": [], "unverified_rows": [],
+    "aborted": false, "audit_error": "",
+    "restore_point": "backups/separated-notes-20261007_120000_000000000/restore_point.db",
+    "quarantine_dir": "backups/separated-notes-20261007_120000_000000000"
+  }
+}
+```
+
+- 沒有可處理項目時不建立資料夾，`restore_point` / `quarantine_dir` 為 `null`；第二次執行因此是 no-op。
+- 第一個 DB 錯誤會中止（`aborted: true`），已提交的筆記保持合併；`result.json` 寫入失敗時仍回 `200`，`audit_error` 帶原因。
+- `500` 只在保證沒有修改任何筆記時回傳，body 帶 `"notes_changed": 0`。其他錯誤或連線中斷時結果未知，請重新 dry-run 並查看 `result.json`。
+- 單一行程假設：維護動作與 restore、separate、複製筆記、刪除筆記／附件、上傳附件、JSON 匯入、媒體清理、full snapshot 共用一把行程內的鎖；同一 data-dir 不要同時跑兩個 Prism 行程。
+
+回滾（回到執行前；執行後的 DB 編輯會一併還原）：
+
+1. 停掉其他 writer（關閉編輯畫面、停止呼叫 API 的 agent；Pi 先 `systemctl stop prism-backup.timer`），用 `POST /api/server/backup/rotate`（或 `GET /api/server/backup/download`）取得目前 DB 的一致備份。
+2. 停止 Prism。
+3. 依 `moves.tsv` 逐列預檢：`restore_point` 的 SHA-256 必須相符；原位置已有相同 hash 的檔案就接受（可重入），hash 不同或兩處都沒有正確的檔就停止，不換 DB。
+4. 從隔離資料夾**複製**（不是搬移）檔案回原位，複製後再核對 hash。
+5. 把 `restore_point.db` 複製成 `backups/prism_backup_<YYYYMMDD_HHMMSS>_000000000.db`，寫入 `config/pending-restore.json`（`{"backup": "<檔名>", "requested_at": "<RFC3339>"}`），啟動 Prism；開機時在任何連線之前驗證並換上 DB（log：`restored database from backup`）。
+6. 再跑一次 dry-run，結果應與執行前相同。
+
+只核對進度而不回滾時，`result.json` 不完整也沒關係：用同一個 binary 以另一個 port 開啟停機後的 DB 與 data-dir **副本**，查 plan 中附件列 id 是否還在、D2 筆記是否有對應的歷史，不要只看內容 hash。
 
 ### GET `/api/system/port-config`
 

@@ -152,12 +152,48 @@
     - 另以 probe 確認：被判為預覽時，內容一定能從全文重建，不會丟失獨有的使用者文字。
   - 驗收後依 Codex astra 對 OPT-20 計畫的審查意見，再補上四項：嚴格前綴、只排除單一附件列、無法確認視為共用、交易內再驗證。四項都有 fail-before 證據，由主代理讀回並確認。
   - 驗證：`go vet` 通過、`go test ./...` ok、pytest 409 passed、`git diff --check` 通過。
+- `PRISM-OPT-20`（本機驗證；未發版、未部署 Pi；**尚未在正式資料上執行**）：
+  - 流程：
+    - prism-critical 兩段式施工，計畫改了三版。
+    - Codex astra（`gpt-6-astra`，唯讀）審過三輪計畫和一輪實際改動：
+      - v1、v2 的結論都是「需修改」，v3 剩兩項，以實作條件 A1、A2 的形式納入。
+      - 實際改動的審查發現兩項，已修正：隔離區改成原子、不覆蓋的搬移；full snapshot 在 panic 時也會解鎖。
+      - astra 有一項意見被主代理以程式證據駁回：維護後已開啟的編輯器可以照常存檔，因為 restore 回 404 後仍會 PUT。astra 第 3 輪已撤回。
+    - prism-verifier 獨立驗收。
+  - 功能：
+    - 新端點 `POST /api/system/inline-separated-notes`（additive），前端在 Maintenance 新增「合併長文回筆記」卡片，四語 i18n。
+    - 預設只做 dry-run，只有明確送 `"dry_run": false` 才執行；重複 key、超過大小上限、型別不符都回 400。只接受直接連線的 loopback peer，並受 server-system gate 保護。
+    - 執行時：
+      - 在 `backups/separated-notes-<ts>/` 建立還原點（`writeConsistentDBBackup`，含 WAL 中的資料）、不可變的 `plan.json`／`moves.tsv`，以及 `result.json`。
+      - 逐筆交易處理，先 commit DB 再搬檔。檔案移入隔離區，不刪除，也不覆蓋既有檔案。
+      - `updated_at` 不變。
+    - 處理方式：
+      - **merge**（一般已拆分筆記）：全文寫回 `Notes.content`。
+      - **D2**（內容分歧的筆記）：以 DB 為準，附件全文寫入 `Note_History`。舊全文若引用了沒有其他保護的本機媒體，就只列出、不處理；這項判斷在交易內以當下的 DB 重新驗證。
+      - 以下情況只列出、不處理：缺檔、懸空列、超過 1 MiB、預覽不符、路徑無效或非標準、symlink／junction、共用檔（含大小寫變體、硬連結）、同一筆記有多個 auto 列、找不到筆記、孤兒檔、媒體未受保護、檔案身分無法確認。
+    - 並發：`server.noteFilesMu`，與 restore、separate、複製、刪除、附件上傳與刪除、匯入、媒體清理、full snapshot 的暫存複製共用。讀 request body 與寫大小沒有上限的回應時，不持有這把鎖。
+      - restore 的第一個語句改成只刪一列的 `DELETE … RETURNING`，避免 `SQLITE_BUSY_SNAPSHOT`。
+      - restore 的共用檔判斷改以開啟的 handle 取得檔案身分。保留 EqualFold 預篩，所以不同檔名的別名（硬連結、8.3 短檔名）在每次存檔的路徑上偵測不到；Prism 沒有任何路徑會產生這種列。維護動作在搬檔前會比對所有列的檔案身分，不做預篩。
+  - 測試：
+    - Go：新增 `notes_inline_test.go`，共 G1–G25 加 G12b，以及兩條補測。
+    - fail-before：14 條 HTTP 測試在 HEAD 上回 404；鎖與 restore 的測試在 HEAD 上失敗。
+    - mutation：16 項，拿掉任一項防護，對應的測試都會轉紅。verifier 另外自己抽查 3 項。
+    - pytest：3 條治理檢查，readonly-promotion-gate 的 discard 清單加入新路由。
+  - 隔離 runtime：
+    - 實作代理：browser smoke 21/21，涵蓋 1280 與 390 寬度、預覽、確認、成功、部分失敗、「結果未知」，以及「編輯器開著時執行維護」的 merge 與 D2。
+    - 實作代理：回滾演練 22/22，涵蓋完整回滾、執行到一半被 kill、回滾被中斷後重跑、殘留 WAL、名稱衝突、缺少來源、managed restore 驗證失敗。回滾不需要 Python。
+    - verifier：HTTP 檢查與 headless 瀏覽器（1280、390）都通過。
+  - 效能（隔離資料：1,000 篇筆記、230 篇已拆分、300 個文字附件）：
+    - 合併 230 篇約 1.2 s。dry-run 第一次 9.4 s（剛寫入的檔案，持鎖期間存已拆分的筆記要等），之後約 1 s。
+    - 尾段詞從 0/29 變成 29/29 找得到。但搜尋仍然 partial，因為 300 個文字附件本身就超過掃描上限；已記到 PRISM-OPT-47 作為啟動依據。
+  - 已知、不阻擋：只支援單一行程；搬檔被鎖住時筆記仍會合併，原檔變成孤兒檔並列出；D2 的歷史 `diff_summary` 是固定中文；在正式資料上執行前建議先下載 full snapshot。
+  - 驗證：`go vet` 通過、`go test ./...` ok、`npm run build` 通過、pytest 412 passed、`git diff --check` 通過、鏡像一致。
 
 ### P1 — 下一輪
 
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
-| PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Todo | 19、60 | FEAT-02、PERF-01 |
+| PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Done | 19、60 | FEAT-02、PERF-01 |
 | PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Todo | — | UX-02 |
 | PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Todo | 建議在 21 之後 | UX-03 |
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |

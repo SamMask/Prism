@@ -52,16 +52,24 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 		mode = "skip"
 	}
 
+	// The body is fully parsed. The import writes attachment and upload files, so it runs under
+	// noteFilesMu; its reply (duplicate titles, messages with request paths) has no size bound
+	// and is written after the lock is released.
+	status, payload := s.importJSONNotes(importData, notes, mode)
+	writeJSON(w, status, payload)
+}
+
+func (s *server) importJSONNotes(importData map[string]any, notes []map[string]any, mode string) (int, response) {
+	s.noteFilesMu.Lock()
+	defer s.noteFilesMu.Unlock()
 	tx, err := s.db.Begin()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 	}
 	defer tx.Rollback()
 
 	if err := importJSONCategoriesTx(tx, objectArray(importData["categories"])); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return http.StatusBadRequest, response{"status": "error", "message": err.Error()}
 	}
 	defaultCategoryID, _ := defaultCategoryIDTx(tx)
 	idMap := map[int]int{}
@@ -91,8 +99,7 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 			LIMIT 1`, title, contentPreview).Scan(&existingID)
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			cleanupCreated()
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 		}
 		if err == nil {
 			if mode == "skip" {
@@ -129,8 +136,7 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 				categoryID = found
 			} else if err != nil && !errors.Is(err, sql.ErrNoRows) {
 				cleanupCreated()
-				writeError(w, http.StatusInternalServerError, err.Error())
-				return
+				return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 			}
 		}
 
@@ -156,14 +162,12 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 		)
 		if err != nil {
 			cleanupCreated()
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 		}
 		newID64, err := result.LastInsertId()
 		if err != nil {
 			cleanupCreated()
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 		}
 		newID := int(newID64)
 		if hasOldID {
@@ -171,8 +175,7 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := replaceNoteTags(tx, newID, stringArrayValue(note["tags"]), false); err != nil {
 			cleanupCreated()
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 		}
 		urls := stringArrayValue(note["urls"])
 		if len(urls) == 0 {
@@ -180,35 +183,31 @@ func (s *server) handleImportJSON(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := replaceNoteURLs(tx, newID, urls); err != nil {
 			cleanupCreated()
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
+			return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 		}
 		importedCount++
 	}
 
 	if err := s.restoreImportedAttachments(tx, idMap, importData, &createdFiles); err != nil {
 		cleanupCreated()
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return http.StatusBadRequest, response{"status": "error", "message": err.Error()}
 	}
 	if err := s.restoreImportedUploads(importData, &createdFiles); err != nil {
 		cleanupCreated()
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
+		return http.StatusBadRequest, response{"status": "error", "message": err.Error()}
 	}
 	if err := tx.Commit(); err != nil {
 		cleanupCreated()
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
 	}
 	if len(duplicates) > 10 {
 		duplicates = duplicates[:10]
 	}
-	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
+	return http.StatusOK, response{"status": "success", "data": response{
 		"imported":   importedCount,
 		"skipped":    skippedCount,
 		"duplicates": duplicates,
-	}})
+	}}
 }
 
 func importJSONCategoriesTx(tx *sql.Tx, categories []map[string]any) error {

@@ -105,3 +105,79 @@ def test_test_portfolio_and_browser_smoke_use_current_isolated_runtime():
         "test_data_recovery_direct_load",
     ):
         assert marker in smoke
+
+
+# PRISM-OPT-20: governance checks for the separated-notes maintenance action. Behavior is
+# covered by go-shadow/notes_inline_test.go and the isolated-runtime smoke.
+def _inline_notes_blocks(i18n: str) -> list[str]:
+    blocks = []
+    start = 0
+    while True:
+        start = i18n.find("      inlineNotes: {", start)
+        if start < 0:
+            return blocks
+        end = i18n.index("\n      },\n", start)
+        blocks.append(i18n[start:end])
+        start = end
+
+
+def _keys(block: str) -> set[str]:
+    keys = set()
+    for line in block.splitlines()[1:]:
+        stripped = line.strip()
+        if ":" in stripped and not stripped.startswith("}"):
+            keys.add(f"{len(line) - len(line.lstrip())}:{stripped.split(':', 1)[0]}")
+    return keys
+
+
+def test_inline_separated_notes_i18n_keys_match_in_four_locales():
+    i18n = _read("i18n/index.ts")
+    blocks = _inline_notes_blocks(i18n)
+    assert len(blocks) == 4
+    reference = _keys(blocks[0])
+    assert "8:resultUnknown" in reference and "10:media_unprotected" in reference
+    for block in blocks[1:]:
+        assert _keys(block) == reference
+
+
+def test_inline_separated_notes_is_registered_documented_and_explicit():
+    main_go = (ROOT / "go-shadow" / "main.go").read_text(encoding="utf-8")
+    api_reference = (ROOT / "docs" / "API_REFERENCE.md").read_text(encoding="utf-8")
+    contracts = (ROOT / "docs" / "CONTRACTS.md").read_text(encoding="utf-8")
+    manifest = (ROOT / "docs" / "contracts" / "go-primary-route-ownership-manifest.json").read_text(encoding="utf-8")
+    api = _read("services/api.ts")
+
+    assert 'mux.HandleFunc("/api/system/inline-separated-notes", srv.handleInlineSeparatedNotes)' in main_go
+    assert "POST `/api/system/inline-separated-notes`" in api_reference
+    assert "CONTRACT-SEPARATED-NOTES-INLINE" in contracts
+    assert '"rule": "/api/system/inline-separated-notes"' in manifest
+    assert "{ dry_run: dryRun }" in api
+
+
+def test_note_file_writers_take_the_note_files_lock():
+    go = ROOT / "go-shadow"
+    sources = {name: (go / name).read_text(encoding="utf-8") for name in (
+        "notes_actions.go", "notes_write.go", "attachments.go", "import.go", "media_cleanup.go", "export.go", "notes_inline.go",
+    )}
+
+    def body(source: str, signature: str) -> str:
+        start = source.index(signature)
+        return source[start:source.index("\n}\n", start)]
+
+    locked = [
+        ("notes_actions.go", "func (s *server) restoreSeparatedContent("),
+        ("notes_actions.go", "func (s *server) separateContent("),
+        ("notes_actions.go", "func (s *server) duplicateNote("),
+        ("notes_actions.go", "func (s *server) batchDeleteNotes("),
+        ("notes_write.go", "func (s *server) deleteNote("),
+        ("attachments.go", "func (s *server) deleteAttachment("),
+        ("attachments.go", "func (s *server) uploadAttachment("),
+        ("import.go", "func (s *server) importJSONNotes("),
+        ("media_cleanup.go", "func (s *server) deleteOrphanImages("),
+        ("media_cleanup.go", "func (s *server) deleteAllOriginals("),
+        ("media_cleanup.go", "func (s *server) fixBrokenImages("),
+        ("export.go", "func (s *server) buildFullSnapshot("),
+        ("notes_inline.go", "func (s *server) runInlineSeparatedNotes("),
+    ]
+    for name, signature in locked:
+        assert "noteFilesMu" in body(sources[name], signature) or "lockNoteFiles()" in body(sources[name], signature), signature

@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
-import { HardDrive, CheckCircle, AlertTriangle, XCircle, Loader2, Activity, Search, RefreshCw } from 'lucide-react'
-import { api, type SearchIntegrityResponse } from '../services/api'
+import { HardDrive, CheckCircle, AlertTriangle, XCircle, Loader2, Activity, Search, RefreshCw, FileText } from 'lucide-react'
+import {
+  api,
+  type InlineSeparatedNotesReport,
+  type InlineSkipReason,
+  type SearchIntegrityResponse,
+} from '../services/api'
 import { Button } from './ui/Button'
+import { confirm } from './ui/ConfirmDialog'
 import { toast } from './ui/Toast'
 import { useTranslation } from '../hooks/useTranslation'
 
@@ -228,6 +234,8 @@ export function SystemMaintenance() {
         )}
       </div>
 
+      <InlineSeparatedNotesCard />
+
       <details className="rounded-lg border border-border-subtle bg-bg-elevated/50" data-testid="maintenance-advanced-diagnostics">
         <summary className="cursor-pointer px-4 py-3 font-medium text-text-primary">
           {t('settings.maintenance.advancedTitle')}
@@ -309,6 +317,268 @@ export function SystemMaintenance() {
           </div>
         </div>
       </details>
+    </div>
+  )
+}
+
+const INLINE_LIST_LIMIT = 20
+
+type InlineErrorKind = 'rejected' | 'nothingChanged' | 'unknown'
+
+interface InlineErrorState {
+  kind: InlineErrorKind
+  message: string
+}
+
+// A 4xx or a 500 that says notes_changed: 0 proves nothing changed; anything else (no
+// response, proxy errors, a 5xx without the flag) leaves the outcome unknown.
+function inlineError(error: unknown): InlineErrorState {
+  const response = (error as { response?: { status?: number; data?: { message?: string; notes_changed?: number } } })
+    ?.response
+  const message = response?.data?.message || ''
+  if (response?.status && response.status >= 400 && response.status < 500) return { kind: 'rejected', message }
+  if (response?.status === 500 && response.data?.notes_changed === 0) return { kind: 'nothingChanged', message }
+  return { kind: 'unknown', message }
+}
+
+function InlineList({
+  title,
+  items,
+  testId,
+}: {
+  title: string
+  items: Array<{ key: string; label: string; detail?: string }>
+  testId: string
+}) {
+  const { t } = useTranslation()
+  if (items.length === 0) return null
+  return (
+    <details className="rounded bg-bg-surface p-2 text-xs" data-testid={testId}>
+      <summary className="cursor-pointer font-medium text-text-primary">
+        {title} ({items.length})
+      </summary>
+      <ul className="mt-2 max-h-64 space-y-1 overflow-y-auto">
+        {items.slice(0, INLINE_LIST_LIMIT).map((item) => (
+          <li key={item.key} className="min-w-0">
+            <div className="break-words text-text-secondary">{item.label}</div>
+            {item.detail && <div className="break-all font-mono text-[11px] text-text-muted">{item.detail}</div>}
+          </li>
+        ))}
+        {items.length > INLINE_LIST_LIMIT && (
+          <li className="text-text-muted">
+            {t('settings.maintenance.inlineNotes.more', { count: items.length - INLINE_LIST_LIMIT })}
+          </li>
+        )}
+      </ul>
+    </details>
+  )
+}
+
+function InlineSeparatedNotesCard() {
+  const { t } = useTranslation()
+  const [report, setReport] = useState<InlineSeparatedNotesReport | null>(null)
+  const [phase, setPhase] = useState<'idle' | 'checking' | 'merging'>('idle')
+  const [error, setError] = useState<InlineErrorState | null>(null)
+  const busy = phase !== 'idle'
+  const reasonLabel = (reason: InlineSkipReason | '') =>
+    reason ? t(`settings.maintenance.inlineNotes.reasons.${reason}`) : ''
+
+  const runCheck = async () => {
+    setPhase('checking')
+    setError(null)
+    try {
+      setReport(await api.inlineSeparatedNotes(true))
+    } catch (err) {
+      const state = inlineError(err)
+      setError(state)
+      toast.error(state.message || t('settings.maintenance.inlineNotes.checkFailed'))
+    } finally {
+      setPhase('idle')
+    }
+  }
+
+  const runMerge = async () => {
+    if (!report) return
+    const accepted = await confirm({
+      title: t('settings.maintenance.inlineNotes.confirmTitle'),
+      message: t('settings.maintenance.inlineNotes.confirmMessage', {
+        merge: report.counts.merge,
+        history: report.counts.history,
+      }),
+      confirmText: t('settings.maintenance.inlineNotes.confirmAction'),
+      variant: 'warning',
+    })
+    if (!accepted) return
+    setPhase('merging')
+    setError(null)
+    try {
+      const result = await api.inlineSeparatedNotes(false)
+      setReport(result)
+      const done = result.counts.merged + result.counts.historied
+      const failed = result.counts.failed + result.counts.move_failed
+      if (result.aborted || failed > 0 || result.audit_error) {
+        toast.warning(t('settings.maintenance.inlineNotes.partial', { done, failed }))
+      } else {
+        toast.success(t('settings.maintenance.inlineNotes.success', { count: done }))
+      }
+    } catch (err) {
+      setError(inlineError(err))
+      toast.error(t('settings.maintenance.inlineNotes.mergeFailed'))
+    } finally {
+      setPhase('idle')
+    }
+  }
+
+  const counts = report?.counts
+  const missing = counts ? counts.skipped_by_reason.missing_file + counts.skipped_by_reason.dangling_row : 0
+  const nothingToDo = counts ? counts.actionable === 0 && counts.skipped === 0 && counts.orphan_files === 0 : false
+  const executed = report !== null && !report.dry_run
+  const partial =
+    executed && counts !== undefined && (report.aborted || counts.failed + counts.move_failed > 0 || report.audit_error !== '')
+  const noteLabel = (item: { note_id: number; title: string }) => `#${item.note_id} ${item.title}`
+
+  return (
+    <div className="rounded-lg bg-bg-elevated p-4" data-testid="inline-notes-card">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <FileText size={18} className="shrink-0 text-accent" />
+          <span className="font-medium text-text-primary">{t('settings.maintenance.inlineNotes.title')}</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" onClick={runCheck} disabled={busy} data-testid="inline-notes-check">
+            {phase === 'checking' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            {phase === 'checking'
+              ? t('settings.maintenance.inlineNotes.checking')
+              : t('settings.maintenance.inlineNotes.check')}
+          </Button>
+          {report?.dry_run && counts && counts.actionable > 0 && (
+            <Button size="sm" variant="primary" onClick={runMerge} disabled={busy} data-testid="inline-notes-merge">
+              {phase === 'merging' ? <Loader2 size={14} className="animate-spin" /> : null}
+              {phase === 'merging'
+                ? t('settings.maintenance.inlineNotes.merging')
+                : t('settings.maintenance.inlineNotes.merge', { count: counts.actionable })}
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="mb-2 text-xs text-text-muted">{t('settings.maintenance.inlineNotes.description')}</p>
+
+      {error && (
+        <div className="mt-2 rounded bg-danger/10 p-2 text-xs text-danger" role="alert" data-testid="inline-notes-error">
+          {error.kind === 'unknown'
+            ? t('settings.maintenance.inlineNotes.resultUnknown')
+            : error.kind === 'nothingChanged'
+              ? t('settings.maintenance.inlineNotes.failedNothingChanged', { message: error.message })
+              : t('settings.maintenance.inlineNotes.rejected', { message: error.message })}
+        </div>
+      )}
+
+      {report && counts && (
+        <div className="mt-3 space-y-2">
+          {!executed && (
+            <div className="rounded bg-bg-surface p-2 text-sm text-text-primary" role="status" data-testid="inline-notes-summary">
+              {nothingToDo
+                ? t('settings.maintenance.inlineNotes.nothingToDo')
+                : t('settings.maintenance.inlineNotes.summary', {
+                    merge: counts.merge,
+                    history: counts.history,
+                    missing,
+                    other: counts.skipped - missing,
+                  })}
+            </div>
+          )}
+          {executed && (
+            <div
+              className={`space-y-1 rounded p-2 text-xs ${partial ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}
+              role="status"
+              data-testid="inline-notes-result"
+            >
+              <div className="text-sm font-medium">
+                {partial
+                  ? t('settings.maintenance.inlineNotes.partial', {
+                      done: counts.merged + counts.historied,
+                      failed: counts.failed + counts.move_failed,
+                    })
+                  : t('settings.maintenance.inlineNotes.success', { count: counts.merged + counts.historied })}
+              </div>
+              {report.aborted && <div>{t('settings.maintenance.inlineNotes.aborted')}</div>}
+              {report.audit_error && (
+                <div className="break-all">
+                  {t('settings.maintenance.inlineNotes.auditError', { message: report.audit_error })}
+                </div>
+              )}
+              {report.restore_point && (
+                <div className="break-all font-mono">
+                  {t('settings.maintenance.inlineNotes.restorePoint', { path: report.restore_point })}
+                </div>
+              )}
+              {report.quarantine_dir && (
+                <div className="break-all font-mono">
+                  {t('settings.maintenance.inlineNotes.quarantineDir', { path: report.quarantine_dir })}
+                </div>
+              )}
+            </div>
+          )}
+          {!executed && (
+            <>
+              <InlineList
+                title={t('settings.maintenance.inlineNotes.listMerge')}
+                testId="inline-notes-merge-list"
+                items={report.merge.map((item) => ({ key: `m${item.attachment_id}`, label: noteLabel(item), detail: item.file_path }))}
+              />
+              <InlineList
+                title={t('settings.maintenance.inlineNotes.listHistory')}
+                testId="inline-notes-history-list"
+                items={report.history.map((item) => ({ key: `h${item.attachment_id}`, label: noteLabel(item), detail: item.file_path }))}
+              />
+            </>
+          )}
+          <InlineList
+            title={t('settings.maintenance.inlineNotes.listResults')}
+            testId="inline-notes-results"
+            items={report.results.map((item) => ({
+              key: `r${item.attachment_id}`,
+              label: `${noteLabel(item)} · ${t(`settings.maintenance.inlineNotes.status.${item.status}`)}${
+                item.reason ? ` · ${reasonLabel(item.reason)}` : ''
+              }`,
+              detail: item.move_error
+                ? t('settings.maintenance.inlineNotes.moveFailed', { message: item.move_error })
+                : item.error || item.moved_to || undefined,
+            }))}
+          />
+          <InlineList
+            title={t('settings.maintenance.inlineNotes.listSkipped')}
+            testId="inline-notes-skipped"
+            items={report.skipped.map((item) => ({
+              key: `s${item.attachment_id}`,
+              label: `${noteLabel(item)} · ${reasonLabel(item.reason)}`,
+              detail: item.file_path,
+            }))}
+          />
+          <InlineList
+            title={t('settings.maintenance.inlineNotes.listOrphans')}
+            testId="inline-notes-orphans"
+            items={report.orphan_files.map((item) => ({ key: item.file_path, label: item.file_path }))}
+          />
+          <InlineList
+            title={t('settings.maintenance.inlineNotes.listShared')}
+            testId="inline-notes-shared"
+            items={report.shared_files.map((item, index) => ({
+              key: `${item.file_path}-${index}`,
+              label: item.note_ids.map((id) => `#${id}`).join(', '),
+              detail: item.file_path,
+            }))}
+          />
+          <InlineList
+            title={t('settings.maintenance.inlineNotes.listUnverified')}
+            testId="inline-notes-unverified"
+            items={report.unverified_rows.map((item) => ({ key: `u${item.attachment_id}`, label: `#${item.note_id}`, detail: item.file_path }))}
+          />
+          {(counts.skipped > 0 || counts.orphan_files > 0) && (
+            <p className="text-xs text-text-muted">{t('settings.maintenance.inlineNotes.manualHint')}</p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

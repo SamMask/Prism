@@ -227,6 +227,11 @@ func (s *server) uploadAttachment(w http.ResponseWriter, r *http.Request, noteID
 		return
 	}
 
+	// The multipart body is fully parsed; the file write can overwrite an attachment file that
+	// protects media references, so it runs under noteFilesMu. The reply echoes the title
+	// (unbounded) and is written after the explicit unlock.
+	unlock := s.lockNoteFiles()
+	defer unlock()
 	if err := os.MkdirAll(s.runtime.attachmentsDir, 0755); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -274,6 +279,7 @@ func (s *server) uploadAttachment(w http.ResponseWriter, r *http.Request, noteID
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	unlock()
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
 		"id": attachmentID, "file_path": relativePath, "title": title, "size_bytes": sizeBytes,
 	}})
@@ -284,6 +290,8 @@ func attachmentTooLargeMessage() string {
 }
 
 func (s *server) deleteAttachment(w http.ResponseWriter, attachmentID int) {
+	s.noteFilesMu.Lock() // no request body; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	var filePath sql.NullString
 	if err := s.db.QueryRow("SELECT file_path FROM Note_Attachments WHERE id = ?", attachmentID).Scan(&filePath); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

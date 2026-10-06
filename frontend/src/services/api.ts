@@ -233,6 +233,77 @@ export interface SearchIntegrityRebuildResponse {
   message: string;
 }
 
+// PRISM-OPT-20: POST /api/system/inline-separated-notes (dry-run unless dry_run is false).
+export type InlineSkipReason =
+  | 'missing_file'
+  | 'dangling_row'
+  | 'too_large'
+  | 'preview_mismatch'
+  | 'invalid_path'
+  | 'unsafe_path'
+  | 'nonstandard_path'
+  | 'shared_file'
+  | 'identity_unverified'
+  | 'unreadable'
+  | 'multiple_auto_rows'
+  | 'note_missing'
+  | 'media_unprotected'
+  | 'changed_during_run';
+
+export interface InlineNoteItem {
+  note_id: number;
+  title: string;
+  attachment_id: number;
+  file_path: string;
+  size_bytes: number | null;
+}
+
+export interface InlineSkippedItem extends InlineNoteItem {
+  reason: InlineSkipReason;
+  detail: string;
+}
+
+export interface InlineResultItem {
+  note_id: number;
+  title: string;
+  attachment_id: number;
+  action: 'merge' | 'history';
+  status: 'merged' | 'historied' | 'skipped' | 'failed';
+  reason: InlineSkipReason | '';
+  moved_to: string | null;
+  move_error: string;
+  error: string;
+}
+
+export interface InlineSeparatedNotesReport {
+  dry_run: boolean;
+  counts: {
+    actionable: number;
+    merge: number;
+    history: number;
+    merged: number;
+    historied: number;
+    move_failed: number;
+    failed: number;
+    skipped: number;
+    skipped_by_reason: Record<InlineSkipReason, number>;
+    orphan_files: number;
+    shared_files: number;
+    unverified_rows: number;
+  };
+  merge: InlineNoteItem[];
+  history: InlineNoteItem[];
+  results: InlineResultItem[];
+  skipped: InlineSkippedItem[];
+  orphan_files: Array<{ file_path: string; size_bytes: number | null; modified_at: string | null }>;
+  shared_files: Array<{ file_path: string; note_ids: number[]; attachment_ids: number[] }>;
+  unverified_rows: Array<{ attachment_id: number; note_id: number; file_path: string; error: string }>;
+  aborted: boolean;
+  audit_error: string;
+  restore_point: string | null;
+  quarantine_dir: string | null;
+}
+
 // Create axios instance
 const API_BASE_URL = "/api";
 const client = axios.create({
@@ -826,6 +897,11 @@ export const api = {
 
   rebuildSearchIndex: async (): Promise<SearchIntegrityRebuildResponse> => {
     const { data } = await client.post("/system/search-integrity/rebuild-fts", {});
+    return data.data;
+  },
+
+  inlineSeparatedNotes: async (dryRun: boolean): Promise<InlineSeparatedNotesReport> => {
+    const { data } = await client.post("/system/inline-separated-notes", { dry_run: dryRun });
     return data.data;
   },
 

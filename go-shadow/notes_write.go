@@ -173,6 +173,8 @@ func (s *server) updateNote(w http.ResponseWriter, r *http.Request, noteID int) 
 }
 
 func (s *server) deleteNote(w http.ResponseWriter, noteID int) {
+	s.noteFilesMu.Lock() // no request body; the response is small and fixed-size
+	defer s.noteFilesMu.Unlock()
 	tx, err := s.db.Begin()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

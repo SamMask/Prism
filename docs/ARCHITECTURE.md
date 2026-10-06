@@ -70,7 +70,8 @@ Go primary 仍是單一 executable 與單一 `package main`；2026-07-13 完成�
 - 長文拆分：
   - 自 PRISM-OPT-19 起，前端存檔後不再呼叫 `separate`，新的長文完整留在 `Notes.content`。
   - 既有的已拆分筆記，在編輯器存檔時會先 `restore` 收回 DB，再 PUT。
-  - 尚未編輯過的已拆分筆記仍在 `docs/notes/note_<id>.md`，`Notes.content` 只有 500 字預覽，FTS、匯出與 DB 複本都只含預覽，要等 PRISM-OPT-20 一次合併。
+  - 尚未處理的已拆分筆記仍在 `docs/notes/note_<id>.md`，`Notes.content` 只有 500 字預覽。Maintenance 的「合併長文回筆記」（`POST /api/system/inline-separated-notes`，PRISM-OPT-20）會先 dry-run，確認後建立還原點，把全文合併回 DB（分歧內容保留 DB、附件全文存入版本歷史），檔案移入 `backups/separated-notes-<ts>/`；無法證明安全的列只列出。
+  - 會寫入或刪除 `docs/notes` 檔、附件檔或 auto 附件列的路徑（restore、separate、複製／刪除筆記、附件上傳／刪除、JSON 匯入、媒體清理、full snapshot 的暫存複製）共用 `server.noteFilesMu`；讀 request body 與寫無上限的回應時不持有這把鎖。
   - `separate`／`check_separation`／`restore` 端點為了相容而保留。
 - 文字附件與被拆分長文的內容只靠 request 期間逐檔掃描（200 檔 / 5 MiB / 250 ms），檔案多時常態回傳 `search_diagnostics.partial`。
 

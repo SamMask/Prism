@@ -65,6 +65,7 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/system/check-consistency")
     registered.discard("/api/system/search-integrity")
     registered.discard("/api/system/search-integrity/rebuild-fts")
+    registered.discard("/api/system/inline-separated-notes")
     registered.discard("/api/system/port-config")
     registered.discard("/api/export/full-snapshot")
     registered.discard("/api/server/hardware")

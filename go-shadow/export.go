@@ -203,24 +203,40 @@ func (s *server) buildFullSnapshot(stageRoot string, createdAt time.Time) (fullS
 		return fullSnapshotManifest{}, "", err
 	}
 	databaseTarget := filepath.Join(payloadRoot, "database", "knowledge.db")
-	if err := s.writeConsistentDBBackup(databaseTarget); err != nil {
-		return fullSnapshotManifest{}, "", err
-	}
 
 	type snapshotRoot struct {
 		source      string
 		destination string
 	}
-	roots := []snapshotRoot{
-		{snapshotRuntimeDir(s.runtime.uploadsDir, s.runtime.dataDir, "static", "uploads"), "static/uploads"},
-		{snapshotRuntimeDir(s.runtime.attachmentsDir, s.runtime.dataDir, "docs", "attachments"), "docs/attachments"},
-		{snapshotRuntimeDir(s.runtime.notesDir, s.runtime.dataDir, "docs", "notes"), "docs/notes"},
-		{snapshotRuntimeDir(s.runtime.configDir, s.runtime.dataDir, "config"), "config"},
-	}
-	for _, root := range roots {
-		if err := copySnapshotTree(root.source, filepath.Join(payloadRoot, filepath.FromSlash(root.destination))); err != nil {
-			return fullSnapshotManifest{}, "", err
+	copyRoots := func(roots ...snapshotRoot) error {
+		for _, root := range roots {
+			if err := copySnapshotTree(root.source, filepath.Join(payloadRoot, filepath.FromSlash(root.destination))); err != nil {
+				return err
+			}
 		}
+		return nil
+	}
+	// The DB snapshot must match docs/notes and docs/attachments (the separated-notes
+	// maintenance moves note files), so those are staged under noteFilesMu. Uploads, config,
+	// hashing, zipping and serving happen after the lock is released.
+	unlock := s.lockNoteFiles()
+	defer unlock() // idempotent; also releases the lock if staging panics
+	err := s.writeConsistentDBBackup(databaseTarget)
+	if err == nil {
+		err = copyRoots(
+			snapshotRoot{snapshotRuntimeDir(s.runtime.attachmentsDir, s.runtime.dataDir, "docs", "attachments"), "docs/attachments"},
+			snapshotRoot{snapshotRuntimeDir(s.runtime.notesDir, s.runtime.dataDir, "docs", "notes"), "docs/notes"},
+		)
+	}
+	unlock()
+	if err == nil {
+		err = copyRoots(
+			snapshotRoot{snapshotRuntimeDir(s.runtime.uploadsDir, s.runtime.dataDir, "static", "uploads"), "static/uploads"},
+			snapshotRoot{snapshotRuntimeDir(s.runtime.configDir, s.runtime.dataDir, "config"), "config"},
+		)
+	}
+	if err != nil {
+		return fullSnapshotManifest{}, "", err
 	}
 
 	manifest := fullSnapshotManifest{
@@ -231,7 +247,7 @@ func (s *server) buildFullSnapshot(stageRoot string, createdAt time.Time) (fullS
 		ManualRestoreRequired: true,
 		Files:                 []fullSnapshotManifestFile{},
 	}
-	err := filepath.WalkDir(payloadRoot, func(filePath string, entry os.DirEntry, walkErr error) error {
+	err = filepath.WalkDir(payloadRoot, func(filePath string, entry os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
