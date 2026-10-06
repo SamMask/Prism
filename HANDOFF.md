@@ -22,7 +22,7 @@
 - 2026-10-06：
   - 完成全專案審查（`docs/PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md`）。所有 findings 已轉為工單 PRISM-OPT-15～51：看板在 `docs/TODO.md`，規格在 `docs/WORK_ORDERS.md`。
   - 同日完成治理文件瘦身（PRISM-OPT-27）。`.loop/verify-gate.ps1` 通過：pytest 399 passed、`go test ./...` ok、mirror 與 diff check 通過。證據記錄於 `docs/TODO.md`。
-  - 2026-10-06 的變更 commit 在分支 `docs/2026-10-06-review-work-orders`，未 push、未合併 `main`。
+  - 2026-10-06 的變更（`e77a631`、`2bb38a7`）已 fast-forward 合併到 `main` 並推送 `origin/main`；未建立 release/tag，未部署 Pi。
 
 ## Next Entry
 
