@@ -58,7 +58,7 @@ Go primary 仍是單一 executable 與單一 `package main`；2026-07-13 完成�
 
 `GET /api/notes?q=...` 維持單一查詢入口：
 
-- `Notes.title` / `Notes.content` 使用 SQLite FTS5 (`Notes_FTS`)。
+- `Notes.title` / `Notes.content` 使用 SQLite FTS5 (`Notes_FTS`)。查詢含中文或日文（Han、Hiragana、Katakana）時，另外對 title / content 做子字串 `LIKE` 比對，所有 token 都要命中（PRISM-OPT-18）。純英文查詢只走 FTS 的逐 token 前綴比對。
 - `Notes.remarks`、`Tags.name`、`Note_Attachments.title` / `file_path` 使用 SQL 關聯條件。
 - 文字附件內容（`.md` / `.markdown` / `.txt`）由後端在 request 期間 read-only 掃描檔案內容，再把命中的 `note_id` 併回 SQL 條件。
 
@@ -66,7 +66,7 @@ Go primary 仍是單一 executable 與單一 `package main`；2026-07-13 完成�
 
 已知限制（2026-10-06 審查實測，修正工單見 `docs/TODO.md`）：
 
-- `Notes_FTS` 使用 FTS5 預設 `unicode61` tokenizer，查詢是逐 token 前綴比對；中文／日文沒有空白分詞，詞位於句中時搜不到（PRISM-OPT-18）。
+- 中文／日文搜尋用 `LIKE` 掃描全文：1,000 筆約 30 ms，10,000 筆（每筆約 1,800 字）約 1 秒。若資料成長到這個量級，改用 FTS5 trigram 索引（PRISM-OPT-45）。韓文（Hangul）與全形英數字沒有特別處理。
 - 超過 5,000 字的筆記儲存後會被拆到 `docs/notes/note_<id>.md`，`Notes.content` 只剩 500 字預覽；FTS、版本歷史、JSON/Markdown 匯出與 DB 複本都只含預覽（PRISM-OPT-19 / PRISM-OPT-20）。
 - 文字附件與被拆分長文的內容只靠 request 期間逐檔掃描（200 檔 / 5 MiB / 250 ms），檔案多時常態回傳 `search_diagnostics.partial`。
 

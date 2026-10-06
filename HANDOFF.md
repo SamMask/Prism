@@ -28,10 +28,11 @@
     - PRISM-OPT-15：`GET /api/export/db` 改為送出一致快照。
     - PRISM-OPT-16：附件檢視改為純文字輸出，附件項目可以用鍵盤操作。
     - PRISM-OPT-17：Header 的 New 與搜尋在任何 route 都導向 Library 並生效。
+    - PRISM-OPT-18：中文／日文子字串搜尋；palette 對 CJK 輸入 2 字即查詢。
 
 ## Next Entry
 
-1. 施工剩下的 P0：PRISM-OPT-18、19。兩張彼此獨立，各自 commit。開工時在 `docs/TODO.md` 把該工單標為 `Doing`。
+1. 施工最後一張 P0：PRISM-OPT-19。開工時在 `docs/TODO.md` 把該工單標為 `Doing`。
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。
    - 使用者 2026-10-06 授權：工單審查與測試都通過後，直接 commit、fast-forward 合併回 `main` 並 push，不需再問。這項授權不包含 release、tag 或 Pi deploy。
    - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。

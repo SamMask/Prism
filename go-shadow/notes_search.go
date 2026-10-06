@@ -194,6 +194,10 @@ func (s *server) buildNotesSearchClause(keyword string) (string, []any, *attachm
 		args = append(args, ftsQuery)
 	}
 	if len(tokens) > 0 {
+		if hasCJKToken(tokens) {
+			// unicode61 keeps a CJK run as one token, so FTS prefix match misses mid-run words.
+			clauses = append(clauses, tokenAndClause("(LOWER(COALESCE(n.title, '')) LIKE ? OR LOWER(COALESCE(n.content, '')) LIKE ?)", tokens, &args))
+		}
 		clauses = append(clauses, tokenAndClause("LOWER(COALESCE(n.remarks, '')) LIKE ?", tokens, &args))
 		clauses = append(clauses, tagTokenSearchClause(tokens, &args))
 		clauses = append(clauses, attachmentMetadataTokenSearchClause(tokens, &args))
@@ -247,11 +251,25 @@ func (d *attachmentScanDiagnostics) toResponse() response {
 
 func tokenAndClause(condition string, tokens []string, args *[]any) string {
 	parts := make([]string, 0, len(tokens))
+	placeholderCount := strings.Count(condition, "?")
 	for _, token := range tokens {
 		parts = append(parts, condition)
-		*args = append(*args, "%"+token+"%")
+		for i := 0; i < placeholderCount; i++ {
+			*args = append(*args, "%"+token+"%")
+		}
 	}
 	return "(" + strings.Join(parts, " AND ") + ")"
+}
+
+func hasCJKToken(tokens []string) bool {
+	for _, token := range tokens {
+		for _, r := range token {
+			if unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func tagTokenSearchClause(tokens []string, args *[]any) string {

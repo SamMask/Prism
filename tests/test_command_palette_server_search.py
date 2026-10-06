@@ -26,6 +26,19 @@ def test_command_palette_server_search_uses_existing_notes_api_contract():
     assert "data-testid=\"command-palette-server-search-status\"" in source
 
 
+def test_command_palette_server_search_uses_two_char_threshold_for_cjk():
+    source = PALETTE_PATH.read_text(encoding="utf-8")
+
+    assert "const SERVER_SEARCH_MIN_CHARS = 3" in source
+    assert "const SERVER_SEARCH_MIN_CHARS_CJK = 2" in source
+    assert "const CJK_CHAR_PATTERN = /[\\p{Script=Han}\\p{Script=Hiragana}\\p{Script=Katakana}]/u" in source
+    assert (
+        "const minChars = CJK_CHAR_PATTERN.test(trimmed) ? SERVER_SEARCH_MIN_CHARS_CJK : SERVER_SEARCH_MIN_CHARS"
+        in source
+    )
+    assert "return trimmed.length >= minChars ? trimmed : ''" in source
+
+
 def test_command_palette_server_search_results_open_full_note_detail():
     source = PALETTE_PATH.read_text(encoding="utf-8")
 

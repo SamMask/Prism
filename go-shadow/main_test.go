@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1761,6 +1762,144 @@ func TestNotesSearchUsesTokenizedFTSAndCardFields(t *testing.T) {
 	pagination := payload["pagination"].(map[string]any)
 	if int(pagination["total"].(float64)) < 6 {
 		t.Fatalf("unknown type should not add an empty filter, payload=%#v", payload)
+	}
+}
+
+func TestNotesSearchFindsCJKSubstringsInTitleAndContent(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	promptID := insertSearchNote(t, db, "學習筆記", "今天學習提示詞工程的方法，重點是角色設定與輸出格式。", "", 1)
+	nightID := insertSearchNote(t, db, "攝影", "週末拍攝城市夜景的紀錄", "", 1)
+	titleID := insertSearchNote(t, db, "超廣角鏡頭心得", "plain body", "", 1)
+	kanaID := insertSearchNote(t, db, "カメラ", "このカメラのレンズはポートレート撮影に向いています", "", 1)
+	mixedID := insertSearchNote(t, db, "混合", "學習 prompt 的提示詞工程技巧", "", 1)
+	otherID := insertSearchNote(t, db, "一般筆記", "沒有相關內容的筆記", "", 1)
+
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: t.TempDir(), sqliteQueryOnly: false}}
+	cases := []struct {
+		query string
+		want  []int
+	}{
+		{"工程", []int{promptID, mixedID}},
+		{"角色設定", []int{promptID}},
+		{"夜景", []int{nightID}},
+		{"廣角", []int{titleID}},
+		{"ポートレート", []int{kanaID}},
+		{"角色 格式", []int{promptID}},
+		{"角色 夜景", nil},
+		{"prompt 工程", []int{mixedID}},
+		{"不存在的詞", nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.query, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			path := "/api/notes?per_page=100&q=" + url.QueryEscape(tc.query)
+			srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+			if recorder.Code != http.StatusOK {
+				t.Fatalf("%q returned %d body=%s", tc.query, recorder.Code, recorder.Body.String())
+			}
+			var payload struct {
+				Data       []map[string]any `json:"data"`
+				Pagination struct {
+					Total int `json:"total"`
+				} `json:"pagination"`
+			}
+			if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
+				t.Fatal(err)
+			}
+			got := map[int]bool{}
+			for _, note := range payload.Data {
+				got[int(note["id"].(float64))] = true
+			}
+			if len(got) != len(tc.want) || payload.Pagination.Total != len(tc.want) {
+				t.Fatalf("%q: want ids %v (total %d), got ids %v total %d", tc.query, tc.want, len(tc.want), got, payload.Pagination.Total)
+			}
+			for _, id := range tc.want {
+				if !got[id] {
+					t.Fatalf("%q: missing id %d, got %v", tc.query, id, got)
+				}
+			}
+			if got[otherID] {
+				t.Fatalf("%q unexpectedly matched unrelated note %d", tc.query, otherID)
+			}
+		})
+	}
+}
+
+func TestNotesSearchClauseAddsCJKBranchOnlyForCJKQueries(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: t.TempDir(), sqliteQueryOnly: false}}
+
+	clause, args, _ := srv.buildNotesSearchClause("ftsa ftsb")
+	if strings.Contains(clause, "n.title") || strings.Contains(clause, "n.content") {
+		t.Fatalf("ASCII query must not add a title/content LIKE branch: %s", clause)
+	}
+	// FTS (1) + remarks (2) + tags (2) + attachment metadata (2 tokens x 2).
+	if len(args) != 9 || args[0] != `"ftsa"* "ftsb"*` {
+		t.Fatalf("ASCII query args changed: %#v", args)
+	}
+
+	clause, args, _ = srv.buildNotesSearchClause("prompt 工程")
+	if strings.Count(clause, "LOWER(COALESCE(n.title, '')) LIKE ?") != 2 || strings.Count(clause, "LOWER(COALESCE(n.content, '')) LIKE ?") != 2 {
+		t.Fatalf("CJK query should add one title/content LIKE pair per token: %s", clause)
+	}
+	if len(args) != 13 || args[1] != "%prompt%" || args[2] != "%prompt%" || args[3] != "%工程%" || args[4] != "%工程%" {
+		t.Fatalf("unexpected CJK query args: %#v", args)
+	}
+}
+
+// BenchmarkNotesSearchCJK1000Notes measures a CJK substring query through the
+// real handler over a fresh-schema DB with 1,000 notes of ~1,800 CJK characters each.
+// Run: go test -run '^$' -bench BenchmarkNotesSearchCJK -benchtime 20x
+func BenchmarkNotesSearchCJK1000Notes(b *testing.B) {
+	owner, err := openSQLiteOwner(filepath.Join(b.TempDir(), "prism_bench.db"), true)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer owner.close()
+	if err := initializeFreshDatabase(owner); err != nil {
+		b.Fatal(err)
+	}
+	db := owner.db
+
+	base := strings.Repeat("今天學習提示詞的方法，重點是角色與輸出格式，以及攝影構圖的練習。", 60)
+	body := string([]rune(base)[:1800])
+	tx, err := db.Begin()
+	if err != nil {
+		b.Fatal(err)
+	}
+	for i := 0; i < 1000; i++ {
+		content := body
+		if i%100 == 0 {
+			content = body + "城市夜景"
+		}
+		if _, err := tx.Exec("INSERT INTO Notes (title, content, category_id) VALUES (?, ?, 1)", fmt.Sprintf("筆記 %d", i), content); err != nil {
+			b.Fatal(err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		b.Fatal(err)
+	}
+
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: b.TempDir(), sqliteQueryOnly: false}}
+	path := "/api/notes?per_page=20&q=" + url.QueryEscape("夜景")
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		recorder := httptest.NewRecorder()
+		srv.handleNotes(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+		if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"total":10`) {
+			b.Fatalf("unexpected response %d body=%.200s", recorder.Code, recorder.Body.String())
+		}
 	}
 }
 

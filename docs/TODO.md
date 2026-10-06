@@ -43,7 +43,7 @@
 | PRISM-OPT-15 | `Download .db` 改為一致快照（重用 `writeConsistentDBBackup`） | Done | — | OPS-01 |
 | PRISM-OPT-16 | 附件檢視改為純文字輸出；附件項目可用鍵盤操作 | Done | — | TECH-07 |
 | PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Done | — | UX-01 |
-| PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Todo | — | FEAT-01 |
+| PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Done | — | FEAT-01 |
 | PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Todo | — | FEAT-02 |
 
 完成證據（2026-10-06）：
@@ -82,6 +82,23 @@
     - 「從這兩頁搜尋」不適用：md 以下 Header 搜尋框隱藏（`hidden md:block`），command palette 按鈕只在 `lg` 以上顯示。手機只能在 Library 頁內的 `mobile-search-form` 搜尋。非首頁在手機上沒有搜尋入口，這是既有的 UX 缺口，不在本工單範圍。
   - 已知小瑕疵：從非首頁搜尋會送出兩次相同的 `/api/notes?q=` 請求（`setSearchQuery` 一次、HomePage 掛載一次）。store 的 request sequence 會丟掉舊的回應，結果正確；要消除就得改 appStore，不在範圍內。
   - 驗證：`npm run build` 通過、pytest 405 passed、`git diff --check` 通過。
+- `PRISM-OPT-18`（本機驗證；未發版、未部署 Pi）：
+  - `buildNotesSearchClause`（`go-shadow/notes_search.go`）：查詢 token 含 Han、Hiragana 或 Katakana 時，多一個 OR 分支，對每個 token 做 title／content 的 `LIKE`，token 之間 AND。純英文查詢產生的 SQL 與參數和修正前逐字相同：verifier 比對了 10 種非 CJK 查詢，包含韓文與全形字。FTS schema、tokenizer、migration、附件掃描上限都沒有改。
+  - Command Palette：CJK 輸入 2 字就查詢 server；英文門檻維持 3。
+  - 測試：
+    - `TestNotesSearchFindsCJKSubstringsInTitleAndContent` 經 HTTP handler 執行，有 9 個案例：工程、角色設定、夜景、廣角、ポートレート、多 token AND、混合的「prompt 工程」，以及兩個應該 0 筆的負面案例。7 個正面案例在 HEAD 上失敗。
+    - `TestNotesSearchClauseAddsCJKBranchOnlyForCJKQueries`。
+    - pytest 鎖定 palette 的門檻。
+  - 隔離 runtime 實測（prism-verifier）：
+    - HTTP：工程、角色設定、夜景、カメラ、ポートレート都命中；英文 `prom` 的前綴比對照舊；「城市 工程」為 0 筆，AND 語意正確。
+    - Chromium 中的 palette：輸入「夜」不送出請求，「夜景」會送出並出現結果；"ab" 不送出、"abc" 會送出；console 沒有錯誤。
+  - 效能（`go test -run '^$' -bench BenchmarkNotesSearchCJK -benchtime 20x .`，fresh schema，每筆約 1,800 個 CJK 字）：
+    - 1,000 筆約 30–34 ms/op。修正前只走 FTS，約 4.5 ms，但命中 0 筆。
+    - 10,000 筆約 1.0–1.14 s/op。handler 的 COUNT 與列表各掃一次全文，單一 LIKE COUNT 約 378 ms。這組數字是 PRISM-OPT-45（trigram 索引）的判斷依據。
+  - 已知語意與範圍：
+    - 查詢只要含 CJK token，裡面的 ASCII token 也改用子字串比對，例如「rom 工程」會命中 prompt。
+    - 韓文（Hangul）與全形英數字的行為和修正前相同。
+  - 驗證：`go vet` 通過、`go test ./...` ok、`npm run build` 通過、pytest 406 passed、`git diff --check` 通過。
 
 ### P1 — 下一輪
 

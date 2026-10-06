@@ -18,6 +18,8 @@ import { useTranslation } from '../hooks/useTranslation'
 import { SearchDiagnosticsNotice } from './SearchDiagnosticsNotice'
 
 const SERVER_SEARCH_MIN_CHARS = 3
+const SERVER_SEARCH_MIN_CHARS_CJK = 2
+const CJK_CHAR_PATTERN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u
 const SERVER_SEARCH_LIMIT = 8
 const SERVER_SEARCH_DEBOUNCE_MS = 250
 
@@ -52,7 +54,8 @@ function getNotePreview(note: Note, fallback: string) {
 function getServerSearchTerm(query: string): string {
   const trimmed = query.trim()
   if (trimmed.startsWith('?')) return trimmed.slice(1).trim()
-  return trimmed.length >= SERVER_SEARCH_MIN_CHARS ? trimmed : ''
+  const minChars = CJK_CHAR_PATTERN.test(trimmed) ? SERVER_SEARCH_MIN_CHARS_CJK : SERVER_SEARCH_MIN_CHARS
+  return trimmed.length >= minChars ? trimmed : ''
 }
 
 export function CommandPalette() {
