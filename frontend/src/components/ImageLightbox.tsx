@@ -1,8 +1,9 @@
 import { ChevronLeft, ChevronRight, Copy, ExternalLink, RotateCcw, X, ZoomIn, ZoomOut } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from '../hooks/useTranslation'
+import { useDialogLayer } from './ui/Modal'
 import { toast } from './ui/Toast'
 
 const MIN_ZOOM = 0.5
@@ -32,6 +33,11 @@ export function ImageLightbox({
   onClose,
 }: ImageLightboxProps) {
   const { t } = useTranslation()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  // Registers as the topmost layer (Tab trap, focus in/return); its own capture-phase Escape below
+  // stops propagation first, so the hook's Escape never double-fires.
+  // With no image the component renders nothing; don't sit on top of the dialog stack then.
+  useDialogLayer(images.length > 0, dialogRef, onClose)
   const [zoomScale, setZoomScale] = useState(1)
   const currentIndex = Math.min(Math.max(activeIndex, 0), images.length - 1)
   const currentImage = images[currentIndex]
@@ -126,7 +132,9 @@ export function ImageLightbox({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[180] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm sm:p-6"
+      ref={dialogRef}
+      tabIndex={-1}
+      className="outline-none fixed inset-0 z-[180] flex items-center justify-center bg-black/90 p-3 backdrop-blur-sm sm:p-6"
       role="dialog"
       aria-modal="true"
       aria-label={t('reading.lightboxTitle')}

@@ -299,6 +299,34 @@
     - data router 讓 main chunk 增加約 14.5 kB（gzip）。
     - 確認框上按 Escape 會變成「放棄並關閉？」確認框，這是既有行為，屬於 PRISM-OPT-62 的範圍。
     - 新 router 沒有在 desktop WebView2 上實測。
+- `PRISM-OPT-62`（本機驗證；未發版、未部署 Pi；2026-10-07 由 P2 提升為 P1）：
+  - `Modal.tsx` 新增共用 hook `useDialogLayer`：
+    - module 層級的 dialog 堆疊；在 window capture 階段快照按鍵當下的最上層。
+    - Tab trap 只作用於最上層，Escape 也只交給最上層。
+    - 開啟時 focus 移入；關閉時歸還給 opener。opener 是 body、已卸載或 disabled 時，退回下一層 dialog 的面板。
+    - opener 只在每次開啟時擷取一次，StrictMode 不會清掉它。
+  - 套用範圍：
+    - `Modal`：`role="dialog"`、`aria-modal`、`aria-labelledby`。
+    - `ConfirmDialog`：`role="alertdialog"`、`aria-labelledby`／`describedby`，並移除它自己的 document Escape listener。OPT-63 的「被取代的 confirm 回 false」保留。
+    - `ImageLightbox` 也登記為一層，這是規格範圍外、但修正退回項所必要的改動；只在有圖片時登記。
+  - 效果：
+    - Tab 無法再到達背景的導覽連結，補上 OPT-59／63 發現的資料遺失路徑。
+    - 確認框上按 Escape 只取消該確認框，不會再疊出第二個。
+  - 驗證：
+    - prism-verifier 第一輪**退回**：lightbox 疊在 ReadingView 或編輯器上時，Tab 被底層 trap 拉回，lightbox 的控制項用鍵盤到不了，這是相對 HEAD 的退化。另有歷史視窗關閉後 focus 掉到 body。
+    - 修正後複驗通過，1280 與 390、HEAD 對照：
+      - 編輯器（編輯與預覽模式）Tab／Shift+Tab 各 30 次都不離開、碰不到背景連結；HEAD 會到達背景連結。
+      - 確認框上 Escape 只關確認框；HEAD 會疊出第二個。
+      - OPT-63 上一頁加 Escape 不會卡住；focus 會回到 Header 的 New 按鈕。
+      - lightbox（ReadingView 上、編輯器雙欄 gallery、預覽）的 8 個控制項都能用 Tab 到達，Escape 只關 lightbox，方向鍵行為與 HEAD 相同、不外洩到底層。
+      - 歷史視窗關閉後 focus 留在編輯器；OPT-21、22、59 沒有退化。
+    - e2e：新增 `e2e/test_dialog_a11y.py` 5 項，沿用既有的 Playwright fixture，沒有新增 dependency；既有的 `e2e/test_note_flow.py` 5 項仍然通過。修改前 5 項全部失敗。
+    - 指令：`npm run build` 通過、pytest 422 passed、`git diff --check` 通過。
+  - 已知：
+    - 用滑鼠點卡片或卡片選單開啟的對話框，opener 已不存在，關閉後 focus 會落在 body。卡片是 div，要讓它可聚焦需另開工單。
+    - 背景沒有 `inert`／`aria-hidden`，螢幕閱讀器的虛擬游標仍能讀到背景。
+    - Settings、Wizard、BackupImport 自己的 fixed div 不在本單範圍。
+    - StrictMode 在 dev 下的行為是推論，沒有實跑。
 
 ### P1 — 下一輪
 
@@ -318,7 +346,7 @@
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |
-| PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Todo | — | OPT-22 追蹤 |
+| PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Done | — | OPT-22 追蹤 |
 | PRISM-OPT-63 | 編輯器有未存變更時，app 內導覽（上一頁、連結、palette 導覽）先詢問 | Done | — | OPT-59 追蹤 |
 
 完成證據（2026-10-06）：

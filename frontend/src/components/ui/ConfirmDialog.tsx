@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { AlertTriangle } from 'lucide-react'
 import { createPortal } from 'react-dom'
 import { t } from '../../i18n'
+import { useDialogLayer } from './Modal'
 
 interface ConfirmOptions {
   title: string
@@ -55,18 +56,12 @@ export function ConfirmDialogProvider() {
     if (state) confirmBtnRef.current?.focus()
   }, [state])
 
-  // ESC to cancel
-  useEffect(() => {
-    if (!state) return
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        state.resolve(false)
-        setState(null)
-      }
-    }
-    document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [state])
+  // ESC cancels, but only when this confirm is the topmost dialog (it usually sits over the editor).
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useDialogLayer(!!state, dialogRef, () => {
+    state?.resolve(false)
+    setState(null)
+  })
 
   if (!state) return null
 
@@ -82,7 +77,9 @@ export function ConfirmDialogProvider() {
                  bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
       onClick={(e) => { if (e.target === e.currentTarget) handleCancel() }}
     >
-      <div className="w-full max-w-md bg-bg-surface border border-border-default
+      <div ref={dialogRef} role="alertdialog" aria-modal="true"
+           aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-message" tabIndex={-1}
+           className="outline-none w-full max-w-md bg-bg-surface border border-border-default
                       rounded-xl shadow-2xl shadow-black/50
                       animate-in zoom-in-95 duration-150">
         {/* Header */}
@@ -91,8 +88,8 @@ export function ConfirmDialogProvider() {
             <AlertTriangle size={20} className={isDanger ? 'text-danger' : 'text-warning'} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-text-primary">{options.title}</h3>
-            <p className="mt-1 text-sm text-text-secondary whitespace-pre-line">{options.message}</p>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-text-primary">{options.title}</h3>
+            <p id="confirm-dialog-message" className="mt-1 text-sm text-text-secondary whitespace-pre-line">{options.message}</p>
           </div>
         </div>
 
