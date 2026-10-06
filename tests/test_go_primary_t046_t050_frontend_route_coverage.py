@@ -8,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-frontend-route-coverage.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
 GO_SHADOW_DIR = ROOT / "go-shadow"
@@ -77,7 +78,7 @@ def test_go_primary_registers_frontend_called_missing_routes_and_static_guard():
 
 def test_docs_record_t046_t052_completion_and_t053_handoff():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
     readme = GO_README_PATH.read_text(encoding="utf-8")
 

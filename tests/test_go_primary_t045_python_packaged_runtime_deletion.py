@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-python-packaged-runtime-deletion.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"
 README_PATH = ROOT / "README.md"
@@ -128,7 +129,7 @@ def test_dependency_manifests_are_legacy_dev_test_only_not_product_startup():
 
 def test_t045_docs_mark_go_primary_product_startup_and_t046_source_followup():
     todo = _text(TODO_PATH)
-    architecture = _text(ARCHITECTURE_PATH)
+    architecture = _text(ARCHITECTURE_PATH) + _text(ARCHITECTURE_HISTORY_PATH)
     schema = _text(SCHEMA_PATH)
     deploy_pi = _text(DEPLOY_PI_PATH)
     readme = _text(README_PATH)

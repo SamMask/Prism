@@ -12,10 +12,14 @@
 | `desktop-portable-release-handoff-20260618.md` | 從 `HANDOFF.md` / `docs/TODO.md` 瘦身移出的 Desktop Shell Phase 0-6、Windows portable baseline、manual acceptance、README split 與 release packaging 邊界。 |
 | `Prism_Go_模組逐步重構計劃報告.md` | 早期 Python → Go 漸進替換盤點與 Phase 19/23 決策脈絡；已由 active `docs/TODO.md` 取代 current roadmap 角色。 |
 | `Go重構審查報告-20260613-codex.md` | 2026-06-13 Go primary 收尾唯讀審查原文；T046-T052 已吸收其 findings，保留作 T053 Python source 封存/刪除 guardrail。 |
+| `todo-handoff-archive-20261006.md` | 2026-10-06 治理瘦身時從 `docs/TODO.md` / `HANDOFF.md` 移出的完成紀錄與長版 current state（原文照搬）。 |
+| `architecture-go-migration-history-20261006.md` | 2026-10-06 從 `docs/ARCHITECTURE.md` 移出的 Phase 18–23、T004–T053 歷史敘事與 Frontend Redesign Intake（原文照搬）。 |
+| `PROJECT_REVIEW-20260619.md` | 2026-06-19 專案審查，已被後續審查取代；2026-10-06 由根目錄移入。 |
+| `hypothetical_modern_prism.md`、`future_possibilities_heavy_local.md` | 早期架構與本地 AI 方案探討（已實作或已廢棄）；2026-10-06 由 `docs/` 移入。 |
 | `20260616-chatgpt-Prism-虛擬團隊討論會.md` | Prism / Cerberus 討論逐字稿與整理稿；已將 Core UX、備選項與未來分支候選吸收到 `docs/TODO.md` 的 2026-06-16 intake。 |
 
 維護規則：
-- `docs/TODO.md` 只保留 active roadmap、候選 backlog、下一步入口與歸檔索引。
+- `docs/TODO.md` 只保留工單看板、候選 backlog、下一步入口與歸檔索引；工單規格在 `docs/WORK_ORDERS.md`。
 - `HANDOFF.md` 只保留新對話接手所需的最短 current state / next entry；長版交接快照移入本資料夾。
 - 完成階段後，先在 `docs/TODO.md` 標記狀態；若該段不再指導下一步工作，再移入本資料夾。
 - 長版版本歷程寫入 `todo-changelog.md`；`docs/TODO.md` 只保留最近幾筆高信號摘要。

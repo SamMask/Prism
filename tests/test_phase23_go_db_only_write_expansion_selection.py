@@ -7,6 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-db-only-write-expansio
 FIRST_WRITE_PATH = ROOT / "docs" / "contracts" / "phase23-go-first-write-route-implementation.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_ROADMAP_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -120,7 +121,7 @@ def test_23_5_does_not_authorize_implementation_live_schema_or_file_scope():
 
 def test_docs_record_23_5_completion_and_next_subgate_details():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_roadmap = GO_ROADMAP_PATH.read_text(encoding="utf-8")
 
     assert "23.5 Go DB-only write expansion gate — ✅ Completed (2026-06-05)" in todo

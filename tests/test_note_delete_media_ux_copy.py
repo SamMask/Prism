@@ -7,7 +7,7 @@ NOTE_CARD_PATH = ROOT / "frontend" / "src" / "components" / "NoteCard.tsx"
 DANGER_ZONE_PATH = ROOT / "frontend" / "src" / "components" / "settings" / "DangerZoneSection.tsx"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 TODO_PATH = ROOT / "docs" / "TODO.md"
-HANDOFF_PATH = ROOT / "HANDOFF.md"
+TODO_HANDOFF_ARCHIVE_20261006_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20261006.md"
 
 
 def test_note_delete_confirmation_mentions_reference_counted_media_cleanup():
@@ -45,10 +45,11 @@ def test_settings_orphan_image_cleanup_copy_mentions_leftovers_after_note_delete
 
 
 def test_note_delete_media_ux_docs_close_without_runtime_semantics_change():
+    archive = TODO_HANDOFF_ARCHIVE_20261006_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
-    handoff = HANDOFF_PATH.read_text(encoding="utf-8")
 
-    assert "`NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）" in todo
-    assert "只補 confirmation / Settings copy" in todo
-    assert "未改 Go delete/media cleanup runtime" in todo
-    assert "NOTE-DELETE-MEDIA-UX-CANDIDATE-01 已完成" in handoff
+    assert "`NOTE-DELETE-MEDIA-UX-CANDIDATE-01`（狀態：`Done`）" in archive
+    assert "只補 confirmation / Settings copy" in archive
+    assert "未改 Go delete/media cleanup runtime" in archive
+    assert "NOTE-DELETE-MEDIA-UX-CANDIDATE-01 已完成" in archive
+    assert "todo-handoff-archive-20261006.md" in todo

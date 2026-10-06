@@ -7,6 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-live-cutover-rollback-
 C_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-packaged-runtime-release-candidate.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -62,7 +63,7 @@ def test_d_live_evidence_keeps_route_ownership_truthful():
 
 def test_docs_record_d_closure_without_starting_e_or_d_next():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert "D. Live cutover and rollback proof — completed_rollback_proof_no_permanent_cutover" in todo

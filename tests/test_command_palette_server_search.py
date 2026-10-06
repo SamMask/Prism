@@ -6,6 +6,7 @@ PALETTE_PATH = ROOT / "frontend" / "src" / "components" / "CommandPalette.tsx"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
+TODO_HANDOFF_ARCHIVE_20261006_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20261006.md"
 
 
 def test_command_palette_server_search_uses_existing_notes_api_contract():
@@ -46,13 +47,15 @@ def test_command_palette_server_search_i18n_exists_for_four_locales():
 
 
 def test_kwf_01_docs_record_completion_and_current_handoff():
+    archive = TODO_HANDOFF_ARCHIVE_20261006_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
 
-    assert "`KWF-01 Command Palette server-side search`（狀態：`Done`）" in todo
-    assert "Command Palette 輸入 `? xxx` 或至少 3 個字元" in todo
-    assert "不改後端搜尋引擎" in todo
-    assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in todo
-    assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
-    assert "KWF-01 Command Palette server-side search 已完成" in handoff
+    assert "`KWF-01 Command Palette server-side search`（狀態：`Done`）" in archive
+    assert "Command Palette 輸入 `? xxx` 或至少 3 個字元" in archive
+    assert "不改後端搜尋引擎" in archive
+    assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in archive
+    assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in archive
+    assert "KWF-01 Command Palette server-side search 已完成" in archive
     assert "## Next Entry" in handoff
+    assert "todo-handoff-archive-20261006.md" in todo

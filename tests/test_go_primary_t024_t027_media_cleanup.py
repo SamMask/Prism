@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 GO_README_PATH = GO_SHADOW_DIR / "README.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
@@ -363,7 +364,7 @@ def _load_contract(task_id):
 def test_t024_t027_contracts_docs_and_route_manifest_are_closed():
     main_go = read_go_package_source(GO_SHADOW_DIR)
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
     readme = GO_README_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")

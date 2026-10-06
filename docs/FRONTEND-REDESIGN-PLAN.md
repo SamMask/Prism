@@ -1,5 +1,7 @@
 # Prism Frontend Redesign Plan
 
+> **2026-10-06 狀態**：本文件已是歷史規劃。它引用的原型檔 `docs/New_UI/` 已不在 repo；現行 UI/UX 方向以 `docs/PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md` §4–§6 與 `docs/WORK_ORDERS.md` 為準。
+
 > **用途**: 把 `docs/New_UI/Prism Redesign - standalone.html` 的 UI 原型與 `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` 的 Go shadow backend 歷史路線整合成可執行的前端改版規劃。
 > **最後更新**: 2026-05-27
 > **狀態**: 規劃中；本文件不是已完成清單。

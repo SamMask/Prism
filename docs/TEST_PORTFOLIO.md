@@ -1,8 +1,8 @@
 # Prism Test Portfolio
 
-> Baseline: 2026-08-12
+> Baseline: 2026-08-12（分類）；2026-10-06 更新數量與可執行性實測
 > Current runtime: Go primary
-> Inventory: 75 Python test modules / 396 collected tests, 83 Go test functions, 5 isolated browser smoke tests
+> Inventory: 76 Python test modules / 399 collected tests, 83 Go test functions, 5 isolated browser smoke tests（不在預設 gate 內）
 
 本文件說明測試「在證明什麼」，避免把 source wording、歷史計畫或部署紀錄誤當成 current product behavior。模組以主要責任分類；同一模組可能同時覆蓋次要契約。
 
@@ -20,7 +20,7 @@
 - Library/search: `test_command_palette_server_search.py`, `test_kwf02_saved_search_workspace.py`, `test_phase22_command_palette_entrypoint_reliability.py`, `test_phase22_home_search_empty_state_context_copy.py`, `test_starred_tag_filters.py`.
 - Notes/content: `test_markdown_sanitization.py`, `test_note_delete_media_ux_copy.py`, `test_note_list_lightweight_payload.py`, `test_note_variant_lineage.py`, `test_reading_workspace.py`.
 - Import/UI/i18n: `test_bulk_markdown_txt_import.py`, `test_default_category_i18n.py`, `test_frontend_i18n_settings.py`, `test_image_viewer_lightbox.py`, `test_kwf03_to_kwf07_workflow.py`.
-- Product surfaces: `test_phase22_prompt_builder_mobile_action_bar.py`, `test_phase22_settings_tab_deep_linking.py`, `test_phase24_settings_home_maintenance_followups.py`, `test_project_optimization_p0_frontend.py`, `test_project_optimization_p1.py`.
+- Product surfaces: `test_phase22_prompt_builder_mobile_action_bar.py`, `test_phase22_settings_tab_deep_linking.py`, `test_phase24_settings_home_maintenance_followups.py`, `test_project_optimization_p0_frontend.py`, `test_project_optimization_p1.py`, `test_editor_copy_content.py`.
 
 這組仍包含不少 source-string assertions；它們適合防止入口或契約被移除，但不能取代瀏覽器行為。`e2e/test_note_flow.py` 因此固定驗收 Home 搜尋開啟、Prompt 直接載入、Prompt save-to-open 與 Data & Recovery 深連結。
 
@@ -57,6 +57,21 @@ Governance assertions只鎖定範圍、狀態層級與下一入口。它們通�
 - Phase 23: file-read plan, rollback proof, local smoke boundary, ownership audit, packaged candidate, Pi rollout, and the three Python deletion/ownership closure modules (9 total).
 
 本輪移除兩個 feature tests 對 HANDOFF 句子「目前沒有未交付的 active construction item」的重複鎖定；該句與 feature behavior 無關，active queue 改變時不應讓 Search／Saved View 測試失敗。相關測試仍保留自己的 TODO、contract 與 Next Entry assertions。
+
+## 可執行性實測（2026-10-06）
+
+2026-10-06 審查逐一分類了 399 個 pytest，看它「實際做了什麼」：
+
+| 類型 | 數量 | 說明 |
+|---|---:|---|
+| 執行型 | 27（6.8%） | build／啟動 Go binary、發 HTTP，或跑 `go test`／pwsh smoke |
+| 只讀 source | 109 | 斷言 frontend/Go/scripts 原始碼含有某字串 |
+| 只讀文件 | 235 | 斷言 Markdown 或 `docs/contracts/*.json` 含有某字串（其中 186 個讀 contract JSON） |
+| source + 文件 | 28 | 兩者混合 |
+
+結論：上表的 Behavior 類（100 個測試）沒有任何執行型測試，名稱與實際證明力不符。2026-10-06 runtime 實測找到的中文搜尋失效、長文匯出失真、DB 複本不一致、Header 動作失效，都是在全綠的狀態下存在。
+
+依 `docs/GOVERNANCE.md` §3，行為宣稱必須有可執行證據。重新分類、補 behavior test 與 fast／release gate 分流，見 `docs/WORK_ORDERS.md` 的 PRISM-OPT-26。冷建置時，4 個打包／桌面 smoke 佔全套 238.5s 中的 189.3s；cache 已熱時全套約 72s。
 
 ## Required gates
 

@@ -13,6 +13,7 @@ GO_SMOKE = ROOT / "scripts" / "go_primary_full_workflow_smoke.py"
 PI_SETUP = ROOT / "deploy" / "raspberry_pi" / "setup.sh"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
@@ -102,7 +103,7 @@ def test_pi_setup_refuses_to_overwrite_an_existing_shared_caddyfile():
 
 def test_t042_t043_t044_docs_are_current_and_hand_off_to_t045_t046():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
     deploy_pi = DEPLOY_PI_PATH.read_text(encoding="utf-8")
     readme = GO_README_PATH.read_text(encoding="utf-8")

@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-write-surface-selection.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_ROADMAP_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 PHASE23_FILE_READ_IMPLEMENTATION_PATH = (
     ROOT / "docs" / "contracts" / "phase23-go-file-read-parity-implementation.json"
@@ -110,7 +111,7 @@ def test_23_3_does_not_authorize_live_or_broader_write_work():
 
 def test_docs_record_23_3_completion_and_23_4_pending_gate():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_roadmap = GO_ROADMAP_PATH.read_text(encoding="utf-8")
 
     assert "23.3 Go write surface selection gate — ✅ Completed (2026-06-05)" in todo

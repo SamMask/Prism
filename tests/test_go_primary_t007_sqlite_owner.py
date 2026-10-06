@@ -7,6 +7,7 @@ GO_SHADOW_DIR = ROOT / "go-shadow"
 CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-sqlite-connection-owner.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 README_PATH = GO_SHADOW_DIR / "README.md"
 
 
@@ -65,7 +66,7 @@ def test_t007_go_source_and_unit_tests_lock_owner_behavior():
 
 def test_t007_docs_mark_done_and_keep_runtime_boundaries():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     readme = README_PATH.read_text(encoding="utf-8")
 
     row = next(line for line in todo.splitlines() if line.startswith("| T007 "))

@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW_DIR = ROOT / "go-shadow"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
@@ -412,7 +413,7 @@ def test_t032_t035_docs_and_contracts_are_updated():
         row = next(line for line in todo.splitlines() if line.startswith(f"| {task_id} |"))
         assert row.endswith("| Done |")
 
-    for path in (ARCHITECTURE_PATH, GO_README_PATH, GO_REPORT_PATH):
+    for path in (ARCHITECTURE_HISTORY_PATH, GO_README_PATH, GO_REPORT_PATH):
         text = path.read_text(encoding="utf-8")
         assert "T032-T035" in text
         assert "local/copied" in text

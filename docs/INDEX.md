@@ -1,20 +1,23 @@
 # Prism 文檔索引 (INDEX)
 
 > **專案版本**: v2.6.1
-> **更新日期**: 2026-07-14
+> **更新日期**: 2026-10-06
 > **專案狀態**: 🟢 穩定運行 — Go primary Headless KMS (AI 功能已於 v2.3.0 拔除)
 
 ---
 
-## 核心開發文件 ⭐ (每次開發前必讀)
+## 核心開發文件 ⭐
+
+> 分層必讀以 `AGENTS.md` / `CLAUDE.md` 為準：每次開工只需讀 `AGENTS.md`、`HANDOFF.md`、`TODO.md`，其餘依任務讀。
 
 | 文件 | 說明 | 維護狀態 |
 |------|------|----------|
 | [README.md](./README.md) | 文檔中心入口、快速開始、文件治理與近期歸檔入口 | ✅ 持續更新 |
 | [GOVERNANCE.md](./GOVERNANCE.md) | 完成宣稱、狀態層級、驗證證據、委派邊界與 UI/UX 治理規則 | ✅ 持續更新 |
-| [TODO.md](./TODO.md) | Active roadmap、候選 backlog、下一步入口；完成紀錄與長版歷史移至 development-history | ✅ 持續更新 |
+| [TODO.md](./TODO.md) | 工單看板（狀態）、deferred 候選、下一步入口；完成紀錄與長版歷史移至 development-history | ✅ 持續更新 |
+| [WORK_ORDERS.md](./WORK_ORDERS.md) | 工單規格（PRISM-OPT-15～51）：目標、範圍、不做、驗收、驗證、Blocked 啟動條件 | ✅ 持續更新 (2026-10-06) |
 | [SCHEMA.md](./SCHEMA.md) | **現行 DB 綱要** — 所有資料表欄位定義（唯一真實來源），附 Migration 歷程 | ✅ 持續更新 |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | C4 Container Diagram、模組邊界、資料流向 | ✅ 持續更新 |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | C4 Container Diagram、模組邊界、搜尋路徑與已知限制、部署拓撲（只放 current truth） | ✅ 持續更新 (2026-10-06 瘦身) |
 | [Prism.md](./Prism.md) | V2 架構決策記錄與歷史路線圖（V1→V2 重構背景、AI 拔除決策脈絡） | 🗄️ 歷史參考，不再更新 |
 
 > **注意**: `CLAUDE.md` / `AGENTS.md` 與 `HANDOFF.md` 位於專案根目錄，不在此資料夾。`HANDOFF.md` 只保留最短接手狀態；長版快照在 `development-history/`。
@@ -27,9 +30,9 @@
 |------|------|----------|
 | [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-06-19) |
 | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) | public GitHub release、tag、portable package 前的 fresh validation evidence template | ✅ 已建立 |
-| [TEST_PORTFOLIO.md](./TEST_PORTFOLIO.md) | 測試資產分類、完成權限、isolated Go browser smoke 與歷史 assertions 邊界 | ✅ 已建立 (2026-08-12) |
+| [TEST_PORTFOLIO.md](./TEST_PORTFOLIO.md) | 測試資產分類、完成權限、isolated Go browser smoke、2026-10-06 可執行性實測 | ✅ 已更新 (2026-10-06) |
 | [contracts/full-data-snapshot-v1.md](./contracts/full-data-snapshot-v1.md) | 完整資料快照 v1：local-only、consistent DB、五類檔案、manifest hash、manual restore 邊界 | ✅ 已建立 (2026-08-12) |
-| [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 新 UI 參考檔 + Go shadow backend 路線整合規劃；前端改版與重構前必讀 | 📋 規劃中 |
+| [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 前端改版的歷史規劃；它引用的原型檔 `New_UI/` 已不在 repo | 🗄️ 歷史規劃 |
 | [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
 | [contracts/api-readonly-manifest.json](./contracts/api-readonly-manifest.json) | Phase 18 read-only API manifest；Go shadow backend 與工具 surface 的機器可讀草稿 | ✅ 已建立 |
 | [contracts/phase19-go-runtime-packaging.md](./contracts/phase19-go-runtime-packaging.md) | Phase 19 Go runtime / packaging proof：single binary、external data dir、driver spike、build/deploy plan | ✅ 已建立 |
@@ -65,7 +68,9 @@
 | [2026-07-01-深入研究-deep-research-report-Prism.md](./development-history/2026-07-01-深入研究-deep-research-report-Prism.md) | **產品架構深入研究** — 2026-07-14 已依 current truth 標記完成／吸收、候選與不採用項；原文保留決策脈絡 | 🗄️ 已歸檔 / 已吸收 |
 | [20260619_Prism_深度掃描報告.md](./development-history/20260619_Prism_深度掃描報告.md) | **深度全面掃描** — API、搜尋、DB、檔案、啟動、安全、測試與可維護性檢查；01A-01G 已收斂，01H 保留為低優先維護 triage | 🗄️ 已歸檔 / 已吸收 |
 | [Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | **Go primary 收尾審查** — 唯讀靜態審查原文；T046-T052 已吸收 findings，T053 前作 Python source 封存/刪除 guardrail | 🗄️ 已歸檔 / 已吸收 |
-| [20260412-cco-綜合分析報告.md](./過期/20260412-cco-綜合分析報告.md) | **體檢報告** — Linus-mode 深度審核，列出 P0/P1/P2 問題與「好品味」段落 | ✅ 已完成 v2.4.2 |
+| [PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md](./PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md) | **產品深度優化與改版方向審查** — runtime 實測中文搜尋、長文拆分、DB 複本一致性等問題；findings 已轉為工單 PRISM-OPT-15～51 | ✅ 現行審查 |
+| [PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md](./PROJECT_OPTIMIZATION_REVIEW_2026-08-12.md) | 前一輪產品／UX／技術審查；P0/P1（PRISM-OPT-01～14）已完成，P2 殘項已併入 2026-10-06 工單 | 🗄️ 已結案 |
+| [PROJECT_REVIEW-20260619.md](./development-history/PROJECT_REVIEW-20260619.md) | 2026-06-19 專案審查（已被後續審查取代），2026-10-06 由根目錄移入歷史 | 🗄️ 已歸檔 |
 
 ---
 
@@ -84,12 +89,14 @@
 |------|------|------|
 | [development-history/README.md](./development-history/README.md) | 從 TODO 拆出的完成階段與完整 Changelog 保存區 | 🗄️ 歷史保存，按需更新 |
 | [development-history/governance-source-20260705/README.md](./development-history/governance-source-20260705/README.md) | 2026-07-05 新版治理素材歸檔；正式規則已收斂到 `GOVERNANCE.md` | 🗄️ 歷史保存 |
+| [development-history/todo-handoff-archive-20261006.md](./development-history/todo-handoff-archive-20261006.md) | 2026-10-06 治理瘦身時從 TODO / HANDOFF 移出的完成紀錄原文 | 🗄️ 歷史保存 |
+| [development-history/architecture-go-migration-history-20261006.md](./development-history/architecture-go-migration-history-20261006.md) | 從 ARCHITECTURE 移出的 Phase 18–23、T004–T053 歷史敘事與 Frontend Redesign Intake | 🗄️ 歷史保存 |
 | [development-history/go-primary-runtime-completion-20260617.md](./development-history/go-primary-runtime-completion-20260617.md) | T001-T053 Go primary migration 完成敘事、artifact 與完整任務表 | 🗄️ 歷史保存 |
 | [development-history/desktop-backup-i18n-handoff-20260617.md](./development-history/desktop-backup-i18n-handoff-20260617.md) | 2026-06-14 local desktop / backup / dashboard handoff、2026-06-17 Core UX 與 i18n 詳細完成記錄 | 🗄️ 歷史保存 |
 | [development-history/desktop-portable-release-handoff-20260618.md](./development-history/desktop-portable-release-handoff-20260618.md) | Desktop Shell Phase 0-6、Windows portable baseline、manual acceptance、README split 與 release packaging 邊界 | 🗄️ 歷史保存 |
 | [development-history/Go重構審查報告-20260613-codex.md](./development-history/Go重構審查報告-20260613-codex.md) | 2026-06-13 Go 收尾審查原文；T046-T052 已處理，T053 前只作 guardrail 參考 | 🗄️ 歷史保存 |
-| [hypothetical_modern_prism.md](./hypothetical_modern_prism.md) | 現代化架構評估報告（前後端分離 Vite/React 方案探討）| 🗄️ 已完成實作，僅供歷史參考 |
-| [future_possibilities_heavy_local.md](./future_possibilities_heavy_local.md) | 本地 AI 重度依賴方案探索（PyTorch / Ollama / HuggingFace）| 🗄️ 已廢棄 — AI 功能於 v2.3.0 全面移除 |
+| [hypothetical_modern_prism.md](./development-history/hypothetical_modern_prism.md) | 現代化架構評估報告（前後端分離 Vite/React 方案探討）| 🗄️ 已完成實作，僅供歷史參考 |
+| [future_possibilities_heavy_local.md](./development-history/future_possibilities_heavy_local.md) | 本地 AI 重度依賴方案探索（PyTorch / Ollama / HuggingFace）| 🗄️ 已廢棄 — AI 功能於 v2.3.0 全面移除 |
 
 ---
 
@@ -97,7 +104,6 @@
 
 | 文件 | 說明 | 狀態 |
 |------|------|------|
-| [Prism Redesign - standalone.html](./New_UI/Prism%20Redesign%20-%20standalone.html) | 新 UI 前端原型參考；只採工作流與視覺方向，不直接搬 prototype code / sample data | 📎 參考 |
 | [Prism_Go_模組逐步重構計劃報告.md](./development-history/Prism_Go_模組逐步重構計劃報告.md) | Python → Go 漸進替換歷史盤點；早期 Phase 0-1 read-only shadow backend 與 response diff 決策追溯 | 🗄️ 歷史保存 |
 
 ---
@@ -109,8 +115,9 @@
 | 新增 / 修改 API 端點 | `SCHEMA.md` + `API_REFERENCE.md` |
 | 修改資料庫欄位或新增 Migration | `SCHEMA.md` |
 | 架構調整 / 新模組 | `ARCHITECTURE.md` |
-| 規劃新功能 / 查進度 | `TODO.md` |
-| 前端改版 / UI rewrite | `FRONTEND-REDESIGN-PLAN.md` + `docs/New_UI/Prism Redesign - standalone.html` |
+| 規劃新功能 / 查進度 | `TODO.md`（看板）+ `WORK_ORDERS.md`（規格） |
+| 施工某張工單 | `WORK_ORDERS.md` 該工單 + 對應審查報告的 Finding |
+| 前端改版 / UI rewrite | `PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md` §4–§6 + `GOVERNANCE.md` §7；`FRONTEND-REDESIGN-PLAN.md` 僅供歷史參考 |
 | Go shadow backend / API contract lock | `contracts/phase18-readiness.md` + `contracts/api-readonly-manifest.json` + `development-history/Prism_Go_模組逐步重構計劃報告.md` + `API_REFERENCE.md` + `SCHEMA.md` |
 | Go primary runtime / packaging proof | `TODO.md` + `contracts/go-primary-route-ownership-manifest.json` + `contracts/go-primary-frontend-route-coverage.json` + `contracts/go-primary-python-packaged-runtime-deletion.json` + `development-history/Go重構審查報告-20260613-codex.md` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |
 | 首次部署 / 環境設定 | `DEPLOYMENT.md` + `CONTRIBUTING.md` |

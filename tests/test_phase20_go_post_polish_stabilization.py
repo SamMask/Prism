@@ -7,6 +7,7 @@ STABILIZATION_PATH = ROOT / "docs" / "contracts" / "phase20-go-post-polish-stabi
 POLISH_PATH = ROOT / "docs" / "contracts" / "phase20-go-read-surface-polish.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 
 
 def _stabilization():
@@ -85,7 +86,7 @@ def test_phase20_3_authorized_20_4_stabilization_gate():
 
 def test_phase20_4_docs_record_closure_and_21_0_next_gate():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
 
     assert "Phase 20: Post-readonly Go Scope Assessment — ✅ Closed" in todo
     assert "20.4 Post-polish Stabilization and Candidate Closure Gate" in todo

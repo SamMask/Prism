@@ -137,7 +137,7 @@ return "2.6.1"
 ```
 
 > ⚠️ **發版前必檢**：Go runtime fallback version、root `README.md` / `README.zh-TW.md` badge、release tag 與 release asset 命名必須同步。
-> 過去曾發生 `config.py` 卡在 `2.0.0-alpha.1` 而 Changelog 已到 `v2.4.1` 的長期 desync，詳見 [`docs/過期/20260412-cco-綜合分析報告.md`](./過期/20260412-cco-綜合分析報告.md) §3 P2-10.7。
+> 目前前端仍有寫死的版本字串（`frontend/index.html`、`Sidebar.tsx`、`SettingsPage.tsx` 的 About fallback），曾造成 V2.6.1 兩次修正型發版；收斂工單見 `docs/WORK_ORDERS.md` 的 PRISM-OPT-24。更早也發生過 `config.py` 卡在 `2.0.0-alpha.1` 的長期 desync（原報告已不在 repo）。
 
 ### 建置流程
 

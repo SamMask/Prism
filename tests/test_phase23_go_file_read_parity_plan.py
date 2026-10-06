@@ -7,6 +7,7 @@ PLAN_PATH = ROOT / "docs" / "contracts" / "phase23-go-file-read-parity-plan.json
 POLISH_PATH = ROOT / "docs" / "contracts" / "phase20-go-read-surface-polish.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -123,7 +124,7 @@ def test_phase20_gap_is_the_source_for_phase23_1_plan():
 
 def test_phase23_1_docs_record_completion_and_23_2_next_gate():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert "23.1 Go file-read parity plan gate — ✅ Completed" in todo

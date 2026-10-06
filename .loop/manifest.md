@@ -11,11 +11,13 @@ explore:
 
 plan:
   - docs/TODO.md
+  - docs/WORK_ORDERS.md
   - docs/CONTRACTS.md
   - docs/API_REFERENCE.md
 
 execute:
   - AGENTS.md
+  - docs/WORK_ORDERS.md
   - docs/ARCHITECTURE.md
   - docs/SCHEMA.md
 

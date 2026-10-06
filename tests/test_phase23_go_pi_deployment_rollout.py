@@ -7,6 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-pi-deployment-rollout.
 SOURCE_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-local-smoke-artifact-release-boundary.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -141,7 +142,7 @@ def test_phase23_9_boundaries_and_next_steps_are_locked():
 
 def test_docs_record_23_9_completion_and_next_planning_gate():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert "23.9 Pi deployment rollout track — ✅ Completed (2026-06-06)" in todo

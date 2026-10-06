@@ -1,6 +1,6 @@
 # Prism Governance Guide
 
-更新日期：2026-07-05
+更新日期：2026-10-06
 
 本文件是 Prism 的開發治理規則，整理自 `docs/development-history/governance-source-20260705/` 的新版治理素材後，收斂成適合本 repo 的版本。它約束的是「怎麼規劃、宣稱、驗證、委派、維護文件」，不是 Prism 產品 runtime 功能。
 
@@ -14,7 +14,8 @@ Prism 的 current truth 以目前 repo source、contracts、tests、runtime 文�
 |---|---|
 | 開發規範與入口 | `AGENTS.md` / `CLAUDE.md`（必須完全鏡像） |
 | 最新接手狀態 | `HANDOFF.md` |
-| Active roadmap / 候選 backlog | `docs/TODO.md` |
+| Active roadmap / 工單狀態 / 候選 backlog | `docs/TODO.md` |
+| 工單規格 | `docs/WORK_ORDERS.md` |
 | API / runtime contract | `docs/API_REFERENCE.md`、`docs/contracts/`、`docs/CONTRACTS.md` |
 | 架構 / DB | `docs/ARCHITECTURE.md`、`docs/SCHEMA.md` |
 | Pi deploy / rollback | `DEPLOY-PI.md` |
@@ -61,6 +62,12 @@ Prism 的 current truth 以目前 repo source、contracts、tests、runtime 文�
 | Release / packaging | Artifact build、external data-dir、local data exclusion、release wording。 |
 
 高風險修改不能只靠「我檢查過」自我背書。至少要有 diff、test output、read-back、runtime smoke 或可重跑命令之一。
+
+行為證據的額外規則：
+
+- 宣稱「行為已修正／已可用」時，證據必須是會執行程式的測試或 smoke，例如 Go test、HTTP 請求、browser／e2e。只斷言 source 或文件含有某段字串的測試，屬於治理檢查，不能當作行為證據。
+- 搜尋、tokenize、匯出、匯入等文字處理變更，測試資料必須包含 CJK 內容。2026-10-06 審查發現中文子字串搜尋失效，而現有搜尋測試全部只用 ASCII token。
+- 備份、匯出、還原類功能必須驗證「剛寫入、尚未 checkpoint」的資料也會被包含在內。
 
 Windows/PowerShell 注意事項：
 
@@ -111,6 +118,31 @@ Codex native subagents 或 OMX workflow 只在能提高速度、正確性或覆�
 - 不把外部建議原文直接升格成 roadmap；先轉成 Prism 現有 architecture / contract 下可驗證的工作項。
 
 `HANDOFF.md` 只保留下一輪需要知道的最短 current state、驗證缺口與下一步入口。避免把完整歷史、研究摘要或大段 reasoning 放進 handoff。
+
+### 6.1 工單（Work Orders）
+
+- 看板與規格分開存放：
+  - 工單**狀態**只記在 `docs/TODO.md` 的看板。
+  - 工單**規格**只寫在 `docs/WORK_ORDERS.md`。
+  - 同一張工單的狀態不在兩處重複。
+- 工單 ID 沿用 `PRISM-OPT-NN`，每張工單都要對應一個審查 Finding ID 或使用者需求。
+- 規格欄位：Finding、優先級、目標、原因、修改範圍、不要修改、行為規格、驗收、驗證；`Blocked` 工單另寫「啟動條件」。
+- 優先級語意：P0 現在做、P1 下一輪、P2 稍後、P3 目前不建議、Future 證據不足。P3 與 Future 一律標 `Blocked`，只有啟動條件成立、且使用者明確 promote 才改為 `Todo`。
+- 一次只有一張 `Doing`。完成時在看板寫入驗證證據並改為 `Done`。整個 roadmap 結案後，把 `docs/WORK_ORDERS.md` 對應章節與看板完成列移到 `docs/development-history/`。
+
+### 6.2 文件預算
+
+- 「每次開工必讀」的文件（`AGENTS.md`／`CLAUDE.md`、`HANDOFF.md`、`docs/TODO.md`）合計控制在約 30KB 以內；加上依任務必讀的 `docs/GOVERNANCE.md`、`docs/ARCHITECTURE.md`、`docs/SCHEMA.md` 後，合計約 60KB 以內。
+- `HANDOFF.md` 約 4KB 以內。
+- `docs/ARCHITECTURE.md` 只放 current truth；遷移、phase 與 gate 敘事放在 `docs/development-history/`。
+- 移出的內容必須原文照搬到 `docs/development-history/` 的歸檔檔案，並在 `docs/TODO.md` 的 Archive Index 留指標。不得改寫歷史證據。
+
+### 6.3 Docs-lock 測試政策
+
+- 測試不得鎖定 `HANDOFF.md`、`docs/TODO.md` 的敘述句。這兩份文件會隨每輪工作改寫；需要時只檢查結構，例如 `## Next Entry` 標題、工單 ID、歸檔指標。
+- 「某項工作已完成」的歷史斷言要讀歸檔檔案（`docs/development-history/`），不要讀 active 文件。
+- 仍有約束力的產品決策（例如 KWF-07 不加入審核 metadata）可以留在 `HANDOFF.md` 並被測試檢查；一旦決策失效，就同步更新該測試。
+- 文件瘦身時若有測試失敗，修法是把測試指向歸檔位置，而不是把歷史文字留在 active 文件裡。
 
 ## 7. UI / UX 治理
 

@@ -9,6 +9,7 @@ SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOYMENT_PATH = ROOT / "docs" / "DEPLOYMENT.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 README_PATH = ROOT / "README.md"
 DOCS_README_PATH = ROOT / "docs" / "README.md"
@@ -51,7 +52,7 @@ def test_t051_docs_replace_stale_python_owner_wording_with_current_truth():
     schema = _text(SCHEMA_PATH)
     deployment = _text(DEPLOYMENT_PATH)
     deploy_pi = _text(DEPLOY_PI_PATH)
-    architecture = _text(ARCHITECTURE_PATH)
+    architecture = _text(ARCHITECTURE_PATH) + _text(ARCHITECTURE_HISTORY_PATH)
     go_readme = _text(GO_README_PATH)
     index = _text(INDEX_PATH)
 

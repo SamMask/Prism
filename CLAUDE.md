@@ -2,36 +2,46 @@
 
 # Prism 開發指引
 
-## 每次開發前必讀
+## 必讀文件（分層）
+
+### 每次開工必讀
 
 | 文件 | 內容 |
 |---|---|
 | `CLAUDE.md` / `AGENTS.md` | 開發規範（哲學 / 禁止事項 / 專案快查） — 雙份鏡像 |
-| `HANDOFF.md` | 新對話接手用最短 current state / next entry；長版交接快照見 `docs/development-history/` |
-| `docs/README.md` | 文檔中心入口、快速開始、文件治理與近期歸檔入口 |
-| `docs/GOVERNANCE.md` | 完成宣稱、狀態層級、驗證證據、委派與 UI/UX 治理規則 |
-| `DEPLOY-PI.md` | 樹莓派 Go primary 更新流程（artifact deploy、systemd、Caddy、rollback/soak） |
-| `docs/ARCHITECTURE.md` | 架構圖（C4 Container Diagram） |
-| `docs/SCHEMA.md` | 現行 DB 綱要（所有資料表欄位定義，改 DB 前必讀） |
-| `docs/TODO.md` | Active roadmap、候選 backlog 與下一步入口；完整完成項目 / Changelog 見 `docs/development-history/` |
-| `docs/Prism.md` | V2 規劃期歷史記錄（已凍結，不再更新；僅供重構決策脈絡參考） |
+| `HANDOFF.md` | 新對話接手用最短 current state / next entry（約 4KB 以內）；長版交接快照見 `docs/development-history/` |
+| `docs/TODO.md` | 工單看板（狀態）、deferred 候選與下一步入口；完成紀錄 / Changelog 見 `docs/development-history/` |
 
-### 重大重構 / Go 收尾 / 前端改版額外必讀
+### 依任務必讀
+
+| 情境 | 文件 |
+|---|---|
+| 施工某張工單 | `docs/WORK_ORDERS.md` 中該工單的規格（證據在對應的審查報告） |
+| 完成宣稱、委派、UI/UX、文件治理 | `docs/GOVERNANCE.md` |
+| 架構調整 / 新模組 | `docs/ARCHITECTURE.md`（只放 current truth） |
+| 改 DB 欄位或 migration | `docs/SCHEMA.md`（現行 DB 綱要，改 DB 前必讀） |
+| 新增 / 修改 API | `docs/API_REFERENCE.md`、`docs/CONTRACTS.md` |
+| 樹莓派部署 / rollback | `DEPLOY-PI.md`（artifact deploy、systemd、Caddy、rollback/soak） |
+| 發版 / 打包 | `docs/RELEASE_CHECKLIST.md` |
+| 找文件 | `docs/README.md`、`docs/INDEX.md` |
+
+### 歷史參考（追溯決策脈絡時才讀）
 
 | 文件 | 內容 |
 |---|---|
-| `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` | 已封存的 Python → Go 漸進替換盤點；只供早期 shadow backend / response diff 決策追溯，current truth 以 `docs/TODO.md` 為準 |
-| `docs/development-history/Go重構審查報告-20260613-codex.md` | 2026-06-13 Go primary 收尾審查原文；T046-T052 findings 已掃過並收斂，T053 source 封存/刪除已依其 guardrail 完成，current truth 以 `docs/TODO.md` / contracts / API docs 為準 |
-| `docs/development-history/desktop-portable-release-handoff-20260618.md` | Windows desktop portable / release baseline 完成紀錄；Desktop Shell Phase 0-6、post-package follow-up、manual acceptance、README split 與 release packaging 邊界已歸檔 |
-| `docs/FRONTEND-REDESIGN-PLAN.md` | 新 UI 參考檔與 Go 重構路線的整合規劃；採納 UX 工作流，明確暫緩 collections schema、AI、協作與大規模 scope creep |
-| `docs/contracts/phase19-go-runtime-packaging.md` | Go runtime / packaging proof；single binary、external data dir、SQLite driver spike、Windows/Pi build plan |
-| `docs/New_UI/Prism Redesign - standalone.html` | UI 原型參考；只採工作流與視覺方向，不直接搬 prototype-only code / sample data / tweak panel |
+| `docs/Prism.md` | V2 規劃期歷史記錄（已凍結，不再更新） |
+| `docs/development-history/Prism_Go_模組逐步重構計劃報告.md` | 已封存的 Python → Go 漸進替換盤點；只供早期 shadow backend / response diff 決策追溯 |
+| `docs/development-history/Go重構審查報告-20260613-codex.md` | 2026-06-13 Go primary 收尾審查原文；T046-T052 findings 已收斂，T053 source 刪除已依其 guardrail 完成 |
+| `docs/development-history/architecture-go-migration-history-20261006.md` | 從 `docs/ARCHITECTURE.md` 移出的 Phase 18–23 / T004–T053 歷史敘事 |
+| `docs/development-history/desktop-portable-release-handoff-20260618.md` | Windows desktop portable / release baseline 完成紀錄 |
+| `docs/FRONTEND-REDESIGN-PLAN.md` | 前端改版的歷史規劃；它引用的原型檔 `docs/New_UI/` 已不在 repo（2026-10-06 確認） |
+| `docs/contracts/phase19-go-runtime-packaging.md` | Go runtime / packaging proof；single binary、external data dir、SQLite driver spike |
 
 ## 執行規則
 
-1. **有未規劃事項** → 先在 `docs/TODO.md` 拆解原子任務，更新後再繼續實作
+1. **有未規劃事項** → 先在 `docs/TODO.md` 看板開工單、在 `docs/WORK_ORDERS.md` 寫規格，再繼續實作
 2. **完成一個階段** → 回頭更新相關文件：
-   - `docs/TODO.md`（只保留 active roadmap / next entry；長版完成紀錄歸檔到 `docs/development-history/`）
+   - `docs/TODO.md`（工單狀態與驗證證據；roadmap 結案後把完成紀錄歸檔到 `docs/development-history/`）
    - `HANDOFF.md`（只保留下一輪接手所需的最短狀態；長版交接快照歸檔到 `docs/development-history/`）
    - `docs/ARCHITECTURE.md`（新模組 / 架構變動時）
    - `docs/SCHEMA.md`（有新 DB 欄位或遷移時）

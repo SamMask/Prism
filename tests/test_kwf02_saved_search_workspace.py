@@ -7,6 +7,7 @@ STORE_PATH = ROOT / "frontend" / "src" / "stores" / "appStore.ts"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
+TODO_HANDOFF_ARCHIVE_20261006_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20261006.md"
 
 
 def test_kwf02_saved_search_workspace_uses_local_storage_without_backend_contract():
@@ -46,12 +47,14 @@ def test_kwf02_saved_search_workspace_renders_save_restore_and_delete_controls()
 
 
 def test_kwf02_docs_close_saved_search_and_keep_current_handoff():
+    archive = TODO_HANDOFF_ARCHIVE_20261006_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
 
-    assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in todo
-    assert "localStorage key `prism.savedSearchWorkspaces.v1`" in todo
-    assert "沒有新增 DB migration、Go API、semantic search、auth 或 Pi deploy" in todo
-    assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in todo
-    assert "KWF-02 Saved Search / Search Workspace 已完成" in handoff
+    assert "`KWF-02 Saved Search / Search Workspace`（狀態：`Done`）" in archive
+    assert "localStorage key `prism.savedSearchWorkspaces.v1`" in archive
+    assert "沒有新增 DB migration、Go API、semantic search、auth 或 Pi deploy" in archive
+    assert "`KWF-03 Full data snapshot export`（狀態：`Done`）" in archive
+    assert "KWF-02 Saved Search / Search Workspace 已完成" in archive
     assert "## Next Entry" in handoff
+    assert "todo-handoff-archive-20261006.md" in todo

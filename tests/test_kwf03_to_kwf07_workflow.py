@@ -11,6 +11,7 @@ READING_VIEW_PATH = ROOT / "frontend" / "src" / "components" / "ReadingView.tsx"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 TODO_PATH = ROOT / "docs" / "TODO.md"
 HANDOFF_PATH = ROOT / "HANDOFF.md"
+TODO_HANDOFF_ARCHIVE_20261006_PATH = ROOT / "docs" / "development-history" / "todo-handoff-archive-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 API_REFERENCE_PATH = ROOT / "docs" / "API_REFERENCE.md"
 
@@ -57,6 +58,7 @@ def test_kwf04_batch_delete_uses_server_dry_run_preview_before_write():
 
 
 def test_kwf05_import_dry_run_preview_is_frontend_only_and_collision_aware():
+    archive = TODO_HANDOFF_ARCHIVE_20261006_PATH.read_text(encoding="utf-8")
     backup = BACKUP_IMPORT_PATH.read_text(encoding="utf-8")
     i18n = I18N_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
@@ -69,8 +71,8 @@ def test_kwf05_import_dry_run_preview_is_frontend_only_and_collision_aware():
     assert "data-unsupported={bulkPreview.unsupportedCount}" in backup
     assert "api." not in backup.split("function buildBulkImportPreview")[1].split("export function BackupImportSection")[0]
     assert i18n.count("bulkImportDryRun:") >= 4
-    assert "KWF-05 Import dry-run / collision preview`（狀態：`Done`）" in todo
-
+    assert "KWF-05 Import dry-run / collision preview`（狀態：`Done`）" in archive
+    assert "todo-handoff-archive-20261006.md" in todo
 
 def test_kwf06_reading_view_source_url_panel_uses_existing_note_urls():
     reading = READING_VIEW_PATH.read_text(encoding="utf-8")
@@ -87,15 +89,17 @@ def test_kwf06_reading_view_source_url_panel_uses_existing_note_urls():
 
 
 def test_kwf07_quality_metadata_is_rejected_for_personal_notebook_scope():
+    archive = TODO_HANDOFF_ARCHIVE_20261006_PATH.read_text(encoding="utf-8")
     todo = TODO_PATH.read_text(encoding="utf-8")
     handoff = HANDOFF_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
 
-    assert "KWF-07 Knowledge quality metadata decision gate`（狀態：`Done`）" in todo
-    assert "不採用 `status / review_state / last_verified_at`" in todo
-    assert "除非產品用途明確改變" in todo
+    assert "KWF-07 Knowledge quality metadata decision gate`（狀態：`Done`）" in archive
+    assert "不採用 `status / review_state / last_verified_at`" in archive
+    assert "除非產品用途明確改變" in archive
     assert "KWF-07 product decision 已關閉" in handoff
     assert "不得重新 promote schema v18 workflow" in handoff
     assert "Migration v17" in schema
     assert "| v18+ | （預留） | 下一次 Schema 變更接續此版本號 |" in schema
     assert "review_state" not in schema
+    assert "todo-handoff-archive-20261006.md" in todo

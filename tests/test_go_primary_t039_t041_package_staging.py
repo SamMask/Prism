@@ -14,6 +14,7 @@ PI_STAGING_SCRIPT = ROOT / "scripts" / "stage_go_primary_pi.ps1"
 BUILD_SCRIPT = ROOT / "scripts" / "build_go_runtime.ps1"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 DEPLOY_PI_PATH = ROOT / "DEPLOY-PI.md"
 GO_README_PATH = ROOT / "go-shadow" / "README.md"
@@ -129,7 +130,7 @@ def test_pi_staging_script_writes_only_staging_unit_and_hash_guards_live_assets(
 
 def test_t039_t040_t041_docs_are_current_and_hand_off_to_completed_cutover_gate():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
     deploy_pi = DEPLOY_PI_PATH.read_text(encoding="utf-8")
     readme = GO_README_PATH.read_text(encoding="utf-8")

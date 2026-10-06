@@ -7,6 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-ownership-closure-audi
 SOURCE_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-pi-deployment-rollout.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -101,7 +102,7 @@ def test_python_removal_is_blocked_until_critical_surfaces_have_a_decision():
 def test_docs_record_23_10_1_completion_and_next_decision_gate():
     contract = _contract()
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert contract["allowed_next_step"]["id"] == "23.10.2"

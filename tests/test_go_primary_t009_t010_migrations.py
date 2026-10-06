@@ -21,6 +21,7 @@ T009_CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-existing-db-migra
 T010_CONTRACT_PATH = ROOT / "docs" / "contracts" / "go-primary-migration-backup-rollback.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "go-primary-runtime-completion-20260617.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 SCHEMA_PATH = ROOT / "docs" / "SCHEMA.md"
 README_PATH = GO_SHADOW_DIR / "README.md"
 
@@ -234,7 +235,7 @@ def test_t009_go_runtime_migrates_existing_legacy_db_and_creates_backup(tmp_path
 
 def test_t009_t010_docs_mark_done_and_keep_scope_boundaries():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     schema = SCHEMA_PATH.read_text(encoding="utf-8")
     readme = README_PATH.read_text(encoding="utf-8")
 

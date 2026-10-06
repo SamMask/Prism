@@ -9,6 +9,7 @@ SMOKE_SCRIPT_PATH = ROOT / "scripts" / "smoke_go_local_artifact.ps1"
 BUILD_SCRIPT_PATH = ROOT / "scripts" / "build_go_runtime.ps1"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -126,7 +127,7 @@ def test_release_boundary_blocks_pi_caddy_systemd_and_python_removal():
 def test_docs_record_23_8_2_23_8_3_completion_and_next_gate():
     contract = _contract()
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert contract["allowed_next_step"]["id"] == "23.9.1"

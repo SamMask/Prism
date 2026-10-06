@@ -8,6 +8,7 @@ STABILIZATION_PATH = ROOT / "docs" / "contracts" / "phase23-final-stabilization.
 AUDIT_PATH = ROOT / "docs" / "contracts" / "phase23-go-ownership-closure-audit.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 
 
@@ -139,7 +140,7 @@ def test_23_10_3_keeps_forbidden_scope_and_closes_phase23_with_retained_python()
 
 def test_docs_record_23_10_2_23_10_3_completion_and_phase23_closure():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert "23.10.2** Python removal decision" in todo

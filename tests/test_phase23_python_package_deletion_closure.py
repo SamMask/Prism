@@ -7,6 +7,7 @@ CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-python-package-deletion-c
 D_CONTRACT_PATH = ROOT / "docs" / "contracts" / "phase23-go-live-cutover-rollback-proof.json"
 TODO_PATH = ROOT / "docs" / "development-history" / "todo-archive-pre-go-primary-runtime-migration-20260606.md"
 ARCHITECTURE_PATH = ROOT / "docs" / "ARCHITECTURE.md"
+ARCHITECTURE_HISTORY_PATH = ROOT / "docs" / "development-history" / "architecture-go-migration-history-20261006.md"
 GO_REPORT_PATH = ROOT / "docs" / "development-history" / "Prism_Go_模組逐步重構計劃報告.md"
 REQ_PATH = ROOT / "requirements.txt"
 REQ_PI_PATH = ROOT / "requirements-pi.txt"
@@ -74,7 +75,7 @@ def test_e_blocks_package_deletion_and_runtime_mutation_scope():
 
 def test_docs_record_e_closure_without_e_next_or_false_python_removal_claim():
     todo = TODO_PATH.read_text(encoding="utf-8")
-    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8")
+    architecture = ARCHITECTURE_PATH.read_text(encoding="utf-8") + ARCHITECTURE_HISTORY_PATH.read_text(encoding="utf-8")
     go_report = GO_REPORT_PATH.read_text(encoding="utf-8")
 
     assert "A-E 已經跑完，但沒有達成「可以刪 Python」" in todo
