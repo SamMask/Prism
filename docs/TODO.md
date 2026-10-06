@@ -356,6 +356,24 @@
     - 第二個桌面實例在單一實例檢查之前也可能跑一次檢查（24 小時內只會略過）。
     - 390px 與 zh-TW 的畫面沒有實測。
     - Pi timer 仍傳 `keep_count=3`，已記入「Pi 自動備份改每天」的延後項目。
+- `PRISM-OPT-58`（本機驗證；未發版、未部署 Pi）：
+  - 調查結果（唯讀）：
+    - JSON 匯出對已拆分筆記只帶 500 字預覽加橫幅，**沒有全文**；任何附件都只有 metadata，沒有檔案內容。
+    - 匯入是全有全無：只要有一列 `docs/notes/...`，`skip` 與 `duplicate` 兩種 mode 都回 400 `unsafe attachment path`，一篇都沒匯入。
+  - 修正（`go-shadow/import.go`）：
+    - 路徑經 `path.Clean` 後以 `docs/notes/` 開頭、不是絕對路徑、也不含 `:` 的附件列，一律略過並計數，不寫檔、不建立附件列。只看路徑，不看 auto 旗標，這是主代理的決定。
+    - 回應新增 additive 欄位 `skipped_attachments`；其他路徑照舊經過 `resolveAttachmentMutationPath`。
+  - 驗證：
+    - Go `import_test.go` 3 項測試：兩個行為測試在 HEAD 上回 400；防護測試在 HEAD 與新版都通過（7 種不安全路徑 × auto 旗標，rollback）。
+    - prism-verifier 的 runtime 端到端驗證：
+      - 匯入 fresh target，兩種 mode 都回 200，`skipped_attachments=1`。
+      - 拆分筆記的內容等於匯出的預覽；匯回來源端時 auto 列仍只有 1 列，全文完好。
+      - 17 種惡意路徑（反斜線、UNC、磁碟代號、`../` 等）都被拒絕，或安全地略過，沒有任何寫入。
+    - 指令：`go test ./...` ok、pytest 422 passed、`git diff --check` 通過。
+  - 已知：
+    - 匯入後的拆分筆記只有預覽，橫幅仍寫「點擊附件可查看」，但其實沒有附件。前端提示見 PRISM-OPT-65，`API_REFERENCE.md` 已說明。
+    - 用 skip mode 匯回原 DB 時，一般附件列會重複新增，屬於 PRISM-OPT-64。
+    - `scratchpad/opt58-plan` 的刪除被權限擋下，裡面沒有正式資料，保留未刪。
 
 ### P1 — 下一輪
 
@@ -372,7 +390,7 @@
 | PRISM-OPT-28 | 桌面版每日自動還原點 | Done | — | OPS-02 |
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Done | 第二階段已決定不收緊 | OPS-04 |
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
-| PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
+| PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-64 | JSON 匯入不得刪除或覆寫目標端既有的檔案（rollback 會刪掉原有檔案） | Todo | — | OPT-58 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |

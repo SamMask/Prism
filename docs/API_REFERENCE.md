@@ -1040,6 +1040,11 @@ manifest format 是 `prism.full_data_snapshot.v1`，每個 payload file 都有 `
 - `skip`
 - `duplicate`
 
+回應的 `data` 有 `imported`、`skipped`、`duplicates`，以及 additive 欄位 `skipped_attachments`（PRISM-OPT-58）：
+- 路徑在 `docs/notes/`（已拆分長文）的附件列會被略過並計入這個數字，不寫檔也不建立附件列。原因是 JSON 匯出只有這類筆記的 500 字預覽，沒有全文；而路徑指的是匯出端的 `note_<舊 id>.md`，在目標端可能是另一則筆記的檔案。
+- 這類筆記在目標端只會有預覽加拆分橫幅。要完整保留已拆分長文，請用 full snapshot，或先執行「合併長文回筆記」（PRISM-OPT-20）再匯出 JSON。
+- 其他附件路徑仍須通過路徑安全檢查，否則整批回 `400`。
+
 ### POST `/api/notes/export/batch`
 
 把多筆 note 匯出成 ZIP（markdown + assets）。

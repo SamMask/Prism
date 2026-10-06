@@ -188,7 +188,8 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		importedCount++
 	}
 
-	if err := s.restoreImportedAttachments(tx, idMap, importData, &createdFiles); err != nil {
+	skippedAttachments, err := s.restoreImportedAttachments(tx, idMap, importData, &createdFiles)
+	if err != nil {
 		cleanupCreated()
 		return http.StatusBadRequest, response{"status": "error", "message": err.Error()}
 	}
@@ -204,9 +205,10 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		duplicates = duplicates[:10]
 	}
 	return http.StatusOK, response{"status": "success", "data": response{
-		"imported":   importedCount,
-		"skipped":    skippedCount,
-		"duplicates": duplicates,
+		"imported":            importedCount,
+		"skipped":             skippedCount,
+		"skipped_attachments": skippedAttachments,
+		"duplicates":          duplicates,
 	}}
 }
 
@@ -300,7 +302,8 @@ func upsertImportedSystemCategoryTx(tx *sql.Tx, name, icon, systemKey string, na
 	return err
 }
 
-func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, importData map[string]any, createdFiles *[]string) error {
+func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, importData map[string]any, createdFiles *[]string) (int, error) {
+	skipped := 0
 	for _, item := range objectArray(importData["attachments"]) {
 		oldNoteID, ok := intValue(item["note_id"])
 		if !ok {
@@ -314,9 +317,13 @@ func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, impor
 		if filePath == "" {
 			continue
 		}
+		if isSeparatedNoteAttachmentPath(filePath) {
+			skipped++
+			continue
+		}
 		resolved, ok := resolveAttachmentMutationPath(s.runtime.dataDir, filePath)
 		if !ok {
-			return fmt.Errorf("unsafe attachment path: %s", filePath)
+			return 0, fmt.Errorf("unsafe attachment path: %s", filePath)
 		}
 		contentB64 := stringValue(item["content_b64"])
 		if contentB64 == "" {
@@ -326,16 +333,16 @@ func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, impor
 		if contentB64 != "" {
 			content, err := base64.StdEncoding.DecodeString(contentB64)
 			if err != nil {
-				return fmt.Errorf("invalid attachment content_b64 for %s", filePath)
+				return 0, fmt.Errorf("invalid attachment content_b64 for %s", filePath)
 			}
 			if int64(len(content)) > maxAttachmentFileBytes {
-				return fmt.Errorf("attachment too large: %s", filePath)
+				return 0, fmt.Errorf("attachment too large: %s", filePath)
 			}
 			if err := os.MkdirAll(filepath.Dir(resolved), 0755); err != nil {
-				return err
+				return 0, err
 			}
 			if err := os.WriteFile(resolved, content, 0644); err != nil {
-				return err
+				return 0, err
 			}
 			*createdFiles = append(*createdFiles, resolved)
 			sizeBytes = len(content)
@@ -350,10 +357,20 @@ func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, impor
 			INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted, created_at)
 			VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 			newNoteID, filePath, fileType, stringValue(item["title"]), sizeBytes, boolIntValue(item["is_auto_extracted"])); err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return skipped, nil
+}
+
+// isSeparatedNoteAttachmentPath reports a separated-note row (docs/notes/...). The JSON export
+// carries only the note preview, and the path names the exporting data dir's note_<old id>.md,
+// which may be another note's file here, so the row is skipped instead of restored.
+func isSeparatedNoteAttachmentPath(filePath string) bool {
+	if filepath.IsAbs(filePath) || strings.Contains(filePath, ":") {
+		return false
+	}
+	return strings.HasPrefix(path.Clean(filePath), "docs/notes/")
 }
 
 func (s *server) restoreImportedUploads(importData map[string]any, createdFiles *[]string) error {
