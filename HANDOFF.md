@@ -30,6 +30,7 @@
     - PRISM-OPT-17：Header 的 New 與搜尋在任何 route 都導向 Library 並生效。
     - PRISM-OPT-18：中文／日文子字串搜尋；palette 對 CJK 輸入 2 字即查詢。
     - PRISM-OPT-19：不再拆分新的長文；已拆分筆記存檔時先收回 DB。P0 全部完成。
+    - PRISM-OPT-60：修正 OPT-19 的回歸，restore 前保存分歧內容，共用檔判斷改用 `os.SameFile`。
 
 ## Next Entry
 

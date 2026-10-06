@@ -386,9 +386,15 @@ func (s *server) separateContent(w http.ResponseWriter, r *http.Request, noteID 
 }
 
 func (s *server) restoreSeparatedContent(w http.ResponseWriter, noteID int) {
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
 	var attachmentID int
 	var filePath sql.NullString
-	if err := s.db.QueryRow("SELECT id, file_path FROM Note_Attachments WHERE note_id = ? AND is_auto_extracted = 1", noteID).Scan(&attachmentID, &filePath); err != nil {
+	if err := tx.QueryRow("SELECT id, file_path FROM Note_Attachments WHERE note_id = ? AND is_auto_extracted = 1", noteID).Scan(&attachmentID, &filePath); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "No auto-extracted attachment found for this note")
 			return
@@ -406,33 +412,46 @@ func (s *server) restoreSeparatedContent(w http.ResponseWriter, noteID int) {
 		writeError(w, http.StatusNotFound, "Attachment file not found on disk")
 		return
 	}
-
-	tx, err := s.db.Begin()
+	// The row must still be this note's auto attachment; a concurrent restore may have taken it.
+	deleted, err := tx.Exec("DELETE FROM Note_Attachments WHERE id = ? AND note_id = ? AND is_auto_extracted = 1", attachmentID, noteID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	defer tx.Rollback()
-	if _, err := tx.Exec("UPDATE Notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", normalizeTextContent(string(content)), noteID); err != nil {
+	if n, err := deleted.RowsAffected(); err != nil || n != 1 {
+		writeError(w, http.StatusNotFound, "No auto-extracted attachment found for this note")
+		return
+	}
+	restored := normalizeTextContent(string(content))
+	// Content that is neither the file nor its auto preview was saved by the user after the
+	// split (pre-OPT-19 editor); keep it in history before the file text replaces it.
+	var current string
+	err = tx.QueryRow("SELECT COALESCE(content, '') FROM Notes WHERE id = ?", noteID).Scan(&current)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if _, err := tx.Exec("DELETE FROM Note_Attachments WHERE id = ?", attachmentID); err != nil {
+	if err == nil && current != restored && !isAutoSeparatedPreview(current, restored) {
+		if _, err := tx.Exec("INSERT INTO Note_History (note_id, content, diff_summary) VALUES (?, ?, ?)", noteID, current, "還原前自動備份"); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+	if _, err := tx.Exec("UPDATE Notes SET content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?", restored, noteID); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	// Keep the file while another note's attachment still points at it (legacy/imported rows).
-	referenced, err := noteAttachmentReferenceCounts(tx, []int{noteID})
+	// Keep the file while any other attachment row still points at it (legacy/imported rows).
+	shared, err := noteFileSharedByOtherRow(tx, s.runtime.dataDir, attachmentID, nullableString(filePath), resolved)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	cleaned, _ := noteAttachmentCleanupRelativePath(nullableString(filePath))
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	if referenced[cleaned] == 0 {
+	if !shared {
 		_ = os.Remove(resolved)
 	}
 	writeJSON(w, http.StatusOK, response{"status": "success", "message": "內容已成功還原至筆記"})
@@ -450,7 +469,56 @@ func separatedPreview(content string, previewLen int) string {
 	if len(runes) <= previewLen {
 		return content
 	}
-	return string(runes[:previewLen]) + "\n\n---\n📎 **[完整內容已分離為附件]**\n\n> 此筆記內容過長，已自動分離為附件。點擊附件可查看完整內容。"
+	return string(runes[:previewLen]) + separatedPreviewBanner
+}
+
+const separatedPreviewBanner = "\n\n---\n📎 **[完整內容已分離為附件]**\n\n> 此筆記內容過長，已自動分離為附件。點擊附件可查看完整內容。"
+
+// isAutoSeparatedPreview reports whether content is the preview separateContent left in
+// Notes.content for fileContent: a non-empty strict prefix of the file followed by the banner
+// (separatedPreview only appends the banner when the full text is longer than the preview).
+func isAutoSeparatedPreview(content, fileContent string) bool {
+	head, ok := strings.CutSuffix(normalizeTextContent(content), separatedPreviewBanner)
+	file := normalizeTextContent(fileContent)
+	return ok && head != "" && len(head) < len(file) && strings.HasPrefix(file, head)
+}
+
+// noteFileSharedByOtherRow reports whether an attachment row other than attachmentID points
+// at the same file, by normalized path or by physical identity (case-insensitive
+// filesystems). A case-variant row whose identity cannot be checked counts as shared.
+func noteFileSharedByOtherRow(tx *sql.Tx, dataDir string, attachmentID int, relativePath, resolved string) (bool, error) {
+	cleaned, _ := noteAttachmentCleanupRelativePath(relativePath)
+	target, targetErr := os.Stat(resolved)
+	rows, err := tx.Query("SELECT file_path FROM Note_Attachments WHERE id <> ?", attachmentID)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var filePath sql.NullString
+		if err := rows.Scan(&filePath); err != nil {
+			return false, err
+		}
+		other, ok := noteAttachmentCleanupRelativePath(nullableString(filePath))
+		if !ok {
+			continue
+		}
+		if other == cleaned {
+			return true, nil
+		}
+		// Normalized paths only differ in case when they can still name the same file.
+		if !strings.EqualFold(other, cleaned) {
+			continue
+		}
+		otherPath, ok := resolveNoteAttachmentCleanupPath(dataDir, other)
+		if !ok || targetErr != nil {
+			return true, nil
+		}
+		if info, err := os.Stat(otherPath); err != nil || os.SameFile(target, info) {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
 }
 
 func resolveAutoExtractedNotePath(dataDir, relativePath string) (string, bool) {

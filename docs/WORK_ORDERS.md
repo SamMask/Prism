@@ -63,7 +63,7 @@ git diff --check
 | PRISM-OPT-17 | F | S | prism-builder | prism-verifier |
 | PRISM-OPT-18 | B | L | prism-engineer | prism-verifier |
 | PRISM-OPT-19 | X | L | prism-critical（兩段式） | prism-verifier |
-| PRISM-OPT-20 | X | XL | prism-critical（兩段式，可覆寫為 fable） | prism-verifier |
+| PRISM-OPT-20 | X | XL | prism-critical（兩段式，可覆寫為 fable） | prism-verifier；計畫與改動另由 Codex astra 復審 |
 | PRISM-OPT-21 | F | L | prism-engineer | prism-verifier |
 | PRISM-OPT-22 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-23 | D | S | prism-docs | 主代理 |
@@ -99,6 +99,7 @@ git diff --check
 | PRISM-OPT-53 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-58 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-59 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-60 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-54 | F | S | prism-builder | 主代理 |
 | PRISM-OPT-55 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-56 | B | M | prism-builder | prism-verifier |
@@ -207,6 +208,32 @@ git diff --check
   - 修改已拆分的長文後，版本歷史中有一筆完整的舊版。
   - 全文載入失敗時無法存檔。
 - **驗證**：`cd frontend && npm run build`；`cd go-shadow && go test ./...`；隔離 runtime 的 browser 流程；`pytest tests/ -v`。
+
+---
+
+### PRISM-OPT-60 — 修正 OPT-19 回歸：restore 前保存分歧內容，共用檔判斷改用 `os.SameFile`
+
+- **Finding**：PRISM-OPT-20 規劃時的 probe（2026-10-06）｜ **優先級**：P0 ｜ **依賴**：PRISM-OPT-19
+- **目標**：透過編輯器存檔觸發 `restore` 時，不會在沒有任何紀錄的情況下蓋掉使用者在 DB 中的內容，也不會刪掉其他筆記仍在使用的檔案。
+- **原因**：
+  - 分歧筆記：使用者在 OPT-19 之前把已拆分筆記改短並存檔，DB 是短版，`docs/notes` 檔仍是舊全文。
+    - OPT-19 之後開啟這則筆記，編輯器會載入舊全文；存檔時先 `restore`，用舊檔覆蓋 DB，而且不寫歷史。
+    - 結果短版消失，沒有任何紀錄。OPT-19 之前的流程至少會把短版留在歷史中，所以這是回歸。
+  - OPT-19 的共用檔防護比對的是區分大小寫的字串。Windows 上大小寫不同的路徑其實是同一個檔，restore 仍會刪掉另一則筆記的檔案。兩種情況規劃時都已用 probe 重現。
+- **修改範圍**（`go-shadow/notes_actions.go` 的 `restoreSeparatedContent`，以及必要的小 helper）：
+  - 交易內讀出目前的 `Notes.content`。若它既不等於正規化後的檔案內容，也不是這個檔案自動產生的預覽，就在覆蓋前寫入 `Note_History`。
+    - 自動預覽的定義：以拆分橫幅（`notes_actions.go` 的預覽產生函式）結尾，橫幅前的預覽不是空的，而且是檔案內容的前綴。
+    - 寫入方式比照 `notes_actions.go` 既有的「還原前自動備份」。
+  - 共用檔判斷改用 `os.SameFile`，比對其他筆記附件列解析後的實體檔案；字串相同的情況仍視為共用。
+  - helper 要能讓 PRISM-OPT-20 的分類邏輯重用。
+- **不要修改**：API 形狀、狀態碼、回應訊息；一般已拆分筆記的 restore 不寫歷史（OPT-19 的契約測試）；前端；schema。
+- **驗收**（Go test，經 HTTP handler）：
+  - 分歧筆記 restore 後，`Note_History` 有一筆內容等於原本 DB 的短版；在 HEAD 上失敗。
+  - 一般已拆分筆記 restore 後，歷史仍為 0 筆。
+  - Windows 上另一則筆記以大小寫不同的路徑引用同一個檔時，restore 後檔案仍然存在；在 HEAD 上失敗。非 Windows 環境可以 skip。
+  - OPT-19 的既有測試全部通過。
+- **驗證**：`cd go-shadow && go test ./...`；`pytest tests/ -v`。
+- **已知、交給 PRISM-OPT-20**：分歧筆記在編輯器中仍會先顯示舊全文。本單保證存檔時不遺失任何版本；一次性處理見 PRISM-OPT-20 的 D2（以 DB 為準，附件全文寫入歷史，檔案移入隔離區）。
 
 ---
 

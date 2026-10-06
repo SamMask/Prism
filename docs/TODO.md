@@ -45,6 +45,7 @@
 | PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Done | — | UX-01 |
 | PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Done | — | FEAT-01 |
 | PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Done | — | FEAT-02 |
+| PRISM-OPT-60 | 修正 OPT-19 回歸：restore 前先保存分歧內容；共用檔判斷改用 `os.SameFile` | Done | 19 | OPT-20 規劃追蹤 |
 
 完成證據（2026-10-06）：
 
@@ -131,12 +132,32 @@
     - 共用檔防護有大小寫之分。
     - 若某個環境開了 notes-write 卻沒開 attachment-write，已拆分筆記不會被保護；所有正式設定都兩者同開。
   - 驗證：`npm run build` 通過、`go vet` 通過、`go test ./...` ok、pytest 409 passed、`git diff --check` 通過。
+- `PRISM-OPT-60`（本機驗證；未發版、未部署 Pi）：修正 PRISM-OPT-19 的回歸，在 PRISM-OPT-20 規劃時被 probe 發現。
+  - 問題：
+    - 在 OPT-19 之前被使用者改短的已拆分筆記，透過編輯器存檔時，`restore` 會用舊檔蓋掉 DB 中的短版，而且不留歷史。
+    - 共用檔判斷有大小寫之分，Windows 上大小寫不同的路徑會誤刪另一則筆記的檔案。
+  - 修正（`restoreSeparatedContent`，API 形狀、狀態碼與訊息都不變）：
+    - 附件列查詢、讀檔、刪列、寫歷史、更新內容都在同一個交易內。刪列加上 `note_id` 與 `is_auto_extracted` 條件，必須剛好刪到 1 列，否則 rollback 並回既有的 404，防止並發的 restore 寫入過期內容。
+    - DB 內容既不是全文、也不是自動預覽時，先寫入 `Note_History`（`還原前自動備份`）。
+      - 自動預覽的定義：拆分橫幅前的內容是檔案的非空**嚴格**前綴，判斷寫成 `isAutoSeparatedPreview`，供 OPT-20 重用。
+    - 共用檔判斷改成「排除這一列附件、檢查其餘所有列」，含同一筆記的一般附件列（`noteFileSharedByOtherRow`）：
+      - 路徑字串相同就視為共用。
+      - 只差大小寫時用 `os.SameFile` 比對；無法確認時保守地視為共用。
+      - 只對大小寫變體做檔案系統呼叫，避免持有寫鎖時逐列 stat。verifier 量測舊寫法每列約 1.3–4.4 ms。
+  - 測試（Go，經 HTTP handler 或直接呼叫 helper）：
+    - 在 HEAD 或前一版上失敗的有：分歧內容寫入歷史、大小寫共用檔保留、同一筆記一般附件列保住檔案、刪列 0 筆時中止且沒有任何副作用（用 `RAISE(IGNORE)` trigger 模擬）、無法確認的大小寫變體視為共用、嚴格前綴的邊界案例。
+    - CRLF 預覽不寫歷史。OPT-19 的三個契約測試沒有修改，仍然通過。
+  - 獨立驗收（prism-verifier）：
+    - 隔離 runtime 的 HTTP 實測：分歧筆記 restore 後，歷史留下短版；一般拆分筆記的歷史為 0 筆；大小寫變體的檔案會保留到最後一個引用被收回。
+    - 另以 probe 確認：被判為預覽時，內容一定能從全文重建，不會丟失獨有的使用者文字。
+  - 驗收後依 Codex astra 對 OPT-20 計畫的審查意見，再補上四項：嚴格前綴、只排除單一附件列、無法確認視為共用、交易內再驗證。四項都有 fail-before 證據，由主代理讀回並確認。
+  - 驗證：`go vet` 通過、`go test ./...` ok、pytest 409 passed、`git diff --check` 通過。
 
 ### P1 — 下一輪
 
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
-| PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Todo | 19 | FEAT-02、PERF-01 |
+| PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Todo | 19、60 | FEAT-02、PERF-01 |
 | PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Todo | — | UX-02 |
 | PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Todo | 建議在 21 之後 | UX-03 |
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |

@@ -2843,6 +2843,184 @@ func TestRestoreSeparatedContentKeepsFileSharedWithAnotherNote(t *testing.T) {
 	}
 }
 
+// PRISM-OPT-60: a split note shortened and saved before OPT-19 holds user text in Notes.content
+// while the file keeps the old full text; restore must keep the user text in history.
+func TestRestoreSeparatedContentKeepsDivergentUserTextInHistory(t *testing.T) {
+	srv, db, longContent, _ := separatedNoteFixture(t)
+	shortContent := "使用者改短後存檔的內容 divergentopt60"
+	if _, err := db.Exec("UPDATE Notes SET content = ? WHERE id = 1", shortContent); err != nil {
+		t.Fatal(err)
+	}
+	assertTableCount(t, db, "Note_History", 1, 0)
+
+	if rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected restore 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	assertTableCount(t, db, "Note_History", 1, 1)
+	var historyContent string
+	if err := db.QueryRow("SELECT content FROM Note_History WHERE note_id = 1").Scan(&historyContent); err != nil {
+		t.Fatal(err)
+	}
+	if historyContent != shortContent {
+		t.Fatalf("history should hold the divergent user text, got %d runes", len([]rune(historyContent)))
+	}
+	if noteContent(t, db, 1) != longContent {
+		t.Fatal("restore should move the file text into Notes.content")
+	}
+}
+
+func TestRestoreSeparatedContentCRLFFilePreviewWritesNoHistory(t *testing.T) {
+	srv, db, _, notePath := separatedNoteFixture(t)
+	crlfContent := strings.Repeat("第一行筆記內容 crlfopt60\r\n", 300)
+	if err := os.WriteFile(notePath, []byte(crlfContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("UPDATE Notes SET content = ? WHERE id = 1", separatedPreview(crlfContent, separationPreviewLength)); err != nil {
+		t.Fatal(err)
+	}
+
+	if rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected restore 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	assertTableCount(t, db, "Note_History", 1, 0)
+	if noteContent(t, db, 1) != normalizeTextContent(crlfContent) {
+		t.Fatal("restore should store the LF-normalized file text")
+	}
+}
+
+func TestIsAutoSeparatedPreview(t *testing.T) {
+	file := strings.Repeat("提示詞工程筆記 preview ", 100)
+	preview := separatedPreview(file, separationPreviewLength)
+	cases := []struct {
+		name    string
+		content string
+		want    bool
+	}{
+		{"auto preview", preview, true},
+		{"crlf preview of lf file", strings.ReplaceAll(preview, "\n", "\r\n"), true},
+		{"edited preview text", "改過的開頭" + preview, false},
+		{"banner only", separatedPreviewBanner, false},
+		{"user text", "使用者改短的內容", false},
+		{"full file", file, false},
+		{"full file plus banner", file + separatedPreviewBanner, false},
+		{"crlf full file plus banner", strings.ReplaceAll(file+separatedPreviewBanner, "\n", "\r\n"), false},
+		{"one rune short of file plus banner", string([]rune(file)[:len([]rune(file))-1]) + separatedPreviewBanner, true},
+	}
+	for _, tc := range cases {
+		if got := isAutoSeparatedPreview(tc.content, file); got != tc.want {
+			t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
+		}
+	}
+}
+
+// PRISM-OPT-60: a case-variant row of another note is the same physical file on a
+// case-insensitive filesystem; where its identity cannot be checked the file is kept too.
+func TestRestoreSeparatedContentKeepsCaseVariantSharedFile(t *testing.T) {
+	srv, db, longContent, notePath := separatedNoteFixture(t)
+	_, caseVariantErr := os.Stat(filepath.Join(filepath.Dir(notePath), "NOTE_1.md"))
+	result, err := db.Exec("INSERT INTO Notes (title, content, category_id) VALUES ('大小寫副本', 'preview', 1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	copyID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+		VALUES (?, 'docs/notes/NOTE_1.md', 'md', 'copy', 1, 1)`, copyID); err != nil {
+		t.Fatal(err)
+	}
+
+	if rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected restore 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if _, err := os.Stat(notePath); err != nil {
+		t.Fatalf("file still referenced by a case-variant row must be kept, got %v", err)
+	}
+	if caseVariantErr != nil {
+		return // case-sensitive filesystem: NOTE_1.md is a different (missing) file
+	}
+	if rec := postNoteAction(t, srv, http.MethodPost, fmt.Sprintf("/api/notes/%d/restore", copyID), `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("case-variant note should still restore, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, int(copyID)) != longContent {
+		t.Fatal("case-variant note lost its full text")
+	}
+}
+
+func TestRestoreSeparatedContentKeepsFileReferencedBySameNoteRow(t *testing.T) {
+	srv, db, longContent, notePath := separatedNoteFixture(t)
+	if _, err := db.Exec(`INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+		VALUES (1, 'docs/notes/note_1.md', 'md', '手動附件', 1, 0)`); err != nil {
+		t.Fatal(err)
+	}
+
+	if rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected restore 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, 1) != longContent {
+		t.Fatal("restore should move the full text back into Notes.content")
+	}
+	assertTableCount(t, db, "Note_Attachments", 1, 1)
+	if _, err := os.Stat(notePath); err != nil {
+		t.Fatalf("file still referenced by the note's normal attachment must be kept, got %v", err)
+	}
+}
+
+// A restore whose DELETE of the auto row affects no row (row taken by a concurrent restore)
+// must abort: no content update, no history, no file removal. A RAISE(IGNORE) trigger makes
+// the DELETE a deterministic no-op without a production test hook.
+func TestRestoreSeparatedContentAbortsWhenAutoRowDeleteAffectsNothing(t *testing.T) {
+	srv, db, _, notePath := separatedNoteFixture(t)
+	preview := noteContent(t, db, 1)
+	if _, err := db.Exec(`CREATE TRIGGER opt60_ignore_auto_delete BEFORE DELETE ON Note_Attachments
+		BEGIN SELECT RAISE(IGNORE); END`); err != nil {
+		t.Fatal(err)
+	}
+
+	rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`)
+	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "No auto-extracted attachment found") {
+		t.Fatalf("expected 404 no-op, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, 1) != preview {
+		t.Fatal("aborted restore must not touch Notes.content")
+	}
+	assertTableCount(t, db, "Note_History", 1, 0)
+	assertTableCount(t, db, "Note_Attachments", 1, 1)
+	if _, err := os.Stat(notePath); err != nil {
+		t.Fatalf("aborted restore must keep the file, got %v", err)
+	}
+}
+
+func TestNoteFileSharedByOtherRowKeepsUncheckableCaseVariant(t *testing.T) {
+	srv, db, _, notePath := separatedNoteFixture(t)
+	dataDir := srv.runtime.dataDir
+	if _, err := db.Exec(`INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+		VALUES (2, 'docs/notes/NOTE_9.md', 'md', '大小寫', 1, 1)`); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback()
+	missing := filepath.Join(filepath.Dir(notePath), "note_9.md")
+	shared, err := noteFileSharedByOtherRow(tx, dataDir, 0, "docs/notes/note_9.md", missing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !shared {
+		t.Fatal("a case-variant row that cannot be stat'ed must count as shared")
+	}
+	unrelated, err := noteFileSharedByOtherRow(tx, dataDir, 0, "docs/notes/note_8.md", missing)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unrelated {
+		t.Fatal("rows that are not case variants must not count as shared")
+	}
+}
+
 func TestCheckUpdateReturnsControlledGoPrimaryStatus(t *testing.T) {
 	srv := &server{runtime: runtimeConfig{enableServerSystem: true}}
 	request := httptest.NewRequest(http.MethodGet, "/api/system/check-update", nil)
