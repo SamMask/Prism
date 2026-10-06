@@ -39,6 +39,7 @@
 2. P1 從 PRISM-OPT-20（依賴 19）與 21 開始。以下兩項需要使用者先決策：
    - PRISM-OPT-28：桌面版自動還原點的預設值與保留份數。
    - PRISM-OPT-29 的第二階段：是否收緊 LAN 管理 API。
+   - P2 新增 PRISM-OPT-53～57：OPT-16～18 驗收時發現的已知問題，使用者要求之後處理。另外 OPT-26、41、45 的規格已補上相關追蹤項。
 3. P3／Future 工單維持 `Blocked`；只有啟動條件成立、且使用者明確 promote，才能施工。
 4. 不要自動做 release、Pi deploy、schema 升版、AI、semantic search、內建 auth。
 

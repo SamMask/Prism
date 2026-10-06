@@ -96,6 +96,11 @@ git diff --check
 | PRISM-OPT-50 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-51 | B | L | prism-engineer | prism-verifier |
 | PRISM-OPT-52 | D | M | 主代理（已完成） | 主代理 |
+| PRISM-OPT-53 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-54 | F | S | prism-builder | 主代理 |
+| PRISM-OPT-55 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-56 | B | M | prism-builder | prism-verifier |
+| PRISM-OPT-57 | V | S | 主代理 | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -340,6 +345,11 @@ git diff --check
   - b. 把 3 條 e2e（非 Home 的 New、Ctrl+S、中文搜尋）放進 release gate，並把 `pytest-playwright` 列入相依。
   - c. `pytest.ini` 加上 marker：`slow`（4 個打包／桌面 smoke）、`historical`（只讀文件的 phase19–23 模組）。`.loop/verify-gate.ps1` 預設跑 fast（`-m "not slow and not historical"`），`-Release` 跑全部；CI 跑 release。
   - d. `test_desktop_shell_phase1_3.py:83-90` 重複的 `go test ./...` 改標為 slow，或移除。
+  - e. PRISM-OPT-16／17／18 留下的 source-lock 測試要補上對應的執行型測試，可以併入 b 的 e2e：
+    - 附件 popup 不會被注入。
+    - 非 Home 頁面的 New 與搜尋。
+    - palette 的 CJK 門檻。
+    - 保留 source-lock 作為快速防線。Header 測試要放寬，不鎖定等價寫法（例如 `!isHomeRoute`）。
 - **不要修改**：不刪除任何測試；不降低 migration、release、package 的 safety 覆蓋；不改 runtime。
 - **驗收**：
   - fast gate 的冷建置與熱快取時間都量測並記錄。
@@ -569,6 +579,72 @@ git diff --check
 - **驗收**（Go test）：匯出 → 匯入到 fresh DB → 欄位一致；舊版 JSON 仍可匯入。
 - **驗證**：`cd go-shadow && go test ./...`；`pytest tests/ -v`。
 
+### PRISM-OPT-53 — Mobile 在非 Library 頁面也有搜尋入口
+
+- **Finding**：PRISM-OPT-17 驗收時發現（2026-10-06）｜ **優先級**：P2
+- **目標**：手機寬度（md 以下）在 Settings、Prompt Builder 等頁面也能開始搜尋。
+- **原因**：
+  - Header 搜尋框是 `hidden md:block`，Command Palette 按鈕是 `lg:flex`。
+  - 手機只能在 Library 頁內的 `mobile-search-form` 搜尋；在其他頁面完全沒有搜尋入口。
+- **修改範圍**：`frontend/src/components/Header.tsx`。在 md 以下、非首頁時顯示一個搜尋圖示按鈕：導到 `/`，並把 focus 移到 `mobile-search-input`。aria-label 優先重用既有的 `common.search` key。
+- **不要修改**：桌面版 Header 版面、HomePage 的 `mobile-search-form`、appStore、API。
+- **行為規格**：390px 在 `/settings` 點搜尋圖示 → 回到 Library，搜尋框取得 focus，輸入後送出可看到結果。
+- **驗收**：390px 的 browser smoke，在 `/settings`、`/prompt-builder` 都要驗證；桌面版沒有變化；console 沒有錯誤。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；隔離 runtime 的 browser smoke（desktop 與 390px）。
+
+### PRISM-OPT-54 — 附件刪除按鈕在觸控裝置上的點擊範圍
+
+- **Finding**：PRISM-OPT-16 驗收時發現（2026-10-06）｜ **優先級**：P2
+- **目標**：觸控裝置上，附件刪除按鈕的點擊範圍至少 32×32px（建議 44×44px）。
+- **原因**：目前刪除按鈕約 20×20px（12px 圖示加 `p-1`），在 390px 不易點中，也容易誤點旁邊的開啟按鈕。
+- **修改範圍**：`frontend/src/components/editor/AttachmentPanel.tsx` 的刪除按鈕。只在 `[@media(hover:none)]` 或小螢幕放大 padding 或最小尺寸，桌面外觀不變。
+- **不要修改**：PRISM-OPT-16 的純文字輸出與按鈕語意；上傳與刪除 API。
+- **驗收**：390px 量測刪除按鈕尺寸 ≥ 32×32px；附件列沒有橫向溢出；桌面截圖與修改前相同。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；browser 驗證。
+
+### PRISM-OPT-55 — 從非 Library 頁面搜尋只送出一次請求
+
+- **Finding**：PRISM-OPT-17 驗收時發現（2026-10-06）｜ **優先級**：P2
+- **目標**：從 Settings 或 Prompt Builder 搜尋時，`/api/notes?q=` 只送出一次。
+- **原因**：
+  - Header 先 `navigate('/')`、再 `setSearchQuery`；`setSearchQuery` 會自己 fetch，HomePage 掛載時又 `fetchNotes(true)` 一次。
+  - 結果正確（store 的 request sequence 會丟掉舊回應），但每次多一個重複請求。在 `/` 上搜尋只送一次。
+- **修改範圍**：`frontend/src/stores/appStore.ts`，以及必要時的 `Header.tsx`、`HomePage.tsx`。最小做法：讓非首頁的搜尋只更新 query 不 fetch，交給 HomePage 掛載時 fetch；不得在 Header 重複 `setSearchQuery` 的內部邏輯。
+- **不要修改**：在 `/` 上搜尋的行為；API；PRISM-OPT-17 的導頁行為。
+- **驗收**：用 XHR 或 network 計數：在 `/` 搜尋送出 1 次，從 `/settings` 搜尋也只送出 1 次，結果正確；其他會觸發 fetch 的入口（分類、標籤、排序、封存）行為不變。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；隔離 runtime 的 browser smoke。
+
+### PRISM-OPT-56 — 搜尋正規化：韓文子字串、全形英數、混合查詢語意
+
+- **Finding**：PRISM-OPT-18 驗收時發現（2026-10-06）｜ **優先級**：P2
+- **目標**：韓文詞在句中也能搜到；全形英數字查詢與半形一致；混合查詢的語意寫進文件。
+- **原因**：
+  - PRISM-OPT-18 只把 Han、Hiragana、Katakana 列為 CJK。韓文（Hangul）在詞中段仍搜不到。
+  - SQLite `LOWER` 只轉 ASCII；查詢「ＡＢＣ」不會命中內容中的「abc」，反之亦然。
+  - 查詢只要含 CJK token，ASCII token 也改用子字串比對（例如「rom 工程」會命中 prompt），而純 ASCII 查詢仍是前綴比對。這個語意目前沒有文件說明。
+- **修改範圍**：
+  - `go-shadow/notes_search.go`：`hasCJKToken` 加入 `unicode.Hangul`；查詢 token 先把全形 ASCII（U+FF01–U+FF5E）折成半形。不新增 dependency。
+  - `frontend/src/components/CommandPalette.tsx`：CJK 門檻的 regex 加入 Hangul。
+  - `docs/API_REFERENCE.md` 的搜尋說明：寫明前綴比對、CJK 子字串比對與混合查詢的語意。
+- **不要修改**：FTS schema 與 tokenizer、migration；純英文查詢產生的 SQL 與參數；已存內容（不改寫資料）。
+- **施工前確認**：
+  - 全形折疊只作用在查詢端，內容中的全形字不會被搜到。若要雙向一致，需要索引端正規化，屬於 schema 變更，另開 decision gate。
+  - 混合查詢的語意預設維持現狀，只補文件。
+- **驗收**（Go test，經 HTTP handler）：韓文句中的詞可命中；「ＰＲＯＭＰＴ」與「prompt」的結果相同；PRISM-OPT-18 的既有案例全部不變；純英文查詢的 SQL 與參數不變。
+- **驗證**：`cd go-shadow && go test ./...`；`cd frontend && npm run build`；`pytest tests/ -v`。
+
+### PRISM-OPT-57 — 附件 popup 跨瀏覽器與 desktop shell 驗證
+
+- **Finding**：PRISM-OPT-16 驗收時發現（2026-10-06）｜ **優先級**：P2
+- **目標**：確認 PRISM-OPT-16 的純文字 popup 在 Chromium 以外的環境也正確。
+- **原因**：PRISM-OPT-16 只在 Chromium（headless 與 browser pane）驗證過；Firefox、Safari（WebKit），以及 Windows desktop shell（WebView2 的預設 popup）沒有實測。
+- **修改範圍**：驗證工作，不改程式。在隔離 runtime 上，用含 `<script>`、`</pre><img onerror>` 與 CJK 的附件，在 Firefox、WebKit（或 Safari）與 `Prism.exe` desktop shell 各開一次 popup。
+- **驗收**：
+  - 每個環境的 popup 都只有一個 `<pre>`，原樣顯示 payload，沒有產生 script 或 img 元素。
+  - 結果記錄在 `docs/TODO.md`。
+  - 任何環境失敗時，另開修正工單。
+- **驗證**：截圖或 DOM 檢查的紀錄；desktop shell 使用隔離的 `PrismData`。
+
 ---
 
 ## Roadmap 2026-10-06 — P3 / Future（Blocked）
@@ -592,6 +668,7 @@ git diff --check
   - 用 `go:embed` 內嵌一份預設的 `prompt_options.json`／`wizard_options.json`，作為最後的唯讀 fallback；寫入仍寫到 data-dir。
   - `scripts/pack.bat` 補帶 `static/config`。
 - **驗收**：空的 data-dir 首次開 Prompt Builder 可以使用；既有的使用者設定不被覆蓋。
+- **觀察**（2026-10-06，PRISM-OPT-17／18 驗收時）：隔離 data-dir 的 runtime smoke 若缺少這兩個檔案，Prompt Builder 會出現 404／405 console error，干擾「console 沒有錯誤」的驗收。目前的 workaround 是把 seed 複製到 exe 旁。這也算 seed 缺失的實例，可以作為 promote 的依據。
 
 ### PRISM-OPT-42 — API 表面衛生
 
@@ -626,6 +703,10 @@ git diff --check
 - **啟動條件**：三者同時成立——筆記超過約 1 萬筆；PRISM-OPT-18 的 LIKE fallback 實測延遲不可接受；3 字以上的查詢占多數。
 - **範圍**：新增 trigram FTS 表（schema 升版，需要 decision gate）；2 字查詢仍走 LIKE。
 - **已知成本**：本機 benchmark（10k 筆 × 1,800 字）建索引 36.7s，DB 膨脹到 329MB。
+- **PRISM-OPT-18 實測**（`BenchmarkNotesSearchCJK1000Notes`，每筆約 1,800 個 CJK 字）：
+  - 1,000 筆約 30–34 ms／查詢；10,000 筆約 1.0–1.14 s／查詢。
+  - handler 的 COUNT 與列表各掃一次全文；單一 LIKE COUNT 約 378 ms。
+  - 改 trigram 之前，可以先評估把 COUNT 與列表合併成只掃一次全文的較小改善。
 
 ### PRISM-OPT-46 — Note_History 保留策略
 
