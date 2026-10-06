@@ -67,7 +67,11 @@ Go primary 仍是單一 executable 與單一 `package main`；2026-07-13 完成�
 已知限制（2026-10-06 審查實測，修正工單見 `docs/TODO.md`）：
 
 - 中文／日文搜尋用 `LIKE` 掃描全文：1,000 筆約 30 ms，10,000 筆（每筆約 1,800 字）約 1 秒。若資料成長到這個量級，改用 FTS5 trigram 索引（PRISM-OPT-45）。韓文（Hangul）與全形英數字沒有特別處理。
-- 超過 5,000 字的筆記儲存後會被拆到 `docs/notes/note_<id>.md`，`Notes.content` 只剩 500 字預覽；FTS、版本歷史、JSON/Markdown 匯出與 DB 複本都只含預覽（PRISM-OPT-19 / PRISM-OPT-20）。
+- 長文拆分：
+  - 自 PRISM-OPT-19 起，前端存檔後不再呼叫 `separate`，新的長文完整留在 `Notes.content`。
+  - 既有的已拆分筆記，在編輯器存檔時會先 `restore` 收回 DB，再 PUT。
+  - 尚未編輯過的已拆分筆記仍在 `docs/notes/note_<id>.md`，`Notes.content` 只有 500 字預覽，FTS、匯出與 DB 複本都只含預覽，要等 PRISM-OPT-20 一次合併。
+  - `separate`／`check_separation`／`restore` 端點為了相容而保留。
 - 文字附件與被拆分長文的內容只靠 request 期間逐檔掃描（200 檔 / 5 MiB / 250 ms），檔案多時常態回傳 `search_diagnostics.partial`。
 
 ## Desktop Shell Spike Boundary

@@ -5,33 +5,47 @@ import { toast } from '../../components/ui/Toast'
 import type { Attachment } from '../../components/editor/AttachmentPanel'
 import { t } from '../../i18n'
 
+// Whether the form holds the note's full text: 'pending' until attachments load, 'none' when
+// nothing was split out, 'loaded'/'failed' for a note whose body lives in an auto-extracted file.
+export type FullContentState = 'pending' | 'none' | 'loaded' | 'failed'
+
 export function useNoteAttachments(
   note: Note | null,
   setContent: (c: string) => void,
-  updateOriginalContent: (c: string) => void
+  updateOriginalContent: (c: string) => void,
+  setFullContentState: (state: FullContentState) => void
 ) {
   const [attachments, setAttachments] = useState<Attachment[]>([])
   const attachmentInputRef = useRef<HTMLInputElement>(null)
 
   const loadAttachments = useCallback(async () => {
     if (!note?.id) return
+    setFullContentState('pending')
     try {
       const data = await api.getNoteAttachments(note.id)
       setAttachments(data)
       const autoExtracted = data.find((a: Attachment) => a.is_auto_extracted)
-      if (autoExtracted) {
-        try {
-          const { content: fullContent } = await api.getAttachmentContent(autoExtracted.id)
-          setContent(fullContent)
-          updateOriginalContent(fullContent)
-        } catch {
-          toast.error(t('editor.attachmentsToast.loadFullFailed'))
-        }
+      if (!autoExtracted) {
+        setFullContentState('none')
+        return
       }
-    } catch {
+      try {
+        const { content: fullContent } = await api.getAttachmentContent(autoExtracted.id)
+        setContent(fullContent)
+        updateOriginalContent(fullContent)
+        setFullContentState('loaded')
+      } catch {
+        setFullContentState('failed')
+        toast.error(t('editor.attachmentsToast.loadFullFailed'))
+      }
+    } catch (error) {
+      // 405: the attachment surface is disabled in this runtime, so a split note's full text can't be
+      // loaded or restored here anyway; don't block every edit. Shipped configs enable it with notes-write.
+      const status = (error as { response?: { status?: number } })?.response?.status
+      setFullContentState(status === 405 ? 'none' : 'failed')
       console.error('Failed to load attachments')
     }
-  }, [note?.id, setContent, updateOriginalContent])
+  }, [note?.id, setContent, updateOriginalContent, setFullContentState])
 
   const handleAttachmentSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -82,6 +96,7 @@ export function useNoteAttachments(
       const { content: attachmentContent } = await api.getAttachmentContent(attachmentId)
       if (isAutoExtracted) {
         setContent(attachmentContent)
+        setFullContentState('loaded')
         toast.success(t('editor.attachmentsToast.loaded'))
       } else {
         const win = window.open('', '_blank')

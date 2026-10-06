@@ -29,17 +29,17 @@
     - PRISM-OPT-16：附件檢視改為純文字輸出，附件項目可以用鍵盤操作。
     - PRISM-OPT-17：Header 的 New 與搜尋在任何 route 都導向 Library 並生效。
     - PRISM-OPT-18：中文／日文子字串搜尋；palette 對 CJK 輸入 2 字即查詢。
+    - PRISM-OPT-19：不再拆分新的長文；已拆分筆記存檔時先收回 DB。P0 全部完成。
 
 ## Next Entry
 
-1. 施工最後一張 P0：PRISM-OPT-19。開工時在 `docs/TODO.md` 把該工單標為 `Doing`。
+1. 施工 PRISM-OPT-20（P1，資料搬移 XL）：
+   - 流程：prism-critical 兩段式施工。依使用者要求，計畫與實際改動都交給 Codex astra（`gpt-6-astra`，`codex exec -s read-only`）獨立復審；Codex sol 只在需要幫手時才用。
+   - 開工時在 `docs/TODO.md` 標 `Doing`。
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。
    - 使用者 2026-10-06 授權：工單審查與測試都通過後，直接 commit、fast-forward 合併回 `main` 並 push，不需再問。這項授權不包含 release、tag 或 Pi deploy。
    - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。
-2. P1 從 PRISM-OPT-20（依賴 19）與 21 開始。以下兩項需要使用者先決策：
-   - PRISM-OPT-28：桌面版自動還原點的預設值與保留份數。
-   - PRISM-OPT-29 的第二階段：是否收緊 LAN 管理 API。
-   - P2 新增 PRISM-OPT-53～57：OPT-16～18 驗收時發現的已知問題，使用者要求之後處理。另外 OPT-26、41、45 的規格已補上相關追蹤項。
+2. 其他 P1：21、58、59 等。PRISM-OPT-28（自動還原點的預設值）與 29 的第二階段（LAN 管理 API）需要使用者先決策。P2 的 53～57 是驗收時發現的已知問題，之後處理。
 3. P3／Future 工單維持 `Blocked`；只有啟動條件成立、且使用者明確 promote，才能施工。
 4. 不要自動做 release、Pi deploy、schema 升版、AI、semantic search、內建 auth。
 

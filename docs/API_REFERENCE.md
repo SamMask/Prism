@@ -639,6 +639,8 @@ Response 每筆欄位：
 
 把自動分離的完整內容還原回 note body。
 
+自 PRISM-OPT-19 起，前端存檔不再呼叫 `separate`；編輯已拆分的筆記時，會先呼叫 `restore` 再 PUT。這三個端點保留以維持 API 相容。若同一個 `docs/notes` 檔仍被其他筆記的附件引用，`restore` 不會刪除該檔。
+
 ---
 
 ## 10. Cleanup API

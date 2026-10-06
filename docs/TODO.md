@@ -44,7 +44,7 @@
 | PRISM-OPT-16 | 附件檢視改為純文字輸出；附件項目可用鍵盤操作 | Done | — | TECH-07 |
 | PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Done | — | UX-01 |
 | PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Done | — | FEAT-01 |
-| PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Doing | — | FEAT-02 |
+| PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Done | — | FEAT-02 |
 
 完成證據（2026-10-06）：
 
@@ -99,6 +99,38 @@
     - 查詢只要含 CJK token，裡面的 ASCII token 也改用子字串比對，例如「rom 工程」會命中 prompt。
     - 韓文（Hangul）與全形英數字的行為和修正前相同。
   - 驗證：`go vet` 通過、`go test ./...` ok、`npm run build` 通過、pytest 406 passed、`git diff --check` 通過。
+- `PRISM-OPT-19`（本機驗證；未發版、未部署 Pi）：
+  - 流程：prism-critical 兩段式施工（先出計畫，主代理確認後才實作），prism-verifier 獨立驗收。
+  - 前端：
+    - `useNoteForm.ts`：
+      - 移除存檔後的 `separateContent`。
+      - 已拆分筆記先 `restore`、再 PUT；restore 回 404 時直接 PUT。
+      - 全文載入中或載入失敗時封鎖存檔（重用既有的 `loadFullFailed` 與 `common.loading`，沒有新增 i18n key）。
+      - 加入 `savingRef` 防止重複送出。
+    - `useNoteAttachments.ts` 提供 `FullContentState`：附件清單 405 視為 `none`，其他失敗視為 `failed`。
+    - 刪除四語中已無人使用的 `editor.form.separationFailed`。
+  - 後端：刻意偏離規格的「不要修改 restore」，只為了安全，API 形狀、狀態碼與回應都不變。
+    - `restoreSeparatedContent` 在其他筆記的附件列仍引用同一個 `docs/notes` 檔時，保留該檔案不刪。
+    - 理由：OPT-19 讓 restore 成為每次存檔都會走的路徑；舊資料若有共用檔，另一則筆記會失去全文（規劃時已用 probe 重現）。
+  - 測試：
+    - Go：`TestRestoreSeparatedContentKeepsFileSharedWithAnotherNote` 在 HEAD 上失敗。另有兩個契約鎖定測試，鎖住 restore 不寫歷史、PUT 會快照全文、缺檔時 restore 回 404 且不改資料。
+    - pytest：三個 source-lock 測試，加上改寫的 T046 測試，在 HEAD 上都失敗。
+  - 隔離 runtime 的 headless Chromium 流程，實作代理與 verifier 各自撰寫腳本：
+    - 新建 6,000 字筆記：沒有 `/separate` 請求，GET 回傳全文，沒有附件。
+    - 已拆分筆記改成 34 字：請求順序是 `restore` → PUT，重開顯示 34 字，附件列與檔案已移除。
+    - 版本歷史只有 1 筆，內容等於完整原文。
+    - 全文載入失敗時，Save 按鈕與 Ctrl+S 都不會送出請求，DB 不變。
+    - restore 成功但 PUT 失敗時，重試只送 PUT。一般筆記不受影響。
+    - 結果：實作代理 26/26（HEAD 9/26）；verifier 20/20，HEAD 重現原 bug。
+  - 回滾演練 6/6：
+    - 用 HEAD 版程式開修正後的資料夾，相容。
+    - 流程前用 full-snapshot 建立的快照可以當還原點。
+  - 已知邊角，已寫入 PRISM-OPT-20 的規格：
+    - 超過 1 MiB 的已拆分筆記無法編輯。
+    - 載入全文之後、存檔之前檔案消失，會留下懸空的 auto 列，之後無法存檔。
+    - 共用檔防護有大小寫之分。
+    - 若某個環境開了 notes-write 卻沒開 attachment-write，已拆分筆記不會被保護；所有正式設定都兩者同開。
+  - 驗證：`npm run build` 通過、`go vet` 通過、`go test ./...` ok、pytest 409 passed、`git diff --check` 通過。
 
 ### P1 — 下一輪
 

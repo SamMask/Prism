@@ -2708,6 +2708,141 @@ func TestLongContentSeparationAndRestoreHandlers(t *testing.T) {
 	}
 }
 
+func separatedNoteFixture(t *testing.T) (*server, *sql.DB, string, string) {
+	t.Helper()
+	dataDir := t.TempDir()
+	db, err := openDB(createSpikeDB(t), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	longContent := strings.Repeat("今天學習提示詞工程的方法，重點是角色設定與輸出格式。", 240) + "\n尾段專用詞 tailtokenopt19"
+	if _, err := db.Exec("UPDATE Notes SET title = 'Long Note', content = ? WHERE id = 1", longContent); err != nil {
+		t.Fatal(err)
+	}
+	notesDir := filepath.Join(dataDir, "docs", "notes")
+	srv := &server{db: db, runtime: runtimeConfig{dataDir: dataDir, notesDir: notesDir, enableNotesWrite: true, enableAttachmentTextRead: true}}
+	recorder := httptest.NewRecorder()
+	srv.handleNoteDetail(recorder, httptest.NewRequest(http.MethodPost, "/api/notes/1/separate", strings.NewReader(`{}`)))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected separate 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	return srv, db, longContent, filepath.Join(notesDir, "note_1.md")
+}
+
+func postNoteAction(t *testing.T, srv *server, method, path, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	recorder := httptest.NewRecorder()
+	srv.handleNoteDetail(recorder, httptest.NewRequest(method, path, strings.NewReader(body)))
+	return recorder
+}
+
+func noteContent(t *testing.T, db *sql.DB, noteID int) string {
+	t.Helper()
+	var content string
+	if err := db.QueryRow("SELECT content FROM Notes WHERE id = ?", noteID).Scan(&content); err != nil {
+		t.Fatal(err)
+	}
+	return content
+}
+
+// Contract lock for PRISM-OPT-19: the editor restores a split note and then PUTs the form,
+// so restore must not write history and the PUT must snapshot the full text it replaces.
+func TestRestoreSeparatedThenUpdateKeepsFullOldVersionInHistory(t *testing.T) {
+	srv, db, longContent, notePath := separatedNoteFixture(t)
+	if !strings.Contains(noteContent(t, db, 1), "完整內容已分離為附件") {
+		t.Fatal("separate should leave only the preview banner in Notes.content")
+	}
+
+	if rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected restore 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, 1) != longContent {
+		t.Fatal("restore should move the full text back into Notes.content")
+	}
+	assertTableCount(t, db, "Note_History", 1, 0)
+	assertTableCount(t, db, "Note_Attachments", 1, 0)
+	if _, err := os.Stat(notePath); !os.IsNotExist(err) {
+		t.Fatalf("restore should remove the unshared note file, got %v", err)
+	}
+	assertFTSCount(t, db, "tailtokenopt19", 1)
+	assertNotesSearchIncludes(t, srv, "/api/notes?per_page=20&q="+url.QueryEscape("尾段專用詞"), 1)
+
+	shortContent := "已改短的內容 shortenedopt19"
+	if rec := postNoteAction(t, srv, http.MethodPut, "/api/notes/1", `{"title":"Long Note","content":"`+shortContent+`"}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected update 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	var historyContent string
+	if err := db.QueryRow("SELECT content FROM Note_History WHERE note_id = 1").Scan(&historyContent); err != nil {
+		t.Fatal(err)
+	}
+	if historyContent != longContent {
+		t.Fatalf("history should hold the full old version, got %d runes", len([]rune(historyContent)))
+	}
+	assertFTSCount(t, db, "tailtokenopt19", 0)
+	assertFTSCount(t, db, "shortenedopt19", 1)
+
+	rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`)
+	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "No auto-extracted attachment found") {
+		t.Fatalf("second restore should be a 404 no-op, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, 1) != shortContent {
+		t.Fatal("404 restore must not touch Notes.content")
+	}
+}
+
+func TestRestoreSeparatedContentMissingFileKeepsNoteAndAttachment(t *testing.T) {
+	srv, db, _, notePath := separatedNoteFixture(t)
+	preview := noteContent(t, db, 1)
+	if err := os.Remove(notePath); err != nil {
+		t.Fatal(err)
+	}
+	rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`)
+	if rec.Code != http.StatusNotFound || !strings.Contains(rec.Body.String(), "Attachment file not found on disk") {
+		t.Fatalf("expected missing-file restore 404, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, 1) != preview {
+		t.Fatal("missing-file restore must not touch Notes.content")
+	}
+	assertTableCount(t, db, "Note_Attachments", 1, 1)
+}
+
+func TestRestoreSeparatedContentKeepsFileSharedWithAnotherNote(t *testing.T) {
+	srv, db, longContent, notePath := separatedNoteFixture(t)
+	result, err := db.Exec("INSERT INTO Notes (title, content, category_id) VALUES ('Imported copy', 'preview', 1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	copyID, err := result.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO Note_Attachments (note_id, file_path, file_type, title, size_bytes, is_auto_extracted)
+		VALUES (?, 'docs/notes/note_1.md', 'md', 'copy', 1, 1)`, copyID); err != nil {
+		t.Fatal(err)
+	}
+
+	if rec := postNoteAction(t, srv, http.MethodPost, fmt.Sprintf("/api/notes/%d/restore", copyID), `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("expected copy restore 200, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, int(copyID)) != longContent {
+		t.Fatal("copy should receive the shared full text")
+	}
+	if _, err := os.Stat(notePath); err != nil {
+		t.Fatalf("file still referenced by note 1 must be kept, got %v", err)
+	}
+
+	if rec := postNoteAction(t, srv, http.MethodPost, "/api/notes/1/restore", `{}`); rec.Code != http.StatusOK {
+		t.Fatalf("original note should still restore its full text, got %d body=%s", rec.Code, rec.Body.String())
+	}
+	if noteContent(t, db, 1) != longContent {
+		t.Fatal("original note lost its full text")
+	}
+	if _, err := os.Stat(notePath); !os.IsNotExist(err) {
+		t.Fatalf("last reference restored, file should be removed, got %v", err)
+	}
+}
+
 func TestCheckUpdateReturnsControlledGoPrimaryStatus(t *testing.T) {
 	srv := &server{runtime: runtimeConfig{enableServerSystem: true}}
 	request := httptest.NewRequest(http.MethodGet, "/api/system/check-update", nil)

@@ -421,11 +421,20 @@ func (s *server) restoreSeparatedContent(w http.ResponseWriter, noteID int) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Keep the file while another note's attachment still points at it (legacy/imported rows).
+	referenced, err := noteAttachmentReferenceCounts(tx, []int{noteID})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	cleaned, _ := noteAttachmentCleanupRelativePath(nullableString(filePath))
 	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	_ = os.Remove(resolved)
+	if referenced[cleaned] == 0 {
+		_ = os.Remove(resolved)
+	}
 	writeJSON(w, http.StatusOK, response{"status": "success", "message": "內容已成功還原至筆記"})
 }
 

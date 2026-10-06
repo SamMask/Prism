@@ -56,8 +56,9 @@ def test_frontend_missing_surfaces_have_visible_or_supported_paths():
     assert "`/notes/${noteId}/check_separation`" in api_ts
     assert "`/notes/${noteId}/separate`" in api_ts
     assert "`/notes/${noteId}/restore`" in api_ts
-    assert "toast.warning(t('editor.form.separationFailed'))" in note_form
-    assert "筆記已儲存，但長文自動分離失敗" in i18n
+    # PRISM-OPT-19: the editor no longer splits long notes after save; the routes stay for API compatibility.
+    assert "separateContent" not in note_form
+    assert "separationFailed" not in i18n
     assert "silent" not in note_form
     assert "status === 404" in update_section
     assert "尚未提供更新檢查 API" in update_section

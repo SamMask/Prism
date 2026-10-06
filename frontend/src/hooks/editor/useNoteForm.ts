@@ -4,8 +4,17 @@ import { useAppStore } from '../../stores/appStore'
 import { confirm } from '../../components/ui/ConfirmDialog'
 import { toast } from '../../components/ui/Toast'
 import { t } from '../../i18n'
+import type { FullContentState } from './useNoteAttachments'
 
-const SEPARATION_THRESHOLD = 5000
+// Moves an auto-extracted long note back into Notes.content so the following PUT replaces the
+// full text (and snapshots it in history). 404 means there is nothing left to move.
+async function restoreSeparatedContent(noteId: number) {
+  try {
+    await api.restoreContent(noteId)
+  } catch (error) {
+    if ((error as { response?: { status?: number } })?.response?.status !== 404) throw error
+  }
+}
 
 export function useNoteForm(note: Note | null, onClose: () => void, initialPreview = false) {
   const { fetchNotes } = useAppStore()
@@ -29,7 +38,14 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   const [tagInput, setTagInput] = useState('')
   const [isPreview, setIsPreview] = useState(initialPreview)
   const [isSaving, setIsSaving] = useState(false)
+  const savingRef = useRef(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // Reported by useNoteAttachments; read at save time (also from the Ctrl+S handler).
+  const fullContentState = useRef<FullContentState>(note ? 'pending' : 'none')
+  const setFullContentState = useCallback((state: FullContentState) => {
+    fullContentState.current = state
+  }, [])
 
   // ---- Unsaved changes detection ----
   const originalSnapshot = useRef({
@@ -89,6 +105,17 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       toast.warning(t('editor.form.missingTitleOrContent'))
       return
     }
+    // Saving without the full text would let the stale attachment overwrite this edit later.
+    if (fullContentState.current === 'pending') {
+      toast.info(t('common.loading'))
+      return
+    }
+    if (fullContentState.current === 'failed') {
+      toast.error(t('editor.attachmentsToast.loadFullFailed'))
+      return
+    }
+    if (savingRef.current) return
+    savingRef.current = true
     setIsSaving(true)
     try {
       let finalUrls = [...sourceUrls]
@@ -110,28 +137,23 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
         editor_layout: editorLayout,
         urls: finalUrls,
       }
-      let savedNoteId: number
       if (isEditing) {
+        if (fullContentState.current === 'loaded') {
+          await restoreSeparatedContent(note.id)
+          fullContentState.current = 'none'
+        }
         await api.updateNote(note.id, payload)
-        savedNoteId = note.id
         toast.success(t('editor.form.updated'))
       } else {
-        const result = await api.createNote(payload)
-        savedNoteId = result.note_id
+        await api.createNote(payload)
         toast.success(t('editor.form.created'))
-      }
-      if (content.length > SEPARATION_THRESHOLD) {
-        try {
-          await api.separateContent(savedNoteId)
-        } catch {
-          toast.warning(t('editor.form.separationFailed'))
-        }
       }
       fetchNotes(true)
       onClose()
     } catch {
       toast.error(t('editor.form.saveFailed'))
     } finally {
+      savingRef.current = false
       setIsSaving(false)
     }
   }, [title, content, categoryId, selectedTags, remarks, coverPosition, coverImage, editorLayout, sourceUrls, urlInput, isEditing, note, fetchNotes, onClose])
@@ -214,5 +236,6 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
     removeTag,
     applyFormat,
     updateOriginalContent,
+    setFullContentState,
   }
 }

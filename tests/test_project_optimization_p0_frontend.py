@@ -147,3 +147,45 @@ def test_header_new_note_and_search_submit_navigate_home_from_other_routes():
     submit_body = header[submit_start:header.index("\n  }\n", submit_start)]
     assert nav in submit_body
     assert submit_body.index(nav) < submit_body.index("setSearchQuery(inputValue)")
+
+
+def _note_form_save_body() -> str:
+    form = _read("hooks/editor/useNoteForm.ts")
+    return form[form.index("const handleSave = useCallback"):form.index("// ---- Tag helpers ----")]
+
+
+def test_note_form_no_longer_separates_long_content_after_save():
+    form = _read("hooks/editor/useNoteForm.ts")
+
+    assert "separateContent" not in form
+    assert "SEPARATION_THRESHOLD" not in form
+    assert "separationFailed" not in form
+
+
+def test_note_form_restores_separated_note_before_put():
+    form = _read("hooks/editor/useNoteForm.ts")
+    save = _note_form_save_body()
+
+    assert "await api.restoreContent(noteId)" in form
+    assert "?.response?.status !== 404) throw error" in form
+    restore = save.index("await restoreSeparatedContent(note.id)")
+    assert save.index("fullContentState.current === 'loaded'") < restore
+    assert restore < save.index("await api.updateNote(note.id, payload)")
+
+
+def test_note_form_blocks_save_until_full_content_is_loaded():
+    save = _note_form_save_body()
+    hook = _read("hooks/editor/useNoteAttachments.ts")
+    editor = _read("components/NoteEditor.tsx")
+
+    start_saving = save.index("setIsSaving(true)")
+    blocked = save.index("toast.error(t('editor.attachmentsToast.loadFullFailed'))")
+    assert save.index("fullContentState.current === 'failed'") < blocked < start_saving
+    assert save.index("fullContentState.current === 'pending'") < start_saving
+    assert save.index("if (savingRef.current) return") < start_saving
+
+    load = hook[hook.index("const loadAttachments = useCallback"):hook.index("const handleAttachmentSelect")]
+    assert load.index("api.getAttachmentContent(autoExtracted.id)") < load.index("setFullContentState('loaded')")
+    assert "setFullContentState('failed')" in load
+    assert "status === 405 ? 'none' : 'failed'" in load
+    assert "form.setFullContentState" in editor

@@ -420,7 +420,6 @@ const zhTW = {
       untitled: '無標題',
       updated: '筆記已更新',
       created: '筆記已建立',
-      separationFailed: '筆記已儲存，但長文自動分離失敗，完整內容仍保留在筆記內',
       saveFailed: '儲存失敗，請重試',
     },
     attachmentsToast: {
@@ -1330,7 +1329,6 @@ const en: TranslationDict = {
       untitled: 'Untitled',
       updated: 'Note updated',
       created: 'Note created',
-      separationFailed: 'Note saved, but long-content separation failed. Full content remains in the note.',
       saveFailed: 'Save failed, please try again',
     },
     attachmentsToast: {
@@ -2237,7 +2235,6 @@ const ja: TranslationDict = {
       untitled: '無題',
       updated: 'ノートを更新しました',
       created: 'ノートを作成しました',
-      separationFailed: 'ノートは保存されましたが、長文の自動分離に失敗しました。全文はノート内に残っています。',
       saveFailed: '保存に失敗しました。もう一度お試しください',
     },
     attachmentsToast: {
@@ -3144,7 +3141,6 @@ const ko: TranslationDict = {
       untitled: '제목 없음',
       updated: '노트를 업데이트했습니다',
       created: '노트를 만들었습니다',
-      separationFailed: '노트는 저장되었지만 긴 내용 자동 분리에 실패했습니다. 전체 내용은 노트 안에 남아 있습니다.',
       saveFailed: '저장 실패, 다시 시도해 주세요',
     },
     attachmentsToast: {
