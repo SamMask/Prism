@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api, Note, Tag } from '../../services/api'
 import { useAppStore } from '../../stores/appStore'
 import { confirm } from '../../components/ui/ConfirmDialog'
@@ -8,16 +8,19 @@ import type { FullContentState } from './useNoteAttachments'
 
 // Moves an auto-extracted long note back into Notes.content so the following PUT replaces the
 // full text (and snapshots it in history). 404 means there is nothing left to move.
+// Returns true when the server moved it (and deleted that auto-extracted attachment row).
 async function restoreSeparatedContent(noteId: number) {
   try {
     await api.restoreContent(noteId)
+    return true
   } catch (error) {
     if ((error as { response?: { status?: number } })?.response?.status !== 404) throw error
+    return false
   }
 }
 
 export function useNoteForm(note: Note | null, onClose: () => void, initialPreview = false) {
-  const { fetchNotes } = useAppStore()
+  const { fetchNotes, openEditor } = useAppStore()
   const isEditing = !!note
 
   // ---- Form state ----
@@ -39,13 +42,21 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   const [isPreview, setIsPreview] = useState(initialPreview)
   const [isSaving, setIsSaving] = useState(false)
   const savingRef = useRef(false)
+  // Bumped after each successful restore so the open attachment panel can drop the deleted row.
+  const [restoredCount, setRestoredCount] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Reported by useNoteAttachments; read at save time (also from the Ctrl+S handler).
   const fullContentState = useRef<FullContentState>(note ? 'pending' : 'none')
+  // Set when Ctrl+S creates the note and the editor switches to editing it.
+  const createdNoteId = useRef<number>()
+  const noteId = note?.id
   const setFullContentState = useCallback((state: FullContentState) => {
+    // The form already holds the full text of a note it just created; its attachment reload must
+    // not block the next save with 'pending'.
+    if (noteId !== undefined && noteId === createdNoteId.current) return
     fullContentState.current = state
-  }, [])
+  }, [noteId])
 
   // ---- Unsaved changes detection ----
   const originalSnapshot = useRef({
@@ -69,21 +80,30 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
     originalSnapshot.current.content = c
   }, [])
 
-  const hasUnsavedChanges = useMemo(() => {
-    const norm = (val: unknown) => (val == null ? '' : String(val))
-    const snap = originalSnapshot.current
-    return (
-      norm(title) !== norm(snap.title) ||
-      norm(content) !== norm(snap.content) ||
-      categoryId !== snap.categoryId ||
-      norm(remarks) !== norm(snap.remarks) ||
-      norm(coverImage) !== norm(snap.coverImage) ||
-      norm(coverPosition) !== norm(snap.coverPosition) ||
-      norm(editorLayout) !== norm(snap.editorLayout) ||
-      JSON.stringify(selectedTags.map((t) => t.name).sort()) !== snap.tags ||
-      JSON.stringify([...sourceUrls].sort()) !== snap.urls
-    )
-  }, [title, content, categoryId, remarks, coverImage, coverPosition, editorLayout, selectedTags, sourceUrls])
+  // Computed every render (not memoized) because a save replaces the snapshot ref.
+  const norm = (val: unknown) => (val == null ? '' : String(val))
+  const snap = originalSnapshot.current
+  const hasUnsavedChanges =
+    norm(title) !== norm(snap.title) ||
+    norm(content) !== norm(snap.content) ||
+    categoryId !== snap.categoryId ||
+    norm(remarks) !== norm(snap.remarks) ||
+    norm(coverImage) !== norm(snap.coverImage) ||
+    norm(coverPosition) !== norm(snap.coverPosition) ||
+    norm(editorLayout) !== norm(snap.editorLayout) ||
+    JSON.stringify(selectedTags.map((t) => t.name).sort()) !== snap.tags ||
+    JSON.stringify([...sourceUrls].sort()) !== snap.urls
+
+  // Closing the tab or window bypasses handleClose; let the browser ask first.
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const onBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [hasUnsavedChanges])
 
   // ---- Close guard ----
   const handleClose = useCallback(async () => {
@@ -100,7 +120,8 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   }, [hasUnsavedChanges, onClose])
 
   // ---- Save ----
-  const handleSave = useCallback(async () => {
+  // Ctrl+S saves and stays (close: false); the Save button saves and closes.
+  const save = useCallback(async ({ close }: { close: boolean }) => {
     if (!title.trim() && !content.trim()) {
       toast.warning(t('editor.form.missingTitleOrContent'))
       return
@@ -139,24 +160,45 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       }
       if (isEditing) {
         if (fullContentState.current === 'loaded') {
-          await restoreSeparatedContent(note.id)
+          if (await restoreSeparatedContent(note.id)) setRestoredCount((n) => n + 1)
           fullContentState.current = 'none'
         }
         await api.updateNote(note.id, payload)
         toast.success(t('editor.form.updated'))
       } else {
-        await api.createNote(payload)
+        const { note_id } = await api.createNote(payload)
         toast.success(t('editor.form.created'))
+        if (!close) {
+          // Keep editing the saved note so the next save is an update; if it can't be fetched,
+          // close instead of risking a duplicate create.
+          createdNoteId.current = note_id
+          const created = await api.getNote(note_id).catch(() => null)
+          if (created) openEditor(created)
+          else close = true
+        }
+      }
+      originalSnapshot.current = {
+        title,
+        content,
+        categoryId,
+        remarks,
+        coverImage,
+        coverPosition,
+        editorLayout,
+        tags: JSON.stringify(selectedTags.map((t) => t.name).sort()),
+        urls: JSON.stringify([...finalUrls].sort()),
       }
       fetchNotes(true)
-      onClose()
+      if (close) onClose()
     } catch {
       toast.error(t('editor.form.saveFailed'))
     } finally {
       savingRef.current = false
       setIsSaving(false)
     }
-  }, [title, content, categoryId, selectedTags, remarks, coverPosition, coverImage, editorLayout, sourceUrls, urlInput, isEditing, note, fetchNotes, onClose])
+  }, [title, content, categoryId, selectedTags, remarks, coverPosition, coverImage, editorLayout, sourceUrls, urlInput, isEditing, note, fetchNotes, openEditor, onClose])
+
+  const handleSave = useCallback(() => save({ close: true }), [save])
 
   // ---- Tag helpers ----
   const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -200,7 +242,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
     const handler = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
       switch (e.key.toLowerCase()) {
-        case 's': e.preventDefault(); handleSave(); break
+        case 's': e.preventDefault(); save({ close: false }); break
         case 'b': e.preventDefault(); applyFormat('**'); break
         case 'i': e.preventDefault(); applyFormat('*'); break
         case 'k': e.preventDefault(); applyFormat('[', '](url)'); break
@@ -208,7 +250,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [handleSave, applyFormat])
+  }, [save, applyFormat])
 
   return {
     // form state
@@ -225,6 +267,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
     tagInput, setTagInput,
     isPreview, setIsPreview,
     isSaving,
+    restoredCount,
     textareaRef,
     isEditing,
     // derived

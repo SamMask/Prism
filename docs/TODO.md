@@ -188,13 +188,36 @@
     - 尾段詞從 0/29 變成 29/29 找得到。但搜尋仍然 partial，因為 300 個文字附件本身就超過掃描上限；已記到 PRISM-OPT-47 作為啟動依據。
   - 已知、不阻擋：只支援單一行程；搬檔被鎖住時筆記仍會合併，原檔變成孤兒檔並列出；D2 的歷史 `diff_summary` 是固定中文；在正式資料上執行前建議先下載 full snapshot。
   - 驗證：`go vet` 通過、`go test ./...` ok、`npm run build` 通過、pytest 412 passed、`git diff --check` 通過、鏡像一致。
+- `PRISM-OPT-21`（本機驗證；未發版、未部署 Pi）：
+  - `useNoteForm.ts`：
+    - 拆出 `save({ close })`。`Ctrl+S` 使用 `close: false`；Save 按鈕使用 `close: true`，行為不變。
+    - 存檔成功後更新 snapshot，`hasUnsavedChanges` 改成每次 render 重算。
+    - 有未存變更時才註冊 `beforeunload`。
+  - 新筆記第一次 `Ctrl+S`：
+    - 用回傳的 `note_id` 取回筆記，再以 `openEditor(created)` 原地轉成編輯狀態，所以第二次是 PUT。`NoteEditor` 不重新 mount，表單內容與游標都保留。
+    - `getNote` 失敗時退回「存檔並關閉」。
+    - 對剛建立的筆記，忽略附件重載造成的 `pending`，避免第二次存檔被擋下。對其他筆記照常保護。
+  - 已拆分筆記：OPT-19/60/20 的保護不變（`restore` → PUT → 之後只 PUT；全文載入失敗時擋下存檔）。`restore` 真的成功後，附件面板會在本地移除被伺服器刪掉的 auto 列，規則比照伺服器只刪一列，不重新載入。
+  - 驗證：
+    - pytest：4 個 source-lock 測試在 HEAD 上都失敗。
+    - 實作代理：隔離 runtime 的 headless Chromium，1280 與 390 共 38/38，含拿掉 pending 保護的負對照。
+    - prism-verifier 自寫腳本，主腳本 48 項、補充 10 項、反向對照 1 項，全部通過：
+      - 新筆記連按兩次 `Ctrl+S` 只產生 1 筆，快速連按也一樣。
+      - 有未存變更才跳 `beforeunload`，存檔後就不跳。
+      - Save 按鈕仍是存檔並關閉。
+      - 已拆分筆記：`restore` → PUT，附件面板同步移除該列；檔案損壞時擋下存檔。
+      - `getNote` 回 500 時會退回關閉；tag 與 URL 存檔後不算未存變更。
+    - 指令：`npm run build` 通過、pytest 416 passed、`go test ./...` ok、`git diff --check` 通過。
+  - 已知：
+    - 桌面版（WebView2）關閉視窗時沒有保護，另開 PRISM-OPT-61。
+    - PRISM-OPT-59 若要為 `NoteEditor` 加 `key`，必須在「建立後轉為編輯」時保持不變，已寫進 OPT-59 的規格。
 
 ### P1 — 下一輪
 
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
 | PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Done | 19、60 | FEAT-02、PERF-01 |
-| PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Todo | — | UX-02 |
+| PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Done | — | UX-02 |
 | PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Todo | 建議在 21 之後 | UX-03 |
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |
 | PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Todo | — | TECH-01 |
@@ -206,6 +229,7 @@
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Todo | — | OPT-19 追蹤 |
+| PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Todo | 21 | OPT-21 追蹤 |
 
 完成證據（2026-10-06）：
 

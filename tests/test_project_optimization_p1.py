@@ -181,3 +181,60 @@ def test_note_file_writers_take_the_note_files_lock():
     ]
     for name, signature in locked:
         assert "noteFilesMu" in body(sources[name], signature) or "lockNoteFiles()" in body(sources[name], signature), signature
+
+
+def _note_form() -> str:
+    return _read("hooks/editor/useNoteForm.ts")
+
+
+def test_ctrl_s_saves_without_closing_and_save_button_still_closes():
+    form = _note_form()
+    editor = _read("components/NoteEditor.tsx")
+
+    assert "const save = useCallback(async ({ close }: { close: boolean })" in form
+    assert "case 's': e.preventDefault(); save({ close: false }); break" in form
+    assert "const handleSave = useCallback(() => save({ close: true }), [save])" in form
+    assert "onSave={form.handleSave}" in editor
+    save = form[form.index("const save = useCallback"):form.index("const handleSave = useCallback")]
+    assert "if (close) onClose()" in save
+    # A successful save becomes the new baseline, so the editor no longer reports unsaved changes.
+    assert save.index("await api.updateNote(note.id, payload)") < save.index("originalSnapshot.current = {")
+    assert "fetchNotes(true)" in save
+
+
+def test_new_note_first_ctrl_s_switches_editor_to_the_created_note():
+    form = _note_form()
+    save = form[form.index("const save = useCallback"):form.index("const handleSave = useCallback")]
+
+    create = save.index("const { note_id } = await api.createNote(payload)")
+    assert create < save.index("createdNoteId.current = note_id")
+    assert create < save.index("await api.getNote(note_id)")
+    assert save.index("await api.getNote(note_id)") < save.index("openEditor(created)")
+    # The attachment reload for a note this form just created must not block the next Ctrl+S.
+    setter = form[form.index("const setFullContentState = useCallback"):form.index("// ---- Unsaved changes detection ----")]
+    assert "noteId !== undefined && noteId === createdNoteId.current" in setter
+
+
+def test_beforeunload_is_registered_only_while_there_are_unsaved_changes():
+    form = _note_form()
+    guard = form[form.index("window.addEventListener('beforeunload'") - 400:]
+
+    assert "if (!hasUnsavedChanges) return" in guard
+    assert "event.preventDefault()" in guard
+    assert "event.returnValue = ''" in guard
+    assert "window.removeEventListener('beforeunload', onBeforeUnload)" in guard
+    assert "}, [hasUnsavedChanges])" in guard
+
+
+def test_restore_on_save_drops_the_deleted_auto_attachment_from_the_open_panel():
+    form = _note_form()
+    editor = _read("components/NoteEditor.tsx")
+    save = form[form.index("const save = useCallback"):form.index("const handleSave = useCallback")]
+
+    # Only a restore the server confirmed (not a swallowed 404) bumps the counter.
+    assert "return true" in form[form.index("async function restoreSeparatedContent"):form.index("export function useNoteForm")]
+    assert "if (await restoreSeparatedContent(note.id)) setRestoredCount((n) => n + 1)" in save
+    sync = editor[editor.index("if (!form.restoredCount) return"):]
+    assert "attachments.setAttachments(" in sync
+    assert "a.is_auto_extracted" in sync
+    assert "loadAttachments" not in sync[:sync.index("}, [form.restoredCount")]

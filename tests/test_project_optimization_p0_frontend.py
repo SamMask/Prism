@@ -151,7 +151,7 @@ def test_header_new_note_and_search_submit_navigate_home_from_other_routes():
 
 def _note_form_save_body() -> str:
     form = _read("hooks/editor/useNoteForm.ts")
-    return form[form.index("const handleSave = useCallback"):form.index("// ---- Tag helpers ----")]
+    return form[form.index("const save = useCallback"):form.index("// ---- Tag helpers ----")]
 
 
 def test_note_form_no_longer_separates_long_content_after_save():

@@ -58,6 +58,16 @@ export function NoteEditor({ note, onClose, initialPreview = false }: NoteEditor
     if (form.isEditing) attachments.loadAttachments()
   }, [form.isEditing, attachments.loadAttachments])
 
+  // A restore on save deleted the note's first auto-extracted row on the server; mirror it locally
+  // instead of reloading (a reload could flip the save guard to 'pending' or reload file text).
+  useEffect(() => {
+    if (!form.restoredCount) return
+    attachments.setAttachments((prev) => {
+      const firstAuto = Math.min(...prev.filter((a) => a.is_auto_extracted).map((a) => a.id))
+      return prev.filter((a) => a.id !== firstAuto)
+    })
+  }, [form.restoredCount, attachments.setAttachments])
+
   // Extract images from content for dual-layout gallery
   const galleryImages = useMemo(() => {
     const pattern = /!\[.*?\]\((\/static\/uploads\/[^)]+)\)|<img[^>]+src=["'](\/static\/uploads\/[^"']+)["']/g

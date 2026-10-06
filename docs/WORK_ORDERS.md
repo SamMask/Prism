@@ -100,6 +100,7 @@ git diff --check
 | PRISM-OPT-58 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-59 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-60 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-61 | F | L | prism-engineer | prism-verifier |
 | PRISM-OPT-54 | F | S | prism-builder | 主代理 |
 | PRISM-OPT-55 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-56 | B | M | prism-builder | prism-verifier |
@@ -465,11 +466,29 @@ git diff --check
   - 如果在 palette 中選了另一則筆記，表單可能沿用前一則的內容，存檔時卻寫到新的 note id。
 - **修改範圍**：
   - 第一步：在隔離 runtime 重現。開 A 並修改內容 → `Ctrl+K` 選 B → 存檔 → 檢查 A、B 的 DB 內容與歷史。
-  - 若重現成功：最小修正，例如 `NoteEditor` 加上 `key={editingNote?.id ?? 'new'}`，或在編輯器開著時讓 palette 開筆記前先關閉編輯器，並保留 PRISM-OPT-21 的未存提醒語意。
+  - 若重現成功：最小修正，例如在編輯器開著時讓 palette 開筆記前先關閉編輯器（保留 PRISM-OPT-21 的未存提醒語意），或為 `NoteEditor` 加上 `key`。
+    - 注意 PRISM-OPT-21：新筆記第一次 `Ctrl+S` 後，會透過 `openEditor(created)` 原地轉成編輯狀態。這依賴 `NoteEditor` 不重新 mount，才能保留游標、undo 與 `fullContentState`。
+    - 所以若用 `key`，不能直接用 note id；要用在「建立後轉為編輯」時保持不變的 editor session id。
   - 若無法重現：記錄重現步驟與結果，並關閉工單。
 - **不要修改**：API；schema；PRISM-OPT-19 的存檔流程。
 - **驗收**：重現步驟的結果記錄在 `docs/TODO.md`；若有修正，A、B 的內容與歷史都正確，並有回歸測試或 browser smoke 證據。
 - **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；隔離 runtime 的 browser 流程。
+
+### PRISM-OPT-61 — 桌面版關閉視窗時保護未存變更
+
+- **Finding**：PRISM-OPT-21 驗收時發現（2026-10-07）｜ **優先級**：P1
+- **目標**：Windows desktop（`Prism.exe`，WebView2）在有未存變更時關閉視窗，先詢問使用者，不會無聲地丟掉編輯內容。
+- **原因**：
+  - PRISM-OPT-21 的 `beforeunload` 只保護瀏覽器分頁。
+  - desktop shell 用 `github.com/jchv/go-webview2`，關閉視窗走函式庫預設的處理（`go-shadow/desktop_shell_windows.go` 沒有攔截關閉），所以頁面的 `beforeunload` 不會出現提示。
+  - 這個缺口在 OPT-21 之前就存在；OPT-21 的規格原因段落提到 WebView，但修改範圍與驗收只涵蓋 `beforeunload`。
+- **修改範圍**：
+  - 先確認 go-webview2 是否能攔截視窗關閉，或讓 WebView2 走 beforeunload。
+  - 最小做法候選：前端暴露一個唯讀的「是否有未存變更」查詢；desktop shell 在關閉前以 `Eval`／`Bind` 查詢，若有未存變更就顯示原生確認框。
+  - 若需要替換或 fork 函式庫，停下來回報（新增 dependency 需要 decision gate）。
+- **不要修改**：瀏覽器版的 `beforeunload` 行為；tray 與單一實例的邏輯；API。
+- **驗收**：desktop 實測——有未存變更時關閉視窗會出現確認，選取消就保留編輯；沒有未存變更時直接關閉；tray 的結束行為與現在一致。
+- **驗證**：`cd go-shadow && go test ./...`；desktop shell 的 smoke（`--desktop-shell-smoke` 與手動關閉視窗的實測）；`cd frontend && npm run build`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
