@@ -196,11 +196,19 @@ func runDesktopShellRuntime(cfg runtimeConfig, opts desktopShellOptions) error {
 		releaseLog()
 		return err
 	}
+	// One-shot daily restore point check (PRISM-OPT-28). Desktop-only: the plain server
+	// runtime never calls it. It runs beside the WebView so it cannot delay the UI.
+	restorePointDone := make(chan struct{})
+	go func() {
+		defer close(restorePointDone)
+		srv.ensureDailyRestorePoint(time.Now())
+	}()
 	if strings.TrimSpace(opts.targetURL) == "" {
 		opts.targetURL = "http://" + cfg.addr + "/"
 	}
 	err = runDesktopWebView(opts, func() {
 		shutdownDesktopServer(srv)
+		<-restorePointDone // never close the DB under a half-written restore point
 		if serverErr != nil {
 			select {
 			case listenErr := <-serverErr:

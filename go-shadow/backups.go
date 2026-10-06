@@ -57,6 +57,8 @@ func (s *server) handleBackupRotate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	keepCount := parseBackupKeepCount(payload, defaultBackupKeepCount)
+	s.managedBackupMu.Lock()
+	defer s.managedBackupMu.Unlock()
 	backupName := managedBackupName()
 	backupPath := filepath.Join(s.runtime.backupsDir, backupName)
 	if err := s.writeConsistentDBBackup(backupPath); err != nil {
@@ -77,6 +79,50 @@ func (s *server) handleBackupRotate(w http.ResponseWriter, r *http.Request) {
 			"total_size_mb":   roundMB(totalSize),
 		},
 	})
+}
+
+const autoRestorePointMaxAge = 24 * time.Hour
+
+type autoRestorePointResult struct {
+	Status    string `json:"status"` // created | skipped | failed
+	Backup    string `json:"backup,omitempty"`
+	Error     string `json:"error,omitempty"`
+	CheckedAt string `json:"checked_at"`
+}
+
+// shouldCreateAutoRestorePoint reports whether no managed backup (manual or automatic)
+// was modified within autoRestorePointMaxAge.
+func shouldCreateAutoRestorePoint(backupDir string, now time.Time) (bool, error) {
+	backups, err := listManagedBackups(backupDir)
+	if err != nil {
+		return false, err
+	}
+	return len(backups) == 0 || now.Sub(time.Unix(0, backups[0].ModifiedAt)) >= autoRestorePointMaxAge, nil
+}
+
+// ensureDailyRestorePoint is the desktop shell's one-shot startup check (PRISM-OPT-28):
+// when the newest managed backup is older than a day, write a new one and prune the
+// pool to defaultBackupKeepCount, the same retention as the manual rotate. Failures are
+// only logged and kept for the backup list; they never stop the app.
+func (s *server) ensureDailyRestorePoint(now time.Time) autoRestorePointResult {
+	s.managedBackupMu.Lock()
+	defer s.managedBackupMu.Unlock()
+	result := autoRestorePointResult{Status: "skipped", CheckedAt: now.Format(time.RFC3339)}
+	create, err := shouldCreateAutoRestorePoint(s.runtime.backupsDir, now)
+	if err == nil && create {
+		result.Backup = managedBackupName()
+		err = s.writeConsistentDBBackup(filepath.Join(s.runtime.backupsDir, result.Backup))
+		if err == nil {
+			_, _, _, err = enforceBackupRetention(s.runtime.backupsDir, defaultBackupKeepCount, result.Backup)
+		}
+		result.Status = "created"
+	}
+	if err != nil {
+		result.Status, result.Error = "failed", err.Error()
+	}
+	log.Printf("desktop daily restore point: status=%s backup=%s error=%s", result.Status, result.Backup, result.Error)
+	s.autoRestorePoint.Store(&result)
+	return result
 }
 
 func (s *server) writeConsistentDBBackup(destination string) error {
@@ -327,14 +373,15 @@ func (s *server) handleBackupList(w http.ResponseWriter, r *http.Request) {
 	for _, backup := range backups {
 		totalSize += backup.SizeBytes
 	}
-	writeJSON(w, http.StatusOK, response{
-		"status": "success",
-		"data": response{
-			"backups":       backupResponseItems(backups),
-			"count":         len(backups),
-			"total_size_mb": roundMB(totalSize),
-		},
-	})
+	data := response{
+		"backups":       backupResponseItems(backups),
+		"count":         len(backups),
+		"total_size_mb": roundMB(totalSize),
+	}
+	if auto := s.autoRestorePoint.Load(); auto != nil {
+		data["auto_restore_point"] = auto
+	}
+	writeJSON(w, http.StatusOK, response{"status": "success", "data": data})
 }
 
 func (s *server) handleBackupDelete(w http.ResponseWriter, r *http.Request) {

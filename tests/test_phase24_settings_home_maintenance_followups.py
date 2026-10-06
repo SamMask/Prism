@@ -102,7 +102,7 @@ def test_category_counts_and_backup_delete_controls_are_locked():
     assert 'data-testid="category-actions"' in data_manager
     assert "flex w-16 shrink-0 justify-end gap-1" in data_manager
     assert "Prism 內建還原點" in i18n
-    assert "下載目前資料庫是一次性副本；建立還原點會保留最近 3 份供資料庫還原使用" in i18n
+    assert "下載目前資料庫是一次性副本；建立還原點會保留最近 7 份供資料庫還原使用" in i18n
     assert 'data-testid="restore-point-lifecycle"' in backup_import
     assert "t('settings.backup.createRestorePoint')" in backup_import
     assert "handleDeleteBackup" in backup_import

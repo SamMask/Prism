@@ -177,6 +177,8 @@ export interface BackupListResponse {
   backups: BackupItem[];
   count: number;
   total_size_mb: number;
+  // Desktop only: result of this run's daily restore point check (absent when it never ran).
+  auto_restore_point?: { status: 'created' | 'skipped' | 'failed'; backup?: string; error?: string; checked_at: string };
 }
 
 export interface DeleteBackupResponse {
@@ -1029,8 +1031,9 @@ export const api = {
     window.URL.revokeObjectURL(url);
   },
 
-  rotateBackups: async (keepCount: number = 3): Promise<RotateBackupsResponse> => {
-    const { data } = await client.post('/server/backup/rotate', { keep_count: keepCount });
+  // Without keepCount the backend default applies; it is shared with the desktop daily restore point.
+  rotateBackups: async (keepCount?: number): Promise<RotateBackupsResponse> => {
+    const { data } = await client.post('/server/backup/rotate', keepCount === undefined ? {} : { keep_count: keepCount });
     return data.data;
   },
 

@@ -107,6 +107,8 @@ git diff --check
 | PRISM-OPT-57 | V | S | 主代理 | prism-verifier |
 | PRISM-OPT-62 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-63 | F | L | prism-engineer | prism-verifier |
+| PRISM-OPT-64 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-65 | F | S | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -519,6 +521,37 @@ git diff --check
   - 沒有未存變更時照常導覽；OPT-17、21、22、59 的流程不退化。
 - **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；browser smoke。
 
+### PRISM-OPT-64 — JSON 匯入不得刪除或覆寫目標端既有的檔案
+
+- **Finding**：PRISM-OPT-58 調查時實測（2026-10-07）｜ **優先級**：P1
+- **目標**：JSON 匯入在任何情況下都不會刪除或無聲覆寫目標端原有的附件或圖片檔案。
+- **原因**（`go-shadow/import.go`）：
+  - (a) 附件或 upload 列帶 `content_b64` 時，會直接寫入目標端同路徑的檔案（約 :337、:393-396），並把它加進 `createdFiles`。之後任何一步失敗，cleanup 會刪掉這個檔案，等於刪掉目標端原有的檔案。實測 `existing_file_still_exists=false`。即使匯入成功，也可能覆寫另一則筆記的附件。
+  - (b) 用 `skip` mode 把同一份備份匯回原 DB 時，筆記判為重複，附件列卻會重複新增。
+  - (c) 寫入 DB 的 `file_path` 沒有經過 `path.Clean`。
+- **修改範圍**：`go-shadow/import.go`。
+  - 目的地已存在時，不覆寫：改寫到新的唯一檔名，或略過並計數。
+  - `createdFiles` 只記錄這次真正新建的檔案。
+  - `skip` mode 下，已存在相同附件（同筆記、同正規化路徑）就不重複新增。
+  - 存入 DB 的路徑使用正規化後的值。
+- **不要修改**：路徑安全檢查（只能更嚴格）；匯出格式；PRISM-OPT-58 的 docs/notes 略過行為。
+- **驗收**（Go test）：
+  - 目標端已有同路徑檔案，且匯入後段失敗時，原檔案仍在、內容不變。
+  - 成功匯入時也不覆寫既有檔案。
+  - 用 skip mode 重新匯入，附件列數不變。
+  - 不安全的路徑仍被拒絕。
+- **驗證**：`cd go-shadow && go test ./...`；`pytest tests/ -v`。
+
+### PRISM-OPT-65 — JSON 匯入後提示「拆分筆記只匯入了預覽」
+
+- **Finding**：PRISM-OPT-58 調查時發現（2026-10-07）｜ **優先級**：P2 ｜ **依賴**：PRISM-OPT-58
+- **目標**：匯入含已拆分筆記的 JSON 時，使用者看得到哪些筆記只有預覽，以及要用 full snapshot 才能完整還原。
+- **原因**：PRISM-OPT-58 讓這類匯入不再整批失敗，回應多了 `skipped_attachments`；但 `BackupImportSection.tsx` 只讀 imported 與 skipped，使用者看到的只是「匯入成功」，不知道內容有損。
+- **修改範圍**：`frontend/src/components/settings/BackupImportSection.tsx`、i18n（四語）。`skipped_attachments > 0` 時顯示提示。
+- **不要修改**：匯入 API；PRISM-OPT-58 的後端行為。
+- **驗收**：browser smoke（desktop 與 390px）：匯入含拆分筆記的 JSON 後出現提示；沒有拆分筆記時不出現。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；browser smoke。
+
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
 - **來源**：使用者需求（2026-10-06）｜ **優先級**：P1
@@ -690,6 +723,7 @@ git diff --check
   - 匯入讀到這些欄位時套用；缺欄位時維持現行預設，舊檔案仍相容。
   - `export_info.version` 遞增。
 - **不要修改**：既有欄位的名稱與型別；匯入的重複判斷邏輯。
+- **追加（PRISM-OPT-58 調查，2026-10-07）**：JSON 匯出目前沒有已拆分筆記的全文（只有 500 字預覽），也沒有任何附件的檔案內容。可以考慮讓拆分筆記匯出全文，或讓附件帶 `content_b64`，屬於匯出格式的 additive 變更。在那之前，只有 full snapshot 能完整保留拆分筆記。
 - **驗收**（Go test）：匯出 → 匯入到 fresh DB → 欄位一致；舊版 JSON 仍可匯入。
 - **驗證**：`cd go-shadow && go test ./...`；`pytest tests/ -v`。
 

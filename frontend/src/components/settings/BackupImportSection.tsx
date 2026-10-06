@@ -99,6 +99,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   // Restore-from-backup state
   const [backups, setBackups] = useState<BackupItem[]>([]);
   const [backupTotalMb, setBackupTotalMb] = useState(0);
+  const [autoRestorePointError, setAutoRestorePointError] = useState<string | null>(null);
   const [loadingBackups, setLoadingBackups] = useState(false);
   const [restoreTarget, setRestoreTarget] = useState<BackupItem | null>(null);
   const [isRestarting, setIsRestarting] = useState(false);
@@ -113,6 +114,8 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
       const res = await api.listBackups();
       setBackups(res.backups || []);
       setBackupTotalMb(res.total_size_mb || 0);
+      const auto = res.auto_restore_point;
+      setAutoRestorePointError(auto?.status === 'failed' ? auto.error || '' : null);
     } catch {
       // Server-management API is localhost-only; silently show an empty list off-box.
       setBackups([]);
@@ -138,7 +141,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   const handleCreateRestorePoint = async () => {
     setIsCreatingRestorePoint(true);
     try {
-      await api.rotateBackups(3);
+      await api.rotateBackups();
       await loadBackups();
       toast.success(t('settings.backup.restorePointCreated'));
     } catch {
@@ -680,6 +683,12 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
             {t('settings.backup.restorePointStorage', { size: backupTotalMb })}
           </span>
         </div>
+
+        {autoRestorePointError !== null && (
+          <p className="mb-3 text-sm text-warning" role="status" data-testid="auto-restore-point-failed">
+            {t('settings.backup.autoRestorePointFailed', { error: autoRestorePointError })}
+          </p>
+        )}
 
         {loadingBackups ? (
           <div className="flex items-center gap-2 text-text-muted text-sm">

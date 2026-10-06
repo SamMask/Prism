@@ -87,6 +87,12 @@ Unsaved-changes close guard (PRISM-OPT-61):
 - Tray Quit (`WM_CLOSE`) and logoff/shutdown are not intercepted.
 - In browsers the bound function does not exist and only `beforeunload` applies.
 
+Daily restore point (PRISM-OPT-28):
+- After the desktop runtime passes `/healthz`, the shell runs one background check. If the newest managed backup (`prism_backup_*.db`, by mtime) is older than 24h, it writes a consistent backup and keeps 7 (`defaultBackupKeepCount`, shared with the manual "create restore point").
+- `managedBackupMu` serializes this check with manual rotate.
+- The result is logged and exposed as `auto_restore_point` in the backup list; failures show a warning in Settings.
+- The plain server runtime (Pi/browser) never runs this check.
+
 Desktop Shell Phase 4-6 add the portable Windows package boundary. `scripts/build_desktop_portable.ps1` builds a no-install zip/folder containing `Prism.exe`, `PrismDesktop-debug.exe`, generated `Prism.ico`, Prompt Builder seed config under `static/config`, and `README-PORTABLE.md`; `Prism.exe` is linked with `-H=windowsgui` and `main.desktopShellDefault=1`, so double-clicking starts the desktop shell without a terminal. Build scripts generate a temporary `rsrc` `.syso` so the same generated icon is embedded into the Windows executable resource. The double-click portable default data dir is the executable-neighbor `PrismData\`; explicit `--data-dir` / `PRISM_GO_DATA_DIR` remains available for advanced/debug launches. The runtime does not show a first-run data-dir selector, does not write a portable choice file, and does not create or repair desktop shortcuts. Choosing between portable data, Windows account data, or a custom folder, plus Start Menu / desktop shortcuts and WebView2 bootstrap, is deferred to a future installer gate. `scripts/smoke_desktop_portable.ps1` validates a clean unzip, external data dir, fresh DB, desktop log, and basic note create/search workflow.
 
 This remains Windows desktop shell work only. `desktop_shell_windows.go` is Windows build-tagged, `desktop_shell_other.go` keeps non-Windows stubs, and Pi deployment remains the linux/arm64 Go primary artifact with `prism-go-primary.service`, Caddy, and `DEPLOY-PI.md`. Phase 5 explicitly defers MSI/NSIS/WiX/MSIX installers and auto updaters unless a later decision gate proves they are needed.

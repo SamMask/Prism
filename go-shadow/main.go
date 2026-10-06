@@ -46,7 +46,10 @@ const maxUploadFileBytes int64 = 5 * 1024 * 1024
 const attachmentUploadMultipartOverheadBytes int64 = 64 * 1024
 const maxMarkdownImportBytes int64 = 2 * 1024 * 1024
 const maxExportImages = 100
-const defaultBackupKeepCount = 3
+
+// defaultBackupKeepCount is shared by the manual "create restore point" action and the
+// desktop daily restore point, which prune the same managed-backup pool (PRISM-OPT-28).
+const defaultBackupKeepCount = 7
 const maxBackupKeepCount = 10
 
 // restartExitCode is returned when the process restarts itself to finish a DB
@@ -94,6 +97,13 @@ type server struct {
 	// testHook is test-only instrumentation: named sync points inside the maintenance action
 	// and restore. It is nil in production.
 	testHook func(stage string, noteID int) error
+	// autoRestorePoint holds the result of this process's desktop daily restore point
+	// check; nil when the check never ran (plain server runtime).
+	autoRestorePoint atomic.Pointer[autoRestorePointResult]
+	// managedBackupMu serializes writing a managed backup and pruning the pool, so the
+	// desktop daily restore point and a manual rotate never pick the same timestamped
+	// name or prune each other's half-written file.
+	managedBackupMu sync.Mutex
 }
 
 // lockNoteFiles takes noteFilesMu and returns an idempotent unlock, so a handler can release

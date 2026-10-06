@@ -334,6 +334,28 @@
     - 若 LAN 內有不信任的裝置，改用 Caddy `basic_auth`。
   - `docs/API_REFERENCE.md`：既有的「直接連線 peer 的 loopback 檢查」說明（PRISM-OPT-20 已改寫）後面，補上 2026-10-07 的不收緊決策。
   - 驗證：相關文件測試 22 passed；`git diff --check` 通過；鏡像一致。
+- `PRISM-OPT-28`（本機驗證；未發版、未部署 Pi）：使用者決策為預設開啟、保留 7 份、只限桌面版。
+  - 實作：
+    - 桌面殼在 runtime 通過 `/healthz` 後，以 goroutine 檢查一次：最新的 managed backup（`prism_backup_*.db`，依 mtime）超過 24 小時才建立一致快照，並保留 7 份。
+    - 關閉時等檢查結束才關 DB。
+    - plain runtime（Pi／瀏覽器）與 `--desktop-shell-smoke` 不會觸發。
+    - `defaultBackupKeepCount` 由 3 改為 7；手動「建立還原點」改送 `{}`，由後端預設決定，手動與自動共用同一組備份。
+    - 新增 `managedBackupMu`，讓手動 rotate 與每日檢查序列化。並發測試在加鎖前實際失敗（同名檔案、VACUUM INTO 衝突），拿掉鎖的對照組也會失敗。
+    - 備份清單 additive 欄位 `auto_restore_point`（只在桌面版出現）；檢查失敗時顯示一行警告。
+  - **與規格的偏離（主代理決定）**：失敗警告放在 Settings「資料與還原」分頁的還原點區塊，不在「維護與健康」的總覽。理由：警告和使用者會處理它的還原點清單放在一起。若之後要在總覽也顯示，另開工單。
+  - 驗證：
+    - Go：7 個新測試；`TestBackupRotateDefaultKeepsSeven` 在 HEAD 上失敗。
+    - prism-verifier 的隔離 desktop smoke：
+      - 啟動兩次只建立 1 份；mtime 往前調 25 小時後會建立第 2 份。
+      - 預先放 8 份舊備份後剩 7 份，pre_restore、pre_migrate、`.tmp` 等檔案都保留。
+      - plain runtime 不建立；強制失敗時 log 有記錄，警告也會顯示（headless Edge，1280／英文）。
+    - 指令：linux/arm64 cross-build（Pi）、`go test ./...`、`npm run build`、pytest 422 passed、`git diff --check`、portable smoke（pwsh 7）都通過。
+  - 已知（低）：
+    - 結果欄位在寫入失敗時仍帶著不存在的檔名；retention 失敗時 status 也標成 failed；UI 直接顯示原始錯誤字串。
+    - `handleBackupDelete`／`Restore` 沒有拿 `managedBackupMu`，與 retention 有很窄的 race（rotate 與 delete 之間原本就有）。
+    - 第二個桌面實例在單一實例檢查之前也可能跑一次檢查（24 小時內只會略過）。
+    - 390px 與 zh-TW 的畫面沒有實測。
+    - Pi timer 仍傳 `keep_count=3`，已記入「Pi 自動備份改每天」的延後項目。
 
 ### P1 — 下一輪
 
@@ -347,10 +369,11 @@
 | PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Todo | — | TECH-04 |
 | PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Todo | 建議在 15、18、19 之後 | TECH-02 |
 | PRISM-OPT-27 | 治理文件瘦身、修正斷鏈、解除 docs-lock 測試耦合 | Done | — | TECH-03 |
-| PRISM-OPT-28 | 桌面版每日自動還原點 | Doing | — | OPS-02 |
+| PRISM-OPT-28 | 桌面版每日自動還原點 | Done | — | OPS-02 |
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Done | 第二階段已決定不收緊 | OPS-04 |
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
+| PRISM-OPT-64 | JSON 匯入不得刪除或覆寫目標端既有的檔案（rollback 會刪掉原有檔案） | Todo | — | OPT-58 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |
 | PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Done | — | OPT-22 追蹤 |
@@ -389,6 +412,7 @@
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Todo | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
+| PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 
@@ -412,7 +436,7 @@
 ## Deferred Candidates
 
 - [ ] `DEEP-SCAN-RISK-CANDIDATE-01` 01H 仍是低優先維護 triage（狀態：`Blocked`）：剩餘 frontend bundle/Browserslist warning、歷史 frozen docs/test wording仍需另行 promote；其中 `go-shadow/main.go` route-local 小整理已明確化為 `GO-MAIN-SPLIT-CANDIDATE-01`，但一次性 runtime 大拆分仍 `Blocked`。
-- [ ] Pi 自動備份從每週改為每天（狀態：`Blocked`；2026-10-07 使用者同意方向，等下次 Pi 部署時依 `DEPLOY-PI.md` 另開 gate 處理）。Pi 是使用者的主要使用方式，目前 systemd timer 每週一次，最壞會損失近 7 天的資料。
+- [ ] Pi 自動備份從每週改為每天（狀態：`Blocked`；2026-10-07 使用者同意方向，等下次 Pi 部署時依 `DEPLOY-PI.md` 另開 gate 處理）。Pi 是使用者的主要使用方式，目前 systemd timer 每週一次，最壞會損失近 7 天的資料。另外，Pi timer 目前明確傳 `keep_count=3`（`DEPLOY-PI.md:134`），每週會把共用的 managed backup 修剪回 3 份；PRISM-OPT-28 已把預設改為 7，改 timer 時要一併改成 7。
 - [ ] Desktop installer/updater/WebView2 bootstrap/shortcut automation（狀態：`Blocked`；需使用者明確需要 installer/updater 類能力）。
 - [ ] Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）（狀態：`Blocked`；只有日後恢復 render，才於該 gate 同步補四語 key）。2026-10-06 審查確認 `UpdateSection`、`TagInput` 沒有被引用，是否刪除由 PRISM-OPT-42 決定。
 - [ ] Mermaid 圖表渲染（狀態：`Blocked`；只有 `MARKDOWN-SYNTAX-CANDIDATE-01` 的 `MDS-05` 被明確 promote 後才可施工；不得順手導入 heavy renderer）。
