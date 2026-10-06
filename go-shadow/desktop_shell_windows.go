@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unsafe"
 
@@ -33,6 +34,7 @@ const (
 
 	desktopWMDestroy       = 0x0002
 	desktopWMCommand       = 0x0111
+	desktopWMSysCommand    = 0x0112
 	desktopWMUser          = 0x0400
 	desktopWMTrayIcon      = desktopWMUser + 9
 	desktopWMRButtonUp     = 0x0205
@@ -51,6 +53,13 @@ const (
 	desktopImageIcon      = 1
 	desktopLRLoadFromFile = 0x00000010
 	desktopLRDefaultSize  = 0x00000040
+
+	desktopSCClose       = 0xF060
+	desktopGWLPWndProc   = ^uintptr(3) // GWLP_WNDPROC (-4)
+	desktopMBOKCancel    = 0x00000001
+	desktopMBIconWarning = 0x00000030
+	desktopMBDefButton2  = 0x00000100
+	desktopIDOK          = 1
 )
 
 var (
@@ -79,10 +88,14 @@ var (
 	desktopGetCursorPos    = desktopUser32.NewProc("GetCursorPos")
 	desktopPostMessage     = desktopUser32.NewProc("PostMessageW")
 	desktopFindWindow      = desktopUser32.NewProc("FindWindowW")
+	desktopSetWindowLong   = desktopUser32.NewProc("SetWindowLongPtrW")
+	desktopCallWindowProc  = desktopUser32.NewProc("CallWindowProcW")
+	desktopMessageBox      = desktopUser32.NewProc("MessageBoxW")
 
 	desktopShellNotifyIcon = desktopShell32.NewProc("Shell_NotifyIconW")
 
-	activeDesktopShell *desktopShellApp
+	activeDesktopShell  *desktopShellApp
+	desktopPrevMainProc uintptr
 )
 
 type desktopShellOptions struct {
@@ -141,6 +154,10 @@ type desktopShellApp struct {
 	trayAdded  bool
 	mutex      windows.Handle
 	releaseLog func()
+
+	// Set by the page (useNoteForm) while the editor has unsaved changes; empty when clean.
+	unsavedMessage atomic.Value
+	closePrompting bool
 }
 
 func runDesktopShellWebViewOnly(opts desktopShellOptions) error {
@@ -330,6 +347,10 @@ func runDesktopWebView(opts desktopShellOptions, releaseLog func()) error {
 		return err
 	}
 	if err := app.addTrayIcon(); err != nil {
+		w.Destroy()
+		return err
+	}
+	if err := app.installCloseGuard(); err != nil {
 		w.Destroy()
 		return err
 	}
@@ -528,6 +549,72 @@ func (a *desktopShellApp) quit() {
 			a.webview.Terminate()
 		})
 	}
+}
+
+// installCloseGuard lets the page report unsaved editor changes and asks before a user close
+// (title bar X, Alt+F4, taskbar) discards them. WebView2 does not run a beforeunload prompt when
+// the host window is destroyed. Must run before the first navigation: Bind and Init only apply
+// to documents created afterwards.
+func (a *desktopShellApp) installCloseGuard() error {
+	if err := a.webview.Bind("prismDesktopSetUnsaved", a.setUnsavedMessage); err != nil {
+		return err
+	}
+	a.webview.Init("window.prismDesktopSetUnsaved && window.prismDesktopSetUnsaved('')")
+	prev, _, err := desktopSetWindowLong.Call(uintptr(a.mainHWND), desktopGWLPWndProc, windows.NewCallback(desktopMainWindowProc))
+	if prev == 0 {
+		return fmt.Errorf("SetWindowLongPtrW main window failed: %w", err)
+	}
+	desktopPrevMainProc = prev
+	return nil
+}
+
+func (a *desktopShellApp) setUnsavedMessage(message string) {
+	a.unsavedMessage.Store(message)
+}
+
+func (a *desktopShellApp) currentUnsavedMessage() string {
+	message, _ := a.unsavedMessage.Load().(string)
+	return message
+}
+
+// desktopShouldConfirmClose guards only user-initiated closes (SC_CLOSE). Tray Quit and the
+// library's Destroy post WM_CLOSE directly and keep closing unconditionally.
+func desktopShouldConfirmClose(msg uint32, wParam uintptr, message string) bool {
+	return msg == desktopWMSysCommand && wParam&0xFFF0 == desktopSCClose && message != ""
+}
+
+func (a *desktopShellApp) confirmClose(message string) bool {
+	if a.closePrompting {
+		return false
+	}
+	a.closePrompting = true
+	defer func() {
+		a.closePrompting = false
+		// MessageBoxW's modal loop drops thread messages, including the WM_APP posted by
+		// Dispatch (e.g. a tray Quit chosen while the box was open). Post a fresh one so the
+		// queued work still runs.
+		a.webview.Dispatch(func() {})
+	}()
+	text := windows.StringToUTF16Ptr(strings.ReplaceAll(message, "\x00", ""))
+	caption := windows.StringToUTF16Ptr("Prism")
+	r, _, _ := desktopMessageBox.Call(
+		uintptr(a.mainHWND),
+		uintptr(unsafe.Pointer(text)),
+		uintptr(unsafe.Pointer(caption)),
+		desktopMBOKCancel|desktopMBIconWarning|desktopMBDefButton2,
+	)
+	return r == desktopIDOK
+}
+
+func desktopMainWindowProc(hwnd uintptr, msg uint32, wParam uintptr, lParam uintptr) uintptr {
+	if app := activeDesktopShell; app != nil {
+		message := app.currentUnsavedMessage()
+		if desktopShouldConfirmClose(msg, wParam, message) && !app.confirmClose(message) {
+			return 0
+		}
+	}
+	r, _, _ := desktopCallWindowProc.Call(desktopPrevMainProc, hwnd, uintptr(msg), wParam, lParam)
+	return r
 }
 
 func (a *desktopShellApp) showTrayMenu() {

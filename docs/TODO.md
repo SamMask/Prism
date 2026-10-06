@@ -256,6 +256,30 @@
   - 已知、另開工單：
     - 沒有 focus trap 時，Tab 可以移到背景的導覽連結或 palette 按鈕，導覽後編輯內容會消失。PRISM-OPT-62 已提升為 P1。
     - app 內導覽（上一頁、連結）時，未存的編輯仍會消失。另開 PRISM-OPT-63（P1）。
+- `PRISM-OPT-61`（本機驗證；未發版、未部署 Pi）：
+  - 先做唯讀評估，在 scratch 用原型實測：WebView2 關窗時不會執行頁面的 `beforeunload`（`WM_CLOSE` 到 `WM_DESTROY` 只隔數毫秒）；F5／reload 時 WebView2 會跳出自己的離開提示，OPT-21 的保護在這條路徑有效。go-webview2 沒有關閉攔截點。
+  - 實作：
+    - `desktop_shell_windows.go` subclass 主視窗，只攔 `WM_SYSCOMMAND`/`SC_CLOSE`。
+    - 頁面在有未存變更時，透過 bound `prismDesktopSetUnsaved` 推送在地化提示，shell 直接跳原生 `MessageBoxW`（OK／Cancel，預設 Cancel）。關窗時不必回頭問頁面，所以頁面卡住時仍能關閉。
+    - 確認框開著時防止重入；`MessageBoxW` return 後補一個 `Dispatch(func(){})`，讓被 modal loop 吃掉的 tray Quit 能執行。
+    - tray Quit（`WM_CLOSE`）不攔。
+    - 前端只改 OPT-21 的 beforeunload effect，瀏覽器裡這個函式不存在，所以是 no-op。
+    - 沒有新增 dependency，沒有改 tray／單一實例邏輯，也沒有改 API。
+  - 驗證：
+    - fail-before：Go 判斷函式的表格測試在 HEAD 上無法編譯，pytest source-lock 在 HEAD 上失敗。
+    - 實作代理（隔離 data-dir、自訂 mutex、CDP 驅動真實 UI 輸入）：desktop harness 14/14，包含真實 OS 層 Alt+F4；HEAD build 的負對照在關窗時遺失編輯內容。
+    - prism-verifier 用真的 desktop exe 加自寫 GUI harness 驗收：
+      - 有未存變更時 `SC_CLOSE` 出現 owner 為主視窗的確認框，預設是 Cancel。Cancel 保留內容；OK 關閉，不寫入 DB。
+      - 存檔後、改回原樣、reload 之後都直接關閉；reload 證明 Init 會重設殘留的旗標。
+      - 有未存變更時 tray Quit 直接結束，`--desktop-self-test` 自行退出。
+      - 確認框開著時的重入，以及確認框開著時的 tray Quit 都正確；popup 視窗不會誤清旗標。
+      - 瀏覽器的 `beforeunload` 不變，`prismDesktopSetUnsaved` 在瀏覽器中是 undefined。
+    - 指令：`go vet`、`go test ./...`、linux/arm64 cross-build（Pi）、`npm run build` 都通過，pytest 419 passed、`git diff --check` 通過。
+  - 已知：
+    - Windows 登出／關機（`WM_QUERYENDSESSION`）與不加 `/F` 的 `taskkill` 不受保護，與修改前相同。
+    - 工作列的「關閉視窗」與實體滑鼠點 X 沒有以實體輸入驗證，但它們都會送同一個 `SC_CLOSE`。
+    - `SetWindowLongPtrW` 只存在於 64 位元的 user32；目前只建置 amd64。
+    - 實作代理一開始用了固定 debug 埠 9333，該埠屬於使用者本機另一個瀏覽器；它只讀過頁面清單、沒有任何操作，之後改用隨機埠。
 
 ### P1 — 下一輪
 
@@ -274,7 +298,7 @@
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
-| PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Todo | 21 | OPT-21 追蹤 |
+| PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |
 | PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Todo | — | OPT-22 追蹤 |
 | PRISM-OPT-63 | 編輯器有未存變更時，app 內導覽（上一頁、連結、palette 導覽）先詢問 | Todo | — | OPT-59 追蹤 |
 

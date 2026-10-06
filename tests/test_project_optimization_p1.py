@@ -254,6 +254,21 @@ def test_beforeunload_is_registered_only_while_there_are_unsaved_changes():
     assert "}, [hasUnsavedChanges])" in guard
 
 
+def test_desktop_close_guard_reuses_the_unsaved_effect_and_spares_tray_quit():
+    form = _note_form()
+    guard = form[form.index("window.addEventListener('beforeunload'"):form.index("}, [hasUnsavedChanges])")]
+    shell = (ROOT / "go-shadow" / "desktop_shell_windows.go").read_text(encoding="utf-8")
+
+    # Optional call: browsers (the Pi) have no such function, so nothing changes there.
+    assert "desktop.prismDesktopSetUnsaved?.(t('editor.form.unsavedMessage'))" in guard
+    assert "desktop.prismDesktopSetUnsaved?.('')" in guard
+    assert 'Bind("prismDesktopSetUnsaved"' in shell
+    assert "window.prismDesktopSetUnsaved('')" in shell
+    # Only user closes (SC_CLOSE) are guarded; tray Quit posts WM_CLOSE and stays unconditional.
+    assert "msg == desktopWMSysCommand && wParam&0xFFF0 == desktopSCClose" in shell
+    assert shell.index("app.installCloseGuard()") < shell.index("w.SetHtml(desktopStartupHTML())")
+
+
 def test_restore_on_save_drops_the_deleted_auto_attachment_from_the_open_panel():
     form = _note_form()
     editor = _read("components/NoteEditor.tsx")

@@ -102,7 +102,14 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       event.returnValue = ''
     }
     window.addEventListener('beforeunload', onBeforeUnload)
-    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+    // The Windows desktop shell gets no beforeunload prompt on window close; it asks natively
+    // with this message instead. Absent in browsers, so this is a no-op there.
+    const desktop = window as Window & { prismDesktopSetUnsaved?: (message: string) => unknown }
+    desktop.prismDesktopSetUnsaved?.(t('editor.form.unsavedMessage'))
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload)
+      desktop.prismDesktopSetUnsaved?.('')
+    }
   }, [hasUnsavedChanges])
 
   // ---- Close guard ----
