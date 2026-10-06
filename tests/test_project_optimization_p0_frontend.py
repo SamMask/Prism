@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 
@@ -94,3 +95,38 @@ def test_note_fetches_use_latest_request_sequence_and_expose_inline_retry():
     assert "retryFetchNotes: () =>" in store
     assert 'data-testid="notes-load-error"' in home
     assert "onClick={retryFetchNotes}" in home
+
+
+def test_attachment_popup_renders_content_as_text_not_html():
+    hook = _read("hooks/editor/useNoteAttachments.ts")
+
+    html_sink = re.compile(
+        r"\.write(?:ln)?\(|innerHTML|outerHTML|insertAdjacentHTML|srcdoc|createContextualFragment|DOMParser"
+    )
+    assert not html_sink.search(hook)
+    assert "${attachmentContent}" not in hook
+    assert "window.open('', '_blank')" in hook
+    assert "doc.title = t('editor.attachment.contentTitle')" in hook
+    assert "doc.createElement('pre')" in hook
+    assert "pre.textContent = attachmentContent" in hook
+
+
+def test_attachment_items_are_keyboard_operable_buttons():
+    panel = _read("components/editor/AttachmentPanel.tsx")
+    start = panel.index("attachments.map((att) => (")
+    item = panel[start:panel.index("{/* Upload Button */}", start)]
+
+    assert 'data-testid={`attachment-item-${att.id}`}' in item
+    row_start = item.index("<div")
+    row_tag = item[row_start:item.index("<", row_start + 1)]
+    assert "onClick" not in row_tag
+    assert item.count('type="button"') == 2
+    open_button = item[item.index("<button"):item.index("</button>")]
+    assert 'type="button"' in open_button
+    assert "onClick={() => onLoadAttachment(att.id, att.is_auto_extracted)}" in open_button
+    assert "focus-visible:ring-2" in open_button
+    delete_button = item[item.rindex("<button"):item.rindex("</button>")]
+    assert 'type="button"' in delete_button
+    assert "aria-label={t('editor.attachment.delete')}" in delete_button
+    assert "group-focus-within:opacity-100" in delete_button or "focus-visible:opacity-100" in delete_button
+    assert "focus-visible:ring-2" in delete_button

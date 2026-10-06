@@ -86,16 +86,16 @@ export function useNoteAttachments(
       } else {
         const win = window.open('', '_blank')
         if (win) {
-          win.document.write(`
-            <html>
-              <head>
-                <title>${t('editor.attachment.contentTitle')}</title>
-                <style>body{font-family:monospace;padding:20px;background:#1a1a2e;color:#e0e0e0}pre{white-space:pre-wrap;word-wrap:break-word}</style>
-              </head>
-              <body><pre>${attachmentContent}</pre></body>
-            </html>
-          `)
-          win.document.close()
+          // Build with DOM APIs so attachment text can never be parsed as HTML.
+          const doc = win.document
+          doc.title = t('editor.attachment.contentTitle')
+          const style = doc.createElement('style')
+          style.textContent =
+            'body{font-family:monospace;padding:20px;background:#1a1a2e;color:#e0e0e0}pre{white-space:pre-wrap;word-wrap:break-word}'
+          doc.head.appendChild(style)
+          const pre = doc.createElement('pre')
+          pre.textContent = attachmentContent
+          doc.body.appendChild(pre)
         }
       }
     } catch {

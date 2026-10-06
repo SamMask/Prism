@@ -41,7 +41,7 @@
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
 | PRISM-OPT-15 | `Download .db` 改為一致快照（重用 `writeConsistentDBBackup`） | Done | — | OPS-01 |
-| PRISM-OPT-16 | 附件檢視改為純文字輸出；附件項目可用鍵盤操作 | Todo | — | TECH-07 |
+| PRISM-OPT-16 | 附件檢視改為純文字輸出；附件項目可用鍵盤操作 | Done | — | TECH-07 |
 | PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Todo | — | UX-01 |
 | PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Todo | — | FEAT-01 |
 | PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Todo | — | FEAT-02 |
@@ -56,6 +56,20 @@
     - 新增 CJK 筆記後（尚未 checkpoint）立刻下載，下載檔含這筆。
     - 暫存目錄沒有殘留檔。
   - 驗證：`go vet` 通過、`go test ./...` ok、pytest 402 passed、`git diff --check` 通過。
+- `PRISM-OPT-16`（本機驗證；未發版、未部署 Pi）：
+  - `handleLoadAttachment`（`useNoteAttachments.ts`）改用 DOM API 建立 popup：`<pre>` 加上 `textContent`，不再以 `document.write` 插入附件內容。auto-extracted 載入流程沒有改。
+  - `AttachmentPanel.tsx` 的每個附件列改為兩個原生按鈕：開啟按鈕，以及帶 `aria-label` 的刪除按鈕。刪除按鈕在 hover、鍵盤 focus 時顯示，在不支援 hover 的觸控裝置上一直顯示。
+  - 回歸測試在 `tests/test_project_optimization_p0_frontend.py`，共兩個 source-lock 測試：
+    - 用 regex 禁止 HTML sink：`.write(`、`.writeln(`、`innerHTML`、`srcdoc`、`createContextualFragment` 等，並要求以 `textContent` 寫入內容。
+    - 檢查附件項目是原生按鈕，刪除按鈕有 `aria-label` 和 focus 顯示。
+    - 兩個測試在 HEAD 原始碼上都失敗，`doc.write` 等突變也都會被抓到。
+  - 瀏覽器實測：使用隔離的 fresh runtime，附件內容含 `<script>`、`</pre><img onerror>` 與 CJK。
+    - Tab 鍵可以把 focus 移到開啟按鈕，focus ring 可見，刪除按鈕同時出現。按 Enter 會讀取附件。
+    - popup 內只有一個 `<pre>`，原樣顯示 payload 文字，不會產生 script、img 元素。
+    - 390px 寬度下刪除按鈕一直可見，沒有橫向捲動。刪除時會跳出確認，按取消後附件保留。
+  - 獨立驗收（prism-verifier）在 headless Chromium 開真的 popup 對照：HEAD 版本被注入（title 變成 `PWNED`、script 被執行），新版本沒有。
+  - 驗證：`npm run build` 通過、pytest 404 passed、`git diff --check` 通過。
+  - 尚未驗證：Firefox／Safari，以及 WebView2 desktop shell 中真正開出的 popup。
 
 ### P1 — 下一輪
 

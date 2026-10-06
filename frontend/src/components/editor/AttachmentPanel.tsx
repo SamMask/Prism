@@ -55,41 +55,48 @@ export function AttachmentPanel({
             <div
               key={att.id}
               data-testid={`attachment-item-${att.id}`}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg
+              className={`flex items-center gap-1 rounded-lg
                          bg-bg-elevated text-text-secondary text-xs
-                         hover:bg-bg-hover group cursor-pointer
+                         hover:bg-bg-hover group
                          ${
                            att.is_auto_extracted
                              ? "border-l-2 border-primary"
                              : ""
                          }`}
-              onClick={() => onLoadAttachment(att.id, att.is_auto_extracted)}
-              title={
-                att.is_auto_extracted ? t('editor.attachment.restoreFullContent') : t('editor.attachment.viewAttachment')
-              }
             >
-              <FileText
-                size={14}
-                className={`flex-shrink-0 ${
-                  att.is_auto_extracted ? "text-accent" : "text-primary"
-                }`}
-              />
-              <span className="truncate flex-1" title={att.title}>
-                {att.title}
-                {att.is_auto_extracted && (
-                  <span className="text-accent ml-1">({t('editor.attachment.fullContent')})</span>
-                )}
-              </span>
-              <span className="text-text-muted">
-                {(att.size_bytes / 1024).toFixed(0)}KB
-              </span>
               <button
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent opening file
-                  onDeleteAttachment(att.id);
-                }}
-                className="opacity-0 group-hover:opacity-100 text-text-muted hover:text-danger
-                           transition-opacity"
+                type="button"
+                onClick={() => onLoadAttachment(att.id, att.is_auto_extracted)}
+                title={
+                  att.is_auto_extracted ? t('editor.attachment.restoreFullContent') : t('editor.attachment.viewAttachment')
+                }
+                className="flex flex-1 min-w-0 items-center gap-2 px-2 py-1.5 rounded-lg text-left
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
+                <FileText
+                  size={14}
+                  className={`flex-shrink-0 ${
+                    att.is_auto_extracted ? "text-accent" : "text-primary"
+                  }`}
+                />
+                <span className="truncate flex-1" title={att.title}>
+                  {att.title}
+                  {att.is_auto_extracted && (
+                    <span className="text-accent ml-1">({t('editor.attachment.fullContent')})</span>
+                  )}
+                </span>
+                <span className="text-text-muted">
+                  {(att.size_bytes / 1024).toFixed(0)}KB
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onDeleteAttachment(att.id)}
+                aria-label={t('editor.attachment.delete')}
+                className="mr-1 p-1 rounded text-text-muted hover:text-danger transition-opacity
+                           opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
+                           [@media(hover:none)]:opacity-100
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 title={t('editor.attachment.delete')}
               >
                 <Trash2 size={12} />
