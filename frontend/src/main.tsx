@@ -1,6 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import App from './App'
 import './index.css'
 
@@ -39,10 +39,11 @@ const savedSidebarWidth = readNumberSetting('prism.sidebarWidth', 248, 150, 320)
 document.documentElement.style.setProperty('--prism-sidebar-width', `${savedSidebarWidth}px`)
 document.documentElement.style.setProperty('--sidebar-w', `${savedSidebarWidth}px`)
 
+// A data router (useBlocker needs one) wrapping App's existing <Routes> under a single splat route.
+const router = createBrowserRouter([{ path: '*', element: <App /> }])
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </React.StrictMode>,
 )

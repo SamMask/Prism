@@ -302,3 +302,30 @@ def test_preview_mode_shows_a_heading_not_a_focused_title_input_and_hides_clean_
     assert "t('editor.toolbar.previewNote')" in toolbar
     # New heading key exists in all four locales.
     assert len(re.findall(r"^      previewNote: '[^']+',$", i18n, re.M)) == 4
+
+
+def test_in_app_navigation_asks_before_discarding_unsaved_edits():
+    # PRISM-OPT-63: SPA navigation (browser Back/Forward, sidebar links, palette commands) never fires
+    # beforeunload. useBlocker needs a data router, so the existing <Routes> tree is mounted under one
+    # splat route; the editor form blocks route changes while dirty and reuses the close-guard confirm.
+    main = _read("main.tsx")
+    form = _note_form()
+
+    assert "createBrowserRouter([{ path: '*', element: <App /> }])" in main
+    assert "<RouterProvider router={router} />" in main
+    assert "<BrowserRouter>" not in main
+    assert "useBlocker(" in form
+    assert "hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname" in form
+    guard = form[form.index("if (blocker.state !== 'blocked') return"):]
+    assert "confirmDiscard().then((ok) => (ok ? blocker.proceed() : blocker.reset()))" in guard
+    # One confirm for both the close button and navigation, with the existing four-locale copy.
+    assert form.count("t('editor.form.unsavedTitle')") == 1
+    close = form[form.index("const handleClose = useCallback"):form.index("// ---- Save ----")]
+    assert "await confirmDiscard()" in close
+    # A newer confirm() (e.g. Modal's Escape -> handleClose over the navigation prompt) replaces the
+    # single dialog slot; the hidden one must resolve as cancel, or the blocker would stay blocked
+    # and every later Back would be swallowed without a prompt.
+    dialog = _read("components/ui/ConfirmDialog.tsx")
+    show = dialog[dialog.index("const handleShow = useCallback"):dialog.index("useEffect(() => {\n    showConfirm = handleShow")]
+    assert show.index("pendingResolve.current?.(false)") < show.index("pendingResolve.current = resolve")
+    assert show.index("pendingResolve.current = resolve") < show.index("setState({ options, resolve })")

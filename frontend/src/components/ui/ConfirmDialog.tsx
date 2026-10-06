@@ -33,9 +33,14 @@ export function ConfirmDialogProvider() {
   } | null>(null)
 
   const confirmBtnRef = useRef<HTMLButtonElement>(null)
+  const pendingResolve = useRef<((value: boolean) => void) | null>(null)
 
   const handleShow = useCallback((options: ConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
+      // A newer confirm takes over the single dialog; cancel the one it hides instead of
+      // leaving its caller (e.g. a blocked navigation) waiting forever.
+      pendingResolve.current?.(false)
+      pendingResolve.current = resolve
       setState({ options, resolve })
     })
   }, [])

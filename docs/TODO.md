@@ -280,6 +280,25 @@
     - 工作列的「關閉視窗」與實體滑鼠點 X 沒有以實體輸入驗證，但它們都會送同一個 `SC_CLOSE`。
     - `SetWindowLongPtrW` 只存在於 64 位元的 user32；目前只建置 amd64。
     - 實作代理一開始用了固定 debug 埠 9333，該埠屬於使用者本機另一個瀏覽器；它只讀過頁面清單、沒有任何操作，之後改用隨機埠。
+- `PRISM-OPT-63`（本機驗證；未發版、未部署 Pi）：
+  - 做法：
+    - `main.tsx` 從 `BrowserRouter` 改成 data router：`createBrowserRouter([{ path: '*', element: <App /> }])` 加上 `RouterProvider`。這是官方的最小遷移寫法，`App.tsx` 沒有修改。
+    - `useNoteForm` 用 `useBlocker` 攔截：只在有未存變更、而且 pathname 會改變時才攔。確認文案與 `handleClose` 共用 `confirmDiscard()`，沒有新增 i18n key。
+    - `ConfirmDialog`：新的 confirm 會讓被取代的 pending confirm 以 `false`（取消）resolve。否則導覽確認框開著時按 Escape，會疊出第二個確認框，blocker 會永遠卡在 blocked。
+  - 驗證：
+    - pytest 的 source-lock 測試在 HEAD 上失敗。
+    - 實作代理：隔離 runtime 在 1280 與 390 共 43 項，含 Escape 的邊界案例。
+    - prism-verifier 自寫腳本：CUR 1280 與 390 各 32/32，edge 7/7。
+      - 有未存變更時按上一頁／下一頁、點側欄連結（鍵盤 Enter 與點擊）都會詢問。取消會留在 `/`，內容保留；確認後才離開，DB 不變。
+      - 沒有未存變更、或 `Ctrl+S` 存檔後，照常導覽不詢問。
+      - 導覽確認框開著時按 Escape 不會卡住。
+      - OPT-17、21、22、59、其他 `confirm()`、`beforeunload` 都沒有退化。verifier 逐一檢查了 13 個 `confirm()` 呼叫端，被取代時回傳 `false` 都不會觸發動作。
+      - HEAD 負對照：同樣的操作不詢問，編輯內容遺失。
+    - 指令：`npm run build` 通過、pytest 420 passed、`git diff --check` 通過。
+  - 已知：
+    - data router 讓 main chunk 增加約 14.5 kB（gzip）。
+    - 確認框上按 Escape 會變成「放棄並關閉？」確認框，這是既有行為，屬於 PRISM-OPT-62 的範圍。
+    - 新 router 沒有在 desktop WebView2 上實測。
 
 ### P1 — 下一輪
 
@@ -300,7 +319,7 @@
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |
 | PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Todo | — | OPT-22 追蹤 |
-| PRISM-OPT-63 | 編輯器有未存變更時，app 內導覽（上一頁、連結、palette 導覽）先詢問 | Todo | — | OPT-59 追蹤 |
+| PRISM-OPT-63 | 編輯器有未存變更時，app 內導覽（上一頁、連結、palette 導覽）先詢問 | Done | — | OPT-59 追蹤 |
 
 完成證據（2026-10-06）：
 

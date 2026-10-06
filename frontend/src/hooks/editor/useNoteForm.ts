@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useBlocker } from 'react-router-dom'
 import { api, Note, Tag } from '../../services/api'
 import { useAppStore } from '../../stores/appStore'
 import { confirm } from '../../components/ui/ConfirmDialog'
@@ -113,18 +114,27 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   }, [hasUnsavedChanges])
 
   // ---- Close guard ----
+  const confirmDiscard = () => confirm({
+    title: t('editor.form.unsavedTitle'),
+    message: t('editor.form.unsavedMessage'),
+    confirmText: t('editor.form.discard'),
+    variant: 'warning',
+  })
+
   const handleClose = useCallback(async () => {
-    if (hasUnsavedChanges) {
-      const shouldDiscard = await confirm({
-        title: t('editor.form.unsavedTitle'),
-        message: t('editor.form.unsavedMessage'),
-        confirmText: t('editor.form.discard'),
-        variant: 'warning',
-      })
-      if (!shouldDiscard) return
-    }
+    if (hasUnsavedChanges && !(await confirmDiscard())) return
     onClose()
   }, [hasUnsavedChanges, onClose])
+
+  // In-app navigation (browser Back/Forward, links, palette) unmounts this editor without
+  // beforeunload; ask first, and stay with the edits kept on cancel.
+  const blocker = useBlocker(({ currentLocation, nextLocation }) =>
+    hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname)
+  useEffect(() => {
+    if (blocker.state !== 'blocked') return
+    confirmDiscard().then((ok) => (ok ? blocker.proceed() : blocker.reset()))
+    // Ask once per blocked navigation, not on every re-render while the dialog is open.
+  }, [blocker.state])
 
   // ---- Save ----
   // Ctrl+S saves and stays (close: false); the Save button saves and closes.
