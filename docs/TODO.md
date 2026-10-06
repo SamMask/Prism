@@ -115,6 +115,8 @@
 | PRISM-OPT-28 | 桌面版每日自動還原點 | Blocked | 使用者決定預設值與保留份數 | OPS-02 |
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Todo | 第二階段需要決策 | OPS-04 |
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
+| PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Todo | — | OPT-19 追蹤 |
+| PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Todo | — | OPT-19 追蹤 |
 
 完成證據（2026-10-06）：
 

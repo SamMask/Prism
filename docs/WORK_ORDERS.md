@@ -97,6 +97,8 @@ git diff --check
 | PRISM-OPT-51 | B | L | prism-engineer | prism-verifier |
 | PRISM-OPT-52 | D | M | 主代理（已完成） | 主代理 |
 | PRISM-OPT-53 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-58 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-59 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-54 | F | S | prism-builder | 主代理 |
 | PRISM-OPT-55 | F | M | prism-builder | prism-verifier |
 | PRISM-OPT-56 | B | M | prism-builder | prism-verifier |
@@ -228,6 +230,10 @@ git diff --check
 - **行為規格**：
   - dry-run 先顯示「N 篇可合併、M 篇缺檔」，確認後執行並回報結果。
   - 缺檔的筆記保持原狀並列出。
+  - dry-run 另外列出兩類（PRISM-OPT-19 規劃時發現，2026-10-06）：
+    - 超過 1 MiB、因此無法載入也無法存檔的已拆分筆記。
+    - `docs/notes/` 中沒有任何附件列引用的孤兒檔：在附件面板刪除 auto 附件時只會刪附件列（`attachments.go:286-306`），檔案會留下。
+  - 多則筆記共用同一個 `docs/notes` 檔案時，搬移前要檢查，不得讓其他筆記失去檔案。
 - **驗收**（Go test fixture：2 篇已拆分、1 篇缺檔、1 篇一般筆記）：
   - dry-run 計數正確。
   - 執行後 FTS 能找到尾段關鍵字、JSON 與 MD 匯出包含全文、檔案已移入隔離資料夾、還原點確實存在。
@@ -404,6 +410,37 @@ git diff --check
 - **驗證**：
   - 第一階段：`git diff --check`、`pytest tests/ -v`。
   - 第二階段：再加 `cd go-shadow && go test ./...`。
+
+### PRISM-OPT-58 — JSON 匯入遇到已拆分筆記時整批失敗
+
+- **Finding**：PRISM-OPT-19 規劃時實測（2026-10-06）｜ **優先級**：P1
+- **目標**：含已拆分筆記的 JSON 匯出檔可以匯入，不會整批失敗。
+- **原因**：匯入用 `resolveAttachmentMutationPath` 驗證附件路徑（`import.go:318`），只允許 `docs/attachments/`。只要匯出檔中有 `docs/notes/note_<id>.md` 這類 auto-extracted 附件，就整批回 400 `unsafe attachment path`。PRISM-OPT-20 完成前匯出的 JSON 備份都受影響。
+- **修改範圍**：`go-shadow/import.go`。
+  - 先確認 JSON 匯出對已拆分筆記帶了什麼：只有預覽與路徑，還是也有全文。
+  - 匯入時不再整批失敗：
+    - auto-extracted 的 `docs/notes` 附件列要嘛略過並保留預覽，要嘛在 JSON 含全文時直接寫入 content。採用哪一種，施工前在計畫中說明。
+    - 回應中回報略過的筆數。
+  - 路徑安全檢查不得放寬到任意路徑。
+- **不要修改**：一般附件的路徑安全檢查；schema；export 格式（欄位的擴充屬於 PRISM-OPT-39）。
+- **驗收**（Go test）：一份含一篇已拆分筆記的匯出 JSON 可以匯入 fresh DB；其他筆記完整；略過或寫回的結果與回報一致；含 `../` 等不安全路徑的附件仍然被拒絕。
+- **驗證**：`cd go-shadow && go test ./...`；`pytest tests/ -v`。
+
+### PRISM-OPT-59 — 編輯器開著時從 Command Palette 開另一則筆記（先重現）
+
+- **Finding**：PRISM-OPT-19 規劃時的觀察，**未驗證**（2026-10-06）｜ **優先級**：P1
+- **目標**：確認編輯器開著時切換到另一則筆記，不會把前一則的內容存進新的筆記；若會，修正它。
+- **原因**（推測）：
+  - `HomePage.tsx:617-618` 的 `NoteEditor` 沒有用 note id 當 `key`。
+  - 編輯器開著時 `Ctrl+K` 仍會開啟 palette（`CommandPalette.tsx:317-321`）。
+  - 如果在 palette 中選了另一則筆記，表單可能沿用前一則的內容，存檔時卻寫到新的 note id。
+- **修改範圍**：
+  - 第一步：在隔離 runtime 重現。開 A 並修改內容 → `Ctrl+K` 選 B → 存檔 → 檢查 A、B 的 DB 內容與歷史。
+  - 若重現成功：最小修正，例如 `NoteEditor` 加上 `key={editingNote?.id ?? 'new'}`，或在編輯器開著時讓 palette 開筆記前先關閉編輯器，並保留 PRISM-OPT-21 的未存提醒語意。
+  - 若無法重現：記錄重現步驟與結果，並關閉工單。
+- **不要修改**：API；schema；PRISM-OPT-19 的存檔流程。
+- **驗收**：重現步驟的結果記錄在 `docs/TODO.md`；若有修正，A、B 的內容與歷史都正確，並有回歸測試或 browser smoke 證據。
+- **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；隔離 runtime 的 browser 流程。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
