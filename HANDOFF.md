@@ -24,9 +24,11 @@
   - 同日完成治理文件瘦身（PRISM-OPT-27）。`.loop/verify-gate.ps1` 通過：pytest 399 passed、`go test ./...` ok、mirror 與 diff check 通過。證據記錄於 `docs/TODO.md`。
   - 2026-10-06 的變更（`e77a631`、`2bb38a7`）已 fast-forward 合併到 `main` 並推送 `origin/main`；未建立 release/tag，未部署 Pi。
 
+  - PRISM-OPT-15 已完成：`GET /api/export/db` 改為送出一致快照。驗證證據記錄於 `docs/TODO.md`。分支為 `prism-opt-15-consistent-db-export`。
+
 ## Next Entry
 
-1. 施工 P0：PRISM-OPT-15、16、17、18、19。五張彼此獨立，各自 commit。開工時在 `docs/TODO.md` 把該工單標為 `Doing`。
+1. 施工剩下的 P0：PRISM-OPT-16、17、18、19。四張彼此獨立，各自 commit。開工時在 `docs/TODO.md` 把該工單標為 `Doing`。
    - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。
 2. P1 從 PRISM-OPT-20（依賴 19）與 21 開始。以下兩項需要使用者先決策：
    - PRISM-OPT-28：桌面版自動還原點的預設值與保留份數。

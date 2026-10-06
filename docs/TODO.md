@@ -40,11 +40,22 @@
 
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
-| PRISM-OPT-15 | `Download .db` 改為一致快照（重用 `writeConsistentDBBackup`） | Todo | — | OPS-01 |
+| PRISM-OPT-15 | `Download .db` 改為一致快照（重用 `writeConsistentDBBackup`） | Done | — | OPS-01 |
 | PRISM-OPT-16 | 附件檢視改為純文字輸出；附件項目可用鍵盤操作 | Todo | — | TECH-07 |
 | PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Todo | — | UX-01 |
 | PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Todo | — | FEAT-01 |
 | PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Todo | — | FEAT-02 |
+
+完成證據（2026-10-06）：
+
+- `PRISM-OPT-15`（本機驗證；未發版、未部署 Pi）：
+  - `handleExportDB`（`go-shadow/export.go`）改為先用 `writeConsistentDBBackup` 寫到暫存檔再送出，結束後刪除暫存檔，寫法比照 `handleBackupDownload`。API 路徑、檔名格式、Content-Type、gate 都不變。
+  - 新增 Go 測試 `TestExportDBIncludesUncheckpointedWALWrite`（CJK 資料）、`TestExportDBFreshInitDBIncludesSchema`、`TestExportDBGates`；下載 helper 會斷言暫存目錄沒有殘留。前兩個測試在舊的 `http.ServeFile` 實作上失敗，修正後通過。
+  - 獨立驗收（prism-verifier）在隔離 data-dir 的 fresh runtime 實測 HTTP：
+    - fresh DB 下載檔有 `Notes` 表，integrity ok；同一時間 live 主檔本身沒有 `Notes`。
+    - 新增 CJK 筆記後（尚未 checkpoint）立刻下載，下載檔含這筆。
+    - 暫存目錄沒有殘留檔。
+  - 驗證：`go vet` 通過、`go test ./...` ok、pytest 402 passed、`git diff --check` 通過。
 
 ### P1 — 下一輪
 

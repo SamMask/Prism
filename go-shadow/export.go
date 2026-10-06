@@ -135,10 +135,24 @@ func (s *server) handleExportDB(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Serve a VACUUM INTO snapshot, not the live main file: committed writes
+	// still in the WAL would otherwise be missing from the download.
+	tmp, err := os.CreateTemp("", "prism-export-*.db")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	tmpPath := tmp.Name()
+	tmp.Close()
+	defer os.Remove(tmpPath)
+	if err := s.writeConsistentDBBackup(tmpPath); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	filename := "local_insight_backup_" + time.Now().Format("20060102_150405") + ".db"
 	w.Header().Set("Content-Type", "application/x-sqlite3")
 	w.Header().Set("Content-Disposition", "attachment; filename="+filename)
-	http.ServeFile(w, r, s.runtime.dbPath)
+	http.ServeFile(w, r, tmpPath)
 }
 
 func (s *server) handleExportFullSnapshot(w http.ResponseWriter, r *http.Request) {

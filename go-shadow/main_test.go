@@ -4063,6 +4063,135 @@ func assertBackupContainsNote(t *testing.T, backupPath string, noteID int, title
 	}
 }
 
+func TestExportDBIncludesUncheckpointedWALWrite(t *testing.T) {
+	dbPath := createSpikeDB(t)
+	db, err := openDB(dbPath, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	latestID := insertSearchNote(t, db, "匯出快照 最新", "WAL 尚未 checkpoint 的筆記", "", 1)
+	srv := &server{db: db, runtime: runtimeConfig{dbPath: dbPath, enableImportExport: true}}
+
+	assertBackupContainsNote(t, downloadExportDB(t, srv), latestID, "匯出快照 最新")
+}
+
+func TestExportDBFreshInitDBIncludesSchema(t *testing.T) {
+	dataDir := t.TempDir()
+	cfg, err := resolveRuntimeConfig("127.0.0.1:0", "fresh/prism_runtime_dev.db", dataDir, false, false, false, false, false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cfg.freshDBInitNeeded {
+		t.Fatal("test setup should require fresh init")
+	}
+	// Mirror --enable-import-export so the fresh-init write owner stays open
+	// and the schema remains in the WAL (closing it would checkpoint).
+	cfg.enableImportExport = true
+	owner, err := openRuntimeSQLite(&cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer owner.close()
+
+	// Precondition: the live main file alone lacks Notes, so serving it
+	// directly (the old behavior) would hand out an empty shell.
+	mainOnly := filepath.Join(t.TempDir(), "main_only.db")
+	raw, err := os.ReadFile(cfg.dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mainOnly, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if countSQLiteTable(t, mainOnly, "Notes") != 0 {
+		t.Fatal("test precondition failed: fresh schema already checkpointed into the main DB file")
+	}
+
+	srv := &server{db: owner.db, runtime: runtimeConfig{dbPath: cfg.dbPath, enableImportExport: true}}
+	downloaded := downloadExportDB(t, srv)
+	if countSQLiteTable(t, downloaded, "Notes") != 1 {
+		t.Fatal("exported fresh DB is missing the Notes table")
+	}
+	exported, err := sql.Open("sqlite", downloaded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer exported.Close()
+	var welcomeCount int
+	if err := exported.QueryRow("SELECT COUNT(*) FROM Notes WHERE title = ?", welcomeNoteTitle).Scan(&welcomeCount); err != nil {
+		t.Fatalf("exported fresh DB Notes not queryable: %v", err)
+	}
+	if welcomeCount != 1 {
+		t.Fatalf("expected fresh welcome note in export, got %d", welcomeCount)
+	}
+}
+
+func TestExportDBGates(t *testing.T) {
+	existingDB := createSpikeDB(t)
+	cases := []struct {
+		name    string
+		cfg     runtimeConfig
+		status  int
+		message string
+	}{
+		{"disabled", runtimeConfig{dbPath: existingDB}, http.StatusMethodNotAllowed, "Import/export route is disabled"},
+		{"missing db", runtimeConfig{dbPath: filepath.Join(t.TempDir(), "missing_test.db"), enableImportExport: true}, http.StatusNotFound, "Database file not found"},
+	}
+	for _, tc := range cases {
+		recorder := httptest.NewRecorder()
+		(&server{runtime: tc.cfg}).handleExportDB(recorder, httptest.NewRequest(http.MethodGet, "/api/export/db", nil))
+		if recorder.Code != tc.status || !strings.Contains(recorder.Body.String(), tc.message) {
+			t.Fatalf("%s: got %d body=%s, want %d %q", tc.name, recorder.Code, recorder.Body.String(), tc.status, tc.message)
+		}
+	}
+}
+
+// downloadExportDB calls handleExportDB with the system temp dir redirected to
+// an empty directory, asserts the response contract and that no snapshot temp
+// file is left behind, and returns the downloaded DB path.
+func downloadExportDB(t *testing.T, srv *server) string {
+	t.Helper()
+	snapshotTempDir := t.TempDir()
+	for _, key := range []string{"TMP", "TEMP", "TMPDIR"} {
+		t.Setenv(key, snapshotTempDir)
+	}
+	recorder := httptest.NewRecorder()
+	srv.handleExportDB(recorder, httptest.NewRequest(http.MethodGet, "/api/export/db", nil))
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected export db 200, got %d body=%s", recorder.Code, recorder.Body.String())
+	}
+	if got := recorder.Header().Get("Content-Type"); got != "application/x-sqlite3" {
+		t.Fatalf("export db Content-Type got %q", got)
+	}
+	disposition := recorder.Header().Get("Content-Disposition")
+	if !strings.HasPrefix(disposition, "attachment; filename=local_insight_backup_") || !strings.HasSuffix(disposition, ".db") {
+		t.Fatalf("export db Content-Disposition got %q", disposition)
+	}
+	if entries, err := os.ReadDir(snapshotTempDir); err != nil || len(entries) != 0 {
+		t.Fatalf("export db left temp files behind: %v err=%v", entries, err)
+	}
+	downloaded := filepath.Join(t.TempDir(), "exported.db")
+	if err := os.WriteFile(downloaded, recorder.Body.Bytes(), 0600); err != nil {
+		t.Fatal(err)
+	}
+	return downloaded
+}
+
+func countSQLiteTable(t *testing.T, dbPath, table string) int {
+	t.Helper()
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var count int
+	if err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?", table).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	return count
+}
+
 func TestExposureBoundaryRegressionGuards(t *testing.T) {
 	t.Setenv("PRISM_GO_ALLOW_PUBLIC_BIND", "")
 	if err := validateListenAddress("127.0.0.1:5004"); err != nil {
