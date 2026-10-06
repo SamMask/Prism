@@ -42,7 +42,7 @@
 |---|---|---|---|---|
 | PRISM-OPT-15 | `Download .db` 改為一致快照（重用 `writeConsistentDBBackup`） | Done | — | OPS-01 |
 | PRISM-OPT-16 | 附件檢視改為純文字輸出；附件項目可用鍵盤操作 | Done | — | TECH-07 |
-| PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Todo | — | UX-01 |
+| PRISM-OPT-17 | Header 的 New 與搜尋在任何 route 都導向 Library 並生效 | Done | — | UX-01 |
 | PRISM-OPT-18 | CJK 子字串搜尋 fallback；palette 對 CJK 輸入 2 字即觸發 | Todo | — | FEAT-01 |
 | PRISM-OPT-19 | 停止新的長文拆分；已拆分筆記存檔前先把全文收回 DB | Todo | — | FEAT-02 |
 
@@ -70,6 +70,18 @@
   - 獨立驗收（prism-verifier）在 headless Chromium 開真的 popup 對照：HEAD 版本被注入（title 變成 `PWNED`、script 被執行），新版本沒有。
   - 驗證：`npm run build` 通過、pytest 404 passed、`git diff --check` 通過。
   - 尚未驗證：Firefox／Safari，以及 WebView2 desktop shell 中真正開出的 popup。
+- `PRISM-OPT-17`（本機驗證；未發版、未部署 Pi）：
+  - `Header.tsx` 的 New（新增的 `handleAddNote`）與 `handleSearchSubmit`：不在首頁時先 `navigate('/')`，寫法比照 `handleOpenReadingWorkspace`。appStore、HomePage、API、i18n 都沒有改。
+  - 回歸測試 `test_header_new_note_and_search_submit_navigate_home_from_other_routes`（source-lock）：在 HEAD 版本上失敗；拿掉任何一個 handler 的 navigate 也會失敗。
+  - 瀏覽器 smoke，隔離 fresh runtime，主代理與 prism-verifier 各跑一次：
+    - desktop：從 `/settings`、`/prompt-builder` 按 New，都會導到 Library 並立即開啟 New note。從這兩頁搜尋，會導到 Library 並只顯示符合的筆記。
+    - 不再出現稍後才彈出的編輯器；console 沒有錯誤。
+    - verifier 用 HEAD 版前端重現了原始 bug：URL 停在原頁、編輯器沒開，回到 Home 後編輯器自己彈出。
+  - 390px：
+    - 從兩個 route 按 New 都正常，沒有橫向捲動。
+    - 「從這兩頁搜尋」不適用：md 以下 Header 搜尋框隱藏（`hidden md:block`），command palette 按鈕只在 `lg` 以上顯示。手機只能在 Library 頁內的 `mobile-search-form` 搜尋。非首頁在手機上沒有搜尋入口，這是既有的 UX 缺口，不在本工單範圍。
+  - 已知小瑕疵：從非首頁搜尋會送出兩次相同的 `/api/notes?q=` 請求（`setSearchQuery` 一次、HomePage 掛載一次）。store 的 request sequence 會丟掉舊的回應，結果正確；要消除就得改 appStore，不在範圍內。
+  - 驗證：`npm run build` 通過、pytest 405 passed、`git diff --check` 通過。
 
 ### P1 — 下一輪
 

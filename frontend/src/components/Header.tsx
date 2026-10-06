@@ -62,7 +62,13 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
   const handleSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (location.pathname !== '/') navigate('/')
     setSearchQuery(inputValue)
+  }
+
+  const handleAddNote = () => {
+    if (location.pathname !== '/') navigate('/')
+    openEditor(null)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -369,7 +375,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
           )}
 
           {/* New Note Button */}
-          <Button onClick={() => openEditor(null)} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button" aria-label={t('header.addNote')}>
+          <Button onClick={handleAddNote} variant="primary" size="sm" className="shrink-0" data-testid="add-note-button" aria-label={t('header.addNote')}>
             <Plus size={18} />
             <span className="hidden sm:inline">{t('header.addNote')}</span>
           </Button>

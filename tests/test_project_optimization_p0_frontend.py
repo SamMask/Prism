@@ -130,3 +130,20 @@ def test_attachment_items_are_keyboard_operable_buttons():
     assert "aria-label={t('editor.attachment.delete')}" in delete_button
     assert "group-focus-within:opacity-100" in delete_button or "focus-visible:opacity-100" in delete_button
     assert "focus-visible:ring-2" in delete_button
+
+
+def test_header_new_note_and_search_submit_navigate_home_from_other_routes():
+    header = _read("components/Header.tsx")
+    nav = "if (location.pathname !== '/') navigate('/')"
+
+    add_start = header.index("const handleAddNote = () => {")
+    add_body = header[add_start:header.index("}\n", add_start)]
+    assert nav in add_body
+    assert add_body.index(nav) < add_body.index("openEditor(null)")
+    assert "onClick={handleAddNote}" in header
+    assert "onClick={() => openEditor(null)}" not in header
+
+    submit_start = header.index("const handleSearchSubmit")
+    submit_body = header[submit_start:header.index("\n  }\n", submit_start)]
+    assert nav in submit_body
+    assert submit_body.index(nav) < submit_body.index("setSearchQuery(inputValue)")
