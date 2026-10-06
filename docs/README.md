@@ -71,7 +71,8 @@ docs/
 ├── INDEX.md           # 完整文檔索引
 ├── GOVERNANCE.md      # 開發治理、完成宣稱、驗證證據與 UI/UX 準則
 ├── TODO.md            # 工單看板 / next entry
-├── WORK_ORDERS.md     # 工單規格（目標、範圍、驗收、Blocked 啟動條件）
+├── WORK_ORDERS.md     # 工單規格（目標、範圍、驗收、Blocked 啟動條件）與派工總表
+├── AGENT_DISPATCH.md  # 子代理派工指南（類別×難度 → 代理、模型、effort）
 ├── CONTRACTS.md       # Active task contract index
 ├── TEST_PORTFOLIO.md  # Behavior / Contract / Governance / Historical 測試資產分類
 ├── RELEASE_CHECKLIST.md # Public release/tag/package validation evidence template

@@ -15,6 +15,7 @@
 | [README.md](./README.md) | 文檔中心入口、快速開始、文件治理與近期歸檔入口 | ✅ 持續更新 |
 | [GOVERNANCE.md](./GOVERNANCE.md) | 完成宣稱、狀態層級、驗證證據、委派邊界與 UI/UX 治理規則 | ✅ 持續更新 |
 | [TODO.md](./TODO.md) | 工單看板（狀態）、deferred 候選、下一步入口；完成紀錄與長版歷史移至 development-history | ✅ 持續更新 |
+| [AGENT_DISPATCH.md](./AGENT_DISPATCH.md) | 子代理派工指南：類別×難度矩陣、模型與 effort、升級規則、兩段式派工、Codex 對應；代理定義在 `../.claude/agents/` | ✅ 已建立 (2026-10-06) |
 | [WORK_ORDERS.md](./WORK_ORDERS.md) | 工單規格（PRISM-OPT-15～51）：目標、範圍、不做、驗收、驗證、Blocked 啟動條件 | ✅ 持續更新 (2026-10-06) |
 | [SCHEMA.md](./SCHEMA.md) | **現行 DB 綱要** — 所有資料表欄位定義（唯一真實來源），附 Migration 歷程 | ✅ 持續更新 |
 | [ARCHITECTURE.md](./ARCHITECTURE.md) | C4 Container Diagram、模組邊界、搜尋路徑與已知限制、部署拓撲（只放 current truth） | ✅ 持續更新 (2026-10-06 瘦身) |
@@ -117,6 +118,7 @@
 | 架構調整 / 新模組 | `ARCHITECTURE.md` |
 | 規劃新功能 / 查進度 | `TODO.md`（看板）+ `WORK_ORDERS.md`（規格） |
 | 施工某張工單 | `WORK_ORDERS.md` 該工單 + 對應審查報告的 Finding |
+| 派子代理施工 | `AGENT_DISPATCH.md` + `WORK_ORDERS.md` 派工總表 |
 | 前端改版 / UI rewrite | `PROJECT_OPTIMIZATION_REVIEW_2026-10-06.md` §4–§6 + `GOVERNANCE.md` §7；`FRONTEND-REDESIGN-PLAN.md` 僅供歷史參考 |
 | Go shadow backend / API contract lock | `contracts/phase18-readiness.md` + `contracts/api-readonly-manifest.json` + `development-history/Prism_Go_模組逐步重構計劃報告.md` + `API_REFERENCE.md` + `SCHEMA.md` |
 | Go primary runtime / packaging proof | `TODO.md` + `contracts/go-primary-route-ownership-manifest.json` + `contracts/go-primary-frontend-route-coverage.json` + `contracts/go-primary-python-packaged-runtime-deletion.json` + `development-history/Go重構審查報告-20260613-codex.md` + `go-shadow/README.md` + `DEPLOYMENT.md` + `DEPLOY-PI.md` |

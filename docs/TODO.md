@@ -60,20 +60,21 @@
 | PRISM-OPT-27 | 治理文件瘦身、修正斷鏈、解除 docs-lock 測試耦合 | Done | — | TECH-03 |
 | PRISM-OPT-28 | 桌面版每日自動還原點 | Blocked | 使用者決定預設值與保留份數 | OPS-02 |
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Todo | 第二階段需要決策 | OPS-04 |
+| PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 
-`PRISM-OPT-27` 完成證據（2026-10-06）：
+完成證據（2026-10-06）：
 
-- 文件：
-  - `docs/ARCHITECTURE.md` 由 62.5KB 降為約 12KB，歷史段落原文移到 `docs/development-history/architecture-go-migration-history-20261006.md`。
-  - `docs/TODO.md`、`HANDOFF.md` 的完成紀錄原文移到 `docs/development-history/todo-handoff-archive-20261006.md`。
-  - `CLAUDE.md` / `AGENTS.md` 改為分層必讀，並修正 `docs/New_UI`、`docs/過期` 斷鏈。
-  - 刪除與 governance-source 逐檔相同的 `docs2/`；根目錄 `PROJECT_REVIEW.md` 移入 `docs/development-history/`。
-  - `docs/GOVERNANCE.md` 新增工單、文件預算與 docs-lock 測試規則。
-- 測試：
-  - 24 個歷史測試改為讀「現行文件＋歸檔」，斷言內容本身沒有改。
-  - 4 個測試檔中原本鎖 HANDOFF/TODO 完成句的斷言，依 GOVERNANCE §6.3 改讀歸檔，並改為檢查 TODO 指向歸檔。
-- 必讀文件：由約 186KB 降為「每次開工必讀」23.9KB；加上依任務必讀的 GOVERNANCE、ARCHITECTURE、SCHEMA 共 59.1KB。
-- 驗證（2026-10-06）：`.loop/verify-gate.ps1` 通過，包含 `git diff --check`、AGENTS/CLAUDE mirror check、`pytest tests/ -v` 399 passed、`go test ./...` ok（最後一次完整 gate 為定稿後執行）。新增的未追蹤檔另以 `git diff --no-index --check` 檢查。
+- `PRISM-OPT-27`：
+  - `docs/ARCHITECTURE.md` 62.5KB → 約 12KB。
+  - TODO、HANDOFF、ARCHITECTURE 的歷史原文移到 `docs/development-history/`（`todo-handoff-archive-20261006.md`、`architecture-go-migration-history-20261006.md`）。
+  - 必讀改為分層、修正斷鏈、刪除重複的 `docs2/`。
+  - 28 個測試改讀歸檔，斷言內容不變。
+  - 驗證：`.loop/verify-gate.ps1` 通過（pytest 399 passed、`go test` ok）。commit `e77a631`。
+- `PRISM-OPT-52`：
+  - 新增 `.claude/agents/` 六個代理：scout＝haiku；docs、builder＝sonnet／medium；engineer＝opus／high；critical＝opus／xhigh；verifier＝opus／high、唯讀。
+  - 派工矩陣在 `docs/AGENT_DISPATCH.md`，每張工單的派工在 `docs/WORK_ORDERS.md` 的派工總表。
+  - `tests/test_agent_dispatch.py` 檢查三者一致，且能偵測故意製造的設定漂移。
+  - 驗證：`.loop/verify-gate.ps1` 通過。新代理需重開 session 才會載入。
 
 ### P2 — 稍後
 

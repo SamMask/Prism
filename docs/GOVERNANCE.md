@@ -106,6 +106,8 @@ Codex native subagents 或 OMX workflow 只在能提高速度、正確性或覆�
 
 委派者仍負責整合與最終驗證。子 agent 的結論不是完成證據；必須由主 agent 讀回、比對 source，並執行必要驗證。
 
+派工時選哪個子代理、用哪個模型與 effort，依 `docs/AGENT_DISPATCH.md` 的類別×難度矩陣（2026-10-06 起，依使用者決策取代先前 role-neutral、不指定模型的做法）。commit、push、release 與 Pi deploy 不派給子代理。
+
 ## 6. TODO、Handoff 與文件維護
 
 `docs/TODO.md` 只保留 active roadmap、候選 backlog 與下一步入口。長版完成記錄、舊審查、研究與歷史脈絡放到 `docs/development-history/`。

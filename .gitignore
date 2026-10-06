@@ -63,7 +63,9 @@ resources/wheels/*.whl
 logs/
 
 # AI Assistant
-.claude/
+# Only the shared subagent definitions are tracked; personal settings and worktrees stay local.
+.claude/*
+!.claude/agents/
 .cursor/
 
 # OS

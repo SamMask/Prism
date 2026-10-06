@@ -52,6 +52,55 @@ git diff --check
 
 ---
 
+## 派工總表
+
+依 `docs/AGENT_DISPATCH.md` 的類別（R/D/F/B/T/X/V/O）與難度（S/M/L/XL）指定代理。代理的模型與 effort 定義在 `.claude/agents/`。「主代理」表示不派工，由主代理自行完成或驗證。
+
+| 工單 | 類別 | 難度 | 實作代理 | 驗收 |
+|---|---|---|---|---|
+| PRISM-OPT-15 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-16 | X | S | prism-engineer | prism-verifier |
+| PRISM-OPT-17 | F | S | prism-builder | prism-verifier |
+| PRISM-OPT-18 | B | L | prism-engineer | prism-verifier |
+| PRISM-OPT-19 | X | L | prism-critical（兩段式） | prism-verifier |
+| PRISM-OPT-20 | X | XL | prism-critical（兩段式，可覆寫為 fable） | prism-verifier |
+| PRISM-OPT-21 | F | L | prism-engineer | prism-verifier |
+| PRISM-OPT-22 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-23 | D | S | prism-docs | 主代理 |
+| PRISM-OPT-24 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-25 | T | M | prism-builder | prism-verifier |
+| PRISM-OPT-26 | T | L | prism-engineer | prism-verifier |
+| PRISM-OPT-27 | D | L | 主代理（已完成） | 主代理 |
+| PRISM-OPT-28 | X | M | prism-engineer（決策後） | prism-verifier |
+| PRISM-OPT-29 | X | M | 第一階段 prism-docs；第二階段 prism-engineer | prism-verifier |
+| PRISM-OPT-30 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-31 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-32 | F | L | prism-engineer | prism-verifier |
+| PRISM-OPT-33 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-34 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-35 | D | M | prism-docs；還原演練由主代理執行 | prism-verifier |
+| PRISM-OPT-36 | B | L | prism-engineer | prism-verifier |
+| PRISM-OPT-37 | B | S | prism-builder | 主代理 |
+| PRISM-OPT-38 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-39 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-40 | F | S | prism-builder | 主代理 |
+| PRISM-OPT-41 | B | S | prism-builder | 主代理 |
+| PRISM-OPT-42 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-43 | B | L | prism-engineer | prism-verifier |
+| PRISM-OPT-44 | F | S | prism-builder | 主代理 |
+| PRISM-OPT-45 | X | XL | prism-critical | prism-verifier |
+| PRISM-OPT-46 | X | L | prism-critical | prism-verifier |
+| PRISM-OPT-47 | X | XL | prism-critical | prism-verifier |
+| PRISM-OPT-48 | X | XL | prism-critical | prism-verifier |
+| PRISM-OPT-49 | X | XL | prism-critical | prism-verifier |
+| PRISM-OPT-50 | F | M | prism-builder | prism-verifier |
+| PRISM-OPT-51 | B | L | prism-engineer | prism-verifier |
+| PRISM-OPT-52 | D | M | 主代理（已完成） | 主代理 |
+
+開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
+
+---
+
 ## Roadmap 2026-10-06 — P0
 
 ### PRISM-OPT-15 — DB 複本下載改為一致快照
@@ -345,6 +394,18 @@ git diff --check
 - **驗證**：
   - 第一階段：`git diff --check`、`pytest tests/ -v`。
   - 第二階段：再加 `cd go-shadow && go test ./...`。
+
+### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
+
+- **來源**：使用者需求（2026-10-06）｜ **優先級**：P1
+- **目標**：派工時，依工單類別與難度選擇合適的子代理、模型與推理程度，而不是全部用同一個設定。
+- **已完成內容**：
+  - `.claude/agents/` 新增六個代理定義：prism-scout（haiku）、prism-docs（sonnet／medium）、prism-builder（sonnet／medium）、prism-engineer（opus／high）、prism-critical（opus／xhigh，可覆寫為 fable）、prism-verifier（opus／high，唯讀）。
+  - `docs/AGENT_DISPATCH.md`：類別、難度、派工矩陣、升級規則、兩段式派工、Codex 對應。
+  - 本檔「派工總表」為每張工單指定實作與驗收代理。
+  - `.gitignore` 改為只追蹤 `.claude/agents/`，`settings.local.json` 與 `worktrees/` 仍然忽略。
+  - `tests/test_agent_dispatch.py` 檢查代理定義、派工指南與派工總表三者一致。
+- **驗證證據**：見 `docs/TODO.md` 看板下方。
 
 ---
 

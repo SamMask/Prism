@@ -17,6 +17,7 @@
 | 情境 | 文件 |
 |---|---|
 | 施工某張工單 | `docs/WORK_ORDERS.md` 中該工單的規格（證據在對應的審查報告） |
+| 派子代理施工 | `docs/AGENT_DISPATCH.md`（依類別與難度選代理；代理定義在 `.claude/agents/`） |
 | 完成宣稱、委派、UI/UX、文件治理 | `docs/GOVERNANCE.md` |
 | 架構調整 / 新模組 | `docs/ARCHITECTURE.md`（只放 current truth） |
 | 改 DB 欄位或 migration | `docs/SCHEMA.md`（現行 DB 綱要，改 DB 前必讀） |

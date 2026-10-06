@@ -27,6 +27,7 @@
 ## Next Entry
 
 1. 施工 P0：PRISM-OPT-15、16、17、18、19。五張彼此獨立，各自 commit。開工時在 `docs/TODO.md` 把該工單標為 `Doing`。
+   - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。
 2. P1 從 PRISM-OPT-20（依賴 19）與 21 開始。以下兩項需要使用者先決策：
    - PRISM-OPT-28：桌面版自動還原點的預設值與保留份數。
    - PRISM-OPT-29 的第二階段：是否收緊 LAN 管理 API。
@@ -37,4 +38,4 @@
 
 - 每次都讀：`AGENTS.md`（或 `CLAUDE.md`）、本檔、`docs/TODO.md`。
 - 其他文件依任務讀，見 `AGENTS.md` 的分層必讀表。
-- 施工中工單的規格在 `docs/WORK_ORDERS.md`。
+- 施工中工單的規格在 `docs/WORK_ORDERS.md`；派子代理時讀 `docs/AGENT_DISPATCH.md`。
