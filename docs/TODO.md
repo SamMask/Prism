@@ -839,6 +839,16 @@
     - `-Release` gate 跑了 3 次：2 次全綠；1 次是無關的 `test_reading_lazy_detail` 失敗 → 已開 `PRISM-OPT-76`。
     - 主代理讀 diff 驗收。
   - 已知（低）：只寫其中一邊時，另一邊的名稱只用 `Lstat` 檢查，沒有實際預留，極少數情況下配對可能錯開，但不會覆寫任何檔案。
+- `PRISM-OPT-76`（測試修正，未改產品程式）：
+  - 原因：`e2e/test_reading_lazy_detail.py` 用 `next(i for i in range(10, 40) if created[i] in shown)` 挑第 1 頁的筆記，前提是第 1 頁一定會出現第 10～39 筆。
+    - 但列表依 `is_pinned DESC, updated_at DESC` 排序，`updated_at` 只精確到秒，同一秒建立的筆記順序不固定。
+    - 完整 e2e 執行時，其他測試留下的資料也會占掉第 1 頁的位置。
+    - 這個範圍可能整個落空，於是拋出 `StopIteration`。CI 在 `fc1b9aa` 那次就是因此變紅。
+  - 修正：測試建立的 50 筆改成置頂，讓其他測試留下的非置頂筆記擠不掉它們；`pos` 改成在 1～47 之間，從 DOM 實際顯示的項目中挑。其他斷言都沒動。
+  - 驗證：
+    - 以 20 筆置頂筆記佔滿第 1 頁，重現了原本的 `StopIteration`。
+    - 修正後，單檔連跑 20/20 通過；完整 `pytest e2e` 連跑 3 次都是 56 passed。
+    - `-Release` gate 通過。
 
 ### P1 — 下一輪
 
@@ -906,7 +916,7 @@
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Done | 38 | OPT-38 追蹤 |
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Done | — | OPT-67 追蹤 |
 | PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Done | — | OPT-74 追蹤 |
-| PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Todo | — | OPT-75 驗收 |
+| PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Done | — | OPT-75 驗收 |
 
 ### P3 / Future — 需要證據或明確 promote
 

@@ -46,7 +46,12 @@ def test_reading_workspace_prefetches_only_neighbours(app_page: Page, runtime_ur
         for n in range(1, 51):
             response = page.request.post(
                 f"{runtime_url}/api/notes",
-                data={"title": f"{PREFIX} 第{n:02d}篇", "content": f"第{n:02d}篇：閱讀清單只抓相鄰項目。"},
+                data={
+                    "title": f"{PREFIX} 第{n:02d}篇",
+                    "content": f"第{n:02d}篇：閱讀清單只抓相鄰項目。",
+                    # Pinned notes sort first, so other tests' leftovers cannot push ours off page 1.
+                    "is_pinned": True,
+                },
             )
             assert response.status == 201, response.text()
             created.append(response.json()["data"]["note_id"])
@@ -56,8 +61,10 @@ def test_reading_workspace_prefetches_only_neighbours(app_page: Page, runtime_ur
         shown = page.locator('[data-testid^="note-card-actions-"]').evaluate_all(
             "els => els.map(el => Number(el.dataset.testid.split('-').pop()))"
         )
-        # Pick a visible note in the middle of the workspace so it has two neighbours.
-        pos = next(i for i in range(10, 40) if created[i] in shown)
+        # Notes created within the same second tie on updated_at, so which ones land on page 1
+        # is not predictable. Read it from the DOM: any visible note with two neighbours and
+        # room for the "victim" two places later will do.
+        pos = next(i for i in range(1, 48) if created[i] in shown)
         current = created[pos]
         far = next(i for i in range(50) if created[i] not in shown and abs(i - pos) > 2)
         page.evaluate(
