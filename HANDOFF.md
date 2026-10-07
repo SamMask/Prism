@@ -29,13 +29,13 @@
 
 ## Next Entry
 
-1. 依序做 P2：73、74（30～39、53～57、65、67～72 已完成；73、74 是驗收時發現的既有問題）。
+1. 依序做 P2：74（30～39、53～57、65、67～73 已完成；74 是驗收時發現的既有問題）。
    - 開工時在 `docs/TODO.md` 標 `Doing`。
    - 最高風險（X／XL）的工單，計畫與實際改動另外交給 Codex astra 復審：用 `codex exec -m gpt-6-astra -s read-only`，範圍收窄並限時，因為它容易走偏、過度驗證。Codex sol 只在需要幫手時才用。
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。
    - 使用者 2026-10-06 授權：工單審查與測試都通過後，直接 commit、fast-forward 合併回 `main` 並 push，不需再問。這項授權不包含 release、tag 或 Pi deploy。
    - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。
-2. Pi 部署與發版（使用者 2026-10-07 決定的順序；等 P2 的 73、74 都完成後才部署；每一步執行前仍要使用者說開始）：
+2. Pi 部署與發版（使用者 2026-10-07 決定的順序；等 P2 的 74 完成後才部署；每一步執行前仍要使用者說開始）：
    1. 部署前，把 Pi 上現有的 DB 與圖片（含附件）備份到 Pi 上另一個資料夾。
    2. 部署，確認沒問題。順帶做 OPT-36 的 Pi 重啟 smoke：POST restart 後約 5 秒內 `/healthz` 要恢復。
    3. 在 Pi 資料上執行 OPT-20「合併長文回筆記」，確認沒問題。

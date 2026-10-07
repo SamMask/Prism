@@ -119,8 +119,37 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
         setLocalNote(detail)
         setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
       })
-      .catch(() => {
-        toast.error(t('reading.loadFailed'))
+      .catch(async (error) => {
+        if (!isMounted) return
+        const isGone = error?.response?.status === 404
+        if (!isGone || !workspace.noteIds.includes(note.id)) {
+          toast.error(t('reading.loadFailed'))
+          return
+        }
+        // The open note was deleted: drop it, then move to the next one that still exists.
+        removeNote(note.id)
+        const index = workspace.noteIds.indexOf(note.id)
+        const candidates = [...workspace.noteIds.slice(index + 1), ...workspace.noteIds.slice(0, index).reverse()]
+        for (const candidateId of candidates) {
+          try {
+            const detail = await api.getNote(candidateId)
+            if (!isMounted) return
+            setActiveNote(candidateId)
+            pendingScrollRestoreIdRef.current = candidateId
+            setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
+            setLocalNote(detail)
+            return
+          } catch (candidateError) {
+            if (!isMounted) return
+            if ((candidateError as { response?: { status?: number } })?.response?.status !== 404) {
+              toast.error(t('reading.workspaceLoadFailed'))
+              return
+            }
+            removeNote(candidateId)
+          }
+        }
+        toast.error(t('reading.workspaceAllDeleted'))
+        onClose()
       })
 
     return () => {

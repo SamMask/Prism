@@ -79,7 +79,7 @@ def test_reading_workspace_can_open_from_header_and_editor_toolbar():
     assert "useReadingWorkspace()" in header
     assert "data-testid=\"header-open-reading-workspace\"" in header
     assert "const noteId = workspace.activeId ?? workspace.noteIds[0]" in header
-    assert "api.getNote(noteId)" in header
+    assert "api.getNote(candidateId)" in header
     assert "navigate('/')" in header
     assert "openReading(note)" in header
     assert "t('header.openReadingWorkspace'" in header

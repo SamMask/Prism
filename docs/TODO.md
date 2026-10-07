@@ -789,6 +789,23 @@
     - GUI smoke：不導向 std handle 的情況下，修正前 log 為 0 bytes，修正後 1053 bytes（含 `log opened`、`listening on`、每日還原點）。debug 版的 stderr 與 log 檔兩邊都有內容。
     - fast gate 通過。
     - 改動只有一行，由主代理驗收。
+- `PRISM-OPT-73`（本機驗證；未發版、未部署 Pi）：
+  - 前端：
+    - `Header.handleOpenReadingWorkspace` 先試 activeId，再依清單順序往下試。遇到 404 就用 `removeNote` 移除並繼續，第一個成功的就開啟；全部都 404 時，toast 一次 `reading.workspaceAllDeleted`（四語）。
+    - `ReadingView` 目前項目回 404 時，從清單移除，依序改試後面、再試前面的項目；全部都沒了就提示並關閉。
+    - 非 404 錯誤維持原行為：保留項目，顯示錯誤。
+    - 一律沿用 `useReadingWorkspace` 既有函式，不改 localStorage。
+  - 驗證：
+    - 新增 `e2e/test_reading_deleted_active.py`，共 4 條：
+      - Header 跳過被刪的 active，開啟下一筆。
+      - 全部刪除時只提示一次，每個 id 只打一次 GET，沒有 console error。
+      - ReadingView 的目前項目被刪除後，會移出清單並切換。
+      - active 回 500 時保留項目並顯示錯誤。
+    - HEAD 上前 3 條失敗；第 4 條是守門測試，所以會通過。
+    - source-lock `tests/test_reading_workspace.py` 已同步更新。
+    - `-Release` gate 通過（pytest 427、e2e 56）。
+    - 由主代理讀報告與 gate 驗收。
+  - 已知（低）：閱讀途中才被刪除的筆記，要等下次切換或重新讀取時才會處理，和 OPT-38 一樣採懶處理。
 
 ### P1 — 下一輪
 
@@ -853,7 +870,7 @@
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Done | — | OPT-34 驗收 |
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Done | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Done | — | OPT-36 追蹤 |
-| PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Todo | 38 | OPT-38 追蹤 |
+| PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Done | 38 | OPT-38 追蹤 |
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Todo | — | OPT-67 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote

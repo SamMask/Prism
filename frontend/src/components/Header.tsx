@@ -17,7 +17,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
   const location = useLocation()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { workspace } = useReadingWorkspace()
+  const { workspace, removeNote } = useReadingWorkspace()
   const {
     searchQuery,
     setSearchQuery,
@@ -118,11 +118,24 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
     setIsOpeningReadingWorkspace(true)
     try {
-      const note = await api.getNote(noteId)
-      if (location.pathname !== '/') navigate('/')
-      openReading(note)
-    } catch {
-      toast.error(t('reading.workspaceLoadFailed'))
+      // Active note first, then the rest in list order. Only a 404 drops an entry; any other
+      // failure keeps the list untouched.
+      const candidates = [noteId, ...workspace.noteIds.filter((id) => id !== noteId)]
+      for (const candidateId of candidates) {
+        try {
+          const note = await api.getNote(candidateId)
+          if (location.pathname !== '/') navigate('/')
+          openReading(note)
+          return
+        } catch (error) {
+          if ((error as { response?: { status?: number } })?.response?.status !== 404) {
+            toast.error(t('reading.workspaceLoadFailed'))
+            return
+          }
+          removeNote(candidateId)
+        }
+      }
+      toast.error(t('reading.workspaceAllDeleted'))
     } finally {
       setIsOpeningReadingWorkspace(false)
     }
