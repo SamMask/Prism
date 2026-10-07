@@ -781,6 +781,14 @@
   - 已知（低）：
     - smoke 的頭兩組第 1 輪，WebView2 新視窗分別延遲了 46s 與 14.8s 才出現（Go 在 0.8s 內就 healthy）。其中一次有 WebView2 子程序殘留，已手動清除。之後 7 次都正常，原因沒有查明。
     - Pi 上 rotate 若被中斷，留下的 tmp 不會被清。
+- `PRISM-OPT-72`（本機驗證；桌面版）：
+  - 原因（已重現確認）：`configureDesktopLog` 原本是 `io.MultiWriter(previous=stderr, file)`。GUI build 沒有有效的 stderr，寫入第一個 writer 就失敗，而 MultiWriter 遇到錯誤即停止，所以檔案永遠寫不到內容。
+  - 修正：`desktop_shell_windows.go` 改成 `io.MultiWriter(file, previous)`。`log.Printf` 不理會 `Output` 回傳的錯誤，因此 stderr 失敗也無妨。log 的位置、輪替，以及非 desktop 的 runtime 都沒動。
+  - 驗證：
+    - `TestConfigureDesktopLogWritesFileWhenStderrFails`：用一定會失敗的 writer 模擬 stderr，log 檔內容含 CJK。修正前 log 檔是空的，測試失敗。
+    - GUI smoke：不導向 std handle 的情況下，修正前 log 為 0 bytes，修正後 1053 bytes（含 `log opened`、`listening on`、每日還原點）。debug 版的 stderr 與 log 檔兩邊都有內容。
+    - fast gate 通過。
+    - 改動只有一行，由主代理驗收。
 
 ### P1 — 下一輪
 
@@ -844,7 +852,7 @@
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Done | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Done | — | OPT-34 驗收 |
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Done | 36 | OPT-36 追蹤 |
-| PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |
+| PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Done | — | OPT-36 追蹤 |
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Todo | 38 | OPT-38 追蹤 |
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Todo | — | OPT-67 追蹤 |
 

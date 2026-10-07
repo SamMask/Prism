@@ -3,8 +3,11 @@
 package main
 
 import (
+	"errors"
+	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -61,5 +64,32 @@ func TestDesktopUnsavedMessageRoundTrip(t *testing.T) {
 	app.setUnsavedMessage("")
 	if got := app.currentUnsavedMessage(); got != "" {
 		t.Fatalf("cleared unsaved message = %q, want empty", got)
+	}
+}
+
+type failingWriter struct{}
+
+func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("invalid handle") }
+
+// A GUI build has no usable stderr: the file must still receive the log (PRISM-OPT-72).
+func TestConfigureDesktopLogWritesFileWhenStderrFails(t *testing.T) {
+	prevOut, prevFlags := log.Writer(), log.Flags()
+	defer func() { log.SetOutput(prevOut); log.SetFlags(prevFlags) }()
+	log.SetOutput(failingWriter{})
+
+	logPath := filepath.Join(t.TempDir(), "logs", "desktop-shell.log")
+	release, err := configureDesktopLog("", logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("listening on 127.0.0.1:0 資料夾")
+	release()
+
+	data, err := os.ReadFile(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), "listening on") || !strings.Contains(string(data), "資料夾") {
+		t.Fatalf("log file missing messages: %q", data)
 	}
 }

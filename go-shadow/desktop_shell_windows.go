@@ -398,7 +398,9 @@ func configureDesktopLog(dataDir, requested string) (func(), error) {
 		return nil, err
 	}
 	previous := log.Writer()
-	log.SetOutput(io.MultiWriter(previous, file))
+	// File first: a GUI build has no valid stderr, and MultiWriter stops at the first
+	// failing writer (PRISM-OPT-72). log.Printf ignores the returned write error.
+	log.SetOutput(io.MultiWriter(file, previous))
 	log.Printf("desktop shell log opened: %s", logPath)
 	return func() {
 		log.SetOutput(previous)
