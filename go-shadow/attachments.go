@@ -292,8 +292,15 @@ func attachmentTooLargeMessage() string {
 func (s *server) deleteAttachment(w http.ResponseWriter, attachmentID int) {
 	s.noteFilesMu.Lock() // no request body; the response is small and fixed-size
 	defer s.noteFilesMu.Unlock()
+	tx, err := s.db.Begin()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	defer tx.Rollback()
+	// Delete first so the transaction holds the write lock while it checks the other rows.
 	var filePath sql.NullString
-	if err := s.db.QueryRow("SELECT file_path FROM Note_Attachments WHERE id = ?", attachmentID).Scan(&filePath); err != nil {
+	if err := tx.QueryRow("DELETE FROM Note_Attachments WHERE id = ? RETURNING file_path", attachmentID).Scan(&filePath); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "Attachment not found")
 			return
@@ -301,13 +308,22 @@ func (s *server) deleteAttachment(w http.ResponseWriter, attachmentID int) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	// Keep the file while another row still points at it (e.g. a metadata-only row from a JSON
+	// import). The file goes before the commit so a failed removal still leaves the row in place.
 	if resolved, ok := resolveAttachmentMutationPath(s.runtime.dataDir, nullableString(filePath)); ok {
-		if err := os.Remove(resolved); err != nil && !os.IsNotExist(err) {
+		shared, err := noteFileSharedByOtherRow(tx, s.runtime.dataDir, attachmentID, nullableString(filePath), resolved)
+		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
+		if !shared {
+			if err := os.Remove(resolved); err != nil && !os.IsNotExist(err) {
+				writeError(w, http.StatusInternalServerError, err.Error())
+				return
+			}
+		}
 	}
-	if _, err := s.db.Exec("DELETE FROM Note_Attachments WHERE id = ?", attachmentID); err != nil {
+	if err := tx.Commit(); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}

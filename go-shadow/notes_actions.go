@@ -513,25 +513,30 @@ func noteFileSharedByOtherRow(tx *sql.Tx, dataDir string, attachmentID int, rela
 			return false, err
 		}
 		other, ok := noteAttachmentCleanupRelativePath(nullableString(filePath))
-		if !ok {
-			continue
-		}
-		if other == cleaned {
-			return true, nil
-		}
-		// Normalized paths only differ in case when they can still name the same file.
-		if !strings.EqualFold(other, cleaned) {
-			continue
-		}
-		otherPath, ok := resolveNoteAttachmentCleanupPath(dataDir, other)
-		if !ok || targetErr != nil {
-			return true, nil
-		}
-		if info, err := openFileIdentity(otherPath); err != nil || os.SameFile(target, info) {
+		if ok && noteFileAliases(dataDir, cleaned, other, target, targetErr) {
 			return true, nil
 		}
 	}
 	return false, rows.Err()
+}
+
+// noteFileAliases reports whether the normalized path other may name the file at cleaned,
+// whose open-handle identity is target (or targetErr). Equal paths alias; case variants alias
+// when their identities match or cannot be compared.
+func noteFileAliases(dataDir, cleaned, other string, target os.FileInfo, targetErr error) bool {
+	if other == cleaned {
+		return true
+	}
+	// Normalized paths only differ in case when they can still name the same file.
+	if !strings.EqualFold(other, cleaned) {
+		return false
+	}
+	otherPath, ok := resolveNoteAttachmentCleanupPath(dataDir, other)
+	if !ok || targetErr != nil {
+		return true
+	}
+	info, err := openFileIdentity(otherPath)
+	return err != nil || os.SameFile(target, info)
 }
 
 func resolveAutoExtractedNotePath(dataDir, relativePath string) (string, bool) {

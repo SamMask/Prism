@@ -39,14 +39,27 @@ func (s *server) noteAttachmentCleanupPaths(tx *sql.Tx, noteIDs []int) ([]string
 	}
 	paths := []string{}
 	for _, relativePath := range uniqueStrings(candidates) {
-		if referenced[relativePath] > 0 {
-			continue
-		}
-		if resolved, ok := resolveNoteAttachmentCleanupPath(s.runtime.dataDir, relativePath); ok {
+		resolved, ok := resolveNoteAttachmentCleanupPath(s.runtime.dataDir, relativePath)
+		if ok && !noteFileReferencedElsewhere(s.runtime.dataDir, relativePath, resolved, referenced) {
 			paths = append(paths, resolved)
 		}
 	}
 	return uniqueStrings(paths), nil
+}
+
+// noteFileReferencedElsewhere reports whether a row of a note that stays may still point at the
+// file: the same normalized path, or a case variant naming the same file (noteFileAliases).
+func noteFileReferencedElsewhere(dataDir, cleaned, resolved string, referenced map[string]int) bool {
+	if referenced[cleaned] > 0 {
+		return true
+	}
+	target, targetErr := openFileIdentity(resolved)
+	for other := range referenced {
+		if noteFileAliases(dataDir, cleaned, other, target, targetErr) {
+			return true
+		}
+	}
+	return false
 }
 
 func noteAttachmentReferenceCounts(tx *sql.Tx, excludedNoteIDs []int) (map[string]int, error) {

@@ -110,6 +110,7 @@ git diff --check
 | PRISM-OPT-64 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-65 | F | S | prism-builder | prism-verifier |
 | PRISM-OPT-66 | X | S | prism-engineer | prism-verifier |
+| PRISM-OPT-67 | B | S | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -567,6 +568,16 @@ git diff --check
 - **驗收**（Go test，經 HTTP handler）：兩則筆記的附件列指向同一個檔案時，刪除其中一列，檔案仍在，另一列仍讀得到；只有最後一列被刪時才刪檔。在 HEAD 上失敗。
 - **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
 - **已知限制（PRISM-OPT-64 的 M1，不在本單範圍）**：帶 `content_b64` 的附件撞名改寫成 `_import_N` 之後，再用 skip mode 匯入同一份 JSON，會每次多一列與一個檔案。目前的 export 不帶內容，只有手寫或舊版備份會遇到。
+
+### PRISM-OPT-67 — 上傳附件的 CJK 檔名被濾掉
+
+- **Finding**：PRISM-OPT-66 施工時發現（2026-10-07；HEAD 原本就有）｜ **優先級**：P2
+- **目標**：上傳的附件保留可讀的檔名（含中文、日文、韓文），磁碟上的檔名仍然安全。
+- **原因**：`go-shadow/attachments.go` 的 `sanitizeAttachmentFilename` 用的 regexp `\w` 只認 ASCII，所以 `說明.md` 存成 `_<時間戳>.md`。標題雖然保留，但檔案路徑與 Markdown／匯出中看到的名字都不可讀。
+- **修改範圍**：`sanitizeAttachmentFilename`。允許 Unicode 字母與數字（`\p{L}\p{N}`），仍要過濾路徑分隔字元、控制字元、保留名稱（Windows 的 `CON`、`NUL` 等）與長度上限；既有檔案不改名。
+- **不要修改**：附件 API 形狀；既有附件；路徑安全檢查。
+- **驗收**（Go test）：`說明.md`、`メモ.txt`、`메모.md` 都保留可讀的名稱；`../x.md`、`a/b.md`、`CON.md`、超長名稱都被安全處理。
+- **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

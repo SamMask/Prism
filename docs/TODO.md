@@ -441,6 +441,16 @@
   - 已知：
     - M1：改名後再用 skip mode 匯入帶內容的 JSON，會累積 `_import_N`，已記入 PRISM-OPT-66 的已知限制。
     - M2：不帶內容的附件列會共用目標端的檔案，之後刪除會刪到別人的檔案。這是 HEAD 原本就有的問題，另開 **PRISM-OPT-66（P1）**。
+- `PRISM-OPT-66`（本機驗證；未發版、未部署 Pi）：
+  - `deleteAttachment` 改成單一交易：第一句 `DELETE … RETURNING file_path` → `noteFileSharedByOtherRow` 檢查 → 沒有被共用才刪檔 → commit。
+    - 刪檔放在 commit 之前，以維持原本「刪檔失敗回 500、附件列保留」的語意，主代理同意。
+  - 從 `noteFileSharedByOtherRow` 抽出 `noteFileAliases`，行為不變。筆記刪除與批次刪除（含 dry-run 預覽）改用 `noteFileReferencedElsewhere`：先比字串，再用 handle 比對大小寫變體的檔案身分。這修正了 Windows 上大小寫不同的路徑被誤刪。
+  - 驗證：
+    - 新增 `attachment_delete_test.go`，5 個 case 在 HEAD 上都失敗。
+    - prism-verifier：`-Release` gate 通過（pytest 422、e2e 17）；OPT-60 的 restore 與 shared 測試全部通過。
+    - 額外驗證：同一筆記兩列指向同一檔時不會留下孤兒檔；dry-run 計數正確；刪檔失敗回 500 並保留附件列；併發刪除與讀取各 20 次都正常。
+    - 兩個隔離 runtime 的真實重現：A、B 同秒上傳造成真正撞名，B 匯出後匯入 A。刪匯入的列、或刪除筆記 A 時，A 的檔案都保留；刪掉最後一個引用才刪檔。
+  - 已知：每次刪除都會掃一遍附件表；刪檔成功但 commit 失敗時，會留下指向不存在檔案的附件列，與 HEAD 原本的失敗型態相同。
 
 ### P1 — 下一輪
 
@@ -459,7 +469,7 @@
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-64 | JSON 匯入不得刪除或覆寫目標端既有的檔案（rollback 會刪掉原有檔案） | Done | — | OPT-58 追蹤 |
-| PRISM-OPT-66 | 刪除附件時不得刪掉其他附件列仍在用的檔案（匯入後共用檔案會被誤刪） | Todo | — | OPT-64 追蹤 |
+| PRISM-OPT-66 | 刪除附件時不得刪掉其他附件列仍在用的檔案（匯入後共用檔案會被誤刪） | Done | — | OPT-64 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |
 | PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Done | — | OPT-22 追蹤 |
@@ -499,6 +509,7 @@
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
+| PRISM-OPT-67 | 上傳附件的 CJK 檔名被濾掉（`說明.md` 變成 `_<時間戳>.md`） | Todo | — | OPT-66 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 
