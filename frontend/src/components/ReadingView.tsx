@@ -49,7 +49,7 @@ function sourceUrlDomain(url: string): string {
 }
 
 export function ReadingView({ note, onClose }: ReadingViewProps) {
-  const { openEditor, refreshLoadedNotes, fetchLibraryTotal } = useAppStore()
+  const { openEditor, refreshLoadedNotes, fetchLibraryTotal, notes: listNotes } = useAppStore()
   const { locale, t } = useTranslation()
   const {
     workspace,
@@ -134,8 +134,11 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
 
   useEffect(() => {
     let isMounted = true
-    const missingIds = workspace.noteIds.filter((id) => (
-      id !== localNote.id && !workspaceNotes[id] && !workspaceUnavailableIds.includes(id)
+    // Only the neighbours of the open note are fetched; the rest of the list uses list metadata.
+    const index = workspace.noteIds.indexOf(localNote.id)
+    const neighbourIds = index < 0 ? [] : [workspace.noteIds[index - 1], workspace.noteIds[index + 1]]
+    const missingIds = neighbourIds.filter((id): id is number => (
+      id !== undefined && !workspaceNotes[id] && !workspaceUnavailableIds.includes(id)
     ))
 
     missingIds.forEach((noteId) => {
@@ -144,8 +147,12 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
           if (!isMounted) return
           setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
         })
-        .catch(() => {
+        .catch((error) => {
           if (!isMounted) return
+          if (error?.response?.status === 404) {
+            removeNote(noteId)
+            return
+          }
           setWorkspaceUnavailableIds((current) => (
             current.includes(noteId) ? current : [...current, noteId]
           ))
@@ -259,10 +266,14 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
       setWorkspaceNotes((current) => ({ ...current, [detail.id]: detail }))
       setWorkspaceUnavailableIds((current) => current.filter((id) => id !== noteId))
       setLocalNote(detail)
-    } catch {
-      setWorkspaceUnavailableIds((current) => (
-        current.includes(noteId) ? current : [...current, noteId]
-      ))
+    } catch (error) {
+      if ((error as { response?: { status?: number } })?.response?.status === 404) {
+        removeNote(noteId)
+      } else {
+        setWorkspaceUnavailableIds((current) => (
+          current.includes(noteId) ? current : [...current, noteId]
+        ))
+      }
       toast.error(t('reading.workspaceLoadFailed'))
     } finally {
       setIsWorkspaceSwitching(false)
@@ -359,11 +370,12 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
   }
 
   const workspaceItems = workspace.noteIds.map((noteId) => {
-    const workspaceNote = noteId === localNote.id ? localNote : workspaceNotes[noteId]
+    const workspaceNote = noteId === localNote.id
+      ? localNote
+      : workspaceNotes[noteId] ?? listNotes.find((item) => item.id === noteId)
     return {
       id: noteId,
-      note: workspaceNote,
-      title: workspaceNote?.title || t('reading.untitled'),
+      title: workspaceNote ? (workspaceNote.title || t('reading.untitled')) : `#${noteId}`,
       updatedAt: workspaceNote?.updated_at,
       isUnavailable: workspaceUnavailableIds.includes(noteId),
     }
@@ -579,7 +591,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
                             ? t('reading.workspaceUnavailable')
                             : item.updatedAt
                               ? new Date(item.updatedAt).toLocaleDateString(locale)
-                              : t('reading.workspacePending')}
+                              : null}
                         </span>
                       </button>
                       <button

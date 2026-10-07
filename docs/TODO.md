@@ -587,6 +587,24 @@
     - 新增 `go-shadow/neutral_strings_test.go` 的 `TestRuntimeOutputHasNoMigrationEraWording`。它實際 build 並啟動 runtime，收集 `-h`、`/healthz`、附件 405 回應與啟動 log，斷言其中都沒有 candidate、proof、parity、python。
     - 在 HEAD 上，這個測試會因 4 處字樣而失敗。
     - fast gate 通過（pytest 258、go test ok）。
+- `PRISM-OPT-38`（本機驗證；未發版、未部署 Pi）：
+  - 前端 `ReadingView.tsx`：
+    - 預取範圍：不再預取整個閱讀清單，只抓目前項目的前後各一個。
+    - 側欄 metadata：優先用已載入的 detail，其次用 store 的 list notes；兩者都沒有時，標題顯示 `#id`，第二行留空。原本的「讀取中」會一直卡著，已移除，`reading.workspacePending` 四語一併刪除。
+    - 錯誤處理：只有 404 會透過 `useReadingWorkspace.removeNote` 移出清單；500、斷線維持 unavailable 標記。
+    - 不變：localStorage 的 key 與格式、版面。
+  - 驗證：
+    - 新增 `e2e/test_reading_lazy_detail.py`，用 50 筆 CJK 筆記測試。開啟時 HEAD 發出 50 個 detail 請求，修改後是 3 個；切換項目最多再多 2 個；刪除的筆記輪到時會被移出清單與 localStorage。
+    - prism-verifier 實測：
+      - 500、abort 不會移除，404 會移除。
+      - 延遲回應的過期請求不會寫進 state；連續快速切換時，active 與 localStorage 一致。
+      - 1280／390 的 `#id` 不會破版，點擊後會換成 CJK 標題。
+    - verifier 第一次退回兩項：e2e 單跑 5 次失敗 3 次（背景 load-more 讓遠端項目拿到標題）、未載入項目永遠顯示「讀取中」。修正後，e2e 改為攔截第 2 頁以後的 list 回應，單跑連續 5 次通過。
+    - `-Release` gate 通過（pytest 427、e2e 32）。
+  - 已知：
+    - 低：圖書館很大，或首頁處於篩選狀態時，側欄多數項目會長期顯示 `#id`。
+    - 預取還沒回來就點了該項目時，可能重複抓一次。
+    - 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開（HEAD 既有）→ 已開 `PRISM-OPT-73`。
 
 ### P1 — 下一輪
 
@@ -638,7 +656,7 @@
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Done | — | OPS-03 |
 | PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Done | — | OPS-05 |
 | PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Done | — | TECH-05 |
-| PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Todo | — | R0812:PERF-03 |
+| PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Done | — | R0812:PERF-03 |
 | PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Todo | 23 | FEAT-03 |
 | PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Todo | — | OPT-17 追蹤 |
 | PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Todo | — | OPT-16 追蹤 |
@@ -651,6 +669,7 @@
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Todo | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |
+| PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Todo | 38 | OPT-38 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 

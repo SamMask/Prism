@@ -116,6 +116,7 @@ git diff --check
 | PRISM-OPT-70 | T | S | prism-builder | prism-verifier |
 | PRISM-OPT-71 | B | M | prism-engineer | prism-verifier |
 | PRISM-OPT-72 | B | S | prism-builder | prism-verifier |
+| PRISM-OPT-73 | F | S | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -648,6 +649,20 @@ git diff --check
 - **不要修改**：log 檔位置與輪替；console 版（debug）的輸出。
 - **驗收**：GUI build 啟動後，log 檔內有啟動訊息（含 data dir 與 listening）；修正前為 0 bytes。debug 版的 console 仍有輸出。
 - **驗證**：`cd go-shadow && go test ./...`；GUI build smoke；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+
+### PRISM-OPT-73 — 目前閱讀的筆記被刪除後，閱讀清單打不開
+
+- **Finding**：PRISM-OPT-38 驗收時發現（2026-10-07；HEAD 原本就有）｜ **優先級**：P2（低）
+- **現象**：
+  - 閱讀中的筆記被刪除後（常見於在編輯器裡刪掉），`Header.handleOpenReadingWorkspace` 會用已經刪除的 `activeId` 開啟，每次都失敗並跳出 toast，直到使用者從別張卡片開啟閱讀為止。
+  - `ReadingView` 中，目前項目的 detail 回 404 時，該項目不會移出清單。
+- **修改範圍**：
+  - 開啟閱讀清單時，如果 `activeId` 回 404，就移除該項目，改開清單中下一個還在的項目；清單空了就提示。
+  - 目前項目在 `ReadingView` 中回 404 時，處理方式和鄰居一樣，移出清單。
+  - 一律沿用 `useReadingWorkspace` 既有的 remove 函式。
+- **不要修改**：localStorage 的 key 與格式；非 404 錯誤時的行為（保留項目）。
+- **驗收**：e2e 先把閱讀中的筆記刪除，再按 Header 的閱讀清單：能開啟下一筆，被刪的筆記從清單與 localStorage 消失。修正前失敗。
+- **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
