@@ -990,6 +990,13 @@
     - 修正後，package smoke 通過，`smoke_tag_cleanup.status = skipped`。
     - 用與 Pi 相同的完整 flag 開一個隔離 runtime 跑 smoke：`removed` 三個標籤，DB 只剩 `Welcome`。
     - fast gate 通過。
+- **第二次部署（2026-10-07 晚，使用者授權）**：部署 main `895de75`，內容是 OPT-78、77、79、80、42、81。
+  - 部署前備份：`/home/mask0709/prism-predeploy-20261007-221422/`。`integrity_check` ok，2486 個檔案逐檔做 SHA-256 比對通過，筆記 299 篇，history 160 筆。
+  - cutover exit 0，線上 smoke 通過；OPT-78 生效：`smoke_tag_cleanup.status = removed`，剩下的 smoke 標籤為 0。
+  - 部署後檢查：
+    - 版本 2.7.0（這次部署的是 V2.7.0 之後、尚未發版的 commit），schema 17/17，筆記 299、history 160、uploads 2478，journal 沒有錯誤。
+    - 已移除的 4 組路由在線上都回 404。
+    - 前端 bundle 中有 `selection-more-menu`，Settings 的 chunk 中有 `vacuum-button`／`clear-history-button`；沒有指向 `/prompt-builder` 的導覽連結。
 - **4. 發版 V2.7.0**：tag `V2.7.0` → `a478a8b`，GitHub Actions `37613790399` success。GitHub Release 附 `PrismDesktopPortable-v2.7.0.zip`，SHA256 `3a743a9f…d66d60f`，重新下載後比對一致。之後再 cutover Pi 一次，`/api/test` version 為 2.7.0，schema 17/17，筆記 299。每次 cutover，線上 smoke 都會留下 3 個空標籤，兩次都已刪除 → 已開 `PRISM-OPT-78`。
 
 ### P1 — 下一輪
@@ -1080,7 +1087,7 @@
 | PRISM-OPT-48 | 回收桶（軟刪除與復原） | Blocked | 出現誤刪事件的證據 | FEAT-05 |
 | PRISM-OPT-49 | 桌面版與 Pi 之間跨裝置同步 | Blocked | 有多裝置寫入的證據；先完成 PRISM-OPT-35 | FEAT-06 |
 | PRISM-OPT-50 | Prompt options 自訂 UI | Won't do | 使用者改用獨立的 AI-Art-PromptBuilder（2026-10-07） | FEAT-07 |
-| PRISM-OPT-51 | Wiki 連結與 backlinks | Blocked | 有使用者需求的證據 | FEAT-08 |
+| PRISM-OPT-51 | Wiki 連結與 backlinks | Won't do | 使用者 2026-10-07 結案：這是審查報告的建議，不是使用者需求 | FEAT-08 |
 
 ---
 
