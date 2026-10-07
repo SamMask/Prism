@@ -32,6 +32,7 @@ def _wait_for(url, timeout=10):
     raise AssertionError(f"{url} did not become ready: {last_error}")
 
 
+@pytest.mark.slow
 def test_phase19_go_runtime_build_paths_and_windows_smoke(temp_db, tmp_path):
     go_bin = shutil.which("go")
     if not go_bin:

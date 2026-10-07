@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.historical  # PRISM-OPT-26: doc-only evidence; release gate only
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SOAK_PATH = ROOT / "docs" / "contracts" / "phase19-go-readonly-soak-execution.json"

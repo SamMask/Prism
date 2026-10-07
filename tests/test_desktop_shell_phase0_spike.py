@@ -2,6 +2,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SPIKE_DIR = ROOT / "desktop-spike"
@@ -72,6 +74,7 @@ def test_desktop_shell_phase0_docs_close_current_entry_without_expanding_scope()
     assert "Windows desktop current path 是 `Prism.exe` GUI app + WebView2 + same-process Go runtime" in handoff
 
 
+@pytest.mark.slow
 def test_desktop_shell_phase0_go_build_and_self_test():
     env = os.environ.copy()
     env.setdefault("GOFLAGS", "")

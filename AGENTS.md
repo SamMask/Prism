@@ -47,7 +47,10 @@
    - `docs/ARCHITECTURE.md`（新模組 / 架構變動時）
    - `docs/SCHEMA.md`（有新 DB 欄位或遷移時）
    - `CLAUDE.md` + `AGENTS.md`（開發規範本身要改時，**兩份都要改**）
-3. **測試** → 每次實作後跑 `pytest tests/ -v`；Go runtime / contracts 有變更時加跑 `cd go-shadow && go test ./...`；docs-only 變更至少跑 `git diff --check`、鏡像比對與相關文件 regression
+3. **測試**：
+   - 日常：每次實作後跑 `pwsh -NoProfile -File .loop/verify-gate.ps1`（fast gate）。它會跑 diff check、鏡像比對、`pytest tests/ -v -m "not slow and not historical"` 與 `go test ./...`。
+   - 發版、改打包或 desktop、或要當作工單完成證據時：加 `-Release`，跑全部 pytest 與 `pytest e2e`。CI 跑的是 release gate。
+   - docs-only 變更至少跑 `git diff --check`、鏡像比對與相關文件 regression。
 4. **治理 / 完成宣稱** → 涉及狀態層級、完成宣稱、委派、UI/UX 或 docs policy 時讀 `docs/GOVERNANCE.md`；不得把 candidate、本機驗證、deploy 可用、舊依賴可刪混成同一件事
 
 ## Codex Loop Engineering（開發迴圈）
@@ -69,7 +72,7 @@
 Runtime：   scripts/start_go_primary.ps1（Go primary 為唯一 runtime；Python backend source 已於 T053 移除）
 前端：      cd frontend && npm run dev
 建置：      scripts/build_go_runtime.ps1
-測試：      pytest tests/ -v
+測試：      pwsh -NoProfile -File .loop/verify-gate.ps1（fast）／加 -Release（全部 + e2e）
 資料庫：    knowledge.db (SQLite, WAL mode)
 設定：      Go external data-dir（CLI flags + data-dir config）
 ```

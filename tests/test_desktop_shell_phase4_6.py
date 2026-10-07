@@ -2,6 +2,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW = ROOT / "go-shadow"
@@ -105,6 +107,7 @@ def test_desktop_shell_phase4_6_docs_close_package_decision_and_pi_boundary():
     assert "desktop_shell_windows.go" in architecture
 
 
+@pytest.mark.slow
 def test_desktop_shell_phase4_portable_smoke_script():
     if os.name != "nt":
         return

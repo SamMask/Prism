@@ -132,21 +132,32 @@ def test_attachment_items_are_keyboard_operable_buttons():
     assert "focus-visible:ring-2" in delete_button
 
 
+# Fast guard for PRISM-OPT-17; behavior is proven by e2e/test_review_regressions.py. Any equivalent
+# off-Home check (`location.pathname !== '/'`, `!isHomeRoute`, ...) followed by navigate('/') passes.
+_NAVIGATE_HOME_FIRST = re.compile(
+    r"if\s*\(\s*(?:location\.pathname\s*!==?\s*['\"]/['\"]|!\s*\w+)\s*\)\s*\{?\s*navigate\(\s*['\"]/['\"]"
+)
+
+
+def _handler_body(source: str, name: str) -> str:
+    start = re.search(rf"const {name} = (?:async )?\(", source).start()
+    following = re.search(r"\n  const \w+ = ", source[start + 1:])
+    return source[start:start + 1 + following.start()] if following else source[start:]
+
+
 def test_header_new_note_and_search_submit_navigate_home_from_other_routes():
     header = _read("components/Header.tsx")
-    nav = "if (location.pathname !== '/') navigate('/')"
 
-    add_start = header.index("const handleAddNote = () => {")
-    add_body = header[add_start:header.index("}\n", add_start)]
-    assert nav in add_body
-    assert add_body.index(nav) < add_body.index("openEditor(null)")
-    assert "onClick={handleAddNote}" in header
-    assert "onClick={() => openEditor(null)}" not in header
+    testid = header.index('data-testid="add-note-button"')
+    button_tag = header[header.rindex("<", 0, testid):testid]
+    named = re.search(r"onClick=\{(\w+)\}", button_tag)
+    add_body = _handler_body(header, named.group(1)) if named else button_tag
+    nav = _NAVIGATE_HOME_FIRST.search(add_body)
+    assert nav and nav.start() < add_body.index("openEditor(null)")
 
-    submit_start = header.index("const handleSearchSubmit")
-    submit_body = header[submit_start:header.index("\n  }\n", submit_start)]
-    assert nav in submit_body
-    assert submit_body.index(nav) < submit_body.index("setSearchQuery(inputValue)")
+    submit_body = _handler_body(header, "handleSearchSubmit")
+    nav = _NAVIGATE_HOME_FIRST.search(submit_body)
+    assert nav and nav.start() < submit_body.index("setSearchQuery(inputValue)")
 
 
 def _note_form_save_body() -> str:

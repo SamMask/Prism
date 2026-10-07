@@ -1,4 +1,8 @@
 # Dev/test tooling only — there is no Python backend after T053.
 # Go primary product startup does not install or require this file.
 # The test suite drives the Go runtime over HTTP and uses only the stdlib + pytest.
+# The release-gate browser e2e (`pytest e2e`) also needs pytest-playwright + a Chromium
+# install: `python -m playwright install chromium`.
 pytest==9.0.2
+pytest-playwright==0.8.0
+playwright==1.58.0

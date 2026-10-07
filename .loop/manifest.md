@@ -30,7 +30,8 @@ iterate:
   - docs/TODO.md
 
 # Codex 版沒有 Claude Stop hook；每次 verify 階段由 agent 主動執行此 gate。
-gate: "pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1"
+# 宣稱完成前跑 release gate（全部 pytest + e2e）；開發中可先手動跑不帶 -Release 的 fast gate。
+gate: "pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1 -Release"
 
 max_iterations: 5
 ---

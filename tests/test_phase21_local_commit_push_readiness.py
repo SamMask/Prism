@@ -1,6 +1,10 @@
 import json
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.historical  # PRISM-OPT-26: doc-only evidence; release gate only
+
 
 ROOT = Path(__file__).resolve().parents[1]
 READINESS_PATH = ROOT / "docs" / "contracts" / "phase21-local-commit-push-readiness.json"

@@ -19,6 +19,10 @@ Copy this table into the release notes, release PR, or package handoff. Every
 row needs a fresh date, result, and evidence pointer. If a check was not run,
 leave the result as `Not-tested` and state why.
 
+Since PRISM-OPT-26 the gate row means `.loop/verify-gate.ps1 -Release` (all pytest
+including `slow`/`historical`, Go tests, and `pytest e2e`). The default fast mode is
+daily-development evidence only, not release evidence.
+
 | Check | Date | Result | Evidence | Not-tested reason |
 |---|---|---|---|---|
 | `pwsh -NoProfile -ExecutionPolicy Bypass -File .loop/verify-gate.ps1` | 2026-06-19 | Passed | `git diff --check` passed; `CLAUDE.md` / `AGENTS.md` mirror check passed; `pytest tests/ -v` = 361 passed; `cd go-shadow && go test ./...` = ok. |  |

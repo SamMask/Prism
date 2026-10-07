@@ -13,6 +13,7 @@ $outDir = Join-Path $repoRoot $OutputDir
 Push-Location $frontendDir
 try {
     npm run build
+    if ($LASTEXITCODE -ne 0) { throw "npm run build failed (exit $LASTEXITCODE)" }
 }
 finally {
     Pop-Location
@@ -29,12 +30,15 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 Push-Location $goDir
 try {
     go test ./...
+    if ($LASTEXITCODE -ne 0) { throw "go test failed (exit $LASTEXITCODE)" }
     go build -o (Join-Path $outDir "prism-go-runtime.exe") .
+    if ($LASTEXITCODE -ne 0) { throw "go build (windows) failed (exit $LASTEXITCODE)" }
 
     $env:GOOS = "linux"
     $env:GOARCH = "arm64"
     $env:CGO_ENABLED = "0"
     go build -o (Join-Path $outDir "prism-go-runtime-linux-arm64") .
+    if ($LASTEXITCODE -ne 0) { throw "go build (linux-arm64) failed (exit $LASTEXITCODE)" }
 }
 finally {
     Remove-Item Env:GOOS -ErrorAction SilentlyContinue

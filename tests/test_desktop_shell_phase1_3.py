@@ -3,6 +3,8 @@ import socket
 import subprocess
 from pathlib import Path
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 GO_SHADOW = ROOT / "go-shadow"
@@ -80,6 +82,7 @@ def test_desktop_shell_build_script_keeps_debug_and_gui_targets():
     assert "nsis" not in script.lower()
 
 
+@pytest.mark.slow
 def test_desktop_shell_go_build_and_runtime_smoke(tmp_path):
     test_result = subprocess.run(
         ["go", "test", "./..."],

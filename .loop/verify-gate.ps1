@@ -1,3 +1,9 @@
+# Fast gate (default): skips pytest markers `slow` and `historical` (see pytest.ini).
+# -Release: full pytest suite plus the isolated-runtime browser e2e; CI runs this mode.
+param(
+    [switch] $Release
+)
+
 $ErrorActionPreference = "Stop"
 
 function Invoke-Step {
@@ -28,8 +34,15 @@ Invoke-Step "CLAUDE.md / AGENTS.md mirror check" {
     git diff --no-index --exit-code CLAUDE.md AGENTS.md
 }
 
-Invoke-Step "pytest tests/ -v" {
-    pytest tests/ -v
+if ($Release) {
+    Invoke-Step "pytest tests/ -v" {
+        pytest tests/ -v
+    }
+}
+else {
+    Invoke-Step "pytest tests/ -v -m `"not slow and not historical`"" {
+        pytest tests/ -v -m "not slow and not historical"
+    }
 }
 
 Push-Location "go-shadow"
@@ -40,6 +53,12 @@ try {
 }
 finally {
     Pop-Location
+}
+
+if ($Release) {
+    Invoke-Step "pytest e2e -v" {
+        pytest e2e -v
+    }
 }
 
 Write-Output "Loop gate: passed."

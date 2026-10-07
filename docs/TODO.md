@@ -389,6 +389,26 @@
     - `.vscode/launch.json` 還有無作用的 Flask 時代環境變數。
     - `.gitignore` 裡 `resources/` 的兩條忽略規則還在。
     - `scripts/start_v2_dev.bat` 與 `install.sh` 用 `npm install`，可以考慮改成 `npm ci`。
+- `PRISM-OPT-26`（本機驗證；CI 結果見 push 後的 GitHub Actions）：
+  - gate 分流：
+    - `pytest.ini` 新增 `slow`、`historical` 兩個 marker：4 個打包／桌面 smoke 標 slow；26 個只讀文件的 Phase 19–23 模組標 historical，共 165 個測試。
+    - `.loop/verify-gate.ps1` 預設是 fast gate：diff check、鏡像比對、`pytest -m "not slow and not historical"`（253 個）、`go test`。
+    - 加 `-Release` 跑全部 422 個 pytest 再加 `pytest e2e`（17 個）。CI 改跑 `-Release`，並先安裝 Chromium。`.loop/manifest.md` 的完成 gate 改為 `-Release`。
+  - 計時（記錄於 `docs/TEST_PORTFOLIO.md`）：pytest 冷建置從 129.6–143.3s 降到 71.5–75.0s；熱快取從約 96s 降到約 45–52s。
+  - 行為測試：新增 `e2e/test_review_regressions.py` 7 個，涵蓋：
+    - 附件 popup 不會被注入、從 Settings 按 New、從 Prompt Builder 做中文搜尋、palette 輸入 2 個 CJK 字即查詢 server。
+    - `Ctrl+S` 存檔並留在編輯器、長文存檔後留在 inline、拆分長文改短後重開。
+    - 其中 6 個有 fail-before：倒回修正後確實失敗。verifier 另外在 scratch 同時還原 OPT-16／17／18 三個修正，對應的 4 個 e2e 失敗、其他 13 個通過。
+  - Header 的 source-lock 改為 regex，接受 `!isHomeRoute` 等等價寫法；verifier 用 12 種寫法驗證過。`requirements.txt` 補上原本就在用的 `pytest-playwright`／`playwright`。
+  - Go 測試盤點：CJK、WAL、長文、縮短後被還原，前面的工單都已補齊；`handleSystemVacuum`／`handleWALCheckpoint` 仍沒有測試。
+  - 主代理額外修正：
+    - `scripts/build_go_runtime.ps1` 原本在 `npm run build` 失敗時不會中止，release gate 的 e2e 可能跑在舊的 dist 上而誤判通過（實作時真的發生過）。現在 npm build、go test、go build 失敗都會 throw；已實測前端編譯錯誤會讓腳本 exit 1，而且不產出 artifact。
+    - `CLAUDE.md`／`AGENTS.md` 的測試規則與快查表改為 fast／`-Release` 兩段，兩份一致。
+  - 驗證：
+    - prism-verifier 檢查 marker 分類：historical 全部只讀文件，沒有分錯。
+    - fast 與 `-Release` 都通過；pytest 的 test ID 集合與 HEAD 逐行相同，沒有刪除任何測試。
+    - 第一輪因為計時沒有寫進文件、`TEST_PORTFOLIO.md` 還留著過時的段落而退回，主代理已補上。
+  - 已知（低）：放寬後的 Header 鎖仍綁 `data-testid` 與 `onClick` 的屬性順序（行為已由 e2e 守住）；CI 首次加上 e2e，可能偶爾不穩。
 
 ### P1 — 下一輪
 
@@ -400,7 +420,7 @@
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |
 | PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Todo | — | TECH-01 |
 | PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Done | — | TECH-04 |
-| PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Todo | 建議在 15、18、19 之後 | TECH-02 |
+| PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Done | 建議在 15、18、19 之後 | TECH-02 |
 | PRISM-OPT-27 | 治理文件瘦身、修正斷鏈、解除 docs-lock 測試耦合 | Done | — | TECH-03 |
 | PRISM-OPT-28 | 桌面版每日自動還原點 | Done | — | OPS-02 |
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Done | 第二階段已決定不收緊 | OPS-04 |

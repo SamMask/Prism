@@ -31,7 +31,7 @@
 |------|------|----------|
 | [API_REFERENCE.md](./API_REFERENCE.md) | REST API 端點完整參考 (`/api/*`)、請求參數、回應格式 | ✅ 已確認 (2026-06-19) |
 | [RELEASE_CHECKLIST.md](./RELEASE_CHECKLIST.md) | public GitHub release、tag、portable package 前的 fresh validation evidence template | ✅ 已建立 |
-| [TEST_PORTFOLIO.md](./TEST_PORTFOLIO.md) | 測試資產分類、完成權限、isolated Go browser smoke、2026-10-06 可執行性實測 | ✅ 已更新 (2026-10-06) |
+| [TEST_PORTFOLIO.md](./TEST_PORTFOLIO.md) | 測試資產依執行性分類、fast／release gate、審查 bug 的 e2e 守門 | ✅ 已更新 (2026-10-07) |
 | [contracts/full-data-snapshot-v1.md](./contracts/full-data-snapshot-v1.md) | 完整資料快照 v1：local-only、consistent DB、五類檔案、manifest hash、manual restore 邊界 | ✅ 已建立 (2026-08-12) |
 | [FRONTEND-REDESIGN-PLAN.md](./FRONTEND-REDESIGN-PLAN.md) | 前端改版的歷史規劃；它引用的原型檔 `New_UI/` 已不在 repo | 🗄️ 歷史規劃 |
 | [contracts/phase18-readiness.md](./contracts/phase18-readiness.md) | Phase 18 contract pack：golden fixture、endpoint side-effect map、UI workflow map、Go read shadow acceptance | ✅ 已建立 |
