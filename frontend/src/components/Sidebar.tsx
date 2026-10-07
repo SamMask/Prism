@@ -50,7 +50,8 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     setSelectedTag,
     setShowArchived,
   } = useAppStore()
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  const isCollapsed = useAppStore((state) => state.sidebarCollapsed)
+  const setIsCollapsed = useAppStore((state) => state.setSidebarCollapsed)
   const [showTags, setShowTags] = useState(true)
   const [showAllTags, setShowAllTags] = useState(false)
   const drawerRef = useRef<HTMLElement>(null)

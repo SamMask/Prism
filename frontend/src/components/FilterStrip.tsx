@@ -1,4 +1,4 @@
-import { Archive, Hash, Home, Tag } from 'lucide-react'
+import { Archive, Hash, Home, Tag, X } from 'lucide-react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { useTranslation } from '../hooks/useTranslation'
@@ -15,6 +15,7 @@ export function FilterStrip() {
     selectedCategoryId,
     selectedTagId,
     showArchived,
+    sidebarCollapsed,
     setSelectedCategory,
     setSelectedTag,
     setShowArchived,
@@ -54,6 +55,11 @@ export function FilterStrip() {
     goHome()
   }
 
+  const activeCategory = categories.find((category) => category.id === selectedCategoryId)
+  const activeTag = tags.find((tag) => tag.id === selectedTagId)
+  // Collapsed Sidebar hides its category list, so >= md falls back to the full chips (as on mobile).
+  const mdHide = sidebarCollapsed ? '' : 'md:hidden'
+
   const chipBase = 'inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border px-3 text-[13px] transition-colors'
   const chipIdle = 'border-border-subtle bg-bg-base text-text-secondary hover:border-border-default hover:bg-bg-hover hover:text-text-primary'
   const chipActive = 'border-primary/40 bg-primary/15 text-primary-light'
@@ -68,7 +74,7 @@ export function FilterStrip() {
         <button
           type="button"
           onClick={clearFilters}
-          className={`${chipBase} ${isAllActive ? chipActive : chipIdle}`}
+          className={`${chipBase} ${mdHide} ${isAllActive ? chipActive : chipIdle}`}
           aria-pressed={isAllActive}
           data-testid="filter-all"
         >
@@ -87,8 +93,37 @@ export function FilterStrip() {
           <span>{t('filter.archive')}</span>
         </button>
 
+        {/* >= md: the Sidebar owns category navigation; only the active category shows here, clearable. */}
+        {activeCategory && !sidebarCollapsed && (
+          <button
+            type="button"
+            onClick={() => handleCategoryClick(activeCategory.id)}
+            className={`${chipBase} hidden md:inline-flex ${chipActive}`}
+            aria-label={t('filter.clearCategoryFilter', { name: getCategoryDisplayName(activeCategory, t) })}
+            data-testid="filter-active-category"
+          >
+            <span className="text-[14px]" aria-hidden="true">{activeCategory.icon || '📁'}</span>
+            <span className="max-w-[120px] truncate">{getCategoryDisplayName(activeCategory, t)}</span>
+            <X size={14} aria-hidden="true" />
+          </button>
+        )}
+
+        {activeTag && !starredTagIdSet.has(activeTag.id) && (
+          <button
+            type="button"
+            onClick={() => handleTagClick(activeTag.id)}
+            className={`${chipBase} hidden md:inline-flex ${tagActive}`}
+            aria-label={t('filter.clearTagFilter', { name: activeTag.name })}
+            data-testid="filter-active-tag"
+          >
+            <Hash size={14} aria-hidden="true" />
+            <span className="max-w-[120px] truncate">{activeTag.name}</span>
+            <X size={14} aria-hidden="true" />
+          </button>
+        )}
+
         {categories.length > 0 && (
-          <span className="mx-1 h-4 w-px shrink-0 bg-border-subtle" aria-hidden="true" />
+          <span className={`mx-1 h-4 w-px shrink-0 bg-border-subtle ${mdHide}`} aria-hidden="true" />
         )}
 
         {categories.map((category) => {
@@ -100,7 +135,7 @@ export function FilterStrip() {
               key={category.id}
               type="button"
               onClick={() => handleCategoryClick(category.id)}
-              className={`${chipBase} ${isActive ? chipActive : chipIdle}`}
+              className={`${chipBase} ${mdHide} ${isActive ? chipActive : chipIdle}`}
               aria-pressed={isActive}
               data-testid={`filter-category-${category.id}`}
               title={categoryName}

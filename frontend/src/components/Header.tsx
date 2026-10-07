@@ -6,7 +6,6 @@ import { Button, IconButton } from './ui'
 import { toast } from './ui/Toast'
 import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
-import { getCategoryDisplayName } from '../utils/categoryDisplay'
 import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { api } from '../services/api'
 
@@ -33,12 +32,6 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
     sortBy,
     setSortBy,
     notes,
-    categories,
-    tags,
-    selectedCategoryId,
-    selectedTagId,
-    showArchived,
-    libraryTotal,
     openCommandPalette,
     openReading,
   } = useAppStore()
@@ -158,21 +151,12 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
   const isSelectionMode = selectedNoteIds.length > 0
   const isHomeRoute = location.pathname === '/'
-  const activeCategory = categories.find((category) => category.id === selectedCategoryId)
-  const activeCategoryName = getCategoryDisplayName(activeCategory, t)
-  const activeTag = tags.find((tag) => tag.id === selectedTagId)
-  const pageTitle = location.pathname === '/prompt-builder'
-    ? 'Prompt Builder'
-    : location.pathname === '/settings'
-      ? t('header.settings')
-      : showArchived
-      ? t('header.archive')
-        : activeCategoryName || (activeTag ? `#${activeTag.name}` : t('header.all'))
-  const pageMeta = isHomeRoute
-    ? t('header.homeMeta', { count: libraryTotal === null ? '–' : libraryTotal.toLocaleString() })
-    : location.pathname === '/prompt-builder'
-      ? t('header.promptBuilderMeta')
-      : t('header.settingsMeta')
+  const pageTitle = location.pathname === '/prompt-builder' ? 'Prompt Builder' : t('header.settings')
+  // On Home the H1 + subtitle in HomePage already carry title and (filtered) count; the library total
+  // lives in Sidebar All and the footer, so Header shows no title block there.
+  const pageMeta = location.pathname === '/prompt-builder'
+    ? t('header.promptBuilderMeta')
+    : t('header.settingsMeta')
 
   return (
     <header className="h-[60px] shrink-0 bg-bg-base border-b border-border-subtle px-3 sm:px-4 lg:px-6 flex items-center gap-2 sm:gap-3" data-testid="header">
@@ -241,7 +225,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
       ) : (
         // Normal Header
         <>
-          <div className="min-w-0 flex items-center gap-2 pr-2">
+          {!isHomeRoute && <div className="min-w-0 flex items-center gap-2 pr-2">
             <div className="min-w-0">
               <div className="truncate text-[16px] font-semibold tracking-tight text-text-primary">
                 {pageTitle}
@@ -250,7 +234,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                 {pageMeta}
               </div>
             </div>
-          </div>
+          </div>}
 
           <div className="flex-1" />
 

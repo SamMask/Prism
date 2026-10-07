@@ -56,11 +56,14 @@ def test_ui_version_comes_from_runtime_not_hardcoded_literals():
 
 
 def test_library_total_has_one_source_and_maintenance_reads_real_stats():
-    # PRISM-OPT-31: Sidebar All / Header / Footer share store.libraryTotal (non-archived, from /api/test).
+    # PRISM-OPT-31: Sidebar All / Footer share store.libraryTotal (non-archived, from /api/test).
+    # PRISM-OPT-33: Header no longer repeats the total on Home (covered by e2e/test_library_nav_dedup.py).
     layout = LAYOUT_PATH.read_text(encoding="utf-8")
-    for path in (SIDEBAR_PATH, HEADER_PATH, LAYOUT_PATH):
+    for path in (SIDEBAR_PATH, LAYOUT_PATH):
         text = path.read_text(encoding="utf-8")
         assert "libraryTotal" in text, f"{path.name} must show the Library total"
+    for path in (SIDEBAR_PATH, HEADER_PATH, LAYOUT_PATH):
+        text = path.read_text(encoding="utf-8")
         assert "totalNotes" not in text, f"{path.name} must not show the filtered list count"
     assert "category.count || 0), 0)" not in SIDEBAR_PATH.read_text(encoding="utf-8")
     store = STORE_PATH.read_text(encoding="utf-8")

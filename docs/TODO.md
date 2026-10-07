@@ -508,6 +508,20 @@
     - 修正前 8 個子測試都失敗（`FOREIGN KEY constraint failed (787)`）。主代理另外把修正 stash 掉重跑，3 個測試都失敗；還原後通過。
     - fast gate 通過（pytest 257、go test ok）。
   - 已知（低）：刪除後，variant 卡片上的 parent_title 與 variants_count 要等列表重新載入才會更新，由 PRISM-OPT-69 一併處理。批次刪除的 dry-run 預覽不會列出哪些 variant 會被改掛。
+- `PRISM-OPT-33`（本機驗證；未發版、未部署 Pi）：
+  - 前端：
+    - FilterStrip 在 ≥md 且 Sidebar 展開時，隱藏 All 與分類 chips，只留 Archive、starred tags，以及「目前分類」與「目前非 starred 標籤」兩個可清除的 chip（aria-label 為四語 i18n）。
+    - Sidebar 收合時，Sidebar 會把分類藏起來，所以 FilterStrip 在 ≥md 也恢復完整 chips。為此把 Sidebar 的 `isCollapsed` 移到 appStore 的 `sidebarCollapsed`（不持久化），Sidebar 結構沒變。mobile 維持完整 chips。
+    - Home 的 Header 不再顯示標題與「N items」，因為它和 H1 重複；篩選後數量仍在 H1 副標，總數在 Sidebar All 與 Footer。順手刪掉不再使用的 i18n `header.all／archive／homeMeta`（四語）。
+  - 驗證：
+    - 新增 `e2e/test_library_nav_dedup.py` 5 條，涵蓋：desktop 只剩 Sidebar 一組分類、mobile 保留 chips、標題與計數不重複、收合後恢復 chips、搜尋加非 starred tag 時有 active chip。
+    - 用 HEAD 跑會失敗；prism-verifier 另外只還原 `mdHide`，確認收合那條真的在測收合邏輯。
+    - prism-verifier 第一次退回：desktop 收合 Sidebar 後完全沒有分類導覽。修正後複驗通過：
+      - 1280 展開與收合兩種狀態都正常，Tab 與 Enter 可以操作 chips。
+      - 390 沒有水平溢位，drawer 行為不變。
+      - 「收合→縮到 390→放回 1280」沒有怪狀態。
+    - `-Release` gate 通過（pytest 426、go test ok、e2e 26）。
+  - 已知（低）：390 在「搜尋＋非 starred tag」時看不出是哪個 tag，只有泛用的篩選提示。
 
 ### P1 — 下一輪
 
@@ -554,7 +568,7 @@
 | PRISM-OPT-31 | 筆記計數改用單一來源；Maintenance 改讀 `/api/system/stats` | Done | — | UX-05 |
 | PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Done | 21 | PERF-02 |
 | PRISM-OPT-68 | 刪除有 variant 子筆記的父筆記回 500（FOREIGN KEY constraint failed） | Done | — | OPT-32 追蹤 |
-| PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Todo | — | IA-01 |
+| PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Done | — | IA-01 |
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Todo | — | IA-02 |
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Todo | — | OPS-03 |
 | PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Todo | — | OPS-05 |

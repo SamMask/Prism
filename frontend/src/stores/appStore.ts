@@ -92,6 +92,8 @@ interface AppState {
   setSelectedTag: (id: number | null) => void
   setSortBy: (sort: 'updated' | 'created' | 'custom') => void
   setShowArchived: (showArchived: boolean) => void
+  sidebarCollapsed: boolean
+  setSidebarCollapsed: (collapsed: boolean) => void
   applySearchWorkspace: (filters: SearchWorkspaceFilters) => void
   toggleNoteSelection: (id: number) => void
   selectAllNotes: () => void
@@ -128,6 +130,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedTagId: null,
   sortBy: 'updated',
   showArchived: false,
+  sidebarCollapsed: false,
+  setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
 
   categories: [],
   tags: [],
