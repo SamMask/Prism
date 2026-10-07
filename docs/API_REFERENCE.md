@@ -1044,6 +1044,11 @@ manifest format 是 `prism.full_data_snapshot.v1`，每個 payload file 都有 `
 - 路徑在 `docs/notes/`（已拆分長文）的附件列會被略過並計入這個數字，不寫檔也不建立附件列。原因是 JSON 匯出只有這類筆記的 500 字預覽，沒有全文；而路徑指的是匯出端的 `note_<舊 id>.md`，在目標端可能是另一則筆記的檔案。
 - 這類筆記在目標端只會有預覽加拆分橫幅。要完整保留已拆分長文，請用 full snapshot，或先執行「合併長文回筆記」（PRISM-OPT-20）再匯出 JSON。
 - 其他附件路徑仍須通過路徑安全檢查，否則整批回 `400`。
+- 匯入不會刪除或覆寫目標端既有的檔案（PRISM-OPT-64）：
+  - 附件列帶 `content_b64`、而目標路徑已有檔案時，改寫成 `<原名>_import_<n><副檔名>` 並存入新路徑。
+  - upload（圖片）同名時略過，計入 additive 欄位 `skipped_uploads`。筆記以檔名引用圖片，所以匯入的筆記會顯示目標端原有的那張。
+  - 同一筆記已有相同（正規化）路徑的附件列時不重複新增；存入 DB 的路徑一律正規化。
+  - 需要用備份內容覆蓋現有檔案時，請用 full snapshot 還原。
 
 ### POST `/api/notes/export/batch`
 

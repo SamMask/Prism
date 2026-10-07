@@ -193,7 +193,8 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		cleanupCreated()
 		return http.StatusBadRequest, response{"status": "error", "message": err.Error()}
 	}
-	if err := s.restoreImportedUploads(importData, &createdFiles); err != nil {
+	skippedUploads, err := s.restoreImportedUploads(importData, &createdFiles)
+	if err != nil {
 		cleanupCreated()
 		return http.StatusBadRequest, response{"status": "error", "message": err.Error()}
 	}
@@ -208,6 +209,7 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		"imported":            importedCount,
 		"skipped":             skippedCount,
 		"skipped_attachments": skippedAttachments,
+		"skipped_uploads":     skippedUploads,
 		"duplicates":          duplicates,
 	}}
 }
@@ -321,9 +323,20 @@ func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, impor
 			skipped++
 			continue
 		}
-		resolved, ok := resolveAttachmentMutationPath(s.runtime.dataDir, filePath)
-		if !ok {
+		if _, ok := resolveAttachmentMutationPath(s.runtime.dataDir, filePath); !ok {
 			return 0, fmt.Errorf("unsafe attachment path: %s", filePath)
+		}
+		rawPath := filePath
+		filePath = path.Clean(filePath)
+		// A note mapped onto an existing note (skip mode) may already carry this attachment.
+		var existing int
+		err := tx.QueryRow("SELECT 1 FROM Note_Attachments WHERE note_id = ? AND file_path IN (?, ?) LIMIT 1",
+			newNoteID, filePath, rawPath).Scan(&existing)
+		if err == nil {
+			continue
+		}
+		if !errors.Is(err, sql.ErrNoRows) {
+			return 0, err
 		}
 		contentB64 := stringValue(item["content_b64"])
 		if contentB64 == "" {
@@ -338,13 +351,12 @@ func (s *server) restoreImportedAttachments(tx *sql.Tx, idMap map[int]int, impor
 			if int64(len(content)) > maxAttachmentFileBytes {
 				return 0, fmt.Errorf("attachment too large: %s", filePath)
 			}
-			if err := os.MkdirAll(filepath.Dir(resolved), 0755); err != nil {
+			storedPath, created, err := createImportedAttachmentFile(s.runtime.dataDir, filePath, content)
+			if err != nil {
 				return 0, err
 			}
-			if err := os.WriteFile(resolved, content, 0644); err != nil {
-				return 0, err
-			}
-			*createdFiles = append(*createdFiles, resolved)
+			*createdFiles = append(*createdFiles, created)
+			filePath = storedPath
 			sizeBytes = len(content)
 		} else if size, ok := intValue(item["size_bytes"]); ok {
 			sizeBytes = size
@@ -373,7 +385,58 @@ func isSeparatedNoteAttachmentPath(filePath string) bool {
 	return strings.HasPrefix(path.Clean(filePath), "docs/notes/")
 }
 
-func (s *server) restoreImportedUploads(importData map[string]any, createdFiles *[]string) error {
+// createImportedAttachmentFile writes an imported attachment without replacing a file that exists:
+// when relPath is taken it uses <name>_import_<n><ext> in the same directory. It returns the
+// relative path to store and the absolute path it created.
+func createImportedAttachmentFile(dataDir, relPath string, content []byte) (string, string, error) {
+	dir := path.Dir(relPath)
+	baseName, ext := splitAttachmentName(path.Base(relPath))
+	for n := 0; n < 1000; n++ {
+		candidate := relPath
+		if n > 0 {
+			candidate = path.Join(dir, fmt.Sprintf("%s_import_%d%s", baseName, n, ext))
+		}
+		resolved, ok := resolveAttachmentMutationPath(dataDir, candidate)
+		if !ok {
+			return "", "", fmt.Errorf("unsafe attachment path: %s", candidate)
+		}
+		err := createImportFile(resolved, content)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return "", "", err
+		}
+		return candidate, resolved, nil
+	}
+	return "", "", fmt.Errorf("no free attachment filename for %s", relPath)
+}
+
+// createImportFile creates absPath with content and returns an os.ErrExist error instead of
+// replacing a file that is already there.
+func createImportFile(absPath string, content []byte) error {
+	if err := os.MkdirAll(filepath.Dir(absPath), 0755); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(absPath, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+	if err != nil {
+		return err
+	}
+	_, err = file.Write(content)
+	if closeErr := file.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		_ = os.Remove(absPath)
+	}
+	return err
+}
+
+// restoreImportedUploads writes the uploads that carry content. An upload whose filename already
+// exists is left as it is and counted: notes reference uploads by filename, so a renamed copy
+// would not be reachable from the imported notes.
+func (s *server) restoreImportedUploads(importData map[string]any, createdFiles *[]string) (int, error) {
+	skipped := 0
 	for _, item := range objectArray(importData["uploads"]) {
 		filename := strings.TrimSpace(strings.ReplaceAll(stringValue(item["filename"]), "\\", "/"))
 		if filename == "" {
@@ -388,7 +451,7 @@ func (s *server) restoreImportedUploads(importData map[string]any, createdFiles 
 		}
 		resolved, ok := s.resolveUploadFile(filename)
 		if !ok {
-			return fmt.Errorf("unsafe upload filename: %s", filename)
+			return 0, fmt.Errorf("unsafe upload filename: %s", filename)
 		}
 		contentB64 := stringValue(item["content_b64"])
 		if contentB64 == "" {
@@ -399,20 +462,22 @@ func (s *server) restoreImportedUploads(importData map[string]any, createdFiles 
 		}
 		content, err := base64.StdEncoding.DecodeString(contentB64)
 		if err != nil {
-			return fmt.Errorf("invalid upload content_b64 for %s", filename)
+			return 0, fmt.Errorf("invalid upload content_b64 for %s", filename)
 		}
 		if int64(len(content)) > maxUploadFileBytes {
-			return fmt.Errorf("upload too large: %s", filename)
+			return 0, fmt.Errorf("upload too large: %s", filename)
 		}
-		if err := os.MkdirAll(filepath.Dir(resolved), 0755); err != nil {
-			return err
+		err = createImportFile(resolved, content)
+		if errors.Is(err, os.ErrExist) {
+			skipped++
+			continue
 		}
-		if err := os.WriteFile(resolved, content, 0644); err != nil {
-			return err
+		if err != nil {
+			return 0, err
 		}
 		*createdFiles = append(*createdFiles, resolved)
 	}
-	return nil
+	return skipped, nil
 }
 
 type markdownImportImage struct {

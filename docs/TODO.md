@@ -427,6 +427,20 @@
     - Go `TestAPITestReturnsRuntimeVersion`、pytest source test 都有 fail-before。
     - prism-verifier 的假版本證明：`prismVersion()` 改成 7.7.7-verify 後，title、Sidebar、About 在 1280 與 390 都跟著變；真實 build 仍顯示 2.6.1；擋掉 `/api/test` 時不顯示任何版本。
     - 整個 SPA 只讀一次版本；`-Release` gate 通過（pytest 422 passed、e2e 17 passed）。
+- `PRISM-OPT-64`（本機驗證；未發版、未部署 Pi）：
+  - `go-shadow/import.go`：
+    - 寫檔改用 `O_CREATE|O_EXCL`（`createImportFile`），`createdFiles` 只記錄這次匯入真正新建的檔案；後段失敗的清理不會再刪到目標端原有的檔案。
+    - 附件帶 `content_b64`、而且撞到既有檔案時，改寫成 `<名>_import_<n><副檔名>`，每個候選路徑都重新做安全檢查，並存入新路徑。
+    - upload 撞名時略過，計入 additive `skipped_uploads`，因為筆記以檔名引用圖片。
+    - 同一筆記已有相同（正規化或原始）路徑的附件列時不重複新增，所有 mode 都適用；DB 一律存正規化路徑。
+  - 驗證：
+    - Go 5 項新測試，4 項行為測試在 HEAD 上失敗。
+    - prism-verifier：`-Release` gate 通過（pytest 422、e2e 17）。
+    - 隔離 runtime 實測：失敗匯入時原檔 sha256 不變；成功匯入時原檔不變，新附件讀得到；skip 重新匯入時列數不變。
+    - 邊界 probe：目標是目錄時安全失敗；大小寫衝突會改名或略過；duplicate mode 下同一則筆記的重複列只會建立 1 列。
+  - 已知：
+    - M1：改名後再用 skip mode 匯入帶內容的 JSON，會累積 `_import_N`，已記入 PRISM-OPT-66 的已知限制。
+    - M2：不帶內容的附件列會共用目標端的檔案，之後刪除會刪到別人的檔案。這是 HEAD 原本就有的問題，另開 **PRISM-OPT-66（P1）**。
 
 ### P1 — 下一輪
 
@@ -444,7 +458,8 @@
 | PRISM-OPT-29 | LAN 管理邊界：先修正文件，再決定是否收緊 | Done | 第二階段已決定不收緊 | OPS-04 |
 | PRISM-OPT-52 | 子代理派工：依類別與難度指定模型與 effort（`.claude/agents/` + `docs/AGENT_DISPATCH.md`） | Done | — | 使用者需求 |
 | PRISM-OPT-58 | JSON 匯入遇到已拆分筆記（`docs/notes` 附件）時不再整批失敗 | Done | — | OPT-19 追蹤 |
-| PRISM-OPT-64 | JSON 匯入不得刪除或覆寫目標端既有的檔案（rollback 會刪掉原有檔案） | Todo | — | OPT-58 追蹤 |
+| PRISM-OPT-64 | JSON 匯入不得刪除或覆寫目標端既有的檔案（rollback 會刪掉原有檔案） | Done | — | OPT-58 追蹤 |
+| PRISM-OPT-66 | 刪除附件時不得刪掉其他附件列仍在用的檔案（匯入後共用檔案會被誤刪） | Todo | — | OPT-64 追蹤 |
 | PRISM-OPT-59 | 編輯器開著時從 palette 開另一則筆記，確認不會存錯筆記（先重現） | Done | — | OPT-19 追蹤 |
 | PRISM-OPT-61 | 桌面版（WebView2）關閉視窗時保護未存變更 | Done | 21 | OPT-21 追蹤 |
 | PRISM-OPT-62 | 對話框無障礙：`Modal`／`ConfirmDialog` 加上 `role="dialog"`、focus trap、關閉後歸還 focus | Done | — | OPT-22 追蹤 |

@@ -109,6 +109,7 @@ git diff --check
 | PRISM-OPT-63 | F | L | prism-engineer | prism-verifier |
 | PRISM-OPT-64 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-65 | F | S | prism-builder | prism-verifier |
+| PRISM-OPT-66 | X | S | prism-engineer | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -547,10 +548,25 @@ git diff --check
 - **Finding**：PRISM-OPT-58 調查時發現（2026-10-07）｜ **優先級**：P2 ｜ **依賴**：PRISM-OPT-58
 - **目標**：匯入含已拆分筆記的 JSON 時，使用者看得到哪些筆記只有預覽，以及要用 full snapshot 才能完整還原。
 - **原因**：PRISM-OPT-58 讓這類匯入不再整批失敗，回應多了 `skipped_attachments`；但 `BackupImportSection.tsx` 只讀 imported 與 skipped，使用者看到的只是「匯入成功」，不知道內容有損。
-- **修改範圍**：`frontend/src/components/settings/BackupImportSection.tsx`、i18n（四語）。`skipped_attachments > 0` 時顯示提示。
+- **修改範圍**：`frontend/src/components/settings/BackupImportSection.tsx`、i18n（四語）。`skipped_attachments > 0` 時顯示提示；PRISM-OPT-64 新增的 `skipped_uploads > 0`（同名圖片已存在、沿用目標端那張）也一併提示。
 - **不要修改**：匯入 API；PRISM-OPT-58 的後端行為。
 - **驗收**：browser smoke（desktop 與 390px）：匯入含拆分筆記的 JSON 後出現提示；沒有拆分筆記時不出現。
 - **驗證**：`cd frontend && npm run build`；`pytest tests/ -v`；browser smoke。
+
+### PRISM-OPT-66 — 刪除附件時不得刪掉其他附件列仍在用的檔案
+
+- **Finding**：PRISM-OPT-64 驗收時實測（2026-10-07；HEAD 原本就有）｜ **優先級**：P1
+- **目標**：刪除某則筆記的附件時，若同一個實體檔案仍被其他附件列引用，只刪除附件列，保留檔案。
+- **原因**：
+  - JSON 匯出的附件列只有路徑，沒有檔案內容。匯入到另一個 DB 時，如果目標端剛好有同名檔案（屬於另一則筆記），新附件列就會指向那個檔案。
+  - 之後 `DELETE /api/attachments/{新列 id}` 會連檔案一起刪掉，另一則筆記的附件就消失了。實測可重現。
+  - 目前的 export 只會產生這種不帶內容的列，所以「把 export 匯到另一個 DB、剛好同名」是常見情境。
+- **修改範圍**：`go-shadow/attachments.go` 的附件刪除。刪檔前檢查是否還有其他附件列引用同一個檔案；比照 `notes_actions.go` 的 `noteFileSharedByOtherRow`（PRISM-OPT-60），優先重用它。有引用就只刪附件列。
+  - 一併檢查筆記刪除（`deleteNote`／batch delete）的附件清理路徑：`notes_media.go` 已用 `noteAttachmentReferenceCounts`，確認大小寫與正規化一致。
+- **不要修改**：API 形狀與狀態碼；匯入行為（PRISM-OPT-64）；schema。
+- **驗收**（Go test，經 HTTP handler）：兩則筆記的附件列指向同一個檔案時，刪除其中一列，檔案仍在，另一列仍讀得到；只有最後一列被刪時才刪檔。在 HEAD 上失敗。
+- **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+- **已知限制（PRISM-OPT-64 的 M1，不在本單範圍）**：帶 `content_b64` 的附件撞名改寫成 `_import_N` 之後，再用 skip mode 匯入同一份 JSON，會每次多一列與一個檔案。目前的 export 不帶內容，只有手寫或舊版備份會遇到。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
