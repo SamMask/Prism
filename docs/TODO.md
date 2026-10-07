@@ -522,6 +522,22 @@
       - 「收合→縮到 390→放回 1280」沒有怪狀態。
     - `-Release` gate 通過（pytest 426、go test ok、e2e 26）。
   - 已知（低）：390 在「搜尋＋非 starred tag」時看不出是哪個 tag，只有泛用的篩選提示。
+- `PRISM-OPT-34`（本機驗證；未發版、未部署 Pi）：
+  - 前端：
+    - Appearance 不新增 tab，改成分兩段：「Display」與「Library & editor」（卡片開啟模式、快速新增預設分類、自動載入）。
+    - 圖片儲存模式（抽成 `ImageSaveModeSetting.tsx`）與整個 DangerZoneSection（三種圖片清理）移到 Maintenance 新增的「Images & storage」；Access 只剩 Security。
+    - `?tab=` 的別名：`data` → `backup`；六個舊 tab id 照舊有效。
+    - 圖片儲存模式的 select 加上 state，選完立刻顯示新值，localStorage key 與寫入時機不變。
+    - 四語 i18n。
+    - 主代理收尾時處理了兩項 Low：DangerZone 每列的圖示加 `shrink-0`（390 時原本被壓到幾乎看不見）；韓文標題改為「이미지 및 저장 공간」。
+  - 驗證：
+    - 新增 `e2e/test_settings_regroup.py` 5 條。HEAD 上 4 條失敗；390 溢位那條是防回歸用，所以在 HEAD 上也會通過。
+    - prism-verifier 在隔離 runtime 實測：
+      - 舊的 localStorage 值 reload 後都還在；六個 tab id 與 `data` 都導到正確的 panel。
+      - 390 下七個 tab 都沒有溢位。
+      - 三種圖片清理都實際執行到確認對話並完成，結果正確，文案與流程和 HEAD 相同（修復壞路徑原本就不跳確認）。
+    - `-Release` gate：verifier 那次 e2e 失敗 1 條，是不相關的 `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note`；單獨重跑 3/3 通過，完整重跑 31 passed → 已開 `PRISM-OPT-70`。
+  - 已知（低）：Danger Zone 卡片嵌在 SectionPanel 裡，390 時兩層 padding 疊加，內容變窄但可讀；heading 是 `h2` 包 `h2`。
 
 ### P1 — 下一輪
 
@@ -569,7 +585,7 @@
 | PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Done | 21 | PERF-02 |
 | PRISM-OPT-68 | 刪除有 variant 子筆記的父筆記回 500（FOREIGN KEY constraint failed） | Done | — | OPT-32 追蹤 |
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Done | — | IA-01 |
-| PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Todo | — | IA-02 |
+| PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Done | — | IA-02 |
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Todo | — | OPS-03 |
 | PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Todo | — | OPS-05 |
 | PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Todo | — | TECH-05 |
@@ -583,6 +599,7 @@
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件的 CJK 檔名被濾掉（`說明.md` 變成 `_<時間戳>.md`） | Todo | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
+| PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
 
 ### P3 / Future — 需要證據或明確 promote
 

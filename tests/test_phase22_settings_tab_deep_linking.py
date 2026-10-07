@@ -11,7 +11,7 @@ def test_settings_tabs_are_driven_by_url_search_params():
 
     assert "useSearchParams" in settings_page
     assert "const tabParam = searchParams.get('tab')" in settings_page
-    assert "const activeTab: SettingsTab = isSettingsTab(tabParam) ? tabParam : 'appearance'" in settings_page
+    assert "const activeTab: SettingsTab = resolveSettingsTab(tabParam)" in settings_page
     assert "nextParams.set('tab', tab)" in settings_page
     assert "setSearchParams(nextParams, { replace: true })" in settings_page
 
@@ -23,6 +23,7 @@ def test_settings_tabs_accept_only_known_tab_ids_and_preserve_default_appearance
     assert "function isSettingsTab(value: string | null): value is SettingsTab" in settings_page
     assert "SETTINGS_TAB_IDS.includes(value as SettingsTab)" in settings_page
     assert ": 'appearance'" in settings_page
+    assert "SETTINGS_TAB_ALIASES" in settings_page
     assert "data-testid={`settings-panel-${activeTab}`}" in settings_page
 
 

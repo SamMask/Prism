@@ -129,6 +129,10 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
         {t('settings.appearance.title')}
       </h2>
       
+      <h3 className="text-sm font-medium text-text-muted mb-4" data-testid="appearance-group-display">
+        {t('settings.appearance.sections.display')}
+      </h3>
+
       {/* Dark/Light Mode */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -345,8 +349,12 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
         </div>
       </div>
 
+      <h3 className="mt-8 mb-1 border-t border-border-subtle pt-6 text-sm font-medium text-text-muted" data-testid="appearance-group-library-editor">
+        {t('settings.appearance.sections.libraryEditor')}
+      </h3>
+
       {/* Card Open Mode */}
-      <div className="pt-6 border-t border-border-subtle">
+      <div className="pt-4">
         <div className="mb-3">
             <p className="text-text-primary">{t('settings.appearance.cardOpenMode.title')}</p>
             <p className="text-text-muted text-sm">
@@ -373,36 +381,6 @@ export function AppearanceSection({ categories }: AppearanceSectionProps) {
           <option value="preview">{t('settings.appearance.cardOpenMode.preview')}</option>
           <option value="edit">{t('settings.appearance.cardOpenMode.edit')}</option>
         </select>
-      </div>
-
-      {/* Image Save Mode */}
-      <div className="pt-6 border-t border-border-subtle">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-text-primary">{t('settings.appearance.imageSaveMode.title')}</p>
-            <p className="text-text-muted text-sm">
-              {t('settings.appearance.imageSaveMode.description')}
-            </p>
-          </div>
-          <select
-            value={localStorage.getItem('imageSaveMode') || 'both'}
-            onChange={(e) => {
-              localStorage.setItem('imageSaveMode', e.target.value);
-              const modeKey = e.target.value === 'both'
-                ? 'settings.appearance.imageSaveMode.bothLabel'
-                : 'settings.appearance.imageSaveMode.thumbnailOnlyLabel';
-              toast.success(t('settings.appearance.imageSaveMode.changed', { mode: t(modeKey) }));
-            }}
-            className="px-4 py-2 rounded-lg
-                       bg-bg-elevated border border-border-default
-                       text-text-primary
-                       focus:outline-none focus:border-primary
-                       transition-colors"
-          >
-            <option value="both">{t('settings.appearance.imageSaveMode.both')}</option>
-            <option value="thumbnail_only">{t('settings.appearance.imageSaveMode.thumbnailOnly')}</option>
-          </select>
-        </div>
       </div>
 
       {/* Quick Add Default Category */}

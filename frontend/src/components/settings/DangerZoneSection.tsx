@@ -205,7 +205,7 @@ export function DangerZoneSection() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image size={20} className="text-text-muted" />
+            <Image size={20} className="shrink-0 text-text-muted" />
             <div>
               <p className="text-text-primary">{t('settings.dangerZone.orphanTitle')}</p>
               <p className="text-text-muted text-sm" data-testid="orphan-image-cleanup-description">
@@ -287,7 +287,7 @@ export function DangerZoneSection() {
         {/* Delete Original Images */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Image size={20} className="text-text-muted" />
+            <Image size={20} className="shrink-0 text-text-muted" />
             <div>
               <p className="text-text-primary">{t('settings.dangerZone.originalTitle')}</p>
               <p className="text-text-muted text-sm">
@@ -349,7 +349,7 @@ export function DangerZoneSection() {
         {/* Fix Broken Image Paths */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <AlertCircle size={20} className="text-warning" />
+            <AlertCircle size={20} className="shrink-0 text-warning" />
             <div>
               <p className="text-text-primary">{t('settings.dangerZone.brokenTitle')}</p>
               <p className="text-text-muted text-sm">

@@ -113,6 +113,7 @@ git diff --check
 | PRISM-OPT-67 | B | S | prism-builder | prism-verifier |
 | PRISM-OPT-68 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-69 | F | S | prism-builder | prism-verifier |
+| PRISM-OPT-70 | T | S | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -604,6 +605,18 @@ git diff --check
 - **修改範圍**：`frontend/src/stores/appStore.ts`。刪除成功後改用 PRISM-OPT-32 的 `refreshLoadedNotes()`（或等效、最小的修正），保持列表與捲動位置不變。
 - **不要修改**：API；分頁大小；`refreshLoadedNotes` 的序號機制。
 - **驗收**：e2e 或 store 層測試，修正前失敗。載入 2 頁（40 筆）後刪除第 5 筆，再按 load-more，第 41 筆會出現，且沒有重複 id。刪除有 variant 的父筆記後，子筆記卡片的 parent_title 與 variants_count 不再顯示舊值（PRISM-OPT-68 之後，子筆記會改掛到上一代）。
+- **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
+
+### PRISM-OPT-70 — Ctrl+S e2e 偶發失敗
+
+- **Finding**：PRISM-OPT-34 驗收時發現（2026-10-07）｜ **優先級**：P2（CI 跑 release gate，flaky 會造成假紅燈）
+- **現象**：`e2e/test_review_regressions.py::test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 `pytest e2e` 中偶爾失敗：第二次按 Ctrl+S 後，10 秒內沒看到第二版內容。單獨跑 3 次都通過，完整重跑也通過。
+- **目標**：先判斷是測試的等待條件有問題，還是產品真的有競態（例如第一次存檔還在進行中就按了第二次 Ctrl+S，結果被吞掉或存成舊內容）。
+- **修改範圍**：
+  - 若是測試問題：改成等待明確的存檔完成訊號（例如 response 或 UI 狀態），不要只加長 timeout。
+  - 若是產品競態：最小修正 `useNoteForm` 的存檔流程，並補一條能穩定重現的測試。
+- **不要修改**：Ctrl+S 的行為語意（存檔後留在編輯器）；API。
+- **驗收**：該測試連續跑 20 次都通過（`pytest --count` 或迴圈）；完整 `pytest e2e` 連續 3 次都通過；在 TODO 證據中寫明判定的原因。
 - **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）

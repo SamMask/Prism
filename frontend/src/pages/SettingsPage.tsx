@@ -1,11 +1,12 @@
 
 import { ReactNode, useState, useEffect } from 'react';
-import { Database, FolderOpen, Info, Palette, Shield, Wrench, ArchiveRestore } from 'lucide-react';
+import { Database, FolderOpen, Image, Info, Palette, Shield, Wrench, ArchiveRestore } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { DataManager } from '../components/DataManager';
 import { SystemMaintenance } from '../components/SystemMaintenance';
 import { useAppStore } from '../stores/appStore';
 import { AppearanceSection } from '../components/settings/AppearanceSection';
+import { ImageSaveModeSetting } from '../components/settings/ImageSaveModeSetting';
 import { BackupImportSection } from '../components/settings/BackupImportSection';
 import { DangerZoneSection } from '../components/settings/DangerZoneSection';
 import { SystemStatsSection } from '../components/settings/SystemStatsSection';
@@ -41,8 +42,16 @@ const SETTINGS_TABS: SettingsTabConfig[] = [
 
 const SETTINGS_TAB_IDS = SETTINGS_TABS.map((tab) => tab.id);
 
+// Alternate ?tab= values that map to a current tab id; current ids stay valid as-is.
+const SETTINGS_TAB_ALIASES: Record<string, SettingsTab> = { data: 'backup' };
+
 function isSettingsTab(value: string | null): value is SettingsTab {
   return SETTINGS_TAB_IDS.includes(value as SettingsTab);
+}
+
+function resolveSettingsTab(value: string | null): SettingsTab {
+  const normalized = value ? SETTINGS_TAB_ALIASES[value] ?? value : null;
+  return isSettingsTab(normalized) ? normalized : 'appearance';
 }
 
 function SectionPanel({
@@ -74,7 +83,7 @@ export function SettingsPage() {
   const [stats, setStats] = useState<SystemStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const tabParam = searchParams.get('tab');
-  const activeTab: SettingsTab = isSettingsTab(tabParam) ? tabParam : 'appearance';
+  const activeTab: SettingsTab = resolveSettingsTab(tabParam);
 
   const setActiveTab = (tab: SettingsTab) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -169,6 +178,13 @@ export function SettingsPage() {
               <SectionPanel title={t('settings.maintenance.title')} icon={<Database size={20} className="text-warning" />} testId="settings-maintenance-health">
                 <SystemMaintenance />
               </SectionPanel>
+              <SectionPanel title={t('settings.maintenance.imagesStorage.title')} icon={<Image size={20} className="text-primary" />} testId="settings-images-storage">
+                <p className="mb-4 text-sm text-text-muted">{t('settings.maintenance.imagesStorage.description')}</p>
+                <div className="space-y-5">
+                  <ImageSaveModeSetting />
+                  <DangerZoneSection />
+                </div>
+              </SectionPanel>
               <SystemStatsSection
                 stats={stats}
                 isLoading={isLoading}
@@ -192,7 +208,6 @@ export function SettingsPage() {
           {activeTab === 'access' && (
             <>
               <SecuritySection />
-              <DangerZoneSection />
             </>
           )}
 

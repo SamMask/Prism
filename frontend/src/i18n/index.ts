@@ -553,6 +553,7 @@ const zhTW = {
     },
     appearance: {
       title: '外觀',
+      sections: { display: '顯示', libraryEditor: '筆記庫與編輯' },
       theme: {
         title: '主題模式',
         description: '選擇深色或淺色主題',
@@ -724,6 +725,7 @@ const zhTW = {
       description: '這區是資料健康檢查與進階維護工具；日常使用不需要手動執行，匯出資料庫副本前或懷疑資料異常時再使用即可。',
       advancedTitle: '進階診斷與伺服器資訊',
       advancedDescription: 'WAL、FTS 與低階執行環境資訊只在疑難排解時需要。',
+      imagesStorage: { title: '圖片與儲存空間', description: '圖片保存模式，以及未使用圖片、原圖與損壞路徑的清理。' },
       walTitle: '整理資料庫暫存日誌',
       walDescription: '將 SQLite WAL / checkpoint 暫存內容寫回主資料庫檔；通常只需在下載 .db 副本前手動執行。',
       walResult: '暫存日誌大小: {size} KB → 已處理 {count} 頁',
@@ -1520,6 +1522,7 @@ const en: TranslationDict = {
     },
     appearance: {
       title: 'Appearance',
+      sections: { display: 'Display', libraryEditor: 'Library & editor' },
       theme: {
         title: 'Theme mode',
         description: 'Choose a dark or light theme',
@@ -1691,6 +1694,7 @@ const en: TranslationDict = {
       description: 'Data health checks and advanced maintenance tools live here. You usually do not need to run them day to day; use them before exporting a database copy or when data looks unusual.',
       advancedTitle: 'Advanced diagnostics and server information',
       advancedDescription: 'WAL, FTS, and low-level runtime details are only needed for troubleshooting.',
+      imagesStorage: { title: 'Images & storage', description: 'Image save mode, plus cleanup of unused images, originals, and broken paths.' },
       walTitle: 'Flush database temporary log',
       walDescription: 'Writes SQLite WAL / checkpoint temporary content back to the main database file. Usually only needed before downloading a .db copy.',
       walResult: 'Temporary log size: {size} KB -> processed {count} pages',
@@ -2484,6 +2488,7 @@ const ja: TranslationDict = {
     },
     appearance: {
       title: '外観',
+      sections: { display: '表示', libraryEditor: 'ライブラリとエディター' },
       theme: {
         title: 'テーマモード',
         description: 'ダークまたはライトテーマを選択します',
@@ -2655,6 +2660,7 @@ const ja: TranslationDict = {
       description: 'ここにはデータ状態チェックと高度なメンテナンスツールがあります。通常利用では手動実行は不要で、.db コピーを書き出す前やデータ異常が疑われるときに使います。',
       advancedTitle: '高度な診断とサーバー情報',
       advancedDescription: 'WAL、FTS、低レベルの実行環境情報はトラブルシューティング時のみ必要です。',
+      imagesStorage: { title: '画像とストレージ', description: '画像の保存モードと、未使用画像・元画像・壊れたパスの整理。' },
       walTitle: 'データベース一時ログを整理',
       walDescription: 'SQLite WAL / checkpoint の一時内容をメインデータベースファイルへ書き戻します。通常は .db コピーをダウンロードする前だけ手動実行します。',
       walResult: '一時ログサイズ: {size} KB -> {count} ページ処理済み',
@@ -3448,6 +3454,7 @@ const ko: TranslationDict = {
     },
     appearance: {
       title: '외관',
+      sections: { display: '표시', libraryEditor: '라이브러리 및 에디터' },
       theme: {
         title: '테마 모드',
         description: '어두운 테마 또는 밝은 테마를 선택합니다',
@@ -3619,6 +3626,7 @@ const ko: TranslationDict = {
       description: '이 영역은 데이터 상태 점검과 고급 유지관리 도구입니다. 평소에는 수동으로 실행할 필요가 없으며, .db 사본을 내보내기 전이나 데이터 이상이 의심될 때 사용하면 됩니다.',
       advancedTitle: '고급 진단 및 서버 정보',
       advancedDescription: 'WAL, FTS 및 저수준 런타임 정보는 문제 해결 시에만 필요합니다.',
+      imagesStorage: { title: '이미지 및 저장 공간', description: '이미지 저장 모드와 미사용 이미지·원본·깨진 경로 정리.' },
       walTitle: '데이터베이스 임시 로그 정리',
       walDescription: 'SQLite WAL / checkpoint 임시 내용을 기본 데이터베이스 파일로 기록합니다. 보통 .db 사본을 다운로드하기 전에만 수동으로 실행합니다.',
       walResult: '임시 로그 크기: {size} KB -> {count} 페이지 처리됨',
