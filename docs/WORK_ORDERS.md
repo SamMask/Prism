@@ -123,6 +123,7 @@ git diff --check
 | PRISM-OPT-77 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-78 | T | S | prism-builder | 主代理 |
 | PRISM-OPT-79 | X | S | prism-engineer | prism-verifier |
+| PRISM-OPT-80 | F | S | 主代理 | 主代理 |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -732,6 +733,14 @@ git diff --check
   - 若沒有被引用，比對它是否與 repo git 歷史中的檔案一致。
   - 列出結果請使用者決定。只有使用者同意之後，才可以搬到隔離資料夾，不直接刪除。
 - **不要做**：未經同意就改動 Pi 上的檔案；刪除任何仍被附件列引用的檔案。
+
+### PRISM-OPT-80 — 隱藏內建 Prompt Builder
+
+- **來源**：使用者 2026-10-07｜ **優先級**：P2
+- **目標**：Prism 內建的 Prompt Builder 不再出現在導覽中，因為使用者改用獨立的 AI-Art-PromptBuilder；需要時可以恢復。
+- **修改範圍**：移除 Sidebar 的連結與 CommandPalette 的 `nav-prompt-builder` 命令。
+- **不要修改**：`/prompt-builder` 路由與頁面、options API、i18n 文字（保留以便恢復）。
+- **驗收**：e2e 確認兩處入口都不存在，修正前失敗；直接開網址仍能顯示頁面。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

@@ -916,6 +916,21 @@
       - 其餘 19 篇沒有重複。
     - 結論：**24 篇都維持現狀，不還原**，本單結案。
     - 重複的預覽副本：使用者表示 #5／#333 這類標題大概是測試用的，不用處理（2026-10-07）。
+- `PRISM-OPT-80`（本機驗證；未發版、未部署 Pi）：
+  - 使用者 2026-10-07 表示不用 Prism 內建的 Prompt Builder，Prompt 改在獨立的 AI-Art-PromptBuilder 處理。
+  - 前端：
+    - 移除 Sidebar 的 Prompt Builder 連結與 CommandPalette 的 `nav-prompt-builder`，原位置留下註解。
+    - 一併移除不再使用的 `Sparkles` import。
+    - `/prompt-builder` 路由、頁面元件、Header 的頁面標題、`commandPalette.commands.promptBuilder` i18n 與 options API 都保留，只要把入口加回就能恢復。
+  - 隨之調整：
+    - 40、41 改為 Won't do，恢復 Prompt Builder 時再評估。
+    - 44 只剩全新安裝時的雙語 welcome note（低優先）。
+    - 50 已在先前改為 Won't do。
+  - 驗證：
+    - 新增 `e2e/test_prompt_builder_hidden.py`，共 2 條：
+      - Sidebar 沒有 `/prompt-builder` 連結；palette 不論是否有輸入關鍵字，都沒有該命令。在 HEAD 上會失敗。
+      - 直接開 `/prompt-builder` 仍能顯示頁面。
+    - `-Release` gate 結果見 commit 前的執行紀錄。
 - `PRISM-OPT-79`（使用者 2026-10-07 選 A 並同意執行指令）：
   - 唯讀確認：
     - Pi 的 `docs/attachments` 有 11 個 `*_20251230_*.md`，mtime 都是 2026-03-15 20:47:14。
@@ -1006,22 +1021,23 @@
 | PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Done | — | Pi 部署 OPT-20 |
 | PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Done | — | V2.7.0 部署 |
 | PRISM-OPT-79 | Pi `docs/attachments` 內 11 個 2026-03-15 從 repo 複製來的測試檔（疑似孤兒） | Done | — | OPT-77 調查 |
+| PRISM-OPT-80 | 隱藏內建 Prompt Builder 的入口（側欄、Command Palette），保留路由與 API | Done | — | 使用者 2026-10-07 |
 
 ### P3 / Future — 需要證據或明確 promote
 
 | 工單 | 摘要 | 狀態 | 啟動條件 | Finding |
 |---|---|---|---|---|
-| PRISM-OPT-40 | Prompt Builder：「AI optimize」改名、模板語系、seed 缺失時的死路 | Blocked | 使用者明確 promote | UX-06 |
-| PRISM-OPT-41 | Prompt Builder seed config 內嵌到 binary；`pack.bat` 補帶 config | Blocked | 使用者明確 promote | OPS-06 |
-| PRISM-OPT-42 | API 表面衛生：死 route、死 wrapper、未引用元件、API 文件標 deprecated | Blocked | 先確認外部 agent 的實際用途 | TECH-06 |
+| PRISM-OPT-40 | Prompt Builder：「AI optimize」改名、模板語系、seed 缺失時的死路 | Won't do | 使用者不使用內建 Prompt Builder，已隱藏（OPT-80）；恢復時再評估 | UX-06 |
+| PRISM-OPT-41 | Prompt Builder seed config 內嵌到 binary；`pack.bat` 補帶 config | Won't do | 同上：內建 Prompt Builder 已隱藏（OPT-80）；恢復時再評估 | OPS-06 |
+| PRISM-OPT-42 | API 表面衛生：死 route、死 wrapper、未引用元件、API 文件標 deprecated | Blocked | 盤點完成（2026-10-07），等使用者決定刪除範圍 | TECH-06 |
 | PRISM-OPT-43 | 移除 capability flags；`go-shadow` 改名 | Blocked | 出現新增 runtime mode 的需求，或 flags 誤配的證據 | TECH-05 |
-| PRISM-OPT-44 | 非中文使用者的首次體驗（雙語 welcome note 與模板） | Blocked | 有非中文使用者的證據 | BIZ-01 |
+| PRISM-OPT-44 | 非中文使用者的首次體驗（雙語 welcome note） | Todo（低） | 使用者 2026-10-07 同意；模板部分隨 40 取消，只剩全新安裝時的 welcome note | BIZ-01 |
 | PRISM-OPT-45 | FTS5 trigram 索引 | Blocked | 資料超過 1 萬筆，且 3 字以上的查詢占多數 | FEAT-01 |
 | PRISM-OPT-46 | `Note_History` 保留策略 | Blocked | PRISM-OPT-20 之後出現 DB 成長的證據 | PERF-03 |
 | PRISM-OPT-47 | 文字附件內容索引 | Blocked | PRISM-OPT-20 之後仍有約 50 個以上文字附件，且搜尋常態 partial | PERF-01 |
 | PRISM-OPT-48 | 回收桶（軟刪除與復原） | Blocked | 出現誤刪事件的證據 | FEAT-05 |
 | PRISM-OPT-49 | 桌面版與 Pi 之間跨裝置同步 | Blocked | 有多裝置寫入的證據；先完成 PRISM-OPT-35 | FEAT-06 |
-| PRISM-OPT-50 | Prompt options 自訂 UI | Blocked | 有使用者需求的證據 | FEAT-07 |
+| PRISM-OPT-50 | Prompt options 自訂 UI | Won't do | 使用者改用獨立的 AI-Art-PromptBuilder（2026-10-07） | FEAT-07 |
 | PRISM-OPT-51 | Wiki 連結與 backlinks | Blocked | 有使用者需求的證據 | FEAT-08 |
 
 ---

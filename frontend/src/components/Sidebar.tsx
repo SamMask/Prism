@@ -9,7 +9,6 @@ import {
   Hash,
   Home,
   Settings,
-  Sparkles,
   Tag,
   X,
 } from 'lucide-react'
@@ -197,19 +196,8 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                     {libraryTotal === null ? '–' : libraryTotal.toLocaleString()}
                   </span>
                 </Link>
-                <Link
-                  to="/prompt-builder"
-                  onClick={clearLibraryFilters}
-                  aria-label="Prompt Builder"
-                  className={`flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[13.5px] transition-colors duration-150
-                    ${isCollapsed ? 'md:justify-center' : 'md:justify-start'}
-                    ${location.pathname === '/prompt-builder'
-                      ? 'bg-primary/15 text-primary-light'
-                      : 'text-text-secondary hover:bg-bg-hover hover:text-text-primary'}`}
-                >
-                  <Sparkles size={16} />
-                  <span className={`truncate ${desktopCollapsedClass}`}>Prompt Builder</span>
-                </Link>
+                {/* Prompt Builder entry hidden (PRISM-OPT-80): the user builds prompts in a separate
+                    tool. The /prompt-builder route and its API stay; restore by adding the link back. */}
               </div>
             </div>
 

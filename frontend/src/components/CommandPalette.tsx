@@ -6,7 +6,6 @@ import {
   Plus,
   Search,
   Settings,
-  Sparkles,
   Sun,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -138,15 +137,7 @@ export function CommandPalette() {
         icon: Home,
         action: goHome,
       },
-      {
-        id: 'nav-prompt-builder',
-        group: 'navigation',
-        title: 'Prompt Builder',
-        subtitle: t('commandPalette.commands.promptBuilder.subtitle'),
-        keywords: t('commandPalette.commands.promptBuilder.keywords'),
-        icon: Sparkles,
-        action: () => navigate('/prompt-builder'),
-      },
+      // 'nav-prompt-builder' hidden (PRISM-OPT-80); the route still works by URL.
       {
         id: 'nav-settings',
         group: 'navigation',
