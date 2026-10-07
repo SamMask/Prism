@@ -936,6 +936,27 @@
     - 未知的 `/api/` POST 若帶 body，Windows 上偶爾會出現 connection reset（既有行為），所以 pytest 改成不帶 body，Go 測試仍有帶 body 的覆蓋。
     - `editor.toolbar.copyAiPrompt`／`extractImagePrompt` 這兩個 i18n key 全 repo 都沒有使用，但依「不確定就保留」原則先留著。
     - 既有 data-dir 裡殘留的 `.port_config`／`.auto_open_*` 不會再被讀寫。
+- `PRISM-OPT-81`（本機驗證；未發版、未部署 Pi；sonnet 實作）：
+  - **Settings → 維護與健康**：新增「資料庫維護」卡片。
+    - **壓縮資料庫**（`POST /api/system/vacuum`）：顯示壓縮前後大小與釋放的空間，完成後刷新統計。
+    - **清空全部版本歷史**（`POST /api/system/clear-history`）：
+      - 執行前跳 danger confirm，按取消就不呼叫任何 API。
+      - 勾選框「清空前先建立還原點（建議）」預設勾選：先呼叫既有的 `backup/rotate`，失敗就中止，不會清空任何東西。
+  - **多選工具列的「⋯ 更多動作」**（新元件 `SelectionActions.tsx`）：
+    - 批次改分類（`batch/type`）。
+    - 批次設定標籤（`batch/tags`）：可選 append 或 replace，選 replace 時顯示警告。API 不支援移除指定標籤。
+    - 匯出選取的筆記（`export/batch`，ZIP）。
+    - 改完後就地刷新（`refreshLoadedNotes`），並同步刷新分類與標籤。
+  - **手機（390px）**：選取模式下隱藏漢堡按鈕，否則刪除按鈕會超出 390px。
+  - 四語 i18n 共新增 40 個 key。
+  - 驗證：
+    - 新增 `e2e/test_maintenance_ui.py`，共 6 條，涵蓋：vacuum 只呼叫一次、清空歷史的取消／確認、建立還原點、批次分類、CJK 批次標籤、ZIP 內含標題、390 不溢位。資料用 CJK。
+    - HEAD 上 6 條全部失敗。
+    - `-Release` gate 通過（e2e 64）。
+    - 主代理讀過清空歷史流程的 diff：取消會直接 return，還原點建立失敗會 return，都不會清空。
+  - 已知（低）：
+    - 「先建立還原點」走 `rotate`，和桌面版每日還原點共用保留份數 7；Pi 每週的 timer 仍是 keep 3。
+    - 批次標籤只能 append 或 replace，不能移除指定標籤。
 - `PRISM-OPT-80`（本機驗證；未發版、未部署 Pi）：
   - 使用者 2026-10-07 表示不用 Prism 內建的 Prompt Builder，Prompt 改在獨立的 AI-Art-PromptBuilder 處理。
   - 前端：
@@ -1042,7 +1063,7 @@
 | PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Done | — | V2.7.0 部署 |
 | PRISM-OPT-79 | Pi `docs/attachments` 內 11 個 2026-03-15 從 repo 複製來的測試檔（疑似孤兒） | Done | — | OPT-77 調查 |
 | PRISM-OPT-80 | 隱藏內建 Prompt Builder 的入口（側欄、Command Palette），保留路由與 API | Done | — | 使用者 2026-10-07 |
-| PRISM-OPT-81 | 管理功能做成 UI：壓縮資料庫、清空全部歷史、批次改分類／標籤、匯出選取的筆記 | Todo | 42 | 使用者 2026-10-07 |
+| PRISM-OPT-81 | 管理功能做成 UI：壓縮資料庫、清空全部歷史、批次改分類／標籤、匯出選取的筆記 | Done | 42 | 使用者 2026-10-07 |
 
 ### P3 / Future — 需要證據或明確 promote
 

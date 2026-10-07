@@ -176,7 +176,7 @@ export function SettingsPage() {
           {activeTab === 'maintenance' && (
             <>
               <SectionPanel title={t('settings.maintenance.title')} icon={<Database size={20} className="text-warning" />} testId="settings-maintenance-health">
-                <SystemMaintenance />
+                <SystemMaintenance onStatsUpdate={fetchStats} />
               </SectionPanel>
               <SectionPanel title={t('settings.maintenance.imagesStorage.title')} icon={<Image size={20} className="text-primary" />} testId="settings-images-storage">
                 <p className="mb-4 text-sm text-text-muted">{t('settings.maintenance.imagesStorage.description')}</p>

@@ -8,6 +8,7 @@ import { confirm } from './ui/ConfirmDialog'
 import { useTranslation } from '../hooks/useTranslation'
 import { useReadingWorkspace } from '../hooks/useReadingWorkspace'
 import { api } from '../services/api'
+import { SelectionActions } from './SelectionActions'
 
 interface HeaderProps {
   onOpenMobileNav: () => void
@@ -176,7 +177,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
       <IconButton
         onClick={onOpenMobileNav}
         aria-label={t('sidebar.openNavigation')}
-        className="shrink-0 md:hidden"
+        className={`shrink-0 md:hidden ${isSelectionMode ? 'hidden' : ''}`}
         data-testid="open-mobile-navigation"
       >
         <Menu size={20} />
@@ -223,6 +224,8 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
               {t('header.selectLoaded', { count: notes.length })}
             </span>
           </button>
+
+          <SelectionActions />
 
           <Button
             onClick={handleDeleteSelected}

@@ -416,6 +416,35 @@ export const api = {
     return data.data;
   },
 
+  batchUpdateCategory: async (noteIds: number[], categoryId: number): Promise<{ updated_count: number }> => {
+    const { data } = await client.post("/notes/batch/type", { note_ids: noteIds, category_id: categoryId });
+    return data.data;
+  },
+
+  batchUpdateTags: async (
+    noteIds: number[],
+    tags: string[],
+    mode: "append" | "replace"
+  ): Promise<{ affected_notes: number; tags_added: number; mode: string }> => {
+    const { data } = await client.post("/notes/batch/tags", { note_ids: noteIds, tags, mode });
+    return data.data;
+  },
+
+  // ZIP of Markdown files plus referenced images.
+  exportNotesBatch: async (noteIds: number[]): Promise<void> => {
+    const response = await client.post("/notes/export/batch", { note_ids: noteIds }, { responseType: "blob" });
+    const filename = response.headers["content-disposition"]?.match(/filename="?([^";]+)"?/i)?.[1]
+      || `prism_notes_${Date.now()}.zip`;
+    const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/zip" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
+
   // Phase 3.7: Duplicate / Create Variant
   duplicateNote: async (
     id: number,
@@ -825,6 +854,16 @@ export const api = {
     pages_checkpointed: number;
   }> => {
     const { data } = await client.post("/system/wal-checkpoint", {});
+    return data.data;
+  },
+
+  vacuumDatabase: async (): Promise<{ size_before: number; size_after: number; freed_bytes: number; freed_mb: number }> => {
+    const { data } = await client.post("/system/vacuum", {});
+    return data.data;
+  },
+
+  clearAllHistory: async (): Promise<{ deleted_count: number }> => {
+    const { data } = await client.post("/system/clear-history", {});
     return data.data;
   },
 

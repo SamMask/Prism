@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { HardDrive, CheckCircle, AlertTriangle, XCircle, Loader2, Activity, Search, RefreshCw, FileText } from 'lucide-react'
+import { HardDrive, CheckCircle, AlertTriangle, XCircle, Loader2, Activity, Search, RefreshCw, FileText, Database, History } from 'lucide-react'
 import {
   api,
   type InlineSeparatedNotesReport,
@@ -21,9 +21,19 @@ interface ConsistencyData {
   health: 'healthy' | 'warning' | 'critical'
 }
 
-export function SystemMaintenance() {
+const formatKB = (bytes: number) => (bytes / 1024).toFixed(1)
+
+interface SystemMaintenanceProps {
+  onStatsUpdate?: () => void
+}
+
+export function SystemMaintenance({ onStatsUpdate }: SystemMaintenanceProps = {}) {
   const { t } = useTranslation()
   const [isWalRunning, setIsWalRunning] = useState(false)
+  const [isVacuumRunning, setIsVacuumRunning] = useState(false)
+  const [vacuumResult, setVacuumResult] = useState<{ size_before: number; size_after: number; freed_bytes: number } | null>(null)
+  const [isClearingHistory, setIsClearingHistory] = useState(false)
+  const [snapshotFirst, setSnapshotFirst] = useState(true)
   const [isCheckRunning, setIsCheckRunning] = useState(false)
   const [isSearchCheckRunning, setIsSearchCheckRunning] = useState(false)
   const [isSearchRebuildRunning, setIsSearchRebuildRunning] = useState(false)
@@ -41,6 +51,50 @@ export function SystemMaintenance() {
       toast.error(error?.response?.data?.message || t('settings.maintenance.walFailed'))
     } finally {
       setIsWalRunning(false)
+    }
+  }
+
+  const handleVacuum = async () => {
+    setIsVacuumRunning(true)
+    try {
+      const result = await api.vacuumDatabase()
+      setVacuumResult(result)
+      toast.success(t('settings.maintenance.vacuumComplete', { size: formatKB(result.freed_bytes) }))
+      onStatsUpdate?.()
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || t('settings.maintenance.vacuumFailed'))
+    } finally {
+      setIsVacuumRunning(false)
+    }
+  }
+
+  const handleClearHistory = async () => {
+    if (!await confirm({
+      title: t('settings.maintenance.clearHistoryConfirmTitle'),
+      message: `${t('settings.maintenance.clearHistoryConfirmMessage')}
+
+${t('settings.maintenance.clearHistoryRestoreHint')}`,
+      confirmText: t('settings.maintenance.clearHistoryConfirm'),
+      variant: 'danger',
+    })) return
+
+    setIsClearingHistory(true)
+    try {
+      if (snapshotFirst) {
+        try {
+          await api.rotateBackups()
+        } catch {
+          toast.error(t('settings.maintenance.clearHistorySnapshotFailed'))
+          return
+        }
+      }
+      const result = await api.clearAllHistory()
+      toast.success(t('settings.maintenance.clearHistoryComplete', { count: result.deleted_count }))
+      onStatsUpdate?.()
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || t('settings.maintenance.clearHistoryFailed'))
+    } finally {
+      setIsClearingHistory(false)
     }
   }
 
@@ -232,6 +286,64 @@ export function SystemMaintenance() {
             )}
           </div>
         )}
+      </div>
+
+      <div className="rounded-lg bg-bg-elevated p-4" data-testid="database-maintenance-card">
+        <div className="mb-3 flex items-center gap-2">
+          <Database size={18} className="text-primary" />
+          <span className="font-medium text-text-primary">{t('settings.maintenance.databaseTitle')}</span>
+        </div>
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="min-w-0 flex-1 basis-56 text-xs text-text-muted">{t('settings.maintenance.vacuumDescription')}</p>
+            <Button size="sm" variant="secondary" onClick={handleVacuum} disabled={isVacuumRunning} data-testid="vacuum-button">
+              {isVacuumRunning ? (
+                <>
+                  <Loader2 size={14} className="mr-1 animate-spin" />
+                  {t('settings.maintenance.running')}
+                </>
+              ) : t('settings.maintenance.vacuumRun')}
+            </Button>
+          </div>
+          {vacuumResult && (
+            <div className="rounded bg-bg-surface p-2 text-xs text-text-secondary" data-testid="vacuum-result">
+              {t('settings.maintenance.vacuumResult', {
+                before: formatKB(vacuumResult.size_before),
+                after: formatKB(vacuumResult.size_after),
+                freed: formatKB(vacuumResult.freed_bytes),
+              })}
+            </div>
+          )}
+          <div className="border-t border-border-subtle pt-4">
+            <div className="mb-2 flex items-center gap-2">
+              <History size={16} className="text-danger" />
+              <span className="text-sm font-medium text-text-primary">{t('settings.maintenance.clearHistoryTitle')}</span>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="min-w-0 flex-1 basis-56 text-xs text-text-muted">{t('settings.maintenance.clearHistoryDescription')}</p>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="text-danger border-danger/30 hover:bg-danger/10"
+                onClick={handleClearHistory}
+                disabled={isClearingHistory}
+                data-testid="clear-history-button"
+              >
+                {isClearingHistory ? <Loader2 size={14} className="mr-1 animate-spin" /> : null}
+                {t('settings.maintenance.clearHistoryRun')}
+              </Button>
+            </div>
+            <label className="mt-2 flex items-center gap-2 text-xs text-text-secondary">
+              <input
+                type="checkbox"
+                checked={snapshotFirst}
+                onChange={(e) => setSnapshotFirst(e.target.checked)}
+                data-testid="clear-history-snapshot"
+              />
+              {t('settings.maintenance.clearHistorySnapshot')}
+            </label>
+          </div>
+        </div>
       </div>
 
       <InlineSeparatedNotesCard />
