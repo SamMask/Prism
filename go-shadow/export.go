@@ -75,7 +75,7 @@ func (s *server) handleExportJSON(w http.ResponseWriter, r *http.Request) {
 
 	payload := response{
 		"export_info": response{
-			"version":           "1.6-go",
+			"version":           "1.7-go",
 			"exported_at":       time.Now().Format(time.RFC3339Nano),
 			"notes_count":       len(notes),
 			"tags_count":        len(tags),
@@ -548,6 +548,8 @@ func (s *server) exportJSONNotes() ([]response, error) {
 		SELECT
 			n.id, n.title, n.content, COALESCE(c.name, 'Uncategorized') AS category,
 			n.remarks, n.cover_image, n.created_at, n.updated_at,
+			COALESCE(n.is_pinned, 0), COALESCE(n.is_archived, 0), n.parent_id,
+			COALESCE(n.cover_position, 'top'), COALESCE(n.editor_layout, 'single'), n.sort_order,
 			(SELECT GROUP_CONCAT(t2.name, '||')
 			 FROM Note_Tags nt2 JOIN Tags t2 ON nt2.tag_id = t2.id
 			 WHERE nt2.note_id = n.id) AS tags,
@@ -563,9 +565,11 @@ func (s *server) exportJSONNotes() ([]response, error) {
 	defer rows.Close()
 	notes := []response{}
 	for rows.Next() {
-		var id int
-		var title, content, category, remarks, coverImage, createdAt, updatedAt, tags, urls sql.NullString
-		if err := rows.Scan(&id, &title, &content, &category, &remarks, &coverImage, &createdAt, &updatedAt, &tags, &urls); err != nil {
+		var id, isPinned, isArchived int
+		var parentID, sortOrder sql.NullInt64
+		var title, content, category, remarks, coverImage, createdAt, updatedAt, coverPosition, editorLayout, tags, urls sql.NullString
+		if err := rows.Scan(&id, &title, &content, &category, &remarks, &coverImage, &createdAt, &updatedAt,
+			&isPinned, &isArchived, &parentID, &coverPosition, &editorLayout, &sortOrder, &tags, &urls); err != nil {
 			return nil, err
 		}
 		notes = append(notes, response{
@@ -579,6 +583,13 @@ func (s *server) exportJSONNotes() ([]response, error) {
 			"updated_at":  nullableString(updatedAt),
 			"tags":        splitPipeList(tags),
 			"urls":        splitPipeList(urls),
+			// PRISM-OPT-39 additive fields; parent_id is the exporting DB's id, remapped on import.
+			"is_pinned":      isPinned != 0,
+			"is_archived":    isArchived != 0,
+			"parent_id":      nullableIntOrNil(parentID),
+			"cover_position": nullableString(coverPosition),
+			"editor_layout":  nullableString(editorLayout),
+			"sort_order":     nullableIntOrNil(sortOrder),
 		})
 	}
 	return notes, rows.Err()

@@ -605,6 +605,26 @@
     - 低：圖書館很大，或首頁處於篩選狀態時，側欄多數項目會長期顯示 `#id`。
     - 預取還沒回來就點了該項目時，可能重複抓一次。
     - 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開（HEAD 既有）→ 已開 `PRISM-OPT-73`。
+- `PRISM-OPT-39`（本機驗證；未發版、未部署 Pi）：
+  - 匯出（`export.go`）：每筆新增 `is_pinned`、`is_archived`、`parent_id`、`cover_position`、`editor_layout`、`sort_order`（additive），`export_info.version` 由 `1.6-go` 升為 `1.7-go`。
+  - 匯入（`import.go`）：
+    - 五個值欄位在 INSERT 時寫入。
+    - `parent_id` 在同一個 transaction 的第二輪處理，只透過 `idMap` 重新對應，不直接使用檔中的數字：
+      - parent 被 skip 時，指向既有的那一筆；
+      - parent 不在檔中時設為 NULL；
+      - 會形成環時設為 NULL。
+    - 被 skip 的既有筆記完全不修改。
+    - 不合法的值退回預設值，整批匯入照常成功。
+    - 使用者決定（2026-10-07）：`cover_position`／`editor_layout` 和寫入 API 一致，只檢查型別、不做 enum 檢查。
+  - 文案：四語 `jsonCopyDescription` 與 `docs/API_REFERENCE.md` 都照實寫出包含與不包含的內容。不包含：版本歷史、`prompt_params`、附件與圖片檔案內容；拆分長文只有預覽。
+  - 驗證：
+    - 新增 `go-shadow/import_fields_test.go`，共 6 個測試：round-trip（含 fresh 與 occupied-ids，檔案順序為 C、B、A）、parent 不在檔中、舊版 JSON、不合法值、skip mode、環。修正前有 3 個 FAIL，另外 3 個是相容性守門測試。
+    - prism-verifier 讀 code 並在 scratch 測了以下邊界：id 重疊、skip 不修改既有筆記、duplicate mode、三節點環、第二輪 UPDATE 失敗時整批 rollback 且不留檔。
+    - runtime 端到端：source 的 id 從 5 開始、與 target 錯開，6 個欄位逐筆一致，譜系指向新 id，UI 的置頂區、封存檢視、variant 面板都正確。HEAD 匯出的 1.6-go 檔可以匯入，欄位為預設值。
+    - `-Release` gate 通過（pytest 427、go test ok、e2e 32）。
+  - 已知（低）：
+    - duplicate mode 的譜系與 rollback 路徑只在 scratch 驗證過，沒有 repo 測試鎖住。
+    - 匯入到非空的 DB 時，custom sort 會和既有筆記交錯，這是既有語意。
 
 ### P1 — 下一輪
 
@@ -657,7 +677,7 @@
 | PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Done | — | OPS-05 |
 | PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Done | — | TECH-05 |
 | PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Done | — | R0812:PERF-03 |
-| PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Todo | 23 | FEAT-03 |
+| PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Done | 23 | FEAT-03 |
 | PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Todo | — | OPT-17 追蹤 |
 | PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Todo | — | OPT-17 追蹤 |

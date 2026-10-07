@@ -970,6 +970,15 @@ Current owner: Go primary runtime。T028-T031 原本是 local/copied candidate�
 
 `categories[]` 會包含 `system_key` 與 `name_override`，供還原五個系統分類 identity；note 的 `category` 仍使用 canonical category name。
 
+`export_info.version` 為 `1.7-go`（PRISM-OPT-39）。`notes[]` 每筆有 `id`、`title`、`content`、`category`、`remarks`、`cover_image`、`created_at`、`updated_at`、`tags`、`urls`，以及 additive 欄位：
+
+- `is_pinned`、`is_archived`（boolean）
+- `parent_id`（匯出端的 note id 或 `null`，匯入時會重新對應）
+- `cover_position`（缺值時為 `top`）、`editor_layout`（缺值時為 `single`）
+- `sort_order`（整數或 `null`）
+
+不包含：版本歷史、`prompt_params`（Prompt Builder 的結構化參數）、附件與圖片的檔案內容（`attachments[]`、`uploads[]` 只有路徑 metadata）；已拆分長文的 `content` 只有預覽。完整備份請用 full snapshot。
+
 ### GET `/api/export/db`
 
 下載 SQLite DB 檔。這是 **DB-only** 副本，不包含 `static/uploads`、`docs/attachments`、`docs/notes` 或 `config`。
@@ -1040,6 +1049,17 @@ manifest format 是 `prism.full_data_snapshot.v1`，每個 payload file 都有 `
 
 - `skip`
 - `duplicate`
+
+note 欄位 `is_pinned`、`is_archived`、`cover_position`、`editor_layout`、`sort_order`、`parent_id`（PRISM-OPT-39）：
+
+- 有值就套用；缺欄位或型別不對時用預設值（未置頂、未封存、`top`、`single`、`sort_order` 為 `null`、無 parent），不會讓整批失敗。舊版 JSON 照常可匯入。
+- `cover_position`、`editor_layout` 與 `PUT /api/notes/{id}` 相同：字串照存，非字串用預設值。
+- `parent_id` 依檔案內的舊 id 重新對應，所有筆記建立後才在同一個 transaction 內補上，所以子筆記可以排在 parent 前面：
+  - parent 在檔中且本次建立 → 指向新 id。
+  - parent 在檔中、但被 `skip` 判為重複 → 指向目標端既有的那筆。
+  - parent 不在檔中 → `null`，不會指向目標端碰巧同 id 的筆記。
+  - 會形成環的連結 → `null`。
+- 被 `skip` 的既有筆記本身不會被修改。
 
 回應的 `data` 有 `imported`、`skipped`、`duplicates`，以及 additive 欄位 `skipped_attachments`（PRISM-OPT-58）：
 - 路徑在 `docs/notes/`（已拆分長文）的附件列會被略過並計入這個數字，不寫檔也不建立附件列。原因是 JSON 匯出只有這類筆記的 500 字預覽，沒有全文；而路徑指的是匯出端的 `note_<舊 id>.md`，在目標端可能是另一則筆記的檔案。

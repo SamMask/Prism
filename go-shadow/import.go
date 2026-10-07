@@ -73,6 +73,7 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 	}
 	defaultCategoryID, _ := defaultCategoryIDTx(tx)
 	idMap := map[int]int{}
+	pendingParents := [][2]int{} // {new note id, parent id in the file}
 	importedCount := 0
 	skippedCount := 0
 	duplicates := []string{}
@@ -149,9 +150,11 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 			updatedAt = time.Now().Format(time.RFC3339)
 		}
 
+		sortOrder, hasSortOrder := intValue(note["sort_order"])
 		result, err := tx.Exec(`
-			INSERT INTO Notes (title, content, category_id, remarks, cover_image, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			INSERT INTO Notes (title, content, category_id, remarks, cover_image, created_at, updated_at,
+				is_pinned, is_archived, cover_position, editor_layout, sort_order)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 			title,
 			content,
 			nullableIntArg(categoryID, categoryID > 0),
@@ -159,6 +162,11 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 			stringValue(note["cover_image"]),
 			createdAt,
 			updatedAt,
+			boolIntValue(note["is_pinned"]),
+			boolIntValue(note["is_archived"]),
+			defaultStringField(note, "cover_position", "top"),
+			defaultStringField(note, "editor_layout", "single"),
+			nullableIntArg(sortOrder, hasSortOrder),
 		)
 		if err != nil {
 			cleanupCreated()
@@ -172,6 +180,9 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		newID := int(newID64)
 		if hasOldID {
 			idMap[oldID] = newID
+		}
+		if oldParentID, ok := intValue(note["parent_id"]); ok {
+			pendingParents = append(pendingParents, [2]int{newID, oldParentID})
 		}
 		if err := replaceNoteTags(tx, newID, stringArrayValue(note["tags"]), false); err != nil {
 			cleanupCreated()
@@ -188,6 +199,10 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		importedCount++
 	}
 
+	if err := applyImportedParentsTx(tx, idMap, pendingParents); err != nil {
+		cleanupCreated()
+		return http.StatusInternalServerError, response{"status": "error", "message": err.Error()}
+	}
 	skippedAttachments, err := s.restoreImportedAttachments(tx, idMap, importData, &createdFiles)
 	if err != nil {
 		cleanupCreated()
@@ -212,6 +227,53 @@ func (s *server) importJSONNotes(importData map[string]any, notes []map[string]a
 		"skipped_uploads":     skippedUploads,
 		"duplicates":          duplicates,
 	}}
+}
+
+// applyImportedParentsTx sets parent_id on the notes this import created, after all of them exist,
+// so a child may come before its parent in the file. A file parent id resolves only through idMap
+// (a created note, or the existing note a skipped one matched); an id outside the file stays NULL
+// and never reaches an unrelated target note with the same id. A link that would close a cycle
+// stays NULL.
+func applyImportedParentsTx(tx *sql.Tx, idMap map[int]int, pending [][2]int) error {
+	for _, link := range pending {
+		childID := link[0]
+		parentID, ok := idMap[link[1]]
+		if !ok {
+			continue
+		}
+		cycle, err := parentChainReaches(tx, parentID, childID)
+		if err != nil {
+			return err
+		}
+		if cycle {
+			continue
+		}
+		if _, err := tx.Exec("UPDATE Notes SET parent_id = ? WHERE id = ?", parentID, childID); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// parentChainReaches reports whether target is startID or one of its ancestors.
+func parentChainReaches(tx *sql.Tx, startID, target int) (bool, error) {
+	seen := map[int]bool{}
+	for id := startID; !seen[id]; {
+		if id == target {
+			return true, nil
+		}
+		seen[id] = true
+		var next sql.NullInt64
+		err := tx.QueryRow("SELECT parent_id FROM Notes WHERE id = ?", id).Scan(&next)
+		if errors.Is(err, sql.ErrNoRows) || (err == nil && !next.Valid) {
+			return false, nil
+		}
+		if err != nil {
+			return false, err
+		}
+		id = int(next.Int64)
+	}
+	return false, nil
 }
 
 func importJSONCategoriesTx(tx *sql.Tx, categories []map[string]any) error {
