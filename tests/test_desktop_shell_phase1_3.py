@@ -84,15 +84,8 @@ def test_desktop_shell_build_script_keeps_debug_and_gui_targets():
 
 @pytest.mark.slow
 def test_desktop_shell_go_build_and_runtime_smoke(tmp_path):
-    test_result = subprocess.run(
-        ["go", "test", "./..."],
-        cwd=GO_SHADOW,
-        text=True,
-        capture_output=True,
-        timeout=120,
-    )
-    assert test_result.returncode == 0, test_result.stdout + test_result.stderr
-
+    # `go test ./...` is not repeated here: verify-gate.ps1 runs it as its own step,
+    # and repeating it with a short timeout made CI flaky as the Go suite grew.
     if os.name != "nt":
         return
 
