@@ -37,13 +37,20 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     go_source = read_go_package_source(GO_SHADOW_DIR)
 
     registered = set(re.findall(r'mux\.HandleFunc\("([^"]+)"', main_go))
+    # PRISM-OPT-42 (2026-10-07) removed these routes; they must stay unregistered.
+    for removed in (
+        "/api/upload/extract-prompt",
+        "/api/system/check-update",
+        "/api/system/startup-preference",
+        "/api/system/port-config",
+    ):
+        assert removed not in registered
     registered.discard("/")
     registered.discard("/api/notes/")
     registered.discard("/api/tags/")
     registered.discard("/api/categories/")
     registered.discard("/api/attachments/")
     registered.discard("/api/upload")
-    registered.discard("/api/upload/extract-prompt")
     registered.discard("/api/upload/url")
     registered.discard("/api/upload/delete")
     registered.discard("/api/cleanup/orphan-images")
@@ -55,18 +62,15 @@ def test_phase19_2_gate_matches_go_runtime_surface():
     registered.discard("/api/export/images")
     registered.discard("/api/import/json")
     registered.discard("/api/system/migration-status")
-    registered.discard("/api/system/check-update")
     registered.discard("/api/system/stats")
     registered.discard("/api/system/vacuum")
     registered.discard("/api/system/clear-history")
-    registered.discard("/api/system/startup-preference")
     registered.discard("/api/system/csrf-protection")
     registered.discard("/api/system/wal-checkpoint")
     registered.discard("/api/system/check-consistency")
     registered.discard("/api/system/search-integrity")
     registered.discard("/api/system/search-integrity/rebuild-fts")
     registered.discard("/api/system/inline-separated-notes")
-    registered.discard("/api/system/port-config")
     registered.discard("/api/export/full-snapshot")
     registered.discard("/api/server/hardware")
     registered.discard("/api/server/logs")

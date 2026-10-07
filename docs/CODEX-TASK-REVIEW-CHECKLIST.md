@@ -76,7 +76,7 @@ Current truth 仍以 `AGENTS.md` / `CLAUDE.md`、`docs/TODO.md`、`docs/ARCHITEC
 - 自動修復、自動刪資料、自動 VACUUM、背景排程或未要求的 data mutation。
 - 任務外重構、跨檔大量格式化、抽象層新增、dependency 新增。
 - 回傳本機絕對路徑到使用者資料或把私有 runtime data 納入 docs。
-- 恢復已隱藏的 `PortConfigSection`、`UpdateSection` 或「部署安全邊界」區塊，除非 task 明確授權。
+- 重新加入已於 PRISM-OPT-42（2026-10-07）刪除的 `PortConfigSection`、`UpdateSection`（連同 `port-config`、`startup-preference`、`check-update`、`extract-prompt` route），或恢復已隱藏的「部署安全邊界」區塊，除非 task 明確授權。
 
 ## Verification Checklist
 
@@ -96,7 +96,7 @@ Review 時先看這些問題：
 - Changed files 是否都在「允許修改檔案」內？
 - 是否改到 schema/API/backend/runtime/deploy/Pi？
 - 是否新增 AI/semantic/embedding/GraphRAG 或自動修復行為？
-- 是否恢復 hidden `PortConfigSection` / `UpdateSection` / 部署安全邊界？
+- 是否重新加入已刪除的 `PortConfigSection` / `UpdateSection`（PRISM-OPT-42），或恢復 hidden 部署安全邊界？
 - 是否有任務外重構、大量格式化、dependency 新增？
 - 驗收指令是否真的跑過，且輸出能支持完成 claim？
 - `### Not Changed` 是否明確列出 API/schema/backend/unrelated feature work 沒動？

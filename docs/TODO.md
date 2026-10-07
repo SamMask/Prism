@@ -916,6 +916,26 @@
       - 其餘 19 篇沒有重複。
     - 結論：**24 篇都維持現狀，不還原**，本單結案。
     - 重複的預覽副本：使用者表示 #5／#333 這類標題大概是測試用的，不用處理（2026-10-07）。
+- `PRISM-OPT-42`（本機驗證；未發版、未部署 Pi）：
+  - 盤點：唯讀的 prism-scout（sonnet）共找出約 90 條邏輯路由，其中 4 組只剩死碼在呼叫、14 組沒有 UI 入口、8 個 wrapper 沒有人使用、4 個檔案沒有人 import。
+  - 使用者決定（2026-10-07）：
+    - **刪除**：`/api/system/port-config`、`/api/system/startup-preference`（寫入的 `.port_config`、`.auto_open_*` 都沒有人讀）、`/api/system/check-update`、`/api/upload/extract-prompt`（連同整個 `image_metadata.go`）。
+      - 4 個死檔案：`TagInput.tsx`、`UpdateSection.tsx`、`PortConfigSection.tsx`、`usePromptExtraction.ts`。
+      - `getLocale()`，以及 `api.ts` 的 8 個 wrapper。`migration-status` 的路由保留，只刪前端 wrapper。
+      - 只有被刪檔案使用的 12 個 i18n key（`editor.promptExtraction.*`，四語）。
+    - **Deprecated**（保留路由，只改文件）：prompt-options 與 wizard-options 的寫入 CRUD、`check_separation`、`separate`、`DELETE notes/{id}/history`。
+    - **保留**，由 PRISM-OPT-81 做成 UI：vacuum、clear-history、`batch/type`、`batch/tags`、`export/batch`。
+  - 文件：
+    - `docs/API_REFERENCE.md` 新增「已移除的路由」小節（說明這些路由現在回 JSON 404）；`go-shadow/README.md`、`docs/SEQUENCE-UPLOAD.md`、`docs/CODEX-TASK-REVIEW-CHECKLIST.md` 同步。
+    - 3 份 contract 標記 removed，原有欄位保留作為歷史依據。
+  - 測試：
+    - 新增 `go-shadow/removed_routes_test.go`：6 個 method／path 都要回 404 `API route not found`，且 data-dir 不會產生 marker 檔。這個測試在 HEAD 上失敗。
+    - 7 個 pytest 檔原本斷言「這些東西存在」，改成斷言「已經移除」，沒有直接刪掉斷言。
+  - 驗證：`go test` ok；`npm run build` 通過（tsc 無錯）；`pytest tests/` 只剩 `test_agent_dispatch` 失敗，原因是主代理新增的 OPT-81 尚未加入派工表，已補上；`pytest e2e` 58 passed。
+  - 已知（低）：
+    - 未知的 `/api/` POST 若帶 body，Windows 上偶爾會出現 connection reset（既有行為），所以 pytest 改成不帶 body，Go 測試仍有帶 body 的覆蓋。
+    - `editor.toolbar.copyAiPrompt`／`extractImagePrompt` 這兩個 i18n key 全 repo 都沒有使用，但依「不確定就保留」原則先留著。
+    - 既有 data-dir 裡殘留的 `.port_config`／`.auto_open_*` 不會再被讀寫。
 - `PRISM-OPT-80`（本機驗證；未發版、未部署 Pi）：
   - 使用者 2026-10-07 表示不用 Prism 內建的 Prompt Builder，Prompt 改在獨立的 AI-Art-PromptBuilder 處理。
   - 前端：
@@ -1022,6 +1042,7 @@
 | PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Done | — | V2.7.0 部署 |
 | PRISM-OPT-79 | Pi `docs/attachments` 內 11 個 2026-03-15 從 repo 複製來的測試檔（疑似孤兒） | Done | — | OPT-77 調查 |
 | PRISM-OPT-80 | 隱藏內建 Prompt Builder 的入口（側欄、Command Palette），保留路由與 API | Done | — | 使用者 2026-10-07 |
+| PRISM-OPT-81 | 管理功能做成 UI：壓縮資料庫、清空全部歷史、批次改分類／標籤、匯出選取的筆記 | Todo | 42 | 使用者 2026-10-07 |
 
 ### P3 / Future — 需要證據或明確 promote
 
@@ -1029,7 +1050,7 @@
 |---|---|---|---|---|
 | PRISM-OPT-40 | Prompt Builder：「AI optimize」改名、模板語系、seed 缺失時的死路 | Won't do | 使用者不使用內建 Prompt Builder，已隱藏（OPT-80）；恢復時再評估 | UX-06 |
 | PRISM-OPT-41 | Prompt Builder seed config 內嵌到 binary；`pack.bat` 補帶 config | Won't do | 同上：內建 Prompt Builder 已隱藏（OPT-80）；恢復時再評估 | OPS-06 |
-| PRISM-OPT-42 | API 表面衛生：死 route、死 wrapper、未引用元件、API 文件標 deprecated | Blocked | 盤點完成（2026-10-07），等使用者決定刪除範圍 | TECH-06 |
+| PRISM-OPT-42 | API 表面衛生：死 route、死 wrapper、未引用元件、API 文件標 deprecated | Done | 使用者 2026-10-07 決定刪除與 deprecate 範圍 | TECH-06 |
 | PRISM-OPT-43 | 移除 capability flags；`go-shadow` 改名 | Blocked | 出現新增 runtime mode 的需求，或 flags 誤配的證據 | TECH-05 |
 | PRISM-OPT-44 | 非中文使用者的首次體驗（雙語 welcome note） | Todo（低） | 使用者 2026-10-07 同意；模板部分隨 40 取消，只剩全新安裝時的 welcome note | BIZ-01 |
 | PRISM-OPT-45 | FTS5 trigram 索引 | Blocked | 資料超過 1 萬筆，且 3 字以上的查詢占多數 | FEAT-01 |
@@ -1047,7 +1068,7 @@
 - [ ] `DEEP-SCAN-RISK-CANDIDATE-01` 01H 仍是低優先維護 triage（狀態：`Blocked`）：剩餘 frontend bundle/Browserslist warning、歷史 frozen docs/test wording仍需另行 promote；其中 `go-shadow/main.go` route-local 小整理已明確化為 `GO-MAIN-SPLIT-CANDIDATE-01`，但一次性 runtime 大拆分仍 `Blocked`。
 - [x] ~~Pi 自動備份從每週改為每天~~（2026-10-07 使用者改變決定：**維持每週、最多 3 份輪替**，不改 timer，也不改 `keep_count=3`）。以下為原始紀錄：Pi 是使用者的主要使用方式，目前 systemd timer 每週一次，最壞會損失近 7 天的資料。另外，Pi timer 目前明確傳 `keep_count=3`（`DEPLOY-PI.md:134`），每週會把共用的 managed backup 修剪回 3 份；PRISM-OPT-28 已把預設改為 7，改 timer 時要一併改成 7。
 - [ ] Desktop installer/updater/WebView2 bootstrap/shortcut automation（狀態：`Blocked`；需使用者明確需要 installer/updater 類能力）。
-- [ ] Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）（狀態：`Blocked`；只有日後恢復 render，才於該 gate 同步補四語 key）。2026-10-06 審查確認 `UpdateSection`、`TagInput` 沒有被引用，是否刪除由 PRISM-OPT-42 決定。
+- [x] ~~Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）~~（2026-10-07：三個元件已由 PRISM-OPT-42 刪除，本項結案）。原始紀錄：（狀態：`Blocked`；只有日後恢復 render，才於該 gate 同步補四語 key）。2026-10-06 審查確認 `UpdateSection`、`TagInput` 沒有被引用，是否刪除由 PRISM-OPT-42 決定。
 - [ ] Mermaid 圖表渲染（狀態：`Blocked`；只有 `MARKDOWN-SYNTAX-CANDIDATE-01` 的 `MDS-05` 被明確 promote 後才可施工；不得順手導入 heavy renderer）。
 - [ ] KaTeX 數學公式 / ABC 樂譜渲染（狀態：`Blocked`；目前凍結為備選，只有使用者明確重新開啟需求時才可施工）。
 - [ ] AI / semantic search / embeddings / GraphRAG / auto-writing（狀態：`Blocked`；仍不在 active roadmap）。

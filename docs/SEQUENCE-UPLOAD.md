@@ -78,23 +78,4 @@ sequenceDiagram
 
 ## Prompt 擷取流程
 
-```mermaid
-sequenceDiagram
-    autonumber
-
-    actor User
-    participant Frontend as Frontend (React)
-    participant Backend as Backend API (Flask)
-    participant FS as File System
-
-    Note over User, Frontend: 筆記含 Stable Diffusion / ComfyUI 圖片
-
-    Frontend->>Backend: POST /api/upload/extract-prompt (multipart)
-    activate Backend
-    Backend->>FS: 讀取圖片 EXIF / PNG metadata (stdlib parser)
-    Backend->>Backend: 解析 SD parameters / ComfyUI workflow / NovelAI
-    Backend-->>Frontend: { prompt, source }
-    deactivate Backend
-
-    Frontend->>Frontend: 顯示複製提示詞按鈕 (EditorToolbar)
-```
+已於 2026-10-07（PRISM-OPT-42）移除：`POST /api/upload/extract-prompt`、前端 `usePromptExtraction` 與 `api.extractImagePrompt` 都已刪除，該路徑現在回 JSON 404。見 `docs/API_REFERENCE.md`「已移除的路由」。

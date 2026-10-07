@@ -37,8 +37,18 @@ def test_t051_manifest_records_go_primary_current_owner_and_legacy_read_routing_
 
     routes = {(route["rule"], tuple(route["methods"])): route for route in manifest["routes"]}
     assert routes[("/api/notes", ("POST",))]["production_owner"] == "go-primary"
-    assert routes[("/api/upload/extract-prompt", ("POST",))]["production_owner"] == "go-primary"
-    assert routes[("/api/system/check-update", ("GET",))]["production_owner"] == "go-primary"
+    # PRISM-OPT-42 (2026-10-07) removed these routes; the manifest keeps the rows as provenance.
+    for removed in (
+        ("/api/upload/extract-prompt", ("POST",)),
+        ("/api/system/check-update", ("GET",)),
+        ("/api/system/port-config", ("GET",)),
+        ("/api/system/port-config", ("POST",)),
+        ("/api/system/startup-preference", ("GET",)),
+        ("/api/system/startup-preference", ("POST",)),
+    ):
+        assert routes[removed]["production_owner"] == "removed-in-prism-opt-42"
+        assert "not part of the Go primary product API" in routes[removed]["current_owner_note"]
+    assert routes[("/api/system/migration-status", ("GET",))]["production_owner"] == "go-primary"
     assert routes[("/", ("GET",))]["go_primary_owner"] == "go-primary embedded SPA/static runtime"
 
     legacy_route = routes[("/api/system/go-read-routing", ("GET",))]

@@ -124,6 +124,7 @@ git diff --check
 | PRISM-OPT-78 | T | S | prism-builder | 主代理 |
 | PRISM-OPT-79 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-80 | F | S | 主代理 | 主代理 |
+| PRISM-OPT-81 | F | M | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -741,6 +742,25 @@ git diff --check
 - **修改範圍**：移除 Sidebar 的連結與 CommandPalette 的 `nav-prompt-builder` 命令。
 - **不要修改**：`/prompt-builder` 路由與頁面、options API、i18n 文字（保留以便恢復）。
 - **驗收**：e2e 確認兩處入口都不存在，修正前失敗；直接開網址仍能顯示頁面。
+
+### PRISM-OPT-81 — 管理功能做成 UI
+
+- **來源**：使用者 2026-10-07（PRISM-OPT-42 盤點後）｜ **優先級**：P2
+- **目標**：把 API 已經有、但畫面上沒有入口的四項管理功能做成 UI。
+- **範圍**：
+  - Maintenance「壓縮資料庫」：`POST /api/system/vacuum`。顯示執行前後的 DB 大小或回應內容；執行期間按鈕 disabled。
+  - Maintenance「清空全部版本歷史」：`POST /api/system/clear-history`，屬於破壞性操作。
+    - 使用 danger 版的 ConfirmDialog，文案寫清楚「會刪除所有筆記的版本歷史，無法復原」，並建議先建立還原點。
+    - 若方便，就提供「先建立還原點再清空」的選項，沿用既有的 restore point API。
+  - 多選模式「批次改分類／批次加標籤」：`POST /api/notes/batch/type`、`POST /api/notes/batch/tags`。先確認 API 的實際參數（`docs/API_REFERENCE.md` 與 Go handler），沿用既有的選取狀態與 OPT-32 的就地刷新。
+  - 「匯出選取的筆記」：`POST /api/notes/export/batch`。先確認它回傳的格式，例如 zip 或 markdown，再決定按鈕位置與下載方式。
+- **不要修改**：這些 API 的形狀；既有的批次刪除流程。
+- **驗收**：
+  - 每項都有 e2e，使用 CJK 資料，並在 1280 與 390 兩種寬度驗證。
+  - 清空歷史：必須先確認才會執行；按取消不會呼叫 API。
+  - 批次改分類與標籤：完成後列表就地更新，計數正確。
+  - 四語 i18n。
+- **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

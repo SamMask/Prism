@@ -22,7 +22,8 @@
       "decision": "go_primary_route_added",
       "go_surface": "POST /api/upload/extract-prompt",
       "guard": "--enable-upload-write / PRISM_GO_ENABLE_UPLOAD_WRITE",
-      "fallback_behavior": "missing image and disabled route return controlled JSON errors"
+      "fallback_behavior": "missing image and disabled route return controlled JSON errors",
+      "removed": "已於 PRISM-OPT-42 移除（2026-10-07）：route、handler、api.extractImagePrompt 與 usePromptExtraction.ts 已刪除；/api/upload/extract-prompt 現在回 JSON 404"
     },
     {
       "task_id": "T048",
@@ -35,7 +36,8 @@
       ],
       "guard": "--enable-notes-write / PRISM_GO_ENABLE_NOTES_WRITE",
       "file_root": "PRISM_GO_DATA_DIR/docs/notes",
-      "frontend_error_visibility": "useNoteForm shows a toast if automatic separation fails after save"
+      "frontend_error_visibility": "useNoteForm shows a toast if automatic separation fails after save",
+      "later_change": "PRISM-OPT-19 停止前端呼叫 separate；PRISM-OPT-42（2026-10-07）刪除 api.checkSeparation / separateContent wrapper，check_separation 與 separate 兩條 route 保留但標為 deprecated（見 docs/API_REFERENCE.md）"
     },
     {
       "task_id": "T049",
@@ -43,7 +45,8 @@
       "decision": "go_primary_route_added",
       "go_surface": "GET /api/system/check-update",
       "guard": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM",
-      "response_contract": "returns current_version, null latest_version, has_update=false, and a controlled no-source message"
+      "response_contract": "returns current_version, null latest_version, has_update=false, and a controlled no-source message",
+      "removed": "已於 PRISM-OPT-42 移除（2026-10-07）：route、handler、api.checkUpdate 與 UpdateSection.tsx 已刪除；/api/system/check-update 現在回 JSON 404"
     },
     {
       "task_id": "T050",

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"io"
 	"io/fs"
 	"math"
@@ -78,27 +77,6 @@ func (s *server) handleMigrationStatus(w http.ResponseWriter, r *http.Request) {
 			"latest_version":  status.LatestVersion,
 			"completed":       completed,
 			"pending":         pending,
-		},
-	})
-}
-
-func (s *server) handleCheckUpdate(w http.ResponseWriter, r *http.Request) {
-	if !requireGET(w, r) {
-		return
-	}
-	if !s.runtime.enableServerSystem {
-		writeError(w, http.StatusMethodNotAllowed, "Server/system route is disabled")
-		return
-	}
-	writeJSON(w, http.StatusOK, response{
-		"status": "success",
-		"data": response{
-			"current_version": prismVersion(),
-			"latest_version":  nil,
-			"has_update":      false,
-			"release_url":     "",
-			"release_notes":   "",
-			"message":         "未設定更新來源",
 		},
 	})
 }
@@ -271,51 +249,6 @@ func (s *server) handleSystemClearHistory(w http.ResponseWriter, r *http.Request
 		"status": "success",
 		"data":   response{"deleted_count": count},
 	})
-}
-
-func (s *server) handleStartupPreference(w http.ResponseWriter, r *http.Request) {
-	if !s.requireServerSystem(w, r) {
-		return
-	}
-	yesFile := filepath.Join(s.runtime.dataDir, ".auto_open_yes")
-	noFile := filepath.Join(s.runtime.dataDir, ".auto_open_no")
-	switch r.Method {
-	case http.MethodGet:
-		var value any
-		if fileExists(yesFile) {
-			value = true
-		} else if fileExists(noFile) {
-			value = false
-		}
-		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"auto_open_browser": value}})
-	case http.MethodPost:
-		payload, ok := decodeJSONObject(w, r, "Request body is required")
-		if !ok {
-			return
-		}
-		raw, exists := payload["auto_open_browser"]
-		autoOpen, ok := raw.(bool)
-		if !exists || !ok {
-			writeError(w, http.StatusBadRequest, "auto_open_browser is required")
-			return
-		}
-		_ = os.Remove(yesFile)
-		_ = os.Remove(noFile)
-		target := noFile
-		content := []byte("0")
-		if autoOpen {
-			target = yesFile
-			content = []byte("1")
-		}
-		if err := os.WriteFile(target, content, 0644); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{"auto_open_browser": autoOpen}})
-	default:
-		w.Header().Set("Allow", "GET, POST")
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-	}
 }
 
 func (s *server) handleCSRFProtection(w http.ResponseWriter, r *http.Request) {
@@ -555,55 +488,6 @@ func (s *server) handleSearchIntegrityRebuildFTS(w http.ResponseWriter, r *http.
 	})
 }
 
-func (s *server) handlePortConfig(w http.ResponseWriter, r *http.Request) {
-	if !s.requireServerSystem(w, r) {
-		return
-	}
-	configPath := filepath.Join(s.runtime.dataDir, ".port_config")
-	config, err := loadPortConfig(configPath)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	switch r.Method {
-	case http.MethodGet:
-		config["current_port"] = currentRequestPort(r)
-		writeJSON(w, http.StatusOK, response{"status": "success", "data": config})
-	case http.MethodPost:
-		payload, ok := decodeJSONObject(w, r, "Request body is required")
-		if !ok {
-			return
-		}
-		if raw, exists := payload["preferred_port"]; exists {
-			port, ok := intValue(raw)
-			if !ok || port < 1024 || port > 65535 {
-				writeError(w, http.StatusBadRequest, "端口必須在 1024-65535 之間")
-				return
-			}
-			config["preferred_port"] = port
-		}
-		if raw, exists := payload["fallback_enabled"]; exists {
-			config["fallback_enabled"] = boolValue(raw)
-		}
-		if raw, exists := payload["fallback_range"]; exists {
-			fallbackRange, ok := intValue(raw)
-			if !ok || fallbackRange < 1 || fallbackRange > 100 {
-				writeError(w, http.StatusBadRequest, "備用範圍必須在 1-100 之間")
-				return
-			}
-			config["fallback_range"] = fallbackRange
-		}
-		if err := writeIndentedJSON(configPath, config); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusOK, response{"status": "success", "data": config, "message": "端口設定已儲存，下次啟動時生效"})
-	default:
-		w.Header().Set("Allow", "GET, POST")
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
-	}
-}
-
 func (s *server) handleServerHardware(w http.ResponseWriter, r *http.Request) {
 	if !requireGET(w, r) || !requireLocalhostRequest(w, r) || !s.requireServerSystem(w, r) {
 		return
@@ -797,59 +681,6 @@ func (s *server) scalarInt(query string, args ...any) (int, error) {
 		return 0, err
 	}
 	return value, nil
-}
-
-func loadPortConfig(configPath string) (response, error) {
-	config := response{
-		"preferred_port":   5000,
-		"fallback_enabled": true,
-		"fallback_range":   20,
-	}
-	if !fileExists(configPath) {
-		return config, nil
-	}
-	file, err := os.Open(configPath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	var saved map[string]any
-	if err := json.NewDecoder(file).Decode(&saved); err != nil {
-		return nil, err
-	}
-	for key, value := range saved {
-		config[key] = value
-	}
-	return config, nil
-}
-
-func currentRequestPort(r *http.Request) int {
-	host := r.Host
-	if _, port, err := net.SplitHostPort(host); err == nil {
-		if value, err := strconv.Atoi(port); err == nil {
-			return value
-		}
-	}
-	if idx := strings.LastIndex(host, ":"); idx >= 0 {
-		if value, err := strconv.Atoi(host[idx+1:]); err == nil {
-			return value
-		}
-	}
-	return 80
-}
-
-func boolValue(raw any) bool {
-	switch value := raw.(type) {
-	case bool:
-		return value
-	case string:
-		return strings.EqualFold(value, "true") || value == "1"
-	default:
-		if intValue, ok := intValue(raw); ok {
-			return intValue != 0
-		}
-	}
-	return false
 }
 
 // processMemoryInfo reports Go process memory; used as the non-Linux fallback

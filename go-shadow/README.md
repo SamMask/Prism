@@ -58,12 +58,12 @@ Local/copied-DB candidate endpoints behind explicit flags:
 - `GET /api/attachments/{id}?raw=true` raw/text/binary serving with `--enable-attachment-raw-read`
 - `GET /api/notes/{id}/attachments`, `POST /api/notes/{id}/attachments`, and `DELETE /api/attachments/{id}` metadata/file mutation with `--enable-attachment-write`
 - `POST /api/upload` original upload candidate with `--enable-upload-write`
-- `POST /api/upload/extract-prompt` prompt metadata extraction with `--enable-upload-write`
 - `POST /api/upload` `_thumb.webp` generation and `thumbnail_only` with `--enable-thumbnail-write`
 - `POST /api/upload/url` remote image fetch candidate with `--enable-upload-url-write`
 - server/system/config candidates with `--enable-server-system`
 - embedded SPA and `/static/uploads/<file>` serving from the explicit data dir, with unknown `/api/*` returning JSON 404 instead of SPA fallback
 - T046-T050 frontend route coverage closure: long-content `GET /api/notes/{id}/check_separation`, `POST /api/notes/{id}/separate`, and `POST /api/notes/{id}/restore` are handled with `--enable-notes-write`; `GET /api/system/check-update` returns a controlled Go primary response with `--enable-server-system`; PromptBuilder uses `/api/wizard-options`, and `/static/config/*` returns JSON 404 instead of SPA HTML.
+- PRISM-OPT-42 (2026-10-07) removed `GET` / `POST /api/system/port-config`, `GET` / `POST /api/system/startup-preference`, `GET /api/system/check-update`, and `POST /api/upload/extract-prompt`; they now fall through to the `/api/*` JSON 404. `check_separation`, `separate`, `DELETE /api/notes/{id}/history`, and the prompt/wizard options write CRUD stay registered but are deprecated (see `docs/API_REFERENCE.md`).
 
 Runtime-only endpoint:
 
@@ -371,7 +371,7 @@ The active-roadmap T032-T035 gates close local/copied DB/data candidates for ser
 go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-server-system
 ```
 
-`--enable-server-system` intentionally disables SQLite `query_only` because the candidate includes copied-DB maintenance routes such as WAL checkpoint, VACUUM, and clear-history. It enables `GET /api/server/version`, `GET /api/system/stats`, `GET /api/server/hardware`, `GET /api/server/logs`, backup list/download/rotate/delete, `GET` / `POST /api/system/port-config`, `GET` / `POST /api/system/startup-preference`, `POST /api/server/restart` (restarts the process since PRISM-OPT-36), prompt options CRUD, and wizard options CRUD. File mutations stay under `PRISM_GO_DATA_DIR/backups`, `PRISM_GO_DATA_DIR/config`, and data-root startup marker files.
+`--enable-server-system` intentionally disables SQLite `query_only` because the candidate includes copied-DB maintenance routes such as WAL checkpoint, VACUUM, and clear-history. It enables `GET /api/server/version`, `GET /api/system/stats`, `GET /api/server/hardware`, `GET /api/server/logs`, backup list/download/rotate/delete, `POST /api/server/restart` (restarts the process since PRISM-OPT-36), prompt options CRUD, and wizard options CRUD. File mutations stay under `PRISM_GO_DATA_DIR/backups` and `PRISM_GO_DATA_DIR/config`.
 
 `POST /api/server/restart` restarts the runtime process (supervised: exit 42 for systemd; standalone: re-exec); it never calls `systemctl`. These gates do not promote live/default server/system ownership and do not cover full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 

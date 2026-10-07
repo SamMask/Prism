@@ -53,6 +53,19 @@
 - 部分 API 仍保留 `type` 作為「分類名稱字串」的相容欄位或查詢參數，不代表資料庫仍有 `type` 欄位。
 - `/api/system/go-read-routing` 是 Phase 19 舊讀取路由 proof 端點，已隨 T053 Python source 移除，不存在於 Go primary product runtime（not part of the Go primary product API）；本條僅作歷史說明。
 
+### 已移除的路由
+
+以下路由已於 2026-10-07（PRISM-OPT-42）從 Go primary runtime 刪除，連同 handler 與前端 wrapper。現在呼叫會落到 `/api/` 的 JSON 404（`{"status": "error", "message": "API route not found"}`），也不再寫入 data dir 的 marker 檔。外部 Agent 不應再呼叫。
+
+| 路由 | 原用途 | 移除理由 |
+|---|---|---|
+| `GET` / `POST /api/system/port-config` | 讀寫 data dir 的 `.port_config` | 實際 port 由 `--addr` 決定，`.port_config` 沒有任何程式讀取 |
+| `GET` / `POST /api/system/startup-preference` | 讀寫 `.auto_open_yes` / `.auto_open_no` | marker 沒有任何程式讀取 |
+| `GET /api/system/check-update` | 回傳固定的「未設定更新來源」 | 只有未被引用的 `UpdateSection.tsx` 呼叫 |
+| `POST /api/upload/extract-prompt` | 從既有圖片讀取 AI prompt metadata | 只有未被引用的 `usePromptExtraction.ts` 呼叫；使用者確認不需要 |
+
+`GET /api/system/migration-status` 不在此列：前端 wrapper 已刪除，但 route 保留供維運使用。
+
 ### 建議對接範圍
 
 如果你只是要讓外部 Agent 讀寫知識庫，優先使用這些端點：
@@ -399,6 +412,8 @@
 
 ### DELETE `/api/notes/<note_id>/history`
 
+> **Deprecated（2026-10-07，PRISM-OPT-42）**：前端已不使用；保留以維持相容，未來可能移除。
+
 清空該筆記所有歷史。
 
 ---
@@ -568,21 +583,6 @@ Response 每筆欄位：
 
 - 後端有 SSRF 防護，private / loopback / reserved IP 會被拒絕
 
-### POST `/api/upload/extract-prompt`
-
-從既有圖片檔提取 prompt metadata。
-
-```json
-{
-  "image_path": "/static/uploads/xxx.png"
-}
-```
-
-注意：
-
-- 這不是上傳檔案接口
-- 舊文件寫成 multipart/form-data 是錯的
-
 ---
 
 ## 9. Attachments API
@@ -628,9 +628,13 @@ Response 每筆欄位：
 
 ### GET `/api/notes/<note_id>/check_separation`
 
+> **Deprecated（2026-10-07，PRISM-OPT-42）**：前端已不使用；保留以維持相容，未來可能移除。
+
 檢查內容是否超過自動分離閾值。
 
 ### POST `/api/notes/<note_id>/separate`
+
+> **Deprecated（2026-10-07，PRISM-OPT-42）**：前端已不使用；保留以維持相容，未來可能移除。
 
 把長文主體抽成附件。
 
@@ -703,16 +707,6 @@ Response 每筆欄位：
 ### GET `/api/system/stats`
 
 取得 DB / uploads 統計。`uploads.files`（additive，PRISM-OPT-31）是 uploads 目錄中不含 `*_thumb.*` 縮圖的檔案數；`size_bytes`／`size_mb` 仍包含所有檔案。Maintenance 的圖片統計讀這裡。
-
-### GET `/api/system/startup-preference`
-
-### POST `/api/system/startup-preference`
-
-```json
-{
-  "auto_open_browser": true
-}
-```
 
 ### GET `/api/system/csrf-protection`
 
@@ -868,40 +862,6 @@ Response（dry-run 與執行同形狀，節錄）：
 6. 再跑一次 dry-run，結果應與執行前相同。
 
 只核對進度而不回滾時，`result.json` 不完整也沒關係：用同一個 binary 以另一個 port 開啟停機後的 DB 與 data-dir **副本**，查 plan 中附件列 id 是否還在、D2 筆記是否有對應的歷史，不要只看內容 hash。
-
-### GET `/api/system/port-config`
-
-### POST `/api/system/port-config`
-
-```json
-{
-  "preferred_port": 5000,
-  "fallback_enabled": true,
-  "fallback_range": 20
-}
-```
-
-### GET `/api/system/check-update`
-
-檢查更新來源是否有新版本。
-
-Response：
-
-```json
-{
-  "current_version": "2.7.0",
-  "latest_version": "v2.8.0",
-  "has_update": true,
-  "release_url": "https://github.com/.../releases/tag/V2.8.0",
-  "release_notes": "...",
-  "message": "發現新版本"
-}
-```
-
-備註：
-
-- 若未設定更新來源，會回 `has_update: false` 與 `message: "未設定更新來源"`。
-- 更新來源優先讀 `PRISM_RELEASE_API_URL`，其次讀 `GITHUB_REPOSITORY`，最後嘗試從本機 `git remote origin` 推導 GitHub Releases API。
 
 ### GET `/api/system/go-read-routing`
 
@@ -1107,6 +1067,8 @@ Current owner: Go primary runtime。Prompt / Wizard options 讀寫 `PRISM_GO_DAT
 
 這組主要是 Prism 內建 Prompt Builder 用的設定檔 CRUD；如果 `murmur厭世貓` 不需要管理 UI 選項，可以跳過。
 
+兩個 GET 仍由 Prompt Builder 頁使用；其餘寫入端點如下標註。
+
 ### GET `/api/prompt-options`
 ### POST `/api/prompt-options/category/<category_key>`
 ### PUT `/api/prompt-options/category/<category_key>/<index>`
@@ -1114,9 +1076,13 @@ Current owner: Go primary runtime。Prompt / Wizard options 讀寫 `PRISM_GO_DAT
 ### POST `/api/prompt-options/template`
 ### DELETE `/api/prompt-options/template/<template_id>`
 
+> **Deprecated（2026-10-07，PRISM-OPT-42）**：前端已不使用；保留以維持相容，未來可能移除。（適用本節上列 `POST` / `PUT` / `DELETE` 五個 prompt-options 寫入端點；`GET` 不受影響。）
+
 ### GET `/api/wizard-options`
 ### POST `/api/wizard-options/dimension/<dimension_key>`
 ### DELETE `/api/wizard-options/dimension/<dimension_key>/<index>`
+
+> **Deprecated（2026-10-07，PRISM-OPT-42）**：前端已不使用；保留以維持相容，未來可能移除。（適用上列 `POST` / `DELETE` 兩個 wizard-options 寫入端點；`GET` 不受影響。）
 
 ---
 
@@ -1148,9 +1114,9 @@ Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism
 
 已同步的歷史差異：
 
-- `GET /api/system/check-update` 已補回後端路由。
+- `GET /api/system/check-update` 曾於 T049 補回後端路由；已於 2026-10-07（PRISM-OPT-42）連同前端呼叫一起刪除，見「已移除的路由」。
 - `GET /api/system/go-read-routing` 是 legacy Phase 19 proof endpoint，已於 T053 隨 Python source 移除，不存在於任何 runtime。
-- `GET /api/system/migration-status` 已補回後端路由。
+- `GET /api/system/migration-status` 已補回後端路由；前端 wrapper 已於 PRISM-OPT-42 刪除，route 保留供維運使用。
 - `DELETE /api/categories/<id>` 使用 `target_category_id`，不再使用舊的 `target_category` / `target_name`。
 - `GET /api/notes` 支援 `archived`、`include_archived`、`pinned_only`、`category_id`、`parent_id`。
 - Settings 批次 Markdown/TXT 匯入只是在前端逐檔使用 `POST /api/notes/import/md` 與 `POST /api/notes`；沒有新增 server-side batch import endpoint。

@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash/crc32"
 	"image"
 	"image/color"
 	"image/png"
@@ -2572,70 +2571,6 @@ func TestNotesRestoreHandlerReturnsJSONWhenEnabled(t *testing.T) {
 	}
 }
 
-func TestExtractPromptHandlerReadsStableDiffusionPNGMetadata(t *testing.T) {
-	dataDir := t.TempDir()
-	uploadsDir := filepath.Join(dataDir, "static", "uploads")
-	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-	imagePath := filepath.Join(uploadsDir, "prompt.png")
-	metadata := "beautiful forest\nNegative prompt: blurry\nSteps: 20, Sampler: Euler"
-	if err := os.WriteFile(imagePath, pngWithTextChunk("parameters", metadata), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	srv := &server{runtime: runtimeConfig{dataDir: dataDir, uploadsDir: uploadsDir, enableUploadWrite: true}}
-	request := httptest.NewRequest(http.MethodPost, "/api/upload/extract-prompt", strings.NewReader(`{"image_path":"/static/uploads/prompt.png"}`))
-	recorder := httptest.NewRecorder()
-	srv.handleExtractPrompt(recorder, request)
-
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("expected prompt extraction 200, got %d body=%s", recorder.Code, recorder.Body.String())
-	}
-	var payload struct {
-		Status string `json:"status"`
-		Data   struct {
-			Prompt         string `json:"prompt"`
-			NegativePrompt string `json:"negative_prompt"`
-			Source         string `json:"source"`
-			HasPrompt      bool   `json:"has_prompt"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload.Status != "success" || !payload.Data.HasPrompt {
-		t.Fatalf("unexpected payload: %#v", payload)
-	}
-	if payload.Data.Prompt != "beautiful forest" || payload.Data.NegativePrompt != "blurry" || payload.Data.Source != "stable_diffusion" {
-		t.Fatalf("unexpected prompt data: %#v", payload.Data)
-	}
-}
-
-func TestExtractPromptHandlerHasControlledFailures(t *testing.T) {
-	dataDir := t.TempDir()
-	uploadsDir := filepath.Join(dataDir, "static", "uploads")
-	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
-		t.Fatal(err)
-	}
-
-	disabled := &server{runtime: runtimeConfig{dataDir: dataDir, uploadsDir: uploadsDir}}
-	disabledRequest := httptest.NewRequest(http.MethodPost, "/api/upload/extract-prompt", strings.NewReader(`{"image_path":"/static/uploads/missing.png"}`))
-	disabledRecorder := httptest.NewRecorder()
-	disabled.handleExtractPrompt(disabledRecorder, disabledRequest)
-	if disabledRecorder.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("expected disabled prompt extraction 405, got %d", disabledRecorder.Code)
-	}
-
-	enabled := &server{runtime: runtimeConfig{dataDir: dataDir, uploadsDir: uploadsDir, enableUploadWrite: true}}
-	missingRequest := httptest.NewRequest(http.MethodPost, "/api/upload/extract-prompt", strings.NewReader(`{"image_path":"/static/uploads/missing.png"}`))
-	missingRecorder := httptest.NewRecorder()
-	enabled.handleExtractPrompt(missingRecorder, missingRequest)
-	if missingRecorder.Code != http.StatusNotFound {
-		t.Fatalf("expected missing prompt image 404, got %d body=%s", missingRecorder.Code, missingRecorder.Body.String())
-	}
-}
-
 func TestLongContentSeparationAndRestoreHandlers(t *testing.T) {
 	dataDir := t.TempDir()
 	dbPath := createSpikeDB(t)
@@ -3021,25 +2956,6 @@ func TestNoteFileSharedByOtherRowKeepsUncheckableCaseVariant(t *testing.T) {
 	}
 }
 
-func TestCheckUpdateReturnsControlledGoPrimaryStatus(t *testing.T) {
-	srv := &server{runtime: runtimeConfig{enableServerSystem: true}}
-	request := httptest.NewRequest(http.MethodGet, "/api/system/check-update", nil)
-	recorder := httptest.NewRecorder()
-	srv.handleCheckUpdate(recorder, request)
-
-	if recorder.Code != http.StatusOK {
-		t.Fatalf("expected check-update 200, got %d body=%s", recorder.Code, recorder.Body.String())
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(recorder.Body.Bytes(), &payload); err != nil {
-		t.Fatal(err)
-	}
-	data := payload["data"].(map[string]any)
-	if data["current_version"] == "" || data["has_update"] != false || data["message"] != "未設定更新來源" {
-		t.Fatalf("unexpected check-update payload: %#v", payload)
-	}
-}
-
 func TestPrismVersionIgnoresLegacyConfigPy(t *testing.T) {
 	originalWD, err := os.Getwd()
 	if err != nil {
@@ -3232,23 +3148,6 @@ func TestStaticConfigDoesNotFallBackToSPAHTML(t *testing.T) {
 	if strings.Contains(recorder.Body.String(), "<html") {
 		t.Fatalf("static config fallback returned HTML: %s", recorder.Body.String())
 	}
-}
-
-func pngWithTextChunk(keyword, text string) []byte {
-	chunk := func(kind, payload []byte) []byte {
-		out := bytes.Buffer{}
-		out.Write([]byte{byte(len(payload) >> 24), byte(len(payload) >> 16), byte(len(payload) >> 8), byte(len(payload))})
-		out.Write(kind)
-		out.Write(payload)
-		crc := crc32.ChecksumIEEE(append(kind, payload...))
-		out.Write([]byte{byte(crc >> 24), byte(crc >> 16), byte(crc >> 8), byte(crc)})
-		return out.Bytes()
-	}
-	out := bytes.Buffer{}
-	out.Write([]byte("\x89PNG\r\n\x1a\n"))
-	out.Write(chunk([]byte("tEXt"), append(append([]byte(keyword), 0), []byte(text)...)))
-	out.Write(chunk([]byte("IEND"), nil))
-	return out.Bytes()
 }
 
 func TestThumbnailWriteKeepsDBQueryOnlyAndUpdatesSurfaceWhenExplicitlyEnabled(t *testing.T) {

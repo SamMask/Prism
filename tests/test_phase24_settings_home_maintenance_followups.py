@@ -60,17 +60,16 @@ def test_search_ux_and_maintenance_overview_candidates_are_locked():
 
 
 def test_settings_deploy_controls_explain_port_update_and_hide_local_service_management():
-    port_config = PORT_CONFIG_PATH.read_text(encoding="utf-8")
-    update = UPDATE_PATH.read_text(encoding="utf-8")
     server_dashboard = SERVER_DASHBOARD_PATH.read_text(encoding="utf-8")
     api = API_PATH.read_text(encoding="utf-8")
     i18n = I18N_PATH.read_text(encoding="utf-8")
 
-    assert "目前可用網址" in port_config
-    assert "若頁面已完全連不上" in port_config
-    assert "啟動 console / log" in port_config
-    assert "本機版本更新以覆蓋程式檔為主" in update
-    assert "不需要另外選補丁檔" in update
+    # PRISM-OPT-42 deleted the hidden port / update sections together with their
+    # port-config / check-update routes and api.ts wrappers.
+    assert not PORT_CONFIG_PATH.exists()
+    assert not UPDATE_PATH.exists()
+    assert "/system/port-config" not in api
+    assert "/system/check-update" not in api
     assert "service_management" in api
     assert "const canManageService = hardware?.service_management?.available === true" in server_dashboard
     assert "const hasCpuTemperature = hardware?.cpu_temp != null" in server_dashboard

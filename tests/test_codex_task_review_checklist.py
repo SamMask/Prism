@@ -65,6 +65,7 @@ def test_codex_task_review_checklist_locks_scope_and_hard_return_terms():
     ):
         assert phrase in text
 
+    assert "PRISM-OPT-42" in text
     assert "不修改 agent runtime" in text
     assert "不取代 repo canonical docs" in text
     assert "不得宣稱完成" in text

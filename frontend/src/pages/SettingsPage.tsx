@@ -190,9 +190,6 @@ export function SettingsPage() {
                 isLoading={isLoading}
                 onRefresh={fetchStats}
               />
-              {/* 「部署安全邊界」「端口設定」「版本更新」暫時隱藏：封裝成 .exe 視窗程式後對使用者無用，
-                  在 Pi 上也僅資訊性。元件檔仍保留於 components/settings（PortConfigSection / UpdateSection）。
-                  隱藏理由與復原方式見 docs/TODO.md「設定精簡（hidden sections）」。 */}
               <details className="glass rounded-lg" data-testid="maintenance-advanced">
                 <summary className="cursor-pointer px-5 py-4 font-medium text-text-primary">
                   {t('settings.maintenance.advancedTitle')}

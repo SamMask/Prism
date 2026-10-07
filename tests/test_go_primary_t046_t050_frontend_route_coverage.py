@@ -17,6 +17,7 @@ PROMPT_BUILDER_PATH = ROOT / "frontend" / "src" / "hooks" / "usePromptBuilder.ts
 NOTE_FORM_PATH = ROOT / "frontend" / "src" / "hooks" / "editor" / "useNoteForm.ts"
 I18N_PATH = ROOT / "frontend" / "src" / "i18n" / "index.ts"
 UPDATE_SECTION_PATH = ROOT / "frontend" / "src" / "components" / "settings" / "UpdateSection.tsx"
+PROMPT_EXTRACTION_PATH = ROOT / "frontend" / "src" / "hooks" / "editor" / "usePromptExtraction.ts"
 
 
 def _contract():
@@ -32,8 +33,10 @@ def test_t046_contract_records_frontend_to_go_route_coverage_scope():
     assert contract["recommended_next_task"] == "T051"
     decisions = {item["task_id"]: item for item in contract["coverage_decisions"]}
     assert decisions["T047"]["go_surface"] == "POST /api/upload/extract-prompt"
+    assert "PRISM-OPT-42" in decisions["T047"]["removed"]
     assert "POST /api/notes/<id>/separate" in decisions["T048"]["go_surface"]
     assert decisions["T049"]["go_surface"] == "GET /api/system/check-update"
+    assert "PRISM-OPT-42" in decisions["T049"]["removed"]
     assert decisions["T050"]["old_path"] == "/static/config/wizard_options.json"
     assert decisions["T050"]["new_path"] == "/api/wizard-options"
 
@@ -50,25 +53,31 @@ def test_frontend_missing_surfaces_have_visible_or_supported_paths():
     api_ts = API_TS_PATH.read_text(encoding="utf-8")
     note_form = NOTE_FORM_PATH.read_text(encoding="utf-8")
     i18n = I18N_PATH.read_text(encoding="utf-8")
-    update_section = UPDATE_SECTION_PATH.read_text(encoding="utf-8")
 
-    assert 'client.post("/upload/extract-prompt"' in api_ts
-    assert "`/notes/${noteId}/check_separation`" in api_ts
-    assert "`/notes/${noteId}/separate`" in api_ts
+    # PRISM-OPT-42: the dead extract-prompt / check-update callers are deleted, and the
+    # unused separation wrappers are gone (the separation routes stay as deprecated API).
+    assert "/upload/extract-prompt" not in api_ts
+    assert "/system/check-update" not in api_ts
+    assert "check_separation" not in api_ts
+    assert "`/notes/${noteId}/separate`" not in api_ts
+    assert not UPDATE_SECTION_PATH.exists()
+    assert not PROMPT_EXTRACTION_PATH.exists()
     assert "`/notes/${noteId}/restore`" in api_ts
     # PRISM-OPT-19: the editor no longer splits long notes after save; the routes stay for API compatibility.
     assert "separateContent" not in note_form
     assert "separationFailed" not in i18n
     assert "silent" not in note_form
-    assert "status === 404" in update_section
-    assert "尚未提供更新檢查 API" in update_section
 
 
 def test_go_primary_registers_frontend_called_missing_routes_and_static_guard():
     main_go = read_go_package_source(GO_SHADOW_DIR)
 
-    assert 'mux.HandleFunc("/api/upload/extract-prompt", srv.handleExtractPrompt)' in main_go
-    assert 'mux.HandleFunc("/api/system/check-update", srv.handleCheckUpdate)' in main_go
+    # PRISM-OPT-42 removed these two routes; the Go 404 behavior is locked by
+    # go-shadow/removed_routes_test.go.
+    assert '"/api/upload/extract-prompt"' not in main_go
+    assert '"/api/system/check-update"' not in main_go
+    assert "handleExtractPrompt" not in main_go
+    assert "handleCheckUpdate" not in main_go
     assert 'case "check_separation":' in main_go
     assert 'case "separate":' in main_go
     assert 's.restoreSeparatedContent(w, noteID)' in main_go

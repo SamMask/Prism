@@ -416,10 +416,15 @@ def test_i18n_remaining_hardcoded_ui_audit_triages_active_hidden_and_allowed_lit
     assert "Allowed non-UI/data literals" in todo
     assert "階段 5 收尾" in todo or "進階段 5 收尾" in todo
 
-    assert "PortConfigSection" in settings
-    assert "UpdateSection" in settings
-    assert "<PortConfigSection" not in settings
-    assert "<UpdateSection" not in settings
+    # PRISM-OPT-42 deleted these hidden components; SettingsPage no longer mentions them.
+    assert "PortConfigSection" not in settings
+    assert "UpdateSection" not in settings
+    for deleted in (
+        "components/settings/PortConfigSection.tsx",
+        "components/settings/UpdateSection.tsx",
+        "components/TagInput.tsx",
+    ):
+        assert not (ROOT / "frontend" / "src" / deleted).exists()
 
 
 def test_active_ui_final_i18n_namespaces_are_translated_for_four_locales():

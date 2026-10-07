@@ -525,21 +525,6 @@ export const api = {
     return data.data;
   },
 
-  // Extract AI prompt from image metadata
-  extractImagePrompt: async (
-    imagePath: string
-  ): Promise<{
-    prompt: string | null;
-    negative_prompt: string | null;
-    source: string | null;
-    has_prompt: boolean;
-  }> => {
-    const { data } = await client.post("/upload/extract-prompt", {
-      image_path: imagePath,
-    });
-    return data.data;
-  },
-
   // ===================================================================
   // Attachments API (Phase 3.4)
   // ===================================================================
@@ -608,35 +593,6 @@ export const api = {
   // ===================================================================
   // 3.4.4 Auto-Separation API
   // ===================================================================
-
-  // Check if note content should be separated
-  checkSeparation: async (
-    noteId: number
-  ): Promise<{
-    should_separate: boolean;
-    content_length: number;
-    threshold: number;
-  }> => {
-    const { data } = await client.get(`/notes/${noteId}/check_separation`);
-    return data.data;
-  },
-
-  // Separate long content into attachment
-  separateContent: async (
-    noteId: number,
-    previewLength?: number
-  ): Promise<{
-    attachment_id: number;
-    file_path: string;
-    original_length: number;
-    preview_length: number;
-  }> => {
-    const { data } = await client.post(
-      `/notes/${noteId}/separate`,
-      previewLength ? { preview_length: previewLength } : {}
-    );
-    return data.data;
-  },
 
   // Restore separated content back to note
   restoreContent: async (noteId: number): Promise<void> => {
@@ -859,14 +815,6 @@ export const api = {
     // Backend returns { status: 'success', message: ... }
   },
 
-  // Delete note history
-  deleteNoteHistory: async (
-    noteId: number
-  ): Promise<{ deleted_count: number }> => {
-    const { data } = await client.delete(`/notes/${noteId}/history`);
-    return data.data;
-  },
-
   // ===================================================================
   // System Maintenance
   // ===================================================================
@@ -916,66 +864,6 @@ export const api = {
   // Delete an uploaded image file
   deleteImage: async (url: string): Promise<{ deleted: string[]; count: number }> => {
     const { data } = await client.post("/upload/delete", { url });
-    return data.data;
-  },
-
-  // ===================================================================
-  // Update Check (v2.1.0 - Task 7.1)
-  // ===================================================================
-
-  checkUpdate: async (): Promise<{
-    current_version: string;
-    latest_version: string | null;
-    has_update: boolean;
-    release_url: string;
-    release_notes: string;
-    message?: string;
-    error?: string;
-  }> => {
-    const { data } = await client.get('/system/check-update');
-    return data.data;
-  },
-
-  // ===================================================================
-  // Migration Status (v2.1.0 - Task 7.3)
-  // ===================================================================
-
-  getMigrationStatus: async (): Promise<{
-    current_version: number;
-    latest_version: number;
-    completed: { version: number; name: string }[];
-    pending: { version: number; name: string }[];
-  }> => {
-    const { data } = await client.get('/system/migration-status');
-    return data.data;
-  },
-
-  // ===================================================================
-  // Port Configuration (v1.5.0)
-  // ===================================================================
-
-  // Get port configuration
-  getPortConfig: async (): Promise<{
-    preferred_port: number;
-    fallback_enabled: boolean;
-    fallback_range: number;
-    current_port: number;
-  }> => {
-    const { data } = await client.get("/system/port-config");
-    return data.data;
-  },
-
-  // Save port configuration
-  savePortConfig: async (config: {
-    preferred_port: number;
-    fallback_enabled: boolean;
-    fallback_range: number;
-  }): Promise<{
-    preferred_port: number;
-    fallback_enabled: boolean;
-    fallback_range: number;
-  }> => {
-    const { data } = await client.post("/system/port-config", config);
     return data.data;
   },
 

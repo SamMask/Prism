@@ -451,11 +451,6 @@ const zhTW = {
       downloadImagesFailed: '圖片下載失敗 {count} 張，保留原始 URL',
       htmlParseFailed: '處理 HTML 內容時發生錯誤',
     },
-    promptExtraction: {
-      noImage: '未找到圖片',
-      copiedPrompt: '已複製 {source} 提示詞',
-      noPrompt: '圖片中未找到 AI 提示詞',
-    },
   },
   promptBuilder: {
     loading: '載入配置中...',
@@ -1424,11 +1419,6 @@ const en: TranslationDict = {
       downloadImagesFailed: 'Failed to download {count} images; kept original URLs',
       htmlParseFailed: 'Error while processing HTML content',
     },
-    promptExtraction: {
-      noImage: 'No image found',
-      copiedPrompt: 'Copied {source} prompt',
-      noPrompt: 'No AI prompt found in images',
-    },
   },
   promptBuilder: {
     loading: 'Loading configuration...',
@@ -2393,11 +2383,6 @@ const ja: TranslationDict = {
       downloadFailedSuffix: ' ({count} 枚失敗)',
       downloadImagesFailed: '{count} 枚の画像ダウンロードに失敗しました。元のURLを保持します',
       htmlParseFailed: 'HTML 内容の処理中にエラーが発生しました',
-    },
-    promptExtraction: {
-      noImage: '画像が見つかりません',
-      copiedPrompt: '{source} プロンプトをコピーしました',
-      noPrompt: '画像内に AI プロンプトが見つかりません',
     },
   },
   promptBuilder: {
@@ -3364,11 +3349,6 @@ const ko: TranslationDict = {
       downloadImagesFailed: '이미지 {count}장 다운로드 실패, 원본 URL을 유지합니다',
       htmlParseFailed: 'HTML 내용을 처리하는 중 오류가 발생했습니다',
     },
-    promptExtraction: {
-      noImage: '이미지를 찾지 못했습니다',
-      copiedPrompt: '{source} 프롬프트를 복사했습니다',
-      noPrompt: '이미지에서 AI 프롬프트를 찾지 못했습니다',
-    },
   },
   promptBuilder: {
     loading: '설정을 불러오는 중...',
@@ -3954,10 +3934,6 @@ export function setRuntimeLocale(locale: Locale): void {
 export function setLocale(locale: Locale): void {
   setRuntimeLocale(locale);
   localStorage.setItem(LOCALE_STORAGE_KEY, locale);
-}
-
-export function getLocale(): Locale {
-  return currentLocale;
 }
 
 export function initLocale(): void {

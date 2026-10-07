@@ -8,6 +8,7 @@
   "runtime_flag": "--enable-server-system / PRISM_GO_ENABLE_SERVER_SYSTEM=1",
   "production_runtime_owner": "python",
   "go_candidate": "local copied-DB-and-data only",
+  "removed": "已於 PRISM-OPT-42 移除（2026-10-07）：port-config 與 startup-preference 的 route、handler、前端 wrapper 與 PortConfigSection.tsx 已刪除，兩者現在回 JSON 404，也不再寫 .port_config / .auto_open_* marker；POST /api/server/restart 不受影響。以下 routes / evidence 為歷史紀錄。",
   "routes": [
     "GET /api/system/port-config",
     "POST /api/system/port-config",

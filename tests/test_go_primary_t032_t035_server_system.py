@@ -311,33 +311,23 @@ def test_t034_t035_port_startup_prompt_and_wizard_options(temp_db, tmp_path):
 
     proc, base = _start_go(go_db, go_data, tmp_path, "--enable-server-system")
     try:
-        status, payload, _ = _request_json(base, "/api/system/port-config")
-        assert status == 200
-        assert payload["data"]["preferred_port"] == 5000
-
-        status, payload, _ = _request_json(
-            base,
-            "/api/system/port-config",
-            method="POST",
-            data={"preferred_port": 5678, "fallback_enabled": False, "fallback_range": 7},
-        )
-        assert status == 200
-        assert payload["data"]["preferred_port"] == 5678
-        assert json.loads((go_data / ".port_config").read_text())["fallback_range"] == 7
-
-        status, payload, _ = _request_json(base, "/api/system/startup-preference")
-        assert status == 200
-        assert payload["data"]["auto_open_browser"] is None
-
-        status, payload, _ = _request_json(
-            base,
-            "/api/system/startup-preference",
-            method="POST",
-            data={"auto_open_browser": False},
-        )
-        assert status == 200
-        assert payload["data"]["auto_open_browser"] is False
-        assert (go_data / ".auto_open_no").exists()
+        # PRISM-OPT-42 (2026-10-07): port-config and startup-preference were removed.
+        # Even with --enable-server-system they fall through to the /api/ JSON 404
+        # and no longer write marker files into the data dir. POSTs carry no body here:
+        # the 404 fallback does not read request bodies, and on Windows an unread body can
+        # reset the socket before the client reads the reply. The Go test
+        # TestRemovedOPT42RoutesReturnAPINotFound covers POSTs with JSON bodies.
+        for method, path in (
+            ("GET", "/api/system/port-config"),
+            ("POST", "/api/system/port-config"),
+            ("GET", "/api/system/startup-preference"),
+            ("POST", "/api/system/startup-preference"),
+        ):
+            status, payload, _ = _request_json(base, path, method=method)
+            assert status == 404, (method, path, status, payload)
+            assert payload["message"] == "API route not found"
+        for marker in (".port_config", ".auto_open_yes", ".auto_open_no"):
+            assert not (go_data / marker).exists()
 
         status, payload, _ = _request_json(base, "/api/prompt-options")
         assert status == 200
@@ -443,10 +433,8 @@ def test_t032_t035_docs_and_contracts_are_updated():
         "/api/system/stats",
         "/api/system/vacuum",
         "/api/system/clear-history",
-        "/api/system/startup-preference",
         "/api/system/wal-checkpoint",
         "/api/system/check-consistency",
-        "/api/system/port-config",
         "/api/server/hardware",
         "/api/server/logs",
         "/api/server/restart",
@@ -471,9 +459,20 @@ def test_t032_t035_docs_and_contracts_are_updated():
     }
     assert set(candidates) == server_system_routes
     assert all("local copied" in value for value in candidates.values())
+    removed_routes = [
+        route
+        for route in manifest["routes"]
+        if route["rule"] in {"/api/system/port-config", "/api/system/startup-preference"}
+    ]
+    assert len(removed_routes) == 4
+    assert all(route["production_owner"] == "removed-in-prism-opt-42" for route in removed_routes)
+    assert '"/api/system/port-config"' not in main_go
+    assert '"/api/system/startup-preference"' not in main_go
 
     for task_id, path in CONTRACTS.items():
         payload = json.loads(path.read_text(encoding="utf-8"))
         assert payload["task_id"] == task_id
         assert payload["status"] == "completed"
         assert "production" in json.dumps(payload, ensure_ascii=False).lower()
+    t034 = json.loads(CONTRACTS["T034"].read_text(encoding="utf-8"))
+    assert "PRISM-OPT-42" in t034["removed"]
