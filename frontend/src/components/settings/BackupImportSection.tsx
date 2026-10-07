@@ -91,6 +91,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
   const [showImportModal, setShowImportModal] = useState(false);
   const [importData, setImportData] = useState<unknown>(null);
   const [importMode, setImportMode] = useState<'skip' | 'duplicate'>('skip');
+  const [importNotice, setImportNotice] = useState<{ attachments: number; uploads: number } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bulkFileInputRef = useRef<HTMLInputElement>(null);
   const [bulkFiles, setBulkFiles] = useState<File[]>([]);
@@ -276,6 +277,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
     if (!importData) return;
 
     setIsImporting(true);
+    setImportNotice(null);
     try {
       const result = await api.importJSON(importData, importMode);
       
@@ -287,6 +289,11 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
         toast.success(t('settings.backup.importSuccess', { count: result.imported }));
       }
       
+      // Lossy-import notice stays inline: a toast would vanish before the user can read it.
+      const attachments = result.skipped_attachments ?? 0;
+      const uploads = result.skipped_uploads ?? 0;
+      setImportNotice(attachments > 0 || uploads > 0 ? { attachments, uploads } : null);
+
       setShowImportModal(false);
       setImportData(null);
       
@@ -482,6 +489,24 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
             </Button>
           </div>
         </div>
+        {importNotice && (
+          <div
+            role="status"
+            data-testid="import-lossy-notice"
+            className="mt-4 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-text-secondary space-y-1"
+          >
+            {importNotice.attachments > 0 && (
+              <p data-testid="import-notice-attachments">
+                {t('settings.backup.importSkippedSeparated', { count: importNotice.attachments })}
+              </p>
+            )}
+            {importNotice.uploads > 0 && (
+              <p data-testid="import-notice-uploads">
+                {t('settings.backup.importSkippedUploads', { count: importNotice.uploads })}
+              </p>
+            )}
+          </div>
+        )}
         <div className="border-t border-border-subtle mt-5 pt-5" data-testid="bulk-import-panel">
           <div className="flex items-start justify-between gap-4">
             <div>

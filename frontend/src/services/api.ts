@@ -791,6 +791,8 @@ export const api = {
     imported: number;
     skipped: number;
     duplicates: string[];
+    skipped_attachments?: number;
+    skipped_uploads?: number;
   }> => {
     const { data: response } = await client.post("/import/json", {
       data,

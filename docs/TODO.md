@@ -689,6 +689,21 @@
       - `window.open` 沒有被 shell 攔截。shell 沒有註冊 `NewWindowRequested`，所以由 WebView2 預設開一個獨立的頂層視窗（有網址列 `about:blank`，會出現在工作列）。
   - 截圖與腳本放在 scratchpad（`popup-*.png`、`popup_check.py`、`desktop_check.py`）。
   - 順帶確認 `PRISM-OPT-72`：GUI build 跑過之後，`desktop-shell.log` 仍是 0 bytes。
+- `PRISM-OPT-65`（本機驗證；未發版、未部署 Pi）：
+  - 前端 `BackupImportSection.tsx`：
+    - JSON 匯入成功後讀取 `skipped_attachments`、`skipped_uploads`，缺值時視為 0。任一個大於 0，就在 JSON 匯入列下方顯示 inline 的 `role="status"` 提示。
+    - 用 inline 而不用 toast，因為 toast 很快就消失，這類資料有損的訊息需要讓使用者讀得到。
+    - 原本的成功 toast 保留。
+    - 型別：`api.ts` 的 `importJSON` 回傳型別新增這兩個 optional 欄位，屬 additive，API 本身沒改。
+    - 文案：四語 i18n 新增 `importSkippedSeparated`（N 個已拆分的長文只匯入了預覽，要完整還原請用 Full snapshot）與 `importSkippedUploads`（N 張同名圖片已存在，沿用原有的那張）。
+  - 驗證：
+    - 新增 `e2e/test_import_skip_warning.py`，共 5 條，透過 UI 選檔匯入，含 CJK 資料：
+      - 拆分筆記：1280 與 390 都會出現提示，數字正確。
+      - 普通 JSON：1280 與 390 都不會出現提示。
+      - 同名圖片第二次匯入：會出現圖片那一行提示。
+    - HEAD 上會失敗的有 3 條（拆分 ×2、圖片 ×1）。
+    - `-Release` gate 通過（e2e 47）。
+    - 用 sonnet 實作；改動小、e2e 直接涵蓋驗收，由主代理驗收。
 
 ### P1 — 下一輪
 
@@ -747,7 +762,7 @@
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Done | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Done | — | OPT-16 追蹤 |
-| PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
+| PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Done | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Todo | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
