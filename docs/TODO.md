@@ -678,6 +678,17 @@
   - 已知（低）：
     - 內容中的全形字，用半形查詢仍搜不到；要雙向一致，需要在索引端正規化，屬於 schema decision gate。
     - 簡繁轉換、半形片假名不在本單範圍。
+- `PRISM-OPT-57`（純驗證，沒有改程式；main `166a2ed`）：
+  - 測試內容：
+    - payload 為 `</pre><img onerror>`、`<b id="injected">`、`<script>document.title='PWNED2'</script>`，加上繁體、簡體、日文、韓文。
+    - 先用 API 讀回，確認存進去的內容與原文一致。
+  - 結果，三個環境都 PASS：
+    - 每個 popup 只有一個 `<pre>`，`textContent` 與 payload 完全一致；`img`、`script`、`#injected`、`b` 都是 0 個；popup 與 opener 的 title 都沒被改。
+    - Firefox 140（build 1489）、WebKit 26（build 2191，代替 Safari 實機）：用 Playwright 1.58 經 `executable_path` 指向本機已安裝的舊版 build。1.58 預設要找 1509／2248，本機沒有，也沒有另外下載。這是非標準的 driver 與 browser 搭配，但驗證內容是 DOM 行為，與 driver 版本無關。
+    - Windows desktop shell（GUI build，WebView2 154）：經 CDP（`--remote-debugging-port`）連線，在隔離的 mutex、title、data-dir 與 `WEBVIEW2_USER_DATA_FOLDER` 下執行。
+      - `window.open` 沒有被 shell 攔截。shell 沒有註冊 `NewWindowRequested`，所以由 WebView2 預設開一個獨立的頂層視窗（有網址列 `about:blank`，會出現在工作列）。
+  - 截圖與腳本放在 scratchpad（`popup-*.png`、`popup_check.py`、`desktop_check.py`）。
+  - 順帶確認 `PRISM-OPT-72`：GUI build 跑過之後，`desktop-shell.log` 仍是 0 bytes。
 
 ### P1 — 下一輪
 
@@ -735,7 +746,7 @@
 | PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Done | — | OPT-16 追蹤 |
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Done | — | OPT-18 追蹤 |
-| PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
+| PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Done | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Todo | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
