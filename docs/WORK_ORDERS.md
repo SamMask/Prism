@@ -603,7 +603,7 @@ git diff --check
 - **原因**：`deleteNote`／`deleteSelectedNotes` 只在本地濾掉筆記，`currentPage` 不變。之後 load-more 請求下一頁時，伺服器端的位移已經往前移，跨過頁界的那一筆不會出現。
 - **修改範圍**：`frontend/src/stores/appStore.ts`。刪除成功後改用 PRISM-OPT-32 的 `refreshLoadedNotes()`（或等效、最小的修正），保持列表與捲動位置不變。
 - **不要修改**：API；分頁大小；`refreshLoadedNotes` 的序號機制。
-- **驗收**：e2e 或 store 層測試，修正前失敗。載入 2 頁（40 筆）後刪除第 5 筆，再按 load-more，第 41 筆會出現，且沒有重複 id。
+- **驗收**：e2e 或 store 層測試，修正前失敗。載入 2 頁（40 筆）後刪除第 5 筆，再按 load-more，第 41 筆會出現，且沒有重複 id。刪除有 variant 的父筆記後，子筆記卡片的 parent_title 與 variants_count 不再顯示舊值（PRISM-OPT-68 之後，子筆記會改掛到上一代）。
 - **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）

@@ -501,6 +501,13 @@
     - 刪除有 variant 子筆記的父筆記會回 500（HEAD 既有的後端 bug）→ 已開 `PRISM-OPT-68`。
     - 刪除與批次刪除只在本地濾掉筆記，之後 load-more 用舊的位移，可能漏掉跨頁的那一筆（HEAD 既有）→ 已開 `PRISM-OPT-69`。
     - 低：刷新失敗後按 Retry 會回到第 1 頁；SettingsPage 寫回 `libraryTotal` 時沒經過序號，理論上可能被較舊的回應蓋掉。
+- `PRISM-OPT-68`（本機驗證；未發版、未部署 Pi）：
+  - Go：單筆與批次刪除原本就共用 `deleteNotesByID`（同一個 transaction、持有 `noteFilesMu`）。在刪除前逐筆執行 `UPDATE Notes SET parent_id = (被刪筆記的 parent_id) WHERE parent_id = 被刪 id`，子筆記因此改掛到最近一個沒被刪的祖先，與刪除順序無關。schema、API 形狀、檔案與附件處理都沒改。
+  - 驗證：
+    - 新增 `go-shadow/note_variant_delete_test.go` 的 3 個測試，每個都分 single、batch 兩條路徑（共 8 個子測試）：刪除根筆記、刪除中間一代、批次同時刪除父與子（正序與反序）。每個都檢查 `PRAGMA foreign_key_check` 為空。
+    - 修正前 8 個子測試都失敗（`FOREIGN KEY constraint failed (787)`）。主代理另外把修正 stash 掉重跑，3 個測試都失敗；還原後通過。
+    - fast gate 通過（pytest 257、go test ok）。
+  - 已知（低）：刪除後，variant 卡片上的 parent_title 與 variants_count 要等列表重新載入才會更新，由 PRISM-OPT-69 一併處理。批次刪除的 dry-run 預覽不會列出哪些 variant 會被改掛。
 
 ### P1 — 下一輪
 
@@ -546,7 +553,7 @@
 | PRISM-OPT-30 | Mobile 排序控制與首屏密度 | Done | — | UX-04 |
 | PRISM-OPT-31 | 筆記計數改用單一來源；Maintenance 改讀 `/api/system/stats` | Done | — | UX-05 |
 | PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Done | 21 | PERF-02 |
-| PRISM-OPT-68 | 刪除有 variant 子筆記的父筆記回 500（FOREIGN KEY constraint failed） | Todo | — | OPT-32 追蹤 |
+| PRISM-OPT-68 | 刪除有 variant 子筆記的父筆記回 500（FOREIGN KEY constraint failed） | Done | — | OPT-32 追蹤 |
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Todo | — | IA-01 |
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Todo | — | IA-02 |
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Todo | — | OPS-03 |

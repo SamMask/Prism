@@ -464,6 +464,14 @@ func deleteNotesByID(tx *sql.Tx, noteIDs []int) (int, error) {
 	if len(noteIDs) == 0 {
 		return 0, nil
 	}
+	// Notes.parent_id has no ON DELETE action: move each deleted note's variants up to its own
+	// parent first. Once id is handled no row points at it, and a later id can only hand its
+	// variants to its current parent, so survivors end under their nearest surviving ancestor.
+	for _, id := range noteIDs {
+		if _, err := tx.Exec("UPDATE Notes SET parent_id = (SELECT parent_id FROM Notes WHERE id = ?) WHERE parent_id = ?", id, id); err != nil {
+			return 0, err
+		}
+	}
 	ids := intsToAny(noteIDs)
 	inClause := placeholders(len(noteIDs))
 	for _, table := range []string{"Note_Tags", "Source_Urls", "Note_History", "Note_Attachments"} {

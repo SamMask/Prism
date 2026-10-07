@@ -244,6 +244,7 @@
 
 - 會同步刪除不再被其他筆記引用的上傳圖片。
 - `Note_History` / `Note_Tags` / `Source_Urls` 由 `ON DELETE CASCADE` 清理。
+- 被刪筆記的 variant 子筆記不會被刪除，會改掛到被刪筆記自己的 `parent_id`（根筆記則為 `NULL`）；批次刪除時，子筆記會改掛到最近一個沒有被刪的祖先（PRISM-OPT-68）。
 
 ---
 
