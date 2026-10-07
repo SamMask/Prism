@@ -120,6 +120,36 @@ def filename_from_content_disposition(value):
     return None
 
 
+def smoke_tag_names(label):
+    """The tags this smoke creates on the target runtime (create, update and import payloads)."""
+    return {f"{label}-go-primary", f"{label}-go-primary-updated", f"{label}-imported"}
+
+
+def remove_smoke_tags(base_url, label, api_surface, context=None):
+    """Delete the smoke's own tags once its notes are gone, so a live run leaves no empty tags.
+
+    Only exact smoke tag names with no notes are removed; a tag still used by a note is kept.
+    A runtime without tag writes cannot delete them; that is recorded, not treated as success.
+    """
+    if "local-tag-write" not in api_surface:
+        return {"status": "skipped", "reason": "tag write is disabled on this runtime", "removed": []}
+    names = smoke_tag_names(label)
+    status, payload, _ = request_json(base_url, "/api/tags", context=context)
+    assert_status("list tags", status, 200, payload)
+    removed = []
+    for tag in payload.get("data") or []:
+        if tag.get("name") in names and not tag.get("count"):
+            status, deleted, _ = request_json(base_url, f"/api/tags/{tag['id']}", method="DELETE", context=context)
+            assert_status(f"delete smoke tag {tag['name']}", status, 200, deleted)
+            removed.append(tag["name"])
+    status, payload, _ = request_json(base_url, "/api/tags", context=context)
+    assert_status("list tags after cleanup", status, 200, payload)
+    left = [tag["name"] for tag in payload.get("data") or [] if tag.get("name") in names and not tag.get("count")]
+    if left:
+        raise SmokeError(f"smoke tags remained after cleanup: {left}")
+    return {"status": "removed", "removed": sorted(removed)}
+
+
 def run_smoke(base_url, label, insecure=False):
     context = ssl._create_unverified_context() if insecure else None
     stamp = str(time.time_ns())
@@ -139,6 +169,7 @@ def run_smoke(base_url, label, insecure=False):
             "export JSON",
             "import JSON",
             "delete workflow note",
+            "remove smoke tags",
             "upload orphan image",
             "scan/delete orphan image",
             "download backup",
@@ -251,6 +282,8 @@ def run_smoke(base_url, label, insecure=False):
     assert_status("delete workflow note", status, 200, deleted)
     if any(item.get("id") == note_id for item in search_matches(base_url, workflow_token, context=context)):
         raise SmokeError("deleted workflow note remained searchable")
+
+    evidence["smoke_tag_cleanup"] = remove_smoke_tags(base_url, label, api_surface, context=context)
 
     status, orphan_upload, _ = request_multipart(
         base_url,

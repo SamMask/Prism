@@ -879,6 +879,14 @@
     - 搜尋 note 100 尾段的詞「與黑市地緣」會命中 100（合併前尾段詞搜不到）；
     - uploads 仍是 2478。
   - 仍待處理：23 篇筆記的全文檔案早已不存在，1 篇（海酒食堂）預覽不一致，另有 5 個孤兒檔 → 已開 `PRISM-OPT-77`。
+- `PRISM-OPT-78`（本機驗證；下次 Pi cutover 生效，因為部署時會上傳本機的 smoke 腳本）：
+  - `scripts/go_primary_full_workflow_smoke.py` 新增 `remove_smoke_tags`。刪掉自己的筆記之後，只刪名稱完全等於本次 label 的 3 個 smoke 標籤（`-go-primary`、`-go-primary-updated`、`-imported`），而且必須沒有掛在任何筆記上；刪完重新列出確認，有殘留就讓 smoke 失敗。
+  - runtime 沒有 `local-tag-write`（例如 package smoke）時不刪，在證據檔記錄 `skipped`。這是明確記錄，不算成功。
+  - 驗證：
+    - 修正前，package smoke 的 DB 留下 `t039-windows-package-*` 三個標籤。
+    - 修正後，package smoke 通過，`smoke_tag_cleanup.status = skipped`。
+    - 用與 Pi 相同的完整 flag 開一個隔離 runtime 跑 smoke：`removed` 三個標籤，DB 只剩 `Welcome`。
+    - fast gate 通過。
 - **4. 發版 V2.7.0**：tag `V2.7.0` → `a478a8b`，GitHub Actions `37613790399` success。GitHub Release 附 `PrismDesktopPortable-v2.7.0.zip`，SHA256 `3a743a9f…d66d60f`，重新下載後比對一致。之後再 cutover Pi 一次，`/api/test` version 為 2.7.0，schema 17/17，筆記 299。每次 cutover，線上 smoke 都會留下 3 個空標籤，兩次都已刪除 → 已開 `PRISM-OPT-78`。
 
 ### P1 — 下一輪
@@ -948,8 +956,8 @@
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Done | — | OPT-67 追蹤 |
 | PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Done | — | OPT-74 追蹤 |
 | PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Done | — | OPT-75 驗收 |
-| PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Todo | — | Pi 部署 OPT-20 |
-| PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Todo | — | V2.7.0 部署 |
+| PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Doing | — | Pi 部署 OPT-20 |
+| PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Done | — | V2.7.0 部署 |
 
 ### P3 / Future — 需要證據或明確 promote
 
