@@ -916,6 +916,16 @@
       - 其餘 19 篇沒有重複。
     - 結論：**24 篇都維持現狀，不還原**，本單結案。
     - 重複的預覽副本：使用者表示 #5／#333 這類標題大概是測試用的，不用處理（2026-10-07）。
+- `PRISM-OPT-79`（使用者 2026-10-07 選 A 並同意執行指令）：
+  - 唯讀確認：
+    - Pi 的 `docs/attachments` 有 11 個 `*_20251230_*.md`，mtime 都是 2026-03-15 20:47:14。
+    - 沒有任何 `Note_Attachments` 列引用這 11 個檔案；資料庫裡指向 `docs/attachments` 的列為 0。
+    - 11 個檔案都已在 repo git 歷史中，最早出現在 `abbafb4`（2025-12-30），內容一致。
+    - 同名的 note #277「人類五指的神經限制」本身就是完整版（OPT-20 已合併）。
+  - 處理：搬移，不刪除。搬到 `/home/mask0709/prism/backups/repo-leftover-attachments-20261007/`，用的是 `mv -n`，`MANIFEST.sha256` 記下每個檔案的雜湊。
+    - 搬移前再查一次引用數，仍為 0。
+    - 搬移後：雜湊逐檔比對通過、隔離資料夾內有 11 個檔、原資料夾已清空、`/healthz` 回 200。
+    - 要還原：`mv "$Q"/*_20251230_*.md /home/mask0709/prism/docs/attachments/`。
 - `PRISM-OPT-78`（本機驗證；下次 Pi cutover 生效，因為部署時會上傳本機的 smoke 腳本）：
   - `scripts/go_primary_full_workflow_smoke.py` 新增 `remove_smoke_tags`。刪掉自己的筆記之後，只刪名稱完全等於本次 label 的 3 個 smoke 標籤（`-go-primary`、`-go-primary-updated`、`-imported`），而且必須沒有掛在任何筆記上；刪完重新列出確認，有殘留就讓 smoke 失敗。
   - runtime 沒有 `local-tag-write`（例如 package smoke）時不刪，在證據檔記錄 `skipped`。這是明確記錄，不算成功。
@@ -995,7 +1005,7 @@
 | PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Done | — | OPT-75 驗收 |
 | PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Done | — | Pi 部署 OPT-20 |
 | PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Done | — | V2.7.0 部署 |
-| PRISM-OPT-79 | Pi `docs/attachments` 內 11 個 2026-03-15 從 repo 複製來的測試檔（疑似孤兒） | Todo | — | OPT-77 調查 |
+| PRISM-OPT-79 | Pi `docs/attachments` 內 11 個 2026-03-15 從 repo 複製來的測試檔（疑似孤兒） | Done | — | OPT-77 調查 |
 
 ### P3 / Future — 需要證據或明確 promote
 
