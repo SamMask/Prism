@@ -52,6 +52,7 @@ export function SystemStatsSection({ stats, isLoading, onRefresh }: SystemStatsS
             {stats?.images_count ?? '-'}
           </div>
           <div className="text-text-muted text-sm">{t('settings.systemStats.images')}</div>
+          {stats && <div className="text-text-muted text-xs">{stats.total_size_mb} MB</div>}
         </div>
       </div>
 

@@ -45,6 +45,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     selectedTagId,
     showArchived,
     appVersion,
+    libraryTotal,
     setSelectedCategory,
     setSelectedTag,
     setShowArchived,
@@ -192,7 +193,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
                   <Home size={16} />
                   <span className={`min-w-0 flex-1 truncate ${desktopCollapsedClass}`}>{t('sidebar.all')}</span>
                   <span className={`font-mono text-[11px] text-text-muted ${desktopCollapsedClass}`}>
-                    {categories.reduce((sum, category) => sum + (category.count || 0), 0).toLocaleString()}
+                    {libraryTotal === null ? '–' : libraryTotal.toLocaleString()}
                   </span>
                 </Link>
                 <Link

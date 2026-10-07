@@ -1040,6 +1040,8 @@ func (s *server) handleTest(w http.ResponseWriter, r *http.Request) {
 		"notes_count":      "Notes",
 		"categories_count": "Categories",
 		"tags_count":       "Tags",
+		// Library total shown by the UI: every note except archived ones (PRISM-OPT-31).
+		"library_count": "Notes WHERE is_archived = 0",
 	} {
 		var count int
 		if err := s.db.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {

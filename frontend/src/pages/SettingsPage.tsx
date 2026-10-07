@@ -86,17 +86,26 @@ export function SettingsPage() {
   const fetchStats = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/test');
-      const data = await response.json();
-      if (data.status === 'ok') {
+      const [response, testResponse] = await Promise.all([
+        fetch('/api/system/stats'),
+        fetch('/api/test'),
+      ]);
+      const body = await response.json();
+      const test = await testResponse.json();
+      if (body.status === 'success') {
+        const db = body.data?.database;
+        const uploads = body.data?.uploads;
         setStats({
-          notes_count: data.stats?.notes_count || 0,
-          categories_count: data.stats?.categories_count || 0,
-          tags_count: data.stats?.tags_count || 0,
-          images_count: 0,
-          total_size_mb: 0,
+          // Same definition as Sidebar / Header / Footer: archived notes are not part of the Library total.
+          notes_count: (db?.notes_count || 0) - (db?.archived_count || 0),
+          categories_count: test.stats?.categories_count || 0,
+          tags_count: db?.tags_count || 0,
+          images_count: uploads?.files || 0,
+          total_size_mb: uploads?.size_mb || 0,
         });
       }
+      // Reuse this /api/test response instead of requesting it again for the shared Library total.
+      if (typeof test.stats?.library_count === 'number') useAppStore.setState({ libraryTotal: test.stats.library_count });
     } catch (error) {
       console.error('Failed to fetch stats:', error);
     } finally {

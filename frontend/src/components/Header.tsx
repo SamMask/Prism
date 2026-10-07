@@ -38,7 +38,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
     selectedCategoryId,
     selectedTagId,
     showArchived,
-    totalNotes,
+    libraryTotal,
     openCommandPalette,
     openReading,
   } = useAppStore()
@@ -169,7 +169,7 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
       ? t('header.archive')
         : activeCategoryName || (activeTag ? `#${activeTag.name}` : t('header.all'))
   const pageMeta = isHomeRoute
-    ? t('header.homeMeta', { count: totalNotes.toLocaleString() })
+    ? t('header.homeMeta', { count: libraryTotal === null ? '–' : libraryTotal.toLocaleString() })
     : location.pathname === '/prompt-builder'
       ? t('header.promptBuilderMeta')
       : t('header.settingsMeta')

@@ -9,7 +9,7 @@ import { useTranslation } from '../hooks/useTranslation'
 import { ToastContainer } from './ui/Toast'
 
 export function Layout() {
-  const { totalNotes, tags, closeEditor, appVersion, fetchAppVersion } = useAppStore()
+  const { libraryTotal, tags, closeEditor, appVersion, fetchAppVersion } = useAppStore()
   const { t } = useTranslation()
   const location = useLocation()
   const isLibraryRoute = location.pathname === '/'
@@ -46,7 +46,7 @@ export function Layout() {
           <span>·</span>
           <span>{t('shell.sqliteWal')}</span>
           <span>·</span>
-          <span>{t('shell.notesCount', { count: totalNotes.toLocaleString() })}</span>
+          <span>{t('shell.notesCount', { count: libraryTotal === null ? '–' : libraryTotal.toLocaleString() })}</span>
           <span>·</span>
           <span>{t('shell.tagsCount', { count: tags.length.toLocaleString() })}</span>
         </footer>

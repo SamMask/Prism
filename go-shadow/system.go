@@ -203,6 +203,11 @@ func (s *server) handleSystemStats(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	uploadFiles, err := uploadFileCount(s.runtime.uploadsDir)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
 	writeJSON(w, http.StatusOK, response{
 		"status": "success",
 		"data": response{
@@ -217,6 +222,7 @@ func (s *server) handleSystemStats(w http.ResponseWriter, r *http.Request) {
 			"uploads": response{
 				"size_bytes": uploadSize,
 				"size_mb":    roundMB(uploadSize),
+				"files":      uploadFiles,
 			},
 		},
 	})
@@ -750,6 +756,25 @@ func directorySize(root string) (int64, error) {
 		return nil
 	})
 	return total, err
+}
+
+// uploadFileCount counts uploaded files, not the generated *_thumb derivatives (PRISM-OPT-31).
+func uploadFileCount(root string) (int, error) {
+	count := 0
+	if _, err := os.Stat(root); os.IsNotExist(err) {
+		return 0, nil
+	}
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		name := entry.Name()
+		if !entry.IsDir() && !strings.HasSuffix(strings.TrimSuffix(name, filepath.Ext(name)), "_thumb") {
+			count++
+		}
+		return nil
+	})
+	return count, err
 }
 
 func (s *server) countRows(table, where string) (int, error) {

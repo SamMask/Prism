@@ -25,7 +25,8 @@ interface AppState {
   // Notes
   notes: Note[]
   isLoading: boolean
-  totalNotes: number
+  totalNotes: number // size of the current list result (search / filter aware)
+  libraryTotal: number | null // whole Library, archived excluded; the one total shown by Sidebar/Header/Footer
   currentPage: number
   hasMore: boolean
   searchDiagnostics: SearchDiagnostics | null
@@ -62,6 +63,7 @@ interface AppState {
   fetchCategories: () => Promise<void>
   fetchTags: () => Promise<void>
   fetchAppVersion: () => Promise<void>
+  fetchLibraryTotal: () => Promise<void>
   setLocale: (locale: Locale) => void
   setViewMode: (mode: ViewMode) => void
   openEditor: (note: Note | null, options?: { preview?: boolean; inPlace?: boolean }) => void
@@ -89,6 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   notes: [],
   isLoading: false,
   totalNotes: 0,
+  libraryTotal: null,
   currentPage: 1,
   hasMore: true,
   searchDiagnostics: null,
@@ -163,6 +166,8 @@ export const useAppStore = create<AppState>((set, get) => ({
         isLoading: false,
         notesRetryReset: false,
       })
+      // Mutations (create / archive / delete / import) all re-run fetchNotes(true); keep the Library total in step.
+      if (reset) void get().fetchLibraryTotal()
     } catch (error) {
       if (requestId !== notesRequestSequence) return
       console.error('Failed to fetch notes:', error)
@@ -206,8 +211,20 @@ export const useAppStore = create<AppState>((set, get) => ({
       const response = await fetch('/api/test')
       const data = await response.json()
       if (typeof data.version === 'string' && data.version) set({ appVersion: data.version })
+      if (typeof data.stats?.library_count === 'number') set({ libraryTotal: data.stats.library_count })
     } catch (error) {
       console.error('Failed to fetch app version:', error)
+    }
+  },
+
+  // Library total = notes that are not archived (uncategorized included), independent of search / filters.
+  fetchLibraryTotal: async () => {
+    try {
+      const response = await fetch('/api/test')
+      const data = await response.json()
+      if (typeof data.stats?.library_count === 'number') set({ libraryTotal: data.stats.library_count })
+    } catch (error) {
+      console.error('Failed to fetch library total:', error)
     }
   },
 
@@ -307,8 +324,10 @@ export const useAppStore = create<AppState>((set, get) => ({
       set(state => ({
         notes: state.notes.filter(n => n.id !== id),
         totalNotes: state.totalNotes - 1,
+        libraryTotal: state.libraryTotal === null ? null : Math.max(0, state.libraryTotal - 1),
         isDeleting: false,
       }))
+      void get().fetchLibraryTotal()
     } catch (error) {
       console.error('Failed to delete note:', error)
       set({ isDeleting: false })
@@ -332,6 +351,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         selectedNoteIds: [],
         isDeleting: false,
       }))
+      void get().fetchLibraryTotal()
       return preview
     } catch (error) {
       console.error('Failed to delete notes:', error)

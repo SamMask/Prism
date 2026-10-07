@@ -467,6 +467,23 @@
   - e2e：新增 `e2e/test_mobile_sort_density.py` 3 項，在 HEAD 上失敗；`-Release` gate 通過（pytest 422、e2e 20）。
   - 同時期另一個修正（獨立 commit `f342139`）：`test_desktop_shell_go_build_and_runtime_smoke` 不再重跑 `go test ./...`。它原本設 120s timeout，隨著 Go 測試變多，在 CI 上逾時，造成 OPT-66 那次 push 的 CI 失敗；修正後 CI 恢復綠燈。
   - 已知（低）：排序選單沒有方向鍵導覽；mobile 預設 list 只在第一次載入時判斷。
+- `PRISM-OPT-31`（本機驗證；未發版、未部署 Pi）：
+  - API（additive）：`/api/test` 的 stats 加上 `library_count`（未封存筆記數，含未分類）；`/api/system/stats` 的 uploads 加上 `files`（不含 `*_thumb.*` 縮圖）。
+  - 前端：
+    - store 的 `libraryTotal` 跟著啟動時那次 `/api/test` 一起讀，之後在 `fetchNotes(reset)` 與刪除後刷新。Sidebar 的 All、Header 首頁 meta、Footer 都用它；篩選後的數字只出現在 HomePage 副標，那裡原本就有標示。
+    - Maintenance 改讀 `/api/system/stats`：notes＝總數減封存，images＝`uploads.files`，並顯示大小。
+    - 讀取前或失敗時顯示「–」，不顯示 0。
+    - 主代理另外讓 SettingsPage 重用自己那次 `/api/test` 的 `library_count`，不再多打一次。
+  - 驗證：
+    - Go `TestLibraryCountExcludesArchivedAndUploadStatsCountFiles`、pytest source-lock 都在 HEAD 上失敗。
+    - prism-verifier 的隔離 runtime（7 筆、含 1 筆封存與 1 筆未分類、3 張圖加縮圖）17/17：
+      - 三處都是 6（舊算法會是 7）；直接載入 `/settings` 不是 0；搜尋或篩選後總數不變。
+      - 封存、取消封存、刪除、建立、JSON 匯入後都同步更新；Maintenance 與 API 一致；390px 沒有溢位。
+    - `-Release` gate 通過（pytest 423、e2e 20）。
+  - 已知（低）：
+    - 每次列表 reset 都會多打一次 `/api/test`（4 個 COUNT），可以在 PRISM-OPT-32 收斂。
+    - server-system 停用時，Maintenance 四張卡都顯示「–」。
+    - 分類計數仍包含封存筆記，規格要求不改這個語意。
 
 ### P1 — 下一輪
 
@@ -510,7 +527,7 @@
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
 | PRISM-OPT-30 | Mobile 排序控制與首屏密度 | Done | — | UX-04 |
-| PRISM-OPT-31 | 筆記計數改用單一來源；Maintenance 改讀 `/api/system/stats` | Todo | — | UX-05 |
+| PRISM-OPT-31 | 筆記計數改用單一來源；Maintenance 改讀 `/api/system/stats` | Done | — | UX-05 |
 | PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Todo | 21 | PERF-02 |
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Todo | — | IA-01 |
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Todo | — | IA-02 |

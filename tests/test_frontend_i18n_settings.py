@@ -55,6 +55,22 @@ def test_ui_version_comes_from_runtime_not_hardcoded_literals():
     assert "document.title" in layout and "fetchAppVersion" in layout
 
 
+def test_library_total_has_one_source_and_maintenance_reads_real_stats():
+    # PRISM-OPT-31: Sidebar All / Header / Footer share store.libraryTotal (non-archived, from /api/test).
+    layout = LAYOUT_PATH.read_text(encoding="utf-8")
+    for path in (SIDEBAR_PATH, HEADER_PATH, LAYOUT_PATH):
+        text = path.read_text(encoding="utf-8")
+        assert "libraryTotal" in text, f"{path.name} must show the Library total"
+        assert "totalNotes" not in text, f"{path.name} must not show the filtered list count"
+    assert "category.count || 0), 0)" not in SIDEBAR_PATH.read_text(encoding="utf-8")
+    store = STORE_PATH.read_text(encoding="utf-8")
+    assert "stats?.library_count" in store and "fetchLibraryTotal" in store
+    settings = SETTINGS_PATH.read_text(encoding="utf-8")
+    assert "/api/system/stats" in settings and "images_count: 0" not in settings
+    assert "uploads?.files" in settings
+    assert "fetchLibraryTotal" not in layout  # startup total rides on the existing fetchAppVersion call
+
+
 def test_i18n_exposes_four_locales_and_pure_translate_api():
     i18n = I18N_PATH.read_text(encoding="utf-8")
 

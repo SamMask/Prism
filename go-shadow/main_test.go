@@ -3093,6 +3093,60 @@ func TestAPITestReturnsRuntimeVersion(t *testing.T) {
 	}
 }
 
+func TestLibraryCountExcludesArchivedAndUploadStatsCountFiles(t *testing.T) {
+	db, err := openDB(createSpikeDB(t), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var total int
+	if err := db.QueryRow("SELECT COUNT(*) FROM Notes").Scan(&total); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Notes (title, content, is_archived) VALUES ('封存筆記 archived', '內容', 1)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO Notes (title, content, category_id) VALUES ('未分類筆記', '內容', NULL)"); err != nil {
+		t.Fatal(err)
+	}
+	uploads := t.TempDir()
+	for _, name := range []string{"a.png", "b.jpg", "a_thumb.webp", "b_thumb.webp"} {
+		if err := os.WriteFile(filepath.Join(uploads, name), []byte("12345"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	srv := &server{db: db, runtime: runtimeConfig{enableServerSystem: true, uploadsDir: uploads}}
+
+	rec := httptest.NewRecorder()
+	srv.handleTest(rec, httptest.NewRequest(http.MethodGet, "/api/test", nil))
+	var test struct {
+		Stats map[string]int `json:"stats"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &test); err != nil {
+		t.Fatal(err)
+	}
+	if test.Stats["notes_count"] != total+2 || test.Stats["library_count"] != total+1 {
+		t.Fatalf("library_count must exclude only archived notes (total=%d): %+v", total, test.Stats)
+	}
+
+	rec = httptest.NewRecorder()
+	srv.handleSystemStats(rec, httptest.NewRequest(http.MethodGet, "/api/system/stats", nil))
+	var stats struct {
+		Data struct {
+			Uploads struct {
+				SizeBytes int64 `json:"size_bytes"`
+				Files     int   `json:"files"`
+			} `json:"uploads"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &stats); err != nil {
+		t.Fatalf("decode: %v body=%s", err, rec.Body.String())
+	}
+	if stats.Data.Uploads.Files != 2 || stats.Data.Uploads.SizeBytes != 20 {
+		t.Fatalf("uploads stats must count originals only but size everything: %+v", stats.Data.Uploads)
+	}
+}
+
 func TestSearchIntegrityDiagnosesAndRebuildsFTSOnly(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	db, err := openDB(dbPath, true)
