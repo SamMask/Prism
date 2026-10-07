@@ -118,6 +118,7 @@ git diff --check
 | PRISM-OPT-72 | B | S | prism-builder | prism-verifier |
 | PRISM-OPT-73 | F | S | prism-builder | prism-verifier |
 | PRISM-OPT-74 | X | S | prism-engineer | prism-verifier |
+| PRISM-OPT-75 | X | S | prism-engineer | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -673,6 +674,15 @@ git diff --check
 - **修改範圍**：附件上傳的寫檔改成 `O_EXCL`。檔名已存在時加上去重後綴重試（比照 PRISM-OPT-64 匯入的作法，能共用就共用），絕不覆寫既有檔案。
 - **不要修改**：附件 API 形狀；既有附件；OPT-66 的共用檔判斷。
 - **驗收**（Go test，修正前失敗）：在同一秒內（固定時間或 stub 時鐘）上傳兩個同名附件，兩個檔案都存在，各自的附件列讀回各自的內容。
+- **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+
+### PRISM-OPT-75 — 同一秒上傳同名圖片會覆寫前一張
+
+- **Finding**：PRISM-OPT-74 施工時發現（2026-10-07；HEAD 原本就有）｜ **優先級**：P2（可能遺失資料）
+- **現象**：圖片上傳（`go-shadow/uploads.go`，含 `/api/upload` 與 URL 下載、匯入時寫圖的路徑）的檔名是 `<時間戳到秒>_<檔名>`，用 `os.WriteFile` 寫入。同一秒內上傳兩張 sanitize 後同名的圖片時，後一張會蓋掉前一張的原圖與 `_thumb.webp`，前一則筆記因此顯示成後一張圖。
+- **修改範圍**：圖片寫入改用 `O_EXCL`，撞名時加去重後綴，同時套用到原圖與縮圖，兩者要成對。比照 PRISM-OPT-74 的 `createAttachmentFile`，能共用就共用。回應中的 `filename`／`url` 必須是實際寫入的名稱。失敗時只清掉這次新建的檔案。
+- **不要修改**：upload API 形狀；OPT-67 的 sanitize 規則；OPT-64 匯入既有的 skip 規則（同名已存在時沿用目標端）。
+- **驗收**（Go test，修正前要失敗）：用固定時鐘，在同一秒上傳兩張同名但內容不同的圖片。兩組原圖與縮圖都存在，各自的 URL 讀回各自的內容；預先放好的同名無關檔案不會被改動。
 - **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）

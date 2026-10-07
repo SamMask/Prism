@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 )
 
 func (s *server) handleAttachmentDetail(w http.ResponseWriter, r *http.Request) {
@@ -220,27 +219,19 @@ func (s *server) uploadAttachment(w http.ResponseWriter, r *http.Request, noteID
 
 	originalName := sanitizeAttachmentFilename(header.Filename)
 	baseName, ext := splitAttachmentName(originalName)
-	uniqueFilename := fmt.Sprintf("%s_%s%s", baseName, time.Now().Format("20060102_150405"), ext)
-	if uniqueFilename == "" || uniqueFilename == "." {
-		writeError(w, http.StatusBadRequest, "No file selected")
-		return
-	}
+	stampedName := fmt.Sprintf("%s_%s", baseName, uploadNow().Format("20060102_150405"))
 
-	// The multipart body is fully parsed; the file write can overwrite an attachment file that
-	// protects media references, so it runs under noteFilesMu. The reply echoes the title
-	// (unbounded) and is written after the explicit unlock.
+	// The multipart body is fully parsed; the new attachment file must not race other note-file
+	// writers, so it is created under noteFilesMu. The reply echoes the title (unbounded) and is
+	// written after the explicit unlock.
 	unlock := s.lockNoteFiles()
 	defer unlock()
-	if err := os.MkdirAll(s.runtime.attachmentsDir, 0755); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	targetPath := filepath.Join(s.runtime.attachmentsDir, uniqueFilename)
-	target, err := os.OpenFile(targetPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	target, uniqueFilename, err := createAttachmentFile(s.runtime.attachmentsDir, stampedName, ext)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	targetPath := filepath.Join(s.runtime.attachmentsDir, uniqueFilename)
 	sizeBytes, copyErr := io.Copy(target, io.LimitReader(file, maxAttachmentFileBytes+1))
 	closeErr := target.Close()
 	if copyErr != nil {
@@ -349,6 +340,31 @@ func sanitizeAttachmentFilename(filename string) string {
 func splitAttachmentName(filename string) (string, string) {
 	ext := filepath.Ext(filename)
 	return strings.TrimSuffix(filename, ext), ext
+}
+
+// createAttachmentFile creates <baseName><ext> in dir, or <baseName>_<n><ext> (n = 2, 3, ...)
+// when that name is taken. It never opens a file that is already there, so two uploads that
+// sanitize to the same name in the same second keep separate files (PRISM-OPT-74). It returns
+// the new file, open for writing, and its name; on a later failure the caller removes it.
+func createAttachmentFile(dir, baseName, ext string) (*os.File, string, error) {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return nil, "", err
+	}
+	for n := 1; n <= 1000; n++ {
+		name := baseName + ext
+		if n > 1 {
+			name = fmt.Sprintf("%s_%d%s", baseName, n, ext)
+		}
+		file, err := os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0644)
+		if errors.Is(err, os.ErrExist) {
+			continue
+		}
+		if err != nil {
+			return nil, "", err
+		}
+		return file, name, nil
+	}
+	return nil, "", fmt.Errorf("no free attachment filename for %s%s", baseName, ext)
 }
 
 func resolveAttachmentMutationPath(dataDir, relativePath string) (string, bool) {

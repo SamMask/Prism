@@ -617,6 +617,7 @@ func (s *server) duplicateNoteAttachments(tx *sql.Tx, sourceNoteID int, targetNo
 		var srcAbs string
 		var destAbs string
 		var destRel string
+		var sizeBytes int64
 		autoExtracted := isAutoExtracted.Valid && isAutoExtracted.Int64 != 0
 		if autoExtracted || strings.HasPrefix(cleanedRel, "docs/notes/") {
 			var ok bool
@@ -653,19 +654,30 @@ func (s *server) duplicateNoteAttachments(tx *sql.Tx, sourceNoteID int, targetNo
 			if ext == "" {
 				ext = "." + normalizedType
 			}
-			filename := fmt.Sprintf("%s_copy_%d_%d%s", baseName, targetNoteID, attachmentID, ext)
+			copyBase := fmt.Sprintf("%s_copy_%d_%d", baseName, targetNoteID, attachmentID)
+			if !isSubpath(filepath.Join(s.runtime.attachmentsDir, copyBase+ext), s.runtime.dataDir) {
+				cleanupCreated()
+				return nil, fmt.Errorf("unsafe attachment destination: %s", path.Join("docs", "attachments", copyBase+ext))
+			}
+			// The copy gets a fresh name instead of replacing a file that is already there,
+			// e.g. one a JSON import restored for another row (PRISM-OPT-74).
+			filename, size, err := copyAttachmentFile(srcAbs, s.runtime.attachmentsDir, copyBase, ext)
+			if err != nil {
+				cleanupCreated()
+				return nil, err
+			}
 			destRel = path.Join("docs", "attachments", filepath.ToSlash(filename))
 			destAbs = filepath.Join(s.runtime.attachmentsDir, filename)
-			if !isSubpath(destAbs, s.runtime.dataDir) {
-				cleanupCreated()
-				return nil, fmt.Errorf("unsafe attachment destination: %s", destRel)
-			}
+			sizeBytes = size
 		}
 
-		sizeBytes, err := copyFileAtomic(srcAbs, destAbs)
-		if err != nil {
-			cleanupCreated()
-			return nil, err
+		if autoExtracted {
+			size, err := copyFileAtomic(srcAbs, destAbs)
+			if err != nil {
+				cleanupCreated()
+				return nil, err
+			}
+			sizeBytes = size
 		}
 		createdFiles = append(createdFiles, destAbs)
 
@@ -719,6 +731,29 @@ func copyFileAtomic(sourcePath, destinationPath string) (int64, error) {
 		return 0, err
 	}
 	return sizeBytes, nil
+}
+
+// copyAttachmentFile copies sourcePath into a new file from createAttachmentFile and returns the
+// new file's name and size. A failed copy removes only the file it created.
+func copyAttachmentFile(sourcePath, dir, baseName, ext string) (string, int64, error) {
+	source, err := os.Open(sourcePath)
+	if err != nil {
+		return "", 0, err
+	}
+	defer source.Close()
+	target, name, err := createAttachmentFile(dir, baseName, ext)
+	if err != nil {
+		return "", 0, err
+	}
+	sizeBytes, err := io.Copy(target, source)
+	if closeErr := target.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		_ = os.Remove(filepath.Join(dir, name))
+		return "", 0, err
+	}
+	return name, sizeBytes, nil
 }
 
 func removeFiles(paths []string) {

@@ -806,6 +806,23 @@
     - `-Release` gate 通過（pytest 427、e2e 56）。
     - 由主代理讀報告與 gate 驗收。
   - 已知（低）：閱讀途中才被刪除的筆記，要等下次切換或重新讀取時才會處理，和 OPT-38 一樣採懶處理。
+- `PRISM-OPT-74`（本機驗證；未發版、未部署 Pi）：
+  - Go：
+    - 新增 `createAttachmentFile`：用 `O_EXCL` 依序嘗試 `<base><ext>`、`<base>_2<ext>`，最多到 `_1000`。名稱已被占用就換下一個；其他錯誤直接回傳；永遠不覆寫既有檔案。
+    - 附件上傳改用這個函式，時間戳改用既有的可替換時鐘 `uploadNow`。
+    - 複製筆記時的一般附件（`_copy_`）改用 `copyAttachmentFile`，原本的 `copyFileAtomic` 會先刪掉目的檔。`docs/notes/note_<id>.md` 是固定命名，維持原樣。
+    - 失敗時只刪除這次新建的檔案；沒有新增鎖，沿用 `noteFilesMu`。
+  - 驗證：
+    - 新增 `go-shadow/attachment_no_overwrite_test.go` 的 4 個測試，都經 HTTP handler、資料為 CJK、固定時鐘。修正前 4 個都失敗，修正後都通過：
+      - 同秒上傳三個同名附件，三個檔案都在，各自讀回各自的內容。
+      - 預先放好的同名無關檔案，內容不變。
+      - insert 失敗時，只清掉新檔，既有檔案不動。
+      - 複製筆記時，不會覆寫既有的同名 `_copy_` 檔。
+    - `-Release` gate 通過（pytest 427、e2e 56）。
+    - 主代理讀 diff 驗收。
+  - 已知：
+    - 圖片上傳（`uploads.go`，`<時間戳>_<檔名>` 加 `os.WriteFile`）也有同秒同名覆寫的問題，原圖與縮圖都會被蓋掉 → 已開 `PRISM-OPT-75`。
+    - `note_<id>.md` 在還原舊 DB、序號回捲後，可能蓋掉孤兒檔；屬筆記檔範圍，不在本單。
 
 ### P1 — 下一輪
 
@@ -871,7 +888,8 @@
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Done | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Done | — | OPT-36 追蹤 |
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Done | 38 | OPT-38 追蹤 |
-| PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Todo | — | OPT-67 追蹤 |
+| PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Done | — | OPT-67 追蹤 |
+| PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Todo | — | OPT-74 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 
