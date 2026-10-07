@@ -44,6 +44,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
     selectedCategoryId,
     selectedTagId,
     showArchived,
+    appVersion,
     setSelectedCategory,
     setSelectedTag,
     setShowArchived,
@@ -159,7 +160,7 @@ export function Sidebar({ isMobileOpen, onMobileClose }: SidebarProps) {
           </div>
           <div className={`min-w-0 flex-1 ${desktopCollapsedClass}`}>
             <div className="text-[17px] font-semibold leading-tight tracking-tight text-text-primary">Prism</div>
-            <div className="mt-0.5 font-mono text-[11px] text-text-muted">V2.6.1</div>
+            {appVersion && <div className="mt-0.5 font-mono text-[11px] text-text-muted">V{appVersion}</div>}
           </div>
           <button
             type="button"

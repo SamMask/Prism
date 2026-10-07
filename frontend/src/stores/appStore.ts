@@ -54,12 +54,14 @@ interface AppState {
   // Data
   categories: Category[]
   tags: Tag[]
+  appVersion: string | null
 
   // Actions
   fetchNotes: (reset?: boolean) => Promise<void>
   retryFetchNotes: () => Promise<void>
   fetchCategories: () => Promise<void>
   fetchTags: () => Promise<void>
+  fetchAppVersion: () => Promise<void>
   setLocale: (locale: Locale) => void
   setViewMode: (mode: ViewMode) => void
   openEditor: (note: Note | null, options?: { preview?: boolean; inPlace?: boolean }) => void
@@ -112,6 +114,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   categories: [],
   tags: [],
+  appVersion: null,
 
   // Actions
   fetchNotes: async (reset = false) => {
@@ -194,6 +197,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ tags })
     } catch (error) {
       console.error('Failed to fetch tags:', error)
+    }
+  },
+
+  // The runtime version (Go prismVersion()) is the single source; UI never hardcodes it.
+  fetchAppVersion: async () => {
+    try {
+      const response = await fetch('/api/test')
+      const data = await response.json()
+      if (typeof data.version === 'string' && data.version) set({ appVersion: data.version })
+    } catch (error) {
+      console.error('Failed to fetch app version:', error)
     }
   },
 

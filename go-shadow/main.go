@@ -1043,7 +1043,7 @@ func (s *server) handleTest(w http.ResponseWriter, r *http.Request) {
 	} {
 		var count int
 		if err := s.db.QueryRow("SELECT COUNT(*) FROM " + table).Scan(&count); err != nil {
-			writeJSON(w, http.StatusOK, response{"status": "ok", "message": "Prism API is running!", "error": err.Error()})
+			writeJSON(w, http.StatusOK, response{"status": "ok", "message": "Prism API is running!", "version": prismVersion(), "error": err.Error()})
 			return
 		}
 		counts[key] = count
@@ -1051,6 +1051,7 @@ func (s *server) handleTest(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response{
 		"status":  "ok",
 		"message": "Prism API is running!",
+		"version": prismVersion(),
 		"stats":   counts,
 	})
 }

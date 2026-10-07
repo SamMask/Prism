@@ -14,7 +14,6 @@ import { ServerDashboardSection } from '../components/settings/ServerDashboardSe
 import { useTranslation } from '../hooks/useTranslation';
 
 interface SystemStats {
-  version?: string;
   notes_count: number;
   categories_count: number;
   tags_count: number;
@@ -69,7 +68,7 @@ function SectionPanel({
 }
 
 export function SettingsPage() {
-  const { categories } = useAppStore();
+  const { categories, appVersion } = useAppStore();
   const { t } = useTranslation();
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState<SystemStats | null>(null);
@@ -91,7 +90,6 @@ export function SettingsPage() {
       const data = await response.json();
       if (data.status === 'ok') {
         setStats({
-          version: data.version,
           notes_count: data.stats?.notes_count || 0,
           categories_count: data.stats?.categories_count || 0,
           tags_count: data.stats?.tags_count || 0,
@@ -193,7 +191,7 @@ export function SettingsPage() {
             <SectionPanel title={t('settings.about.title')} icon={<Info size={20} className="text-primary" />} testId="settings-about">
               <div className="space-y-2 text-text-secondary">
                 <p><strong className="text-text-primary">Prism</strong></p>
-                <p>{t('settings.about.version', { version: stats?.version || '2.6.1' })}</p>
+                {appVersion && <p>{t('settings.about.version', { version: appVersion })}</p>}
                 <p>{t('settings.about.frontend')}</p>
                 <p>{t('settings.about.backend')}</p>
                 <p className="text-text-muted text-sm pt-2">

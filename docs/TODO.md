@@ -419,6 +419,14 @@
   - 修改鎖定舊文案的 source test，斷言方式不變。
   - 驗證：`npm run build` 通過；`git diff --check` 通過；隔離 runtime 的 headless 瀏覽器在 4 種語言 × 390／1280 都沒有水平捲動，文字正常換行。
   - 已知：OPT-20 在正式資料上執行後，可以拿掉預覽提示；PRISM-OPT-39 補上欄位後，JSON 文案要同步修改。
+- `PRISM-OPT-24`（本機驗證；未發版、未部署 Pi）：
+  - `/api/test` 加上 `version`（`prismVersion()`，additive）。前端的 `appStore.fetchAppVersion()` 由 `Layout` 在啟動時呼叫一次，供 Sidebar、Settings → About 與 `document.title`（`Prism V<ver>`）使用。
+  - `index.html` 的 title 改為 `Prism`。讀取中或失敗時不顯示假版本。
+  - `Sidebar.tsx`、`SettingsPage.tsx`、`index.html` 不再有版本字面值，由 regex source test 鎖住。`frontend/package.json`（private、沒有用到）不列入版本更新，已寫進 `RELEASE_CHECKLIST.md` 新增的 Version Bump 段。
+  - 驗證：
+    - Go `TestAPITestReturnsRuntimeVersion`、pytest source test 都有 fail-before。
+    - prism-verifier 的假版本證明：`prismVersion()` 改成 7.7.7-verify 後，title、Sidebar、About 在 1280 與 390 都跟著變；真實 build 仍顯示 2.6.1；擋掉 `/api/test` 時不顯示任何版本。
+    - 整個 SPA 只讀一次版本；`-Release` gate 通過（pytest 422 passed、e2e 17 passed）。
 
 ### P1 — 下一輪
 
@@ -428,7 +436,7 @@
 | PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Done | — | UX-02 |
 | PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Done | 建議在 21 之後 | UX-03 |
 | PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Done | — | FEAT-03 |
-| PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Todo | — | TECH-01 |
+| PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Done | — | TECH-01 |
 | PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Done | — | TECH-04 |
 | PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Done | 建議在 15、18、19 之後 | TECH-02 |
 | PRISM-OPT-27 | 治理文件瘦身、修正斷鏈、解除 docs-lock 測試耦合 | Done | — | TECH-03 |

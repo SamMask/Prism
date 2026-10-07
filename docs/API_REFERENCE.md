@@ -1132,7 +1132,7 @@ Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism
 
 ## 16. 建議給 murmur厭世貓的最小對接流程
 
-1. `GET /api/test` 檢查服務是否活著。
+1. `GET /api/test` 檢查服務是否活著；回應帶 `version`（`prismVersion()`，additive，PRISM-OPT-24），前端以它顯示版本。
 2. `GET /api/categories` 先建立分類名稱對照表。
 3. `GET /api/tags` 取得現有 tags。
 4. `GET /api/notes?q=...&page=1&per_page=20` 做查詢。

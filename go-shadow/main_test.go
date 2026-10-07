@@ -3066,6 +3066,33 @@ func TestPrismVersionIgnoresLegacyConfigPy(t *testing.T) {
 	}
 }
 
+func TestAPITestReturnsRuntimeVersion(t *testing.T) {
+	db, err := openDB(createSpikeDB(t), true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	srv := &server{db: db}
+
+	t.Setenv("PRISM_VERSION", "9.9.9-test")
+	rec := httptest.NewRecorder()
+	srv.handleTest(rec, httptest.NewRequest(http.MethodGet, "/api/test", nil))
+	var payload struct {
+		Status  string         `json:"status"`
+		Version string         `json:"version"`
+		Stats   map[string]int `json:"stats"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode: %v body=%s", err, rec.Body.String())
+	}
+	if payload.Status != "ok" || payload.Version != prismVersion() || payload.Version != "9.9.9-test" {
+		t.Fatalf("/api/test must return prismVersion(), got %+v", payload)
+	}
+	if _, ok := payload.Stats["notes_count"]; !ok {
+		t.Fatalf("/api/test stats must stay intact, got %+v", payload)
+	}
+}
+
 func TestSearchIntegrityDiagnosesAndRebuildsFTSOnly(t *testing.T) {
 	dbPath := createSpikeDB(t)
 	db, err := openDB(dbPath, true)

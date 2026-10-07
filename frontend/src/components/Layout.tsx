@@ -9,7 +9,7 @@ import { useTranslation } from '../hooks/useTranslation'
 import { ToastContainer } from './ui/Toast'
 
 export function Layout() {
-  const { totalNotes, tags, closeEditor } = useAppStore()
+  const { totalNotes, tags, closeEditor, appVersion, fetchAppVersion } = useAppStore()
   const { t } = useTranslation()
   const location = useLocation()
   const isLibraryRoute = location.pathname === '/'
@@ -18,6 +18,12 @@ export function Layout() {
   useEffect(() => {
     if (!isLibraryRoute) closeEditor()
   }, [isLibraryRoute, closeEditor])
+  useEffect(() => {
+    fetchAppVersion()
+  }, [fetchAppVersion])
+  useEffect(() => {
+    document.title = appVersion ? `Prism V${appVersion}` : 'Prism'
+  }, [appVersion])
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false)
   const openMobileNav = useCallback(() => setIsMobileNavOpen(true), [])
   const closeMobileNav = useCallback(() => setIsMobileNavOpen(false), [])

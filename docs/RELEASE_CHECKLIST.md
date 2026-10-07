@@ -13,6 +13,14 @@
 | Python | 3.11.x | Dev/test-only pytest runner |
 | pytest | 9.0.2 | `requirements.txt` / `requirements-pi.txt` |
 
+## Version Bump
+
+Since PRISM-OPT-24 the app version has one source:
+- Change `prismVersion()` in `go-shadow/system.go`, plus the README badge, release notes and package name.
+- The frontend reads it at runtime from `/api/test` for the browser title, the sidebar label and Settings → About. Do not edit version literals in `Sidebar.tsx`, `SettingsPage.tsx` or `index.html`; a test forbids them.
+- `frontend/package.json` (`private`, unused) is not part of the bump.
+- After building, check that all three UI places show the new version.
+
 ## Required Evidence
 
 Copy this table into the release notes, release PR, or package handoff. Every

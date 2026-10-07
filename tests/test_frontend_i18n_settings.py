@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,17 +43,16 @@ DESKTOP_I18N_ARCHIVE_PATH = (
 )
 
 
-def test_v261_title_sidebar_and_about_version_are_aligned():
-    frontend_index = FRONTEND_INDEX_PATH.read_text(encoding="utf-8")
-    sidebar = SIDEBAR_PATH.read_text(encoding="utf-8")
-    settings = SETTINGS_PATH.read_text(encoding="utf-8")
-
-    assert "<title>Prism V2.6.1</title>" in frontend_index
-    assert "Prism V2.5" not in frontend_index
-    assert ">V2.6.1<" in sidebar
-    assert ">V2.5<" not in sidebar
-    assert "stats?.version || '2.6.1'" in settings
-    assert "stats?.version || '2.5'" not in settings
+def test_ui_version_comes_from_runtime_not_hardcoded_literals():
+    # PRISM-OPT-24: prismVersion() (served by /api/test) is the single source.
+    layout = (SIDEBAR_PATH.parent / "Layout.tsx").read_text(encoding="utf-8")
+    for path in (FRONTEND_INDEX_PATH, SIDEBAR_PATH, SETTINGS_PATH):
+        text = path.read_text(encoding="utf-8")
+        assert not re.search(r"\d+\.\d+\.\d+", text), f"{path.name} must not hardcode a version"
+    assert "<title>Prism</title>" in FRONTEND_INDEX_PATH.read_text(encoding="utf-8")
+    assert "appVersion" in SIDEBAR_PATH.read_text(encoding="utf-8")
+    assert "appVersion" in SETTINGS_PATH.read_text(encoding="utf-8")
+    assert "document.title" in layout and "fetchAppVersion" in layout
 
 
 def test_i18n_exposes_four_locales_and_pure_translate_api():

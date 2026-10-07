@@ -40,12 +40,7 @@ def test_v261_release_version_is_aligned_across_current_surfaces():
         PORTABLE_README_PATH,
     ):
         assert expected_package in _text(path)
-    assert f"Prism V{expected_version}" in _text(ROOT / "frontend" / "index.html")
-    assert f">V{expected_version}<" in _text(ROOT / "frontend" / "src" / "components" / "Sidebar.tsx")
-    assert (
-        f"stats?.version || '{expected_version}'"
-        in _text(ROOT / "frontend" / "src" / "pages" / "SettingsPage.tsx")
-    )
+    # UI surfaces read the runtime version (PRISM-OPT-24); no literal to align there.
 
 
 def _text(path: Path) -> str:
