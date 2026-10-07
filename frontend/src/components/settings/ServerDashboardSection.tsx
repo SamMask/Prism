@@ -210,13 +210,21 @@ export function ServerDashboardSection() {
     setIsRestarting(true);
     try {
       await api.restartService();
-      toast.success(t('settings.serverDashboard.restartCommandSent'));
-      // Auto-reload after a delay
-      setTimeout(() => window.location.reload(), 5000);
     } catch (error: any) {
       const msg = error?.response?.data?.message || error?.message || t('settings.serverDashboard.restartFailed');
       toast.error(msg);
       setIsRestarting(false);
+      return;
+    }
+    toast.info(t('settings.serverDashboard.restartCommandSent'));
+    // Give the old process time to stop answering, then reload only once the
+    // restarted server is healthy again (PRISM-OPT-36).
+    await new Promise((r) => setTimeout(r, 1500));
+    if (await api.waitForHealthy(60000)) {
+      window.location.reload();
+    } else {
+      setIsRestarting(false);
+      toast.error(t('settings.serverDashboard.restartTimeout'));
     }
   };
 
@@ -502,7 +510,7 @@ export function ServerDashboardSection() {
       </div>
 
       {/* ============================================================= */}
-      {/* Service Restart (Linux only) */}
+      {/* Service Restart (real process restart, PRISM-OPT-36) */}
       {/* ============================================================= */}
       {canManageService && (
         <div className="bg-bg-elevated rounded-lg p-4 border border-red-500/20">

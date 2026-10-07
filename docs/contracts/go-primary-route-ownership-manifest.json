@@ -1172,7 +1172,7 @@
       "python_handler": "routes/server.py:restart_service",
       "production_owner": "go-primary",
       "go_primary_owner": "go-primary runtime route",
-      "go_candidate": "implemented local copied-data server/system safe acknowledgement only",
+      "go_candidate": "implemented local copied-data server/system; restarts the process since PRISM-OPT-36 (exit 42 when supervised, re-exec when standalone)",
       "db_side_effects": [],
       "file_side_effects": [],
       "process_side_effects": [

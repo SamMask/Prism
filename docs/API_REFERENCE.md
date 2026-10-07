@@ -1101,13 +1101,13 @@ Current owner: Go primary runtime。Prompt / Wizard options 讀寫 `PRISM_GO_DAT
 
 ## 14. Server API
 
-Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism-go-primary.service` 會啟用 server/system surface。Go primary 的 restart endpoint 只回 safe acknowledgement，不直接重啟 host service；Pi service restart 仍走 systemd / ops script。
+Current owner: Go primary runtime。`scripts/start_go_primary.ps1` 與 Pi `prism-go-primary.service` 會啟用 server/system surface。`POST /api/server/restart` 會真的重啟 Prism 程序（PRISM-OPT-36），與 backup restore 共用同一條重啟路徑：被 supervisor 管理時（systemd 會設 `INVOCATION_ID`，或 `PRISM_GO_SUPERVISED=1`）以 exit code 42 結束，由 Pi 的 `Restart=on-failure` 拉起；獨立執行（桌面版、本機 runtime）則自我 re-exec。它不呼叫 `systemctl`，也不重開機。
 
 以下端點僅供本機 headless 維運，外部 Agent 通常不要接：
 
 - `GET /api/server/hardware`
 - `GET /api/server/logs`
-- `POST /api/server/restart`
+- `POST /api/server/restart`（先回 `{status: "success", message: "restarting", data: {restarting: true, supervised, service_management: {available: true, reason}}}`，約 250ms 後關閉 HTTP server、checkpoint 並關閉 DB，再重啟程序；呼叫端應輪詢 `/healthz` 直到恢復。`GET /api/server/hardware` 的 `service_management.available` 也改為 `true`）
 - `GET /api/server/backup/list`（桌面版：本次啟動跑過每日還原點檢查時，回應多一個 additive 欄位 `auto_restore_point`，內容是 `{status: created|skipped|failed, backup, error, checked_at}`；瀏覽器／Pi 的 runtime 不會出現這個欄位。PRISM-OPT-28）
 - `GET /api/server/backup/download`（以 SQLite `VACUUM INTO` 產生目前 DB 的一致快照，包含 request 當下 active WAL 最新交易，供使用者自行保存；**不在 server-side 留存或輪換備份**——server-side 保留是 `rotate` 的職責；此 DB backup 不包含 `static/uploads/` / `docs/attachments/` 檔案）
 - `POST /api/server/backup/rotate`（以同樣一致 DB snapshot 建立 server-side 備份並輪換；body 可用 `{ "keep_count": N }`，預設保留最近 7 份（2026-10-07 起由 3 改為 7，與桌面版每日自動還原點共用同一組 managed backup 與保留份數）；相容舊鍵 `{ "keep": N }`；仍是 DB-only backup，不等於 deploy data snapshot）

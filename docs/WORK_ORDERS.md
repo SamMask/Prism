@@ -114,6 +114,8 @@ git diff --check
 | PRISM-OPT-68 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-69 | F | S | prism-builder | prism-verifier |
 | PRISM-OPT-70 | T | S | prism-builder | prism-verifier |
+| PRISM-OPT-71 | B | M | prism-engineer | prism-verifier |
+| PRISM-OPT-72 | B | S | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -623,6 +625,30 @@ git diff --check
 - **驗收**：該測試連續跑 20 次都通過（`pytest --count` 或迴圈）；完整 `pytest e2e` 連續 3 次都通過；在 TODO 證據中寫明判定的原因。
 - **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
+### PRISM-OPT-71 — 桌面版重啟的收尾：tray icon 與每日還原點
+
+- **Finding**：PRISM-OPT-36 施工時發現（2026-10-07；還原點 restore 原本就有這個問題）｜ **優先級**：P2（低）
+- **現象**：
+  - `triggerRestart` 用 `os.Exit` 結束程序，沒有執行 desktop shell 的 cleanup（`NIM_DELETE`），舊的 tray icon 會留成幽靈，要滑鼠移過去才消失。
+  - `triggerRestart` 不會等 `ensureDailyRestorePoint`。桌面版剛啟動幾秒內按 Restart 或還原，可能在還原點寫到一半時關閉 DB。
+- **修改範圍**：
+  - 在 desktop shell 的重啟路徑上，結束前先移除 tray icon，用最小的 hook。
+  - 重啟前等每日還原點完成，或讓還原點寫入可以安全中斷（原子寫入：先寫暫存檔再 rename）。兩種做法挑最小改動的一個。
+- **不要修改**：`triggerRestart` 的 supervised 與 standalone 語意；還原點的保留數量。
+- **驗收**：
+  - desktop shell 重啟 3 次，系統匣只有一個 Prism icon（要有截圖或 `Shell_NotifyIcon` 的證據）。
+  - 重啟與每日還原點同時發生時，不會留下壞掉的還原點：Go test 或注入延遲的 smoke。
+- **驗證**：`cd go-shadow && go test ./...`；desktop smoke；`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
+
+### PRISM-OPT-72 — 桌面 GUI 版 log 檔一直是 0 bytes
+
+- **Finding**：PRISM-OPT-36 施工時發現（2026-10-07）｜ **優先級**：P2
+- **現象**：GUI build（`-H=windowsgui`）的 `logs/desktop-shell.log` 一直是 0 bytes。推測原因：`configureDesktopLog` 用 `io.MultiWriter(previous, file)`，GUI 程式的 stderr 無效時第一個 writer 就失敗，MultiWriter 遇錯即停，後面的檔案永遠寫不到。
+- **修改範圍**：先重現並確認原因，再做最小修正。例如 stderr 無效時只寫檔，或讓檔案成為第一個 writer。
+- **不要修改**：log 檔位置與輪替；console 版（debug）的輸出。
+- **驗收**：GUI build 啟動後，log 檔內有啟動訊息（含 data dir 與 listening）；修正前為 0 bytes。debug 版的 console 仍有輸出。
+- **驗證**：`cd go-shadow && go test ./...`；GUI build smoke；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
 - **來源**：使用者需求（2026-10-06）｜ **優先級**：P1
@@ -747,6 +773,7 @@ git diff --check
 - **修改範圍**：二擇一，施工前在工單記錄選擇：
   - A：handler 改走既有的 `s.restart`／`triggerRestart`（還原點流程已在用，`backups.go:160-164`），維持 localhost 與 server-system gate。
   - B：移除 UI 按鈕與對應 i18n，API 回明確的「not supported」。
+- **選擇（2026-10-07，主代理）**：A。還原點流程已經在用 `s.restart`／`triggerRestart`；在 Pi 上，exit 42 會由 `Restart=on-failure` 拉起；桌面 standalone 則走 `reexecSelf`。施工前要先確認桌面 shell 重新執行後不會出現兩個視窗；若會，退回主代理重新評估。
 - **不要修改**：還原點流程、systemd 設定、CSRF gate。
 - **驗收**：
   - A：桌面版與 Pi 都會實際重啟並回到健康狀態。

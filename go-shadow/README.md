@@ -371,9 +371,9 @@ The active-roadmap T032-T035 gates close local/copied DB/data candidates for ser
 go run . --db copied_runtime_dev.db --data-dir C:\Users\you\AppData\Local\Prism-Go-Smoke --addr 127.0.0.1:5001 --enable-server-system
 ```
 
-`--enable-server-system` intentionally disables SQLite `query_only` because the candidate includes copied-DB maintenance routes such as WAL checkpoint, VACUUM, and clear-history. It enables `GET /api/server/version`, `GET /api/system/stats`, `GET /api/server/hardware`, `GET /api/server/logs`, backup list/download/rotate/delete, `GET` / `POST /api/system/port-config`, `GET` / `POST /api/system/startup-preference`, safe `POST /api/server/restart` acknowledgement, prompt options CRUD, and wizard options CRUD. File mutations stay under `PRISM_GO_DATA_DIR/backups`, `PRISM_GO_DATA_DIR/config`, and data-root startup marker files.
+`--enable-server-system` intentionally disables SQLite `query_only` because the candidate includes copied-DB maintenance routes such as WAL checkpoint, VACUUM, and clear-history. It enables `GET /api/server/version`, `GET /api/system/stats`, `GET /api/server/hardware`, `GET /api/server/logs`, backup list/download/rotate/delete, `GET` / `POST /api/system/port-config`, `GET` / `POST /api/system/startup-preference`, `POST /api/server/restart` (restarts the process since PRISM-OPT-36), prompt options CRUD, and wizard options CRUD. File mutations stay under `PRISM_GO_DATA_DIR/backups`, `PRISM_GO_DATA_DIR/config`, and data-root startup marker files.
 
-The Go local candidate does not execute host service restart. These gates do not promote live/default server/system ownership and do not cover full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
+`POST /api/server/restart` restarts the runtime process (supervised: exit 42 for systemd; standalone: re-exec); it never calls `systemctl`. These gates do not promote live/default server/system ownership and do not cover full workflow E2E, production DB/files, Pi deploy, Caddy/systemd, frontend defaults, Python removal, or public exposure.
 
 #### Static Serving, Security, Full Workflow
 

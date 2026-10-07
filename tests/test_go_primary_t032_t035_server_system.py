@@ -179,7 +179,7 @@ def test_t032_server_status_gate_and_system_shapes(temp_db, tmp_path):
         assert {"memory", "disk", "database", "platform", "service_management"} <= set(
             payload["data"]
         )
-        assert payload["data"]["service_management"]["available"] is False
+        assert payload["data"]["service_management"]["available"] is True
 
         status, payload, _ = _request_json(base, "/api/server/logs?lines=2&level=ERROR")
         assert status == 200
@@ -339,10 +339,6 @@ def test_t034_t035_port_startup_prompt_and_wizard_options(temp_db, tmp_path):
         assert payload["data"]["auto_open_browser"] is False
         assert (go_data / ".auto_open_no").exists()
 
-        status, payload, _ = _request_json(base, "/api/server/restart", method="POST")
-        assert status == 200
-        assert payload["data"]["service_management"]["available"] is False
-
         status, payload, _ = _request_json(base, "/api/prompt-options")
         assert status == 200
         assert payload["data"]["categories"]["style"]["options"] == ["A"]
@@ -398,6 +394,26 @@ def test_t034_t035_port_startup_prompt_and_wizard_options(temp_db, tmp_path):
         )
         assert status == 200
         assert payload["data"]["deleted"] == "first"
+    finally:
+        _stop(proc)
+
+
+def test_server_restart_really_exits_for_supervisor(temp_db, tmp_path, monkeypatch):
+    # PRISM-OPT-36: under a supervisor (systemd sets INVOCATION_ID; tests use
+    # PRISM_GO_SUPERVISED) the restart endpoint drains and exits with code 42 so
+    # the supervisor relaunches Prism. It must no longer be a fake acknowledgement.
+    monkeypatch.setenv("PRISM_GO_SUPERVISED", "1")
+    go_db = _copy_db(temp_db, tmp_path / "go_restart.db")
+    go_data = tmp_path / "go_restart_data"
+    proc, base = _start_go(go_db, go_data, tmp_path, "--enable-server-system")
+    try:
+        status, payload, _ = _request_json(base, "/api/server/restart", method="POST")
+        assert status == 200
+        assert payload["message"] == "restarting"
+        assert payload["data"]["restarting"] is True
+        assert payload["data"]["supervised"] is True
+        assert payload["data"]["service_management"]["available"] is True
+        assert proc.wait(timeout=15) == 42
     finally:
         _stop(proc)
 

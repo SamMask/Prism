@@ -92,7 +92,7 @@ func TestApplyPendingRestoreSwapsValidBackup(t *testing.T) {
 	if got := readProbe(t, cfg.dbPath); got != "BACKUP" {
 		t.Fatalf("live DB not restored: probe = %q, want BACKUP", got)
 	}
-	if fileExists(cfg.dbPath + "-wal") || fileExists(cfg.dbPath + "-shm") {
+	if fileExists(cfg.dbPath+"-wal") || fileExists(cfg.dbPath+"-shm") {
 		t.Fatal("stale WAL/SHM not cleared after restore")
 	}
 	if fileExists(filepath.Join(cfg.configDir, pendingRestoreMarker)) {
@@ -208,6 +208,69 @@ func TestHandleBackupRestoreRejectsBadInput(t *testing.T) {
 			}
 			if fileExists(filepath.Join(cfg.configDir, pendingRestoreMarker)) {
 				t.Fatal("no marker should be written on rejected input")
+			}
+		})
+	}
+}
+
+// TestHandleServerRestart locks PRISM-OPT-36: POST /api/server/restart really
+// restarts (via the same s.restart hook as the backup restore flow) and keeps
+// every existing gate — method, localhost, server-system flag and CSRF.
+func TestHandleServerRestart(t *testing.T) {
+	cases := []struct {
+		name         string
+		method       string
+		remoteAddr   string
+		origin       string
+		serverSystem bool
+		wantCode     int
+		wantRestarts int
+	}{
+		{"post restarts once", http.MethodPost, "127.0.0.1:5555", "", true, http.StatusOK, 1},
+		{"same-origin post restarts once", http.MethodPost, "127.0.0.1:5555", "http://127.0.0.1:5001", true, http.StatusOK, 1},
+		{"get is rejected", http.MethodGet, "127.0.0.1:5555", "", true, http.StatusMethodNotAllowed, 0},
+		{"non-localhost is rejected", http.MethodPost, "192.168.1.20:5555", "", true, http.StatusForbidden, 0},
+		{"server-system disabled is rejected", http.MethodPost, "127.0.0.1:5555", "", false, http.StatusMethodNotAllowed, 0},
+		{"cross-origin post is rejected by csrf", http.MethodPost, "127.0.0.1:5555", "http://evil.example", true, http.StatusForbidden, 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := restoreTestConfig(t)
+			cfg.enableServerSystem = tc.serverSystem
+			restarts := 0
+			srv := &server{runtime: cfg, restart: func() { restarts++ }}
+			srv.csrfEnabled.Store(true)
+			handler := srv.csrfGate(http.HandlerFunc(srv.handleServerRestart))
+
+			req := httptest.NewRequest(tc.method, "http://127.0.0.1:5001/api/server/restart", nil)
+			req.RemoteAddr = tc.remoteAddr
+			if tc.origin != "" {
+				req.Header.Set("Origin", tc.origin)
+			}
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != tc.wantCode {
+				t.Fatalf("status = %d, want %d (%s)", rec.Code, tc.wantCode, rec.Body.String())
+			}
+			if restarts != tc.wantRestarts {
+				t.Fatalf("restart called %d times, want %d", restarts, tc.wantRestarts)
+			}
+			if tc.wantRestarts == 0 {
+				return
+			}
+			var body struct {
+				Status  string `json:"status"`
+				Message string `json:"message"`
+				Data    struct {
+					Restarting bool `json:"restarting"`
+				} `json:"data"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+				t.Fatalf("response is not JSON: %v", err)
+			}
+			if body.Status != "success" || !body.Data.Restarting || strings.Contains(body.Message, "without restarting") {
+				t.Fatalf("response must honestly report a restart, got %s", rec.Body.String())
 			}
 		})
 	}

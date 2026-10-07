@@ -626,11 +626,8 @@ func (s *server) handleServerHardware(w http.ResponseWriter, r *http.Request) {
 				"hostname":   hostname,
 				"go_version": runtime.Version(),
 			},
-			"service_management": response{
-				"available": false,
-				"reason":    "Go local server-system candidate does not restart host services",
-			},
-			"uptime_seconds": readUptimeSeconds(),
+			"service_management": serviceManagementInfo(),
+			"uptime_seconds":     readUptimeSeconds(),
 		},
 	})
 }
@@ -705,14 +702,27 @@ func (s *server) handleServerRestart(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, response{
 		"status":  "success",
-		"message": "Go local server-system candidate acknowledged restart request without restarting host services",
+		"message": "restarting",
 		"data": response{
-			"service_management": response{
-				"available": false,
-				"reason":    "systemd restart is intentionally disabled in the local Go candidate",
-			},
+			"restarting":         true,
+			"supervised":         isSupervised(),
+			"service_management": serviceManagementInfo(),
 		},
 	})
+	// Same restart path as the backup restore flow (PRISM-OPT-36).
+	if s.restart != nil {
+		s.restart()
+	} else {
+		s.triggerRestart()
+	}
+}
+
+// serviceManagementInfo describes how POST /api/server/restart restarts Prism.
+func serviceManagementInfo() response {
+	return response{
+		"available": true,
+		"reason":    "restarts the Prism process: supervised runs (systemd) exit for the supervisor to relaunch; standalone runs relaunch themselves",
+	}
 }
 
 func fileExists(path string) bool {

@@ -559,6 +559,23 @@
     - 演練回報 8 個 Low：驗證改成刪除前的強制步驟、STOP 檢查、port 變數、亂碼原因寫錯、回復指令、還原點提醒、UI 名稱。全部由 prism-docs 修正，修正後的片段在 scratch 假目錄中實際跑過。
     - fast gate 通過；`pytest tests/` 426 passed。
   - 演練順帶發現：純 CJK 檔名的圖片會被拒絕、附件標題變成 `_`。已併入 `PRISM-OPT-67`。
+- `PRISM-OPT-36`（本機驗證；**Pi 實機 smoke 待下次 deploy 補做**；未發版）：
+  - 選 A。`handleServerRestart` 保留 POST、localhost、server-system 三道 gate，CSRF 仍包在外層；先寫出回應再呼叫 `s.restart()`（nil 時退回 `triggerRestart`）。
+    - supervised 模式以 exit 42 結束，由 systemd `Restart=on-failure` 重新拉起。
+    - standalone 與桌面版則 re-exec 自己。
+  - `GET /api/server/hardware` 的 `service_management.available` 改成 `true`。原本固定是 `false`，前端因此一直把 Restart 按鈕藏起來；現在按鈕看得到了。
+  - 前端：保留原本的確認對話。送出後顯示「重新啟動中」，用 `waitForHealthy` 等到恢復才 reload；逾時就顯示錯誤，不再假成功。文案有四語 i18n。
+  - 文件：`docs/API_REFERENCE.md`、`go-shadow/README.md`、兩份 contract 的舊說法（「safe acknowledgement」）都已更新。
+  - 驗證：
+    - Go `TestHandleServerRestart` 有 6 個 case：method、localhost、server-system、CSRF，以及恰好重啟一次。修正前 restart 次數是 0，測試失敗。
+    - pytest `test_server_restart_really_exits_for_supervisor` 確認程序真的以 42 結束。
+    - prism-engineer 實測重啟：standalone 2 輪、desktop shell 3 輪（每輪只有 1 個程序、1 個視窗，資料都在）、UI 的成功與逾時兩條路徑。
+    - prism-verifier 另外跑了一輪 standalone：回應在 2ms 內送達，舊程序 287ms 後退出，0.8s 恢復 healthy，資料還在。cross-origin 的 POST 被擋（403），程序沒有重啟。
+    - `-Release` gate 通過（pytest 427、go test ok、e2e 31）。
+  - 已知：
+    - Pi 經 Caddy 進來時，localhost gate 擋不住區網使用者，只剩 CSRF 防護；還原點端點也一樣。
+    - 桌面版重啟後會殘留一個幽靈 tray icon；剛啟動時按 Restart，可能撞上正在寫入的每日還原點 → 已開 `PRISM-OPT-71`。
+    - 桌面 GUI 版的 log 檔一直是 0 bytes → 已開 `PRISM-OPT-72`。
 
 ### P1 — 下一輪
 
@@ -608,7 +625,7 @@
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Done | — | IA-01 |
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Done | — | IA-02 |
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Done | — | OPS-03 |
-| PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Todo | — | OPS-05 |
+| PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Done | — | OPS-05 |
 | PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Todo | — | TECH-05 |
 | PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Todo | — | R0812:PERF-03 |
 | PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Todo | 23 | FEAT-03 |
@@ -621,6 +638,8 @@
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Todo | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
+| PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Todo | 36 | OPT-36 追蹤 |
+| PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 

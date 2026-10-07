@@ -22,10 +22,10 @@
   "evidence": {
     "port_config": "preferred_port, fallback_enabled, fallback_range, and current_port are served and persisted to the copied data root .port_config",
     "startup_preference": "auto_open_browser marker files are read/written under the copied data root",
-    "service_availability": "Go candidate returns a safe restart acknowledgement and explicitly reports service restart unavailable without calling systemctl"
+    "service_availability": "T034 (2026-06): Go returned a safe restart acknowledgement without restarting. Superseded by PRISM-OPT-36 (2026-10-07): the endpoint restarts the process (exit 42 when supervised, re-exec when standalone) without calling systemctl; see docs/API_REFERENCE.md"
   },
   "boundaries": [
-    "Does not actually restart host services.",
+    "Does not call systemctl or edit host services (process restart since PRISM-OPT-36 relies on the supervisor or self re-exec).",
     "Does not promote production/default server ops ownership.",
     "Does not deploy Pi, edit Caddy/systemd, change frontend defaults, touch production DB/files, remove Python, or expand public exposure."
   ]
