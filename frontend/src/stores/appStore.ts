@@ -14,6 +14,10 @@ export type SearchWorkspaceFilters = {
 const VIEW_MODE_STORAGE_KEY = 'prism.viewMode'
 const NOTES_PAGE_SIZE = 20
 let notesRequestSequence = 0
+let libraryViewMounted = false
+const refetchIfLibraryMounted = (get: () => AppState) => {
+  if (libraryViewMounted) void get().fetchNotes(true)
+}
 let libraryTotalRequestSequence = 0
 
 function notesParams(state: SearchWorkspaceFilters, page: number) {
@@ -72,6 +76,7 @@ interface AppState {
 
   // Actions
   fetchNotes: (reset?: boolean) => Promise<void>
+  setLibraryViewMounted: (mounted: boolean) => void
   refreshLoadedNotes: () => Promise<void>
   retryFetchNotes: () => Promise<void>
   fetchCategories: () => Promise<void>
@@ -213,6 +218,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
+  // Filter setters only fetch while the Library list is on screen. From another page the caller
+  // navigates to '/', and HomePage fetches on mount - fetching here too would send the request twice.
+  setLibraryViewMounted: (mounted) => { libraryViewMounted = mounted },
+
   retryFetchNotes: () => get().fetchNotes(get().notesRetryReset),
 
   fetchCategories: async () => {
@@ -297,27 +306,27 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setSearchQuery: (query) => {
     set({ searchQuery: query, currentPage: 1, selectedNoteIds: [] })
-    get().fetchNotes(true)
+    refetchIfLibraryMounted(get)
   },
 
   setSelectedCategory: (id) => {
     set({ selectedCategoryId: id, selectedTagId: null, showArchived: false, currentPage: 1, selectedNoteIds: [] })
-    get().fetchNotes(true)
+    refetchIfLibraryMounted(get)
   },
 
   setSelectedTag: (id) => {
     set({ selectedTagId: id, selectedCategoryId: null, showArchived: false, currentPage: 1, selectedNoteIds: [] })
-    get().fetchNotes(true)
+    refetchIfLibraryMounted(get)
   },
 
   setSortBy: (sort) => {
     set({ sortBy: sort, currentPage: 1, selectedNoteIds: [] })
-    get().fetchNotes(true)
+    refetchIfLibraryMounted(get)
   },
 
   setShowArchived: (showArchived) => {
     set({ showArchived, selectedCategoryId: null, selectedTagId: null, currentPage: 1, selectedNoteIds: [] })
-    get().fetchNotes(true)
+    refetchIfLibraryMounted(get)
   },
 
   applySearchWorkspace: (filters) => {
@@ -330,7 +339,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       currentPage: 1,
       selectedNoteIds: [],
     })
-    get().fetchNotes(true)
+    refetchIfLibraryMounted(get)
   },
 
   toggleNoteSelection: (id) => {

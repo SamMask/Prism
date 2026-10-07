@@ -29,7 +29,7 @@
 
 ## Next Entry
 
-1. 依序做 P2：54～57、65、67、69～73（30～39、53、68 已完成；69～73 是驗收時發現的既有問題）。
+1. 依序做 P2：54、56、57、65、67、69～73（30～39、53、55、68 已完成；69～73 是驗收時發現的既有問題）。
    - 開工時在 `docs/TODO.md` 標 `Doing`。
    - 最高風險（X／XL）的工單，計畫與實際改動另外交給 Codex astra 復審：用 `codex exec -m gpt-6-astra -s read-only`，範圍收窄並限時，因為它容易走偏、過度驗證。Codex sol 只在需要幫手時才用。
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。

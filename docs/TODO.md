@@ -639,6 +639,21 @@
     - `history.state` 沒有清除，在 `/` 重新整理時會再聚焦一次。
     - iOS 由程式設定的 focus 不一定會叫出鍵盤。
     - 390 下閱讀工作區按鈕也出現時的版面沒有另外量測，標題可以截斷。
+- `PRISM-OPT-55`（本機驗證；未發版、未部署 Pi）：
+  - 前端：
+    - appStore 用 module 變數 `libraryViewMounted` 記錄 Library 畫面是否掛載：HomePage 掛載時設為 true，unmount 時設回 false。
+    - `setSearchQuery`、`setSelectedCategory`、`setSelectedTag`、`setSortBy`、`setShowArchived`、`applySearchWorkspace` 只在 Library 已掛載時才 fetch。不在首頁時只更新 state，等 HomePage 掛載時一次 fetch。
+    - 不論呼叫順序是 Sidebar 那種「先 setter 再 navigate」，或 Header 那種「先 navigate 再 setter」，都能正確處理。
+  - 請求數（修改前 → 修改後）：
+    - `/settings`、`/prompt-builder` 的 Header 搜尋：2 → 1
+    - `/settings` 的 Sidebar 分類、Archive：2 → 1
+    - `/` 上的各種操作：1 → 1
+  - 驗證：
+    - 新增 `e2e/test_single_list_request.py`，共 6 條。HEAD 上有 4 條失敗（`2 == 1`）。
+    - prism-verifier 讀 code 推理了 StrictMode、Reading view／編輯器是 HomePage 的子元件、兩種呼叫順序、OPT-32 的序號，並 grep 所有呼叫點，沒有「Library 未掛載時呼叫 setter 又需要立即拿到結果」的用法。
+    - verifier 也實測補上 e2e 沒涵蓋的入口：Sidebar 標籤、Command Palette 的 Archive／All、Reading view 開關、從 Prompt Builder 返回、在 `/` 快速連點、清空搜尋，全部都是每個動作 1 次，結果正確。
+    - `-Release` gate 通過（pytest 427、e2e 41）。
+  - 已知（低，既有）：在 `/` 已有篩選時，點 Sidebar 的 Prompt Builder 或 Settings，`clearLibraryFilters` 仍會送出 2 個沒有人使用的請求。
 
 ### P1 — 下一輪
 
@@ -694,7 +709,7 @@
 | PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Done | 23 | FEAT-03 |
 | PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Todo | — | OPT-16 追蹤 |
-| PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Todo | — | OPT-17 追蹤 |
+| PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |

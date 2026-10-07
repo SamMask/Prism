@@ -169,9 +169,12 @@ export function HomePage() {
     setLocalNotes(notes)
   }, [notes])
 
+  const setLibraryViewMounted = useAppStore((state) => state.setLibraryViewMounted)
   useEffect(() => {
+    setLibraryViewMounted(true)
     fetchNotes(true)
-  }, [fetchNotes])
+    return () => setLibraryViewMounted(false)
+  }, [fetchNotes, setLibraryViewMounted])
 
   // Header's mobile search icon navigates here with { focusSearch: true } (PRISM-OPT-53).
   const focusSearchOnMount = (useLocation().state as { focusSearch?: boolean } | null)?.focusSearch
