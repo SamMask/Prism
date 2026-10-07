@@ -193,7 +193,7 @@ def test_note_form_blocks_save_until_full_content_is_loaded():
     blocked = save.index("toast.error(t('editor.attachmentsToast.loadFullFailed'))")
     assert save.index("fullContentState.current === 'failed'") < blocked < start_saving
     assert save.index("fullContentState.current === 'pending'") < start_saving
-    assert save.index("if (savingRef.current) return") < start_saving
+    assert save.index("if (savingRef.current) {") < start_saving
 
     load = hook[hook.index("const loadAttachments = useCallback"):hook.index("const handleAttachmentSelect")]
     assert load.index("api.getAttachmentContent(autoExtracted.id)") < load.index("setFullContentState('loaded')")

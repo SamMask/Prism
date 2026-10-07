@@ -744,6 +744,22 @@
   - 已知（低）：
     - 刪除視窗上方的卡片後，捲動位置沒有測。grid 有 `overflow-anchor:none`，可能會有位移。
     - refresh 回來之前，列表會短暫少一筆。
+- `PRISM-OPT-70`（本機驗證；未發版、未部署 Pi）：
+  - **判定：產品競態，而且會遺失內容**（測試的等待方式讓它更容易發生）。
+    - 新筆記第一次存檔時依序執行 `POST`、`GET /api/notes/{id}`、`openEditor(inPlace)`，`savingRef` 要到最後的 `finally` 才放掉。整段期間再按 Ctrl+S，會碰到 `if (savingRef.current) return`，被靜默吞掉。
+    - 結果：畫面上是第二版，伺服器上仍是第一版。
+    - 完整 e2e 負載高時，GET 變慢，第二次 Ctrl+S 就更容易落在這段期間。
+  - 前端 `useNoteForm.ts`：存檔進行中按 Ctrl+S（`close:false`）時，先記下「待存」。`isSaving` 變回 false 之後的第一次 render 由 effect 補存一次；這時已經有最新內容和剛建立的筆記，所以送出的是 PUT，不會重複建立。Ctrl+S 的語意與 API 不變。
+  - 測試：
+    - 原測試改成等明確的 POST／PUT 回應，並用 `GET /api/notes/{id}` 讀完整內容。
+    - 新增 `test_ctrl_s_during_first_save_of_new_note_saves_latest_text_once[create|fetch]`，用 `page.route` 卡住第一次 POST 或建立後的 GET。
+    - source-lock `tests/test_project_optimization_p0_frontend.py` 同步更新。
+  - 驗證：
+    - 修正前兩個新測試都失敗（等不到 PUT，伺服器上是第一版）。
+    - 原測試連跑 20/20 通過；完整 `pytest e2e` 連跑 3 次都是 52 passed。
+    - `-Release` gate 通過。
+    - 由 prism-engineer 診斷與實作，主代理讀 diff 驗收。
+  - 已知（低）：第一次存檔失敗時，排隊的 Ctrl+S 會再試一次，可能出現兩次錯誤 toast。
 
 ### P1 — 下一輪
 
@@ -805,7 +821,7 @@
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Done | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Done | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Done | 32 | OPT-32 追蹤 |
-| PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
+| PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Done | — | OPT-34 驗收 |
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Todo | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Todo | 38 | OPT-38 追蹤 |

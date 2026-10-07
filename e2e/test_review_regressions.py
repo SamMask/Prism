@@ -6,8 +6,10 @@ New/search off Home, OPT-18 CJK search and palette threshold, OPT-19 long note s
 shortened split note, OPT-21 Ctrl+S). Test data is CJK on purpose.
 """
 
+import re
 import time
 
+import pytest
 from playwright.sync_api import Page, expect
 
 CJK_TITLE = "旅行紀錄 OPT26"
@@ -84,26 +86,91 @@ def test_command_palette_queries_server_after_two_cjk_chars(app_page: Page, runt
     expect(app_page.locator(f'[data-testid="command-item-search-note-{note_id}"]')).to_be_visible(timeout=10_000)
 
 
-def test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note(app_page: Page, runtime_url: str):
-    title = "Ctrl+S 存檔 OPT26"
-    app_page.locator('[data-testid="add-note-button"]').click()
-    editor = app_page.locator('[data-testid="note-editor"]')
+def _is_create(response) -> bool:
+    return response.request.method == "POST" and response.url.endswith("/api/notes")
+
+
+def _is_update(note_id: int):
+    return lambda response: response.request.method == "PUT" and response.url.endswith(f"/api/notes/{note_id}")
+
+
+def _note_creates(page: Page) -> list[str]:
+    creates: list[str] = []
+    page.on("request", lambda req: creates.append(req.url) if req.method == "POST" and req.url.endswith("/api/notes") else None)
+    return creates
+
+
+def _new_note_editor(page: Page, title: str, content: str):
+    page.locator('[data-testid="add-note-button"]').click()
+    editor = page.locator('[data-testid="note-editor"]')
     expect(editor).to_be_visible()
     editor.get_by_placeholder("Title", exact=True).fill(title)
     textarea = editor.locator("textarea").first
-    textarea.fill("第一版內容")
-    app_page.keyboard.press("Control+s")
-    assert _wait_until(lambda: _notes_titled(app_page, runtime_url, title)), "Ctrl+S did not create the note"
+    textarea.fill(content)
+    return editor, textarea
+
+
+def test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note(app_page: Page, runtime_url: str):
+    title = "Ctrl+S 存檔 OPT26"
+    creates = _note_creates(app_page)
+    editor, textarea = _new_note_editor(app_page, title, "第一版內容")
+    with app_page.expect_response(_is_create, timeout=10_000) as created:
+        app_page.keyboard.press("Control+s")
+    note_id = created.value.json()["data"]["note_id"]
     expect(editor).to_be_visible()
 
     textarea.fill("第二版內容")
+    with app_page.expect_response(_is_update(note_id), timeout=10_000) as updated:
+        app_page.keyboard.press("Control+s")
+    assert updated.value.ok, updated.value.text()
+
+    saved = app_page.request.get(f"{runtime_url}/api/notes/{note_id}").json()["data"]
+    assert saved["title"] == title
+    assert saved["content"] == "第二版內容"
+    assert len(creates) == 1, creates
+    expect(editor).to_be_visible()
+
+
+@pytest.mark.parametrize("held", ["create", "fetch"])
+def test_ctrl_s_during_first_save_of_new_note_saves_latest_text_once(app_page: Page, runtime_url: str, held: str):
+    """PRISM-OPT-70: a second Ctrl+S pressed while the first save of a new note is still running
+    (POST pending, or the follow-up fetch that switches the editor to the saved note) must not be
+    dropped: the note ends with the second text and is created only once."""
+    title = f"Ctrl+S 連按 OPT70 {held}"
+    pending = []
+
+    def hold_first(route):
+        request = route.request
+        is_target = (request.method == "POST") if held == "create" else (request.method == "GET")
+        if is_target and not pending:
+            pending.append(route)
+        else:
+            route.continue_()
+
+    pattern = f"{runtime_url}/api/notes" if held == "create" else re.compile(r".*/api/notes/\d+$")
+    app_page.route(pattern, hold_first)
+    creates = _note_creates(app_page)
+    editor, textarea = _new_note_editor(app_page, title, "第一版內容")
     app_page.keyboard.press("Control+s")
+    for _ in range(100):  # route handlers only run while Playwright is pumping events
+        if pending:
+            break
+        app_page.wait_for_timeout(100)
+    assert pending, f"first save never reached the held {held} request"
 
-    def saved_second_version():
-        notes = _notes_titled(app_page, runtime_url, title)
-        return len(notes) == 1 and "第二版內容" in notes[0]["content"]
+    textarea.fill("第二版內容")
+    app_page.keyboard.press("Control+s")
+    with app_page.expect_response(lambda r: r.request.method == "PUT" and "/api/notes/" in r.url, timeout=10_000) as updated:
+        pending[0].continue_()
+    app_page.unroute(pattern, hold_first)
+    assert updated.value.ok, updated.value.text()
 
-    assert _wait_until(saved_second_version), _notes_titled(app_page, runtime_url, title)
+    note_id = int(updated.value.url.rsplit("/", 1)[1])
+    saved = app_page.request.get(f"{runtime_url}/api/notes/{note_id}").json()["data"]
+    assert saved["title"] == title
+    assert saved["content"] == "第二版內容"
+    assert len(creates) == 1, creates
+    assert [n["id"] for n in _notes_titled(app_page, runtime_url, title)] == [note_id]
     expect(editor).to_be_visible()
 
 

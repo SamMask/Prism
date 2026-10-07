@@ -43,6 +43,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
   const [isPreview, setIsPreview] = useState(initialPreview)
   const [isSaving, setIsSaving] = useState(false)
   const savingRef = useRef(false)
+  const queuedSaveRef = useRef(false)
   // Bumped after each successful restore so the open attachment panel can drop the deleted row.
   const [restoredCount, setRestoredCount] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -152,7 +153,11 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       toast.error(t('editor.attachmentsToast.loadFullFailed'))
       return
     }
-    if (savingRef.current) return
+    if (savingRef.current) {
+      // A Ctrl+S during a running save is kept and run after it with the latest edits (PRISM-OPT-70).
+      if (!close) queuedSaveRef.current = true
+      return
+    }
     savingRef.current = true
     setIsSaving(true)
     try {
@@ -216,6 +221,14 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       setIsSaving(false)
     }
   }, [title, content, categoryId, selectedTags, remarks, coverPosition, coverImage, editorLayout, sourceUrls, urlInput, isEditing, note, refreshLoadedNotes, fetchLibraryTotal, openEditor, onClose])
+
+  // Runs on the first render after the save ends, so it sees the latest edits and, after a
+  // create, the saved note (the next save is an update, not a second create).
+  useEffect(() => {
+    if (isSaving || !queuedSaveRef.current) return
+    queuedSaveRef.current = false
+    void save({ close: false })
+  }, [isSaving, save])
 
   const handleSave = useCallback(() => save({ close: true }), [save])
 
