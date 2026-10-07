@@ -29,7 +29,11 @@
 
 ## Next Entry
 
-1. 2026-10-06 roadmap 的 P0、P1、P2 已全部完成，並已發版為 V2.7.0。剩下的 P2：77（Pi 上遺失全文的拆分筆記，唯讀調查中）。78 已完成。新工單照「已知的後面要處理」登記成 P2 或 P3。
+1. 2026-10-06 roadmap 的 P0、P1、P2 已全部完成，並已發版為 V2.7.0。剩下的工單：
+   - 77：調查已完成，等使用者確認 Windows 端是否還有全文來源，例如 `D:\Program Files\Prism_V2\docs\notes\`（Blocked）。
+   - 79：Pi `docs/attachments` 裡殘留的測試檔。
+   - 78 已完成。
+   - 新發現的問題照「已知的後面要處理」登記成 P2 或 P3。
    - 開工時在 `docs/TODO.md` 標 `Doing`。
    - 最高風險（X／XL）的工單，計畫與實際改動另外交給 Codex astra 復審：用 `codex exec -m gpt-6-astra -s read-only`，範圍收窄並限時，因為它容易走偏、過度驗證。Codex sol 只在需要幫手時才用。
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。

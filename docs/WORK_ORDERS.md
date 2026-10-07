@@ -122,6 +122,7 @@ git diff --check
 | PRISM-OPT-76 | T | S | prism-builder | 主代理 |
 | PRISM-OPT-77 | X | M | prism-engineer | prism-verifier |
 | PRISM-OPT-78 | T | S | prism-builder | 主代理 |
+| PRISM-OPT-79 | X | S | prism-engineer | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -721,6 +722,16 @@ git diff --check
 - **不要修改**：smoke 的其他驗證步驟；部署腳本的流程。
 - **驗收**：用本機的 package smoke（`scripts/smoke_go_primary_package.ps1`）或隔離 runtime 跑完 smoke 後，`Tags` 裡沒有本次 label 的標籤；既有的標籤都還在。
 - **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1`；package smoke。
+
+### PRISM-OPT-79 — Pi `docs/attachments` 內從 repo 複製來的測試檔
+
+- **Finding**：PRISM-OPT-77 調查時發現（2026-10-07）｜ **優先級**：P2（低，不影響使用）
+- **現象**：Pi 的 `docs/attachments` 有 11 個檔名帶 `20251230` 的檔案，mtime 是 2026-03-15 20:47:14，看起來是搬遷時從開發 repo 一起複製過去的測試資料，可能沒有任何附件列引用。
+- **範圍**：
+  - 先唯讀確認每個檔案有沒有被 `Note_Attachments.file_path` 引用。
+  - 若沒有被引用，比對它是否與 repo git 歷史中的檔案一致。
+  - 列出結果請使用者決定。只有使用者同意之後，才可以搬到隔離資料夾，不直接刪除。
+- **不要做**：未經同意就改動 Pi 上的檔案；刪除任何仍被附件列引用的檔案。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

@@ -879,6 +879,33 @@
     - 搜尋 note 100 尾段的詞「與黑市地緣」會命中 100（合併前尾段詞搜不到）；
     - uploads 仍是 2478。
   - 仍待處理：23 篇筆記的全文檔案早已不存在，1 篇（海酒食堂）預覽不一致，另有 5 個孤兒檔 → 已開 `PRISM-OPT-77`。
+- `PRISM-OPT-77`（唯讀調查完成；**等使用者確認 Windows 端的來源**，所以標 `Blocked`）：
+  - 結論：遺失全文的有 24 篇。除了 23 筆 `missing_file`，note 67 也算在內，因為它現存的 `note_67.md` 其實是另一篇筆記。這些全文**從來沒有到過 Pi**，Pi 上一篇都找不回來。
+  - 遺失原因：2026-03-15 搬遷時，DB 與 uploads 是從日常使用版複製的，`docs/` 卻是從開發 repo `d:\AI\Prism\docs` 整包 `scp` 過去的。證據：
+    - `created_at < 2026-03-16` 的附件列（id 1–25）全部是壞的，之後建立的全部完好。
+    - 孤兒檔 `note_65/67/68.md` 的 git blob 與 repo commit `24607f4`／`abbafb4` 的測試資料一致。
+    - `docs/` 有 20 個檔案的 mtime 都是 2026-03-15 20:47:14，與 Pi 上的 `deploy_to_pi.bat` 一致。
+    - 搬遷前的 `knowledge.db.bak` 只有 1 篇筆記。
+  - 查過的來源，都沒有全文：
+    - Pi 上 28 個 Prism DB（最早是 2026-06-01）；
+    - `Note_History`：只存了預覽，34 與 45 另有比全文短的早期版本；
+    - 所有 `data-files.tar.gz`：不含 `docs/notes`；
+    - `~/backups`、releases、staging：都是其他專案。
+  - 孤兒檔：
+    - `note_65`、`note_68` 是 repo 的測試資料，不需要保留；
+    - `note_256`／`note_257` 與現存的 note 214 逐字相同；
+    - `note_190` 是已刪除筆記「路邊烤肉 WildBBQ」的較長版本（5,295 字），只存在這個檔案裡，要不要保留由使用者決定。
+  - 待使用者確認的來源，可能性由高到低：
+    1. 日常使用版 `D:\Program Files\Prism_V2\docs\notes\`；
+    2. 如果日常使用版搬過位置，新位置下的 `docs\notes\`；
+    3. 桌面版 PrismData；
+    4. 手邊的 Full snapshot 或 03-15 前後的備份；
+    5. 資源回收筒、檔案歷程記錄、雲端版本紀錄。
+
+    `D:\AI\Prism\docs\notes\` 是 repo 的測試資料，不是來源。
+  - 找不到時的替代做法：從原始網址重新擷取並另建新筆記；34、45 可以改用 history 裡的早期版本。
+  - 完整的逐筆表格在調查報告（scratchpad 的 `opt77_report.md`）；結論已整理在本段。
+  - 範圍外的發現：Pi 的 `docs/attachments` 裡有 11 個 `20251230` 的檔案，同樣是 03-15 從 repo 複製過去的測試資料 → 已開 `PRISM-OPT-79`。
 - `PRISM-OPT-78`（本機驗證；下次 Pi cutover 生效，因為部署時會上傳本機的 smoke 腳本）：
   - `scripts/go_primary_full_workflow_smoke.py` 新增 `remove_smoke_tags`。刪掉自己的筆記之後，只刪名稱完全等於本次 label 的 3 個 smoke 標籤（`-go-primary`、`-go-primary-updated`、`-imported`），而且必須沒有掛在任何筆記上；刪完重新列出確認，有殘留就讓 smoke 失敗。
   - runtime 沒有 `local-tag-write`（例如 package smoke）時不刪，在證據檔記錄 `skipped`。這是明確記錄，不算成功。
@@ -956,8 +983,9 @@
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Done | — | OPT-67 追蹤 |
 | PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Done | — | OPT-74 追蹤 |
 | PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Done | — | OPT-75 驗收 |
-| PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Doing | — | Pi 部署 OPT-20 |
+| PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Blocked | 等使用者確認 Windows 端來源 | Pi 部署 OPT-20 |
 | PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Done | — | V2.7.0 部署 |
+| PRISM-OPT-79 | Pi `docs/attachments` 內 11 個 2026-03-15 從 repo 複製來的測試檔（疑似孤兒） | Todo | — | OPT-77 調查 |
 
 ### P3 / Future — 需要證據或明確 promote
 
