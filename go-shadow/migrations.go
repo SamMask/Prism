@@ -441,30 +441,37 @@ func normalizeCategorySystemKey(raw string) (string, bool) {
 	return "", false
 }
 
-const welcomeNoteTitle = "👋 歡迎使用 Prism"
+const welcomeNoteTitle = "👋 歡迎使用 Prism / Welcome to Prism"
 
-const welcomeNoteContent = `# 歡迎使用 Prism
+// welcomeNoteContent is seeded only into a brand-new, empty database. It is bilingual because the
+// runtime cannot know the UI language at first start (PRISM-OPT-44).
+const welcomeNoteContent = `# 歡迎使用 Prism / Welcome to Prism
 
-這是一個本地運行的個人知識庫與 AI 提示詞管理工具。
+Prism 是在本機或區網執行的個人知識庫。
+Prism is a personal knowledge library that runs on your own computer or home network.
 
-## 快速上手
+## 快速上手 / Getting started
 
-- **新增筆記**：點擊左上角「新增筆記」按鈕。
-- **Prompt Builder**：點擊側邊欄「Prompt Builder」建立結構化提示詞。
-- **搜尋**：支援全文檢索，輸入關鍵字即可快速找到筆記。
+- **新增筆記 / New note**：點右上角的「新增」，或按 Ctrl+K 開啟指令面板。
+  Click **New** at the top right, or press Ctrl+K for the command palette.
+- **搜尋 / Search**：中文、日文、韓文都能搜到詞中間的字。
+  Search also finds Chinese, Japanese and Korean words inside sentences.
+- **整理 / Organize**：用分類、標籤與置頂整理筆記；多選後可以批次修改。
+  Use categories, tags and pins; select several notes to change them in one go.
+- **語言 / Language**：在「設定 → 外觀」切換介面語言。
+  Switch the interface language in Settings → Appearance.
 
-## Markdown 支援
+## Markdown
 
-支援標準 Markdown 語法，例如：
+支援標準 Markdown，例如 **粗體**、*斜體*、[連結](https://example.com)、程式碼區塊與引用。
+Standard Markdown works: **bold**, *italic*, [links](https://example.com), code blocks and quotes.
 
-- **粗體**、*斜體*
-- [連結](https://example.com)
-- 程式碼區塊
-- 引用
+## 資料與備份 / Data and backups
 
-## 關於資料
+所有資料都存在你自己的資料夾裡。在「設定 → 資料與復原」可以匯出 JSON，或下載完整資料快照。
+Everything stays in your own data folder. Use Settings → Data & Recovery to export JSON or download a full data snapshot.
 
-所有資料皆儲存在本地端的 ` + "`knowledge.db`" + ` 資料庫中，您可以隨時備份此檔案。
+你可以刪除這篇筆記。 / You can delete this note.
 `
 
 func seedDefaultCategories(tx *sql.Tx) error {

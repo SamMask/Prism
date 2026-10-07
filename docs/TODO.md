@@ -936,6 +936,10 @@
     - 未知的 `/api/` POST 若帶 body，Windows 上偶爾會出現 connection reset（既有行為），所以 pytest 改成不帶 body，Go 測試仍有帶 body 的覆蓋。
     - `editor.toolbar.copyAiPrompt`／`extractImagePrompt` 這兩個 i18n key 全 repo 都沒有使用，但依「不確定就保留」原則先留著。
     - 既有 data-dir 裡殘留的 `.port_config`／`.auto_open_*` 不會再被讀寫。
+- `PRISM-OPT-44`（本機驗證；只影響全新安裝，既有資料庫不受影響；主代理實作）：
+  - `go-shadow/migrations.go`：welcome note 只會在空資料庫建立，這次改成中英雙語，標題為「👋 歡迎使用 Prism / Welcome to Prism」。程式啟動時無法得知介面語系，所以採雙語。
+  - 內容同步現況：拿掉「點側欄 Prompt Builder」（入口已由 OPT-80 隱藏），也拿掉寫死的 `knowledge.db`（桌面版的 DB 檔名不同）。新增 Ctrl+K、CJK 搜尋、多選批次修改、切換語言，以及「設定 → 資料與復原」的備份說明，設定頁名稱與 UI 的 i18n 一致。
+  - 驗證：`TestOpenRuntimeSQLiteInitializesFreshDBAndReturnsReadOnlyOwner` 新增斷言，內容必須同時有中英標題、`Getting started`、`Data & Recovery`，而且不能出現 `Prompt Builder`、`knowledge.db`。舊內容會因為缺少英文而失敗。`go test ./...` ok，`-Release` gate 通過（e2e 64）。
 - `PRISM-OPT-81`（本機驗證；未發版、未部署 Pi；sonnet 實作）：
   - **Settings → 維護與健康**：新增「資料庫維護」卡片。
     - **壓縮資料庫**（`POST /api/system/vacuum`）：顯示壓縮前後大小與釋放的空間，完成後刷新統計。
@@ -1080,7 +1084,7 @@
 | PRISM-OPT-41 | Prompt Builder seed config 內嵌到 binary；`pack.bat` 補帶 config | Won't do | 同上：內建 Prompt Builder 已隱藏（OPT-80）；恢復時再評估 | OPS-06 |
 | PRISM-OPT-42 | API 表面衛生：死 route、死 wrapper、未引用元件、API 文件標 deprecated | Done | 使用者 2026-10-07 決定刪除與 deprecate 範圍 | TECH-06 |
 | PRISM-OPT-43 | 移除 capability flags；`go-shadow` 改名 | Blocked | 出現新增 runtime mode 的需求，或 flags 誤配的證據 | TECH-05 |
-| PRISM-OPT-44 | 非中文使用者的首次體驗（雙語 welcome note） | Todo（低） | 使用者 2026-10-07 同意；模板部分隨 40 取消，只剩全新安裝時的 welcome note | BIZ-01 |
+| PRISM-OPT-44 | 非中文使用者的首次體驗（雙語 welcome note） | Done | 使用者 2026-10-07 同意；模板部分隨 40 取消 | BIZ-01 |
 | PRISM-OPT-45 | FTS5 trigram 索引 | Blocked | 資料超過 1 萬筆，且 3 字以上的查詢占多數 | FEAT-01 |
 | PRISM-OPT-46 | `Note_History` 保留策略 | Blocked | PRISM-OPT-20 之後出現 DB 成長的證據 | PERF-03 |
 | PRISM-OPT-47 | 文字附件內容索引 | Blocked | PRISM-OPT-20 之後仍有約 50 個以上文字附件，且搜尋常態 partial | PERF-01 |

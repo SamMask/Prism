@@ -704,6 +704,21 @@ func TestOpenRuntimeSQLiteInitializesFreshDBAndReturnsReadOnlyOwner(t *testing.T
 	if linkedWelcomeTags != 1 {
 		t.Fatalf("expected welcome note tag link, got %d", linkedWelcomeTags)
 	}
+	// PRISM-OPT-44: the seeded note reads in Chinese and English and only points at visible UI.
+	var welcomeContent string
+	if err := owner.db.QueryRow("SELECT content FROM Notes WHERE title = ?", welcomeNoteTitle).Scan(&welcomeContent); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"歡迎使用 Prism", "Welcome to Prism", "Getting started", "Data & Recovery"} {
+		if !strings.Contains(welcomeContent, want) {
+			t.Fatalf("welcome note is missing %q", want)
+		}
+	}
+	for _, stale := range []string{"Prompt Builder", "knowledge.db"} {
+		if strings.Contains(welcomeContent, stale) {
+			t.Fatalf("welcome note still mentions %q", stale)
+		}
+	}
 	var ftsHits int
 	if err := owner.db.QueryRow("SELECT COUNT(*) FROM Notes_FTS WHERE Notes_FTS MATCH ?", "Prism").Scan(&ftsHits); err != nil {
 		t.Fatalf("FTS query failed after fresh init: %v", err)
