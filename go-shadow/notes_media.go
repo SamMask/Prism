@@ -164,11 +164,7 @@ func noteImageReferences(tx *sql.Tx, noteIDs []int) ([]noteImageReference, error
 
 func (s *server) cleanupNoteImages(tx *sql.Tx, ref noteImageReference) {
 	for _, imagePath := range staticUploadReferences(ref.Content, ref.CoverImage) {
-		var refCount int
-		err := tx.QueryRow(`
-			SELECT COUNT(*) FROM Notes
-			WHERE id != ? AND (cover_image = ? OR content LIKE ?)
-		`, ref.ID, imagePath, "%"+imagePath+"%").Scan(&refCount)
+		refCount, err := otherNoteImageReferenceCount(tx, ref.ID, imagePath)
 		if err != nil {
 			log.Printf("note image cleanup skipped reference count for note %d path %s: %v", ref.ID, imagePath, err)
 			continue
@@ -192,11 +188,7 @@ func (s *server) previewNoteImageCleanupFiles(tx *sql.Tx, refs []noteImageRefere
 	files := []string{}
 	for _, ref := range refs {
 		for _, imagePath := range staticUploadReferences(ref.Content, ref.CoverImage) {
-			var refCount int
-			err := tx.QueryRow(`
-				SELECT COUNT(*) FROM Notes
-				WHERE id != ? AND (cover_image = ? OR content LIKE ?)
-			`, ref.ID, imagePath, "%"+imagePath+"%").Scan(&refCount)
+			refCount, err := otherNoteImageReferenceCount(tx, ref.ID, imagePath)
 			if err != nil {
 				return nil, err
 			}
@@ -215,4 +207,21 @@ func (s *server) previewNoteImageCleanupFiles(tx *sql.Tx, refs []noteImageRefere
 		}
 	}
 	return uniqueStrings(files), nil
+}
+
+// otherNoteImageReferenceCount counts the other notes that reference imagePath as written,
+// percent-decoded or percent-encoded (LIKE also ignores hex case), so deleting one note never
+// removes an image another note shows under a different spelling.
+func otherNoteImageReferenceCount(tx *sql.Tx, noteID int, imagePath string) (int, error) {
+	variants := uploadPathVariants(imagePath)
+	clauses := make([]string, 0, len(variants))
+	args := []any{noteID}
+	for _, variant := range variants {
+		clauses = append(clauses, "cover_image LIKE ? OR content LIKE ?")
+		// LIKE on cover too: SQLite LIKE ignores ASCII case, so %e5 and %E5 spellings both count.
+		args = append(args, variant, "%"+variant+"%")
+	}
+	var refCount int
+	err := tx.QueryRow("SELECT COUNT(*) FROM Notes WHERE id != ? AND ("+strings.Join(clauses, " OR ")+")", args...).Scan(&refCount)
+	return refCount, err
 }

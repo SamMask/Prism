@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -481,10 +482,33 @@ func uploadReferenceFilename(raw string) (string, bool) {
 	return cleaned, true
 }
 
+// addReferencedUploadFilename protects both the reference as written and its percent-decoded
+// filename, so a note that writes /static/uploads/%E5%9C%96.png still protects 圖.png.
 func addReferencedUploadFilename(referenced map[string]bool, raw string) {
-	if filename, ok := uploadReferenceFilename(raw); ok {
-		referenced[filename] = true
+	for _, spelling := range uploadReferenceSpellings(raw) {
+		if filename, ok := uploadReferenceFilename(spelling); ok {
+			referenced[filename] = true
+		}
 	}
+}
+
+// uploadReferenceSpellings returns raw and, when it decodes and differs, its percent-decoded
+// form. A reference that does not decode is kept only as written, never dropped.
+func uploadReferenceSpellings(raw string) []string {
+	decoded, err := url.PathUnescape(raw)
+	if err != nil || decoded == raw {
+		return []string{raw}
+	}
+	return []string{raw, decoded}
+}
+
+// uploadPathVariants returns the /static/uploads/ path as written, percent-decoded and
+// percent-encoded, so a note-content search finds a reference whichever way it is spelled.
+func uploadPathVariants(imagePath string) []string {
+	variants := uploadReferenceSpellings(imagePath)
+	decoded := variants[len(variants)-1]
+	variants = append(variants, (&url.URL{Path: decoded}).EscapedPath())
+	return uniqueStrings(variants)
 }
 
 func expandedUploadReferences(referenced map[string]bool) map[string]bool {
@@ -786,13 +810,19 @@ func brokenReference(noteID int, originalPath, thumbnail string, isCover bool) b
 	return item
 }
 
+// uploadFileExists accepts the filename as written or percent-decoded, so the broken-image
+// report and fix leave a percent-encoded reference to an existing upload alone.
 func (s *server) uploadFileExists(filename string) bool {
-	absPath, ok := s.resolveUploadFile(filename)
-	if !ok {
-		return false
+	for _, spelling := range uploadReferenceSpellings(filename) {
+		absPath, ok := s.resolveUploadFile(spelling)
+		if !ok {
+			continue
+		}
+		if info, err := os.Stat(absPath); err == nil && info.Mode().IsRegular() {
+			return true
+		}
 	}
-	info, err := os.Stat(absPath)
-	return err == nil && info.Mode().IsRegular()
+	return false
 }
 
 func (s *server) findThumbnailForOriginal(filename string) string {

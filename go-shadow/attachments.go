@@ -9,7 +9,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -337,8 +336,14 @@ func allowedAttachmentFilename(filename string) bool {
 }
 
 func sanitizeAttachmentFilename(filename string) string {
-	name := filepath.Base(filename)
-	return regexp.MustCompile(`[^\w\-_\. ]`).ReplaceAllString(name, "")
+	name := path.Base(strings.ReplaceAll(filename, "\\", "/"))
+	name = strings.Map(func(r rune) rune {
+		if filenameWordRune(r) || strings.ContainsRune("-_. ", r) {
+			return r
+		}
+		return -1
+	}, name)
+	return finishSafeFilename(name)
 }
 
 func splitAttachmentName(filename string) (string, string) {

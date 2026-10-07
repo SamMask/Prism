@@ -555,9 +555,12 @@ func uploadReferencesInText(text string) []string {
 // protected from orphan cleanup by the given reference set (same rule as orphanUploadImages).
 func mediaProtected(data []byte, referenced map[string]bool) bool {
 	expanded := expandedUploadReferences(referenced)
+	// Every spelling (as written and percent-decoded) must stay protected: either may be the file.
 	for _, raw := range uploadReferencesInText(string(data)) {
-		if name, ok := uploadReferenceFilename(raw); ok && !uploadProtected(name, referenced, expanded) {
-			return false
+		for _, spelling := range uploadReferenceSpellings(raw) {
+			if name, ok := uploadReferenceFilename(spelling); ok && !uploadProtected(name, referenced, expanded) {
+				return false
+			}
 		}
 	}
 	return true

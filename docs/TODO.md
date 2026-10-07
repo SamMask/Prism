@@ -704,6 +704,32 @@
     - HEAD 上會失敗的有 3 條（拆分 ×2、圖片 ×1）。
     - `-Release` gate 通過（e2e 47）。
     - 用 sonnet 實作；改動小、e2e 直接涵蓋驗收，由主代理驗收。
+- `PRISM-OPT-67`（本機驗證；未發版、未部署 Pi；由 opus 實作）：
+  - 檔名：
+    - `uploads.go` 新增共用 helper：`filenameWordRune`（`IsLetter`／`IsNumber`／`IsMark`）、`finishSafeFilename`（180 byte 截斷，保留副檔名，不切斷 UTF-8；去掉結尾的點與空白；Windows 保留名稱加 `_` 前綴）、`windowsReservedFilename`。
+    - 附件的 `sanitizeAttachmentFilename` 與圖片的 `safeUploadFilename` 都改用這組 helper。
+    - 結果：`說明.md` 存成 `說明_<時間戳>.md`，標題是「說明」；`圖片測試.png` 可以上傳，縮圖照常產生。
+    - 原本被拒的原因：sanitize 之後只剩下 `png`，沒有副檔名。
+  - 配套（允許 CJK 檔名後，需要同步修的資料安全問題）：所有「是否仍被引用」的判斷，都同時認原字串、`url.PathUnescape` 後的字串，以及重新編碼後的字串。
+    - 範圍：孤兒掃描與刪除、`POST /api/upload/delete`、刪除筆記（單筆與批次）、OPT-20 的 `mediaProtected`、壞路徑判斷。
+    - 解碼失敗時只用原字串比對。
+    - 主代理另外把 `otherNoteImageReferenceCount` 的封面比對從 `=` 改成 `LIKE`，讓小寫 hex 的封面也受到保護。
+  - 驗證：
+    - `go-shadow/upload_filenames_test.go`：
+      - sanitize 對照表（中、日、韓、NFD、`../`、`a\b`、`CON`／`nul`、`<>:"|?*`、控制字元、300 個漢字）。
+      - 附件與圖片各一個 HTTP 測試。
+      - percent-encoded 引用的保護：修正前，`/api/upload/delete` 實際刪掉了仍在使用的原圖與縮圖。
+      - `mediaProtected`、ASCII 結果不變，以及小寫 hex 封面（修正前失敗）。
+    - prism-verifier 獨立驗收：
+      - 逐條檢查所有會刪檔的路徑，都只有變得更保守。
+      - 20 萬筆隨機輸入的 property test，加上全形斜線、UNC、`C:` 等路徑逃逸案例，都安全。
+      - 60 個 ASCII 名稱與 HEAD 比對，只有刻意的差異：保留名稱、結尾的點、截斷。
+      - 隔離 runtime 實測：原始寫法與編碼寫法（含大小寫混用）的引用，刪除筆記後檔案都還在，三種清理預覽都沒有列出使用中的圖片。
+    - `-Release` gate 通過（pytest 427、e2e 47）；主代理修完封面比對後，`go test ./...` 也通過。
+  - 已知（低）：
+    - 刪除原圖時，不會改寫編碼寫法的引用（HEAD 原本就是這樣；現在可以用「修復壞路徑」修好）。
+    - export JSON 會多列出解碼後的檔名。極端情況是手寫的 `%3A` 會讓 Windows 上的匯入失敗。
+    - 同一秒內上傳同名附件會互相覆寫（HEAD 原本就是這樣）→ 已開 `PRISM-OPT-74`。
 
 ### P1 — 下一輪
 
@@ -763,12 +789,13 @@
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Done | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Done | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Done | 58 | OPT-58 追蹤 |
-| PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Todo | — | OPT-66 追蹤 |
+| PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Done | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Todo | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Todo | 38 | OPT-38 追蹤 |
+| PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Todo | — | OPT-67 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 
@@ -792,7 +819,7 @@
 ## Deferred Candidates
 
 - [ ] `DEEP-SCAN-RISK-CANDIDATE-01` 01H 仍是低優先維護 triage（狀態：`Blocked`）：剩餘 frontend bundle/Browserslist warning、歷史 frozen docs/test wording仍需另行 promote；其中 `go-shadow/main.go` route-local 小整理已明確化為 `GO-MAIN-SPLIT-CANDIDATE-01`，但一次性 runtime 大拆分仍 `Blocked`。
-- [ ] Pi 自動備份從每週改為每天（狀態：`Blocked`；2026-10-07 使用者同意方向，等下次 Pi 部署時依 `DEPLOY-PI.md` 另開 gate 處理）。Pi 是使用者的主要使用方式，目前 systemd timer 每週一次，最壞會損失近 7 天的資料。另外，Pi timer 目前明確傳 `keep_count=3`（`DEPLOY-PI.md:134`），每週會把共用的 managed backup 修剪回 3 份；PRISM-OPT-28 已把預設改為 7，改 timer 時要一併改成 7。
+- [x] ~~Pi 自動備份從每週改為每天~~（2026-10-07 使用者改變決定：**維持每週、最多 3 份輪替**，不改 timer，也不改 `keep_count=3`）。以下為原始紀錄：Pi 是使用者的主要使用方式，目前 systemd timer 每週一次，最壞會損失近 7 天的資料。另外，Pi timer 目前明確傳 `keep_count=3`（`DEPLOY-PI.md:134`），每週會把共用的 managed backup 修剪回 3 份；PRISM-OPT-28 已把預設改為 7，改 timer 時要一併改成 7。
 - [ ] Desktop installer/updater/WebView2 bootstrap/shortcut automation（狀態：`Blocked`；需使用者明確需要 installer/updater 類能力）。
 - [ ] Hidden/deferred i18n UI（`PortConfigSection`、`UpdateSection`、`TagInput`）（狀態：`Blocked`；只有日後恢復 render，才於該 gate 同步補四語 key）。2026-10-06 審查確認 `UpdateSection`、`TagInput` 沒有被引用，是否刪除由 PRISM-OPT-42 決定。
 - [ ] Mermaid 圖表渲染（狀態：`Blocked`；只有 `MARKDOWN-SYNTAX-CANDIDATE-01` 的 `MDS-05` 被明確 promote 後才可施工；不得順手導入 heavy renderer）。

@@ -117,6 +117,7 @@ git diff --check
 | PRISM-OPT-71 | B | M | prism-engineer | prism-verifier |
 | PRISM-OPT-72 | B | S | prism-builder | prism-verifier |
 | PRISM-OPT-73 | F | S | prism-builder | prism-verifier |
+| PRISM-OPT-74 | X | S | prism-engineer | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -663,6 +664,16 @@ git diff --check
 - **不要修改**：localStorage 的 key 與格式；非 404 錯誤時的行為（保留項目）。
 - **驗收**：e2e 先把閱讀中的筆記刪除，再按 Header 的閱讀清單：能開啟下一筆，被刪的筆記從清單與 localStorage 消失。修正前失敗。
 - **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
+
+### PRISM-OPT-74 — 同一秒上傳同名附件會覆寫前一個檔案
+
+- **Finding**：PRISM-OPT-67 施工時發現（2026-10-07；HEAD 原本就有）｜ **優先級**：P2（可能遺失資料）
+- **現象**：附件寫入使用 `O_TRUNC`，磁碟檔名是 `<sanitize 後的主體>_<時間戳到秒>.<副檔名>`。同一秒內上傳兩個 sanitize 後同名的檔案時，後一個會覆寫前一個，但兩筆附件列都還在，前一筆指向的內容已經被換掉。
+  - 例如同一則筆記連續上傳 `a/b.md` 與 `a\b.md`，或拖放多個同名檔案。
+- **修改範圍**：附件上傳的寫檔改成 `O_EXCL`。檔名已存在時加上去重後綴重試（比照 PRISM-OPT-64 匯入的作法，能共用就共用），絕不覆寫既有檔案。
+- **不要修改**：附件 API 形狀；既有附件；OPT-66 的共用檔判斷。
+- **驗收**（Go test，修正前失敗）：在同一秒內（固定時間或 stub 時鐘）上傳兩個同名附件，兩個檔案都存在，各自的附件列讀回各自的內容。
+- **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

@@ -22,6 +22,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
@@ -506,17 +508,59 @@ func safeUploadFilename(filename string) string {
 		return ""
 	}
 	cleaned := strings.Map(func(r rune) rune {
-		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+		if filenameWordRune(r) || strings.ContainsRune("._-", r) {
 			return r
 		}
-		switch r {
-		case '.', '_', '-':
-			return r
-		default:
-			return '_'
-		}
+		return '_'
 	}, base)
-	return strings.Trim(cleaned, "._-")
+	return finishSafeFilename(strings.Trim(cleaned, "._-"))
+}
+
+// maxSafeFilenameBytes leaves room for the timestamp, copy and _thumb.webp parts that callers add
+// within the common 255-byte filename limit (a CJK character takes 3 bytes).
+const maxSafeFilenameBytes = 180
+
+// filenameWordRune keeps letters, digits and combining marks of any script, so CJK names (and the
+// decomposed kana macOS sends) stay readable. Separators, control and Windows-reserved characters
+// are not word runes.
+func filenameWordRune(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsNumber(r) || unicode.IsMark(r)
+}
+
+// finishSafeFilename caps the name in bytes, drops the trailing dots and spaces Windows strips, and
+// prefixes "_" to Windows device names such as CON or nul.txt.
+func finishSafeFilename(name string) string {
+	if len(name) > maxSafeFilenameBytes {
+		ext := path.Ext(name)
+		if len(ext) > maxSafeFilenameBytes/4 {
+			ext = ""
+		}
+		stem := strings.TrimSuffix(name, ext)
+		cut := maxSafeFilenameBytes - len(ext)
+		for cut > 0 && !utf8.RuneStart(stem[cut]) {
+			cut--
+		}
+		name = stem[:cut] + ext
+	}
+	name = strings.TrimRight(name, ". ")
+	if windowsReservedFilename(name) {
+		name = "_" + name
+	}
+	return name
+}
+
+func windowsReservedFilename(name string) bool {
+	stem, _, _ := strings.Cut(name, ".")
+	stem = strings.ToUpper(strings.TrimRight(stem, " "))
+	switch stem {
+	case "CON", "PRN", "AUX", "NUL":
+		return true
+	}
+	if len(stem) < 4 || (stem[:3] != "COM" && stem[:3] != "LPT") {
+		return false
+	}
+	digit := stem[3:]
+	return utf8.RuneCountInString(digit) == 1 && strings.Contains("123456789¹²³", digit)
 }
 
 func allowedUploadExtension(filename string) bool {
