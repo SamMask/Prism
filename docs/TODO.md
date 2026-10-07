@@ -915,7 +915,7 @@
       - #50 與 #196 是同一家店（#196 是 1,093 字）；
       - 其餘 19 篇沒有重複。
     - 結論：**24 篇都維持現狀，不還原**，本單結案。
-    - 是否刪除重複的預覽副本（#5、#8／#57），等使用者另行決定，不主動處理。
+    - 重複的預覽副本：使用者表示 #5／#333 這類標題大概是測試用的，不用處理（2026-10-07）。
 - `PRISM-OPT-78`（本機驗證；下次 Pi cutover 生效，因為部署時會上傳本機的 smoke 腳本）：
   - `scripts/go_primary_full_workflow_smoke.py` 新增 `remove_smoke_tags`。刪掉自己的筆記之後，只刪名稱完全等於本次 label 的 3 個 smoke 標籤（`-go-primary`、`-go-primary-updated`、`-imported`），而且必須沒有掛在任何筆記上；刪完重新列出確認，有殘留就讓 smoke 失敗。
   - runtime 沒有 `local-tag-write`（例如 package smoke）時不刪，在證據檔記錄 `skipped`。這是明確記錄，不算成功。
