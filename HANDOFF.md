@@ -35,11 +35,11 @@
    - runtime smoke 用的隔離 data-dir 若缺少 `prompt_options.json`、`wizard_options.json`，Prompt Builder 會出現 404／405 console error。這是環境問題，不是回歸；屬於 PRISM-OPT-41 的範圍。
    - 使用者 2026-10-06 授權：工單審查與測試都通過後，直接 commit、fast-forward 合併回 `main` 並 push，不需再問。這項授權不包含 release、tag 或 Pi deploy。
    - 派工依 `docs/AGENT_DISPATCH.md`：每張工單的代理見 `docs/WORK_ORDERS.md` 的派工總表，代理定義在 `.claude/agents/`（新增後需重開 session）。
-2. Pi 部署與發版（使用者 2026-10-07 決定的順序；P2 的 67、69～75 已完成，可以開始部署；每一步執行前仍要使用者說開始）：
-   1. 部署前，把 Pi 上現有的 DB 與圖片（含附件）備份到 Pi 上另一個資料夾。
-   2. 部署，確認沒問題。順帶做 OPT-36 的 Pi 重啟 smoke：POST restart 後約 5 秒內 `/healthz` 要恢復。
-   3. 在 Pi 資料上執行 OPT-20「合併長文回筆記」，確認沒問題。
-   4. 以上都沒問題才發版。
+2. Pi 部署與發版（使用者 2026-10-07 決定的順序；每一步執行前仍要使用者說開始）：
+   1. ✅ 2026-10-07 已把 Pi 現有的 DB、圖片、附件、notes、config 備份到 `/home/mask0709/prism-predeploy-20261007-190419/`，SHA-256 已驗證。
+   2. ✅ 2026-10-07 已部署 `f7c2be5`。OPT-36 的 Pi 重啟 smoke 在 5.8s 內恢復。
+   3. ✅ 2026-10-07 已在 Pi 上執行 OPT-20：合併 77 篇，1 篇寫入 history。還原點在 `backups/separated-notes-20261007_190834_141235567/`。
+   4. 下一步：發版。需要使用者決定版本號並說開始。發版會 bump 版本號，所以發版後還要再 cutover Pi 一次，讓 Pi 顯示新的版本號。
    - Pi 自動備份維持每週、最多 3 份輪替，不改。
 3. P3／Future 工單維持 `Blocked`；只有啟動條件成立、且使用者明確 promote，才能施工。
 4. 不要自動做 release、Pi deploy、schema 升版、AI、semantic search、內建 auth。

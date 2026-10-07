@@ -850,6 +850,37 @@
     - 修正後，單檔連跑 20/20 通過；完整 `pytest e2e` 連跑 3 次都是 56 passed。
     - `-Release` gate 通過。
 
+### Pi 部署紀錄（2026-10-07，使用者逐步授權）
+
+- **1. 部署前備份**：`/home/mask0709/prism-predeploy-20261007-190419/`（299M），內含：
+  - `sqlite3 .backup` 產生的一致 DB，`integrity_check` = ok；
+  - `knowledge.db.bak`；
+  - `static/uploads`、`docs/attachments`、`docs/notes`、`config`，共 2575 個檔案，`SOURCE.sha256` 逐檔比對通過；
+  - 筆記 299 篇、附件列 102 筆，與線上相同。
+
+  這個資料夾不在 `prism/backups/` 之下，部署腳本不會清除它。
+- **2. 部署**：`scripts/go_primary_pi_live_ops.ps1 -Mode Cutover`（main `f7c2be5`）exit 0，線上 full workflow smoke 通過。
+  - 證據在 `build/go-primary-live/pi/`。
+  - 部署後狀態：
+    - `/healthz` 的 `mode` = `go-runtime`，schema 17/17，pending 為空，journal 沒有錯誤；
+    - 筆記 299、附件列 102、uploads 2478，與部署前相同；
+    - 線上 smoke 留下 3 個沒有被使用的標籤 `t042-live-go-primary-*`（id 667–669），待使用者決定是否刪除。
+  - **OPT-36 Pi 重啟 smoke**：`POST /api/server/restart` 之後，systemd 收到 exit 42 並重新拉起，5.8s 後 `/healthz` 恢復 200；PID 從 1256566 變成 1256847，筆記仍是 299。
+    - 低：systemd 會把 exit 42 記成「Failed with result 'exit-code'」再重啟，只是日誌外觀問題。
+- **3. OPT-20 在 Pi 上執行**：
+  - dry-run：merge 77、history 1、skipped 24（missing_file 23、preview_mismatch 1）、orphan_files 5。
+  - 執行結果：merged 77、historied 1，failed 0、move_failed 0。
+  - 還原點：`backups/separated-notes-20261007_190834_141235567/restore_point.db`，78 個檔案移到同一個資料夾隔離。
+  - 驗證：
+    - 再跑一次 dry-run，actionable = 0；
+    - `quick_check` ok；
+    - 77 篇合併後的 `Notes.content` 與隔離檔案的全文逐字一致（換行正規化後）；
+    - note 88 新增一筆 history「合併長文：保留附件全文」；
+    - 搜尋 note 100 尾段的詞「與黑市地緣」會命中 100（合併前尾段詞搜不到）；
+    - uploads 仍是 2478。
+  - 仍待處理：23 篇筆記的全文檔案早已不存在，1 篇（海酒食堂）預覽不一致，另有 5 個孤兒檔 → 已開 `PRISM-OPT-77`。
+- **4. 發版**：尚未進行，等使用者決定版本號。
+
 ### P1 — 下一輪
 
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
@@ -917,6 +948,7 @@
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Done | — | OPT-67 追蹤 |
 | PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Done | — | OPT-74 追蹤 |
 | PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Done | — | OPT-75 驗收 |
+| PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Todo | — | Pi 部署 OPT-20 |
 
 ### P3 / Future — 需要證據或明確 promote
 

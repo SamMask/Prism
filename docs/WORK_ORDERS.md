@@ -120,6 +120,7 @@ git diff --check
 | PRISM-OPT-74 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-75 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-76 | T | S | prism-builder | 主代理 |
+| PRISM-OPT-77 | X | M | prism-engineer | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -693,6 +694,23 @@ git diff --check
 - **修改範圍**：先找出失敗點與時序原因，再改成等待明確的訊號，不要只拉長 timeout。若找到的是產品問題，就修產品，並補一條能重現的測試。
 - **驗收**：單獨連跑 20 次都通過；完整 `pytest e2e` 連跑 3 次都通過。
 - **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
+
+### PRISM-OPT-77 — Pi 上遺失全文的拆分筆記
+
+- **Finding**：2026-10-07 在 Pi 上跑 OPT-20 時發現｜ **優先級**：P2（資料可能已經遺失，要先調查，不能直接改資料）
+- **現象**：OPT-20 的 dry-run 與正式執行都略過以下項目：
+  - 23 筆 `missing_file`：`docs/notes/note_<id>.md` 已經不存在，但附件列還在。涉及的筆記 id 為 3、5、8、34、42–45、50–52、54–57、59、63、64、70–72、74、75。這些筆記的 `Notes.content` 可能只剩預覽。
+  - 1 筆 `preview_mismatch`：note 67「海酒食堂」。
+  - 5 個孤兒檔：`note_65.md`（66KB）、`note_68.md`（106KB）、`note_190.md`、`note_256.md`、`note_257.md`。
+- **目標**：先調查能不能找回全文，再由使用者決定怎麼處理。
+- **調查範圍**（唯讀）：
+  - Pi 上 `prism/backups/` 內的各個 DB 備份與 `go-primary-*/data-files.tar.gz`（注意：它不含 `docs/notes`）。
+  - 舊的 `prism_pre_*` DB，看裡面的 `Notes.content` 是不是比較長的版本。
+  - `~/backups/` 中屬於 Prism 的備份。
+  - 使用者手邊的 Full snapshot 或桌面版資料。
+  - 孤兒檔的內容是否其實屬於某一篇缺檔的筆記，可用標題或開頭比對。
+- **產出**：逐筆列出「找得到的來源 → 建議的還原方式」，以及確定找不回的筆記清單。實際還原前，必須先取得使用者同意，並且先備份。
+- **不要做**：未經同意就改動線上資料；刪除孤兒檔或懸空的附件列。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 
