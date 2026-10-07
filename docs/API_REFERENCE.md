@@ -139,6 +139,7 @@
 #### 備註
 
 - `q` 保持純關鍵字搜尋，無 AI / embedding；標題與內文走 FTS5，備註 / 標籤 / 附件走關聯欄位與文字附件檔案比對。
+- 搜尋比對語意（PRISM-OPT-56）：純 ASCII 查詢對標題 / 內文是 FTS 前綴比對；查詢含 CJK（漢字、平假名、片假名、韓文）時，標題 / 內文改用子字串比對。查詢中只要有一個 CJK token，其餘 ASCII token 也改用子字串比對（例如「rom 工程」會命中含 prompt 的卡片）。全形英數（U+FF01–U+FF5E、全形空白）只在查詢端折成半形；內容中的全形字不會因此被半形查詢搜到。
 - Go primary current truth: `/api/notes?q=...` 已由 Go primary product runtime 負責，搜尋範圍包含 DB-backed 附件 metadata 與 bounded text attachment body scan。
 - 文字附件內容搜尋是 request-time bounded scan：最多 200 個附件檔、5 MiB、250 ms。若超限，回應會加上 optional `search_diagnostics.attachment_body_scan.partial=true`，並標出 `reason`（`file_limit` / `byte_limit` / `time_limit` / `scan_error`）。
 - 列表回應是 Home/card 輕量 payload：`content` 為相容用 preview（與 `content_preview` 相同），`content_truncated=true` 代表前端若要編輯、複製全文、匯出內容或閱讀完整內容，必須再呼叫 `GET /api/notes/<id>`；`content_length` 提供完整 `Notes.content` 字數供卡片 metadata 顯示；`content_first_image` 是從完整內容抽出的第一張圖片 URL，供卡片在不預載全文時維持「無手動封面時用第一張圖」的 fallback。

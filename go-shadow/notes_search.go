@@ -264,7 +264,7 @@ func tokenAndClause(condition string, tokens []string, args *[]any) string {
 func hasCJKToken(tokens []string) bool {
 	for _, token := range tokens {
 		for _, r := range token {
-			if unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana) {
+			if unicode.In(r, unicode.Han, unicode.Hiragana, unicode.Katakana, unicode.Hangul) {
 				return true
 			}
 		}
@@ -310,8 +310,22 @@ func placeholders(count int) string {
 	return strings.TrimRight(strings.Repeat("?,", count), ",")
 }
 
+// foldFullwidth maps fullwidth ASCII (U+FF01-U+FF5E) to halfwidth and U+3000 to a space.
+// Query side only: stored content is never rewritten.
+func foldFullwidth(value string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= 0xFF01 && r <= 0xFF5E:
+			return r - 0xFEE0
+		case r == 0x3000:
+			return ' '
+		}
+		return r
+	}, value)
+}
+
 func searchTokens(keyword string) []string {
-	keyword = strings.ToLower(keyword)
+	keyword = strings.ToLower(foldFullwidth(keyword))
 	var builder strings.Builder
 	for _, r := range keyword {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {

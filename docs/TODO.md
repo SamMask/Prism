@@ -660,6 +660,24 @@
     - 新增 `e2e/test_attachment_touch_target.py`。附件是 CJK 檔案。1280 時刪除按鈕 ≤24px；390 時 ≥32px，附件列與頁面都沒有水平溢位。
     - 在 HEAD 上，390 那條斷言失敗（按鈕尺寸不足）。
     - `-Release` gate 通過。
+- `PRISM-OPT-56`（本機驗證；未發版、未部署 Pi）：
+  - Go `notes_search.go`：
+    - `hasCJKToken` 加入 `unicode.Hangul`。
+    - 新增 `foldFullwidth`：U+FF01–U+FF5E 減 0xFEE0，U+3000 轉成空白。`searchTokens` 先折疊再 `ToLower`，FTS、LIKE、附件掃描都會經過這一步。
+    - 只作用在查詢端；FTS schema、tokenizer、migration、已存內容都沒動。
+  - 前端：CommandPalette 的 `CJK_CHAR_PATTERN` 加入 `\p{Script=Hangul}`，韓文同樣是 2 字就開始搜。
+  - 文件：`docs/API_REFERENCE.md` 新增「搜尋比對語意」：ASCII 用前綴比對；CJK（含韓文）用子字串比對；查詢混合時，只要有 CJK，ASCII token 也改用子字串比對；全形英數只在查詢端折疊。
+  - 驗證：
+    - 新增 `go-shadow/notes_search_norm_test.go`，三個測試都經過 HTTP handler：
+      - 韓文詞中段「의록」：修正前 0 筆。
+      - 「ＰＲＯＭＰＴ」與「prompt」得到相同 id；「ｒｏｍ　工程」也能命中。
+      - `TestNotesSearchASCIIQuerySQLUnchanged`：`prompt`、`a b`、`foo-bar` 產生的 SQL hash 與 args，和修改前擷取的完全相同。
+    - 主代理把 `notes_search.go` stash 掉重跑，前兩個測試失敗，ASCII 那個通過，符合預期。
+    - fast gate 通過（pytest 258）。source-lock `tests/test_command_palette_server_search.py` 的 regex 字串已同步更新。
+    - 改動很小，而且測試直接涵蓋，由主代理驗收。
+  - 已知（低）：
+    - 內容中的全形字，用半形查詢仍搜不到；要雙向一致，需要在索引端正規化，屬於 schema decision gate。
+    - 簡繁轉換、半形片假名不在本單範圍。
 
 ### P1 — 下一輪
 
@@ -716,7 +734,7 @@
 | PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Done | — | OPT-16 追蹤 |
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Done | — | OPT-17 追蹤 |
-| PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
+| PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Done | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Todo | — | OPT-66 追蹤 |

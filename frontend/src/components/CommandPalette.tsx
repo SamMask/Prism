@@ -19,7 +19,7 @@ import { SearchDiagnosticsNotice } from './SearchDiagnosticsNotice'
 
 const SERVER_SEARCH_MIN_CHARS = 3
 const SERVER_SEARCH_MIN_CHARS_CJK = 2
-const CJK_CHAR_PATTERN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u
+const CJK_CHAR_PATTERN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u
 const SERVER_SEARCH_LIMIT = 8
 const SERVER_SEARCH_DEBOUNCE_MS = 250
 
