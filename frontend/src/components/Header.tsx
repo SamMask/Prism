@@ -275,6 +275,18 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
             </div>
           </form>
 
+          {/* Mobile search entry: the Header search box is md+, so non-Home pages get an icon (PRISM-OPT-53) */}
+          {!isHomeRoute && (
+            <IconButton
+              onClick={() => navigate('/', { state: { focusSearch: true } })}
+              aria-label={t('common.search')}
+              className="shrink-0 md:hidden"
+              data-testid="mobile-search-entry"
+            >
+              <Search size={20} />
+            </IconButton>
+          )}
+
           {/* Sort Dropdown */}
           {isHomeRoute && (
           <div className="relative" ref={sortMenuRef}>

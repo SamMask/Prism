@@ -625,6 +625,20 @@
   - 已知（低）：
     - duplicate mode 的譜系與 rollback 路徑只在 scratch 驗證過，沒有 repo 測試鎖住。
     - 匯入到非空的 DB 時，custom sort 會和既有筆記交錯，這是既有語意。
+- `PRISM-OPT-53`（本機驗證；未發版、未部署 Pi）：
+  - 前端：
+    - Header 在非首頁加一顆 `md:hidden` 的搜尋圖示（aria-label 用 `common.search`），點擊後 `navigate('/', { state: { focusSearch: true } })`。
+    - HomePage 掛載時，讀到這個 state 就把 focus 放到 `mobile-search-input`。
+    - 桌面版 Header、`mobile-search-form`、appStore 都沒動。
+  - 驗證：
+    - 新增 `e2e/test_mobile_search_entry.py`：390px 下，從 `/settings`、`/prompt-builder` 點圖示，回到 `/` 後輸入框取得 focus，輸入中文關鍵字送出可看到結果，沒有水平溢位，console error 為 0；1280px 下按鈕不可見。
+    - 在 HEAD 上，390 的兩條測試會失敗。
+    - `-Release` gate 通過（e2e 35）。
+    - 改動很小，而且 e2e 已涵蓋驗收條件，所以由主代理讀 diff 驗收，沒有另外派 prism-verifier。
+  - 已知（低）：
+    - `history.state` 沒有清除，在 `/` 重新整理時會再聚焦一次。
+    - iOS 由程式設定的 focus 不一定會叫出鍵盤。
+    - 390 下閱讀工作區按鈕也出現時的版面沒有另外量測，標題可以截斷。
 
 ### P1 — 下一輪
 
@@ -678,7 +692,7 @@
 | PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Done | — | TECH-05 |
 | PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Done | — | R0812:PERF-03 |
 | PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Done | 23 | FEAT-03 |
-| PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Todo | — | OPT-17 追蹤 |
+| PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Todo | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |

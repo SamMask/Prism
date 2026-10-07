@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useAppStore, type SearchWorkspaceFilters, type ViewMode } from '../stores/appStore'
 import { NoteCard } from '../components/NoteCard'
 import { NoteEditor } from '../components/NoteEditor'
@@ -171,6 +172,12 @@ export function HomePage() {
   useEffect(() => {
     fetchNotes(true)
   }, [fetchNotes])
+
+  // Header's mobile search icon navigates here with { focusSearch: true } (PRISM-OPT-53).
+  const focusSearchOnMount = (useLocation().state as { focusSearch?: boolean } | null)?.focusSearch
+  useEffect(() => {
+    if (focusSearchOnMount) document.getElementById('mobile-search-input')?.focus()
+  }, [focusSearchOnMount])
 
   useEffect(() => {
     setMobileSearchValue(searchQuery)
