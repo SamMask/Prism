@@ -145,9 +145,10 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     try {
       const result = await api.duplicateNote(note.id, { as_variant: true })
       toast.success(t('noteCard.variantCreated', { id: result.note_id }))
-      // Refresh notes list
-      const { fetchNotes } = useAppStore.getState()
-      fetchNotes(true)
+      // Refresh the loaded pages in place (PRISM-OPT-32); a variant is a new Library note.
+      const { refreshLoadedNotes, fetchLibraryTotal } = useAppStore.getState()
+      void refreshLoadedNotes()
+      void fetchLibraryTotal()
     } catch {
       toast.error(t('noteCard.variantFailed'))
     }
@@ -159,9 +160,8 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     try {
       const result = await api.togglePin(note.id)
       toast.success(result.is_pinned ? t('noteCard.pinned') : t('noteCard.unpinned'))
-      // Refresh notes list
-      const { fetchNotes } = useAppStore.getState()
-      fetchNotes(true)
+      // Refresh the loaded pages in place so the note moves into the pinned group (PRISM-OPT-32).
+      void useAppStore.getState().refreshLoadedNotes()
     } catch {
       toast.error(t('noteCard.togglePinFailed'))
     }
@@ -211,9 +211,10 @@ export function NoteCard({ note, viewMode }: NoteCardProps) {
     try {
       const result = await api.toggleArchive(note.id)
       toast.success(result.is_archived ? t('noteCard.archived') : t('noteCard.unarchived'))
-      // Refresh notes list
-      const { fetchNotes } = useAppStore.getState()
-      fetchNotes(true)
+      // Refresh the loaded pages in place (PRISM-OPT-32); archiving changes the Library total.
+      const { refreshLoadedNotes, fetchLibraryTotal } = useAppStore.getState()
+      void refreshLoadedNotes()
+      void fetchLibraryTotal()
     } catch {
       toast.error(t('noteCard.toggleArchiveFailed'))
     }

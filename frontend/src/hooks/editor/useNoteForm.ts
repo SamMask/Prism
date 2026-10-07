@@ -21,7 +21,7 @@ async function restoreSeparatedContent(noteId: number) {
 }
 
 export function useNoteForm(note: Note | null, onClose: () => void, initialPreview = false) {
-  const { fetchNotes, openEditor } = useAppStore()
+  const { refreshLoadedNotes, fetchLibraryTotal, openEditor } = useAppStore()
   const isEditing = !!note
 
   // ---- Form state ----
@@ -185,6 +185,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       } else {
         const { note_id } = await api.createNote(payload)
         toast.success(t('editor.form.created'))
+        void fetchLibraryTotal()
         if (!close) {
           // Keep editing the saved note so the next save is an update; if it can't be fetched,
           // close instead of risking a duplicate create.
@@ -205,7 +206,8 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
         tags: JSON.stringify(selectedTags.map((t) => t.name).sort()),
         urls: JSON.stringify([...finalUrls].sort()),
       }
-      fetchNotes(true)
+      // Keep the list's loaded pages and scroll position (PRISM-OPT-32).
+      void refreshLoadedNotes()
       if (close) onClose()
     } catch {
       toast.error(t('editor.form.saveFailed'))
@@ -213,7 +215,7 @@ export function useNoteForm(note: Note | null, onClose: () => void, initialPrevi
       savingRef.current = false
       setIsSaving(false)
     }
-  }, [title, content, categoryId, selectedTags, remarks, coverPosition, coverImage, editorLayout, sourceUrls, urlInput, isEditing, note, fetchNotes, openEditor, onClose])
+  }, [title, content, categoryId, selectedTags, remarks, coverPosition, coverImage, editorLayout, sourceUrls, urlInput, isEditing, note, refreshLoadedNotes, fetchLibraryTotal, openEditor, onClose])
 
   const handleSave = useCallback(() => save({ close: true }), [save])
 

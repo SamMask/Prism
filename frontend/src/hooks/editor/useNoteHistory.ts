@@ -16,7 +16,7 @@ export function useNoteHistory(
   note: Note | null,
   setContent: (c: string) => void
 ) {
-  const { fetchNotes } = useAppStore()
+  const { refreshLoadedNotes } = useAppStore()
   const [historyVersions, setHistoryVersions] = useState<HistoryVersion[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
@@ -49,7 +49,7 @@ export function useNoteHistory(
       const updatedNote = await api.getNote(note.id)
       setContent(updatedNote.content)
       setShowHistory(false)
-      fetchNotes(true)
+      void refreshLoadedNotes()
     } catch {
       toast.error(t('editor.historyToast.restoreFailed'))
     }

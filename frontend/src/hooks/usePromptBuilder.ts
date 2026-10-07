@@ -118,6 +118,7 @@ export function usePromptBuilder() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const fetchNotes = useAppStore((state) => state.fetchNotes);
+  const fetchLibraryTotal = useAppStore((state) => state.fetchLibraryTotal);
   const fetchCategories = useAppStore((state) => state.fetchCategories);
   const fetchTags = useAppStore((state) => state.fetchTags);
   const openReading = useAppStore((state) => state.openReading);
@@ -585,7 +586,7 @@ export function usePromptBuilder() {
 
       notePayload.category_id = promptCategory.id;
       const result = await api.createNote(notePayload);
-      await Promise.all([fetchNotes(true), fetchCategories(), fetchTags()]);
+      await Promise.all([fetchNotes(true), fetchLibraryTotal(), fetchCategories(), fetchTags()]);
 
       const openSavedNote = async () => {
         try {
@@ -615,7 +616,7 @@ export function usePromptBuilder() {
       console.error("Save error:", err);
       toast.error(t("promptBuilder.alerts.saveNetworkFailed"));
     }
-  }, [applySearchWorkspace, fetchCategories, fetchNotes, fetchTags, form, navigate, openReading, t, textOutput, weights]);
+  }, [applySearchWorkspace, fetchCategories, fetchLibraryTotal, fetchNotes, fetchTags, form, navigate, openReading, t, textOutput, weights]);
 
   // Wizard Functions
   const openWizardModal = useCallback(() => {

@@ -49,7 +49,7 @@ function sourceUrlDomain(url: string): string {
 }
 
 export function ReadingView({ note, onClose }: ReadingViewProps) {
-  const { openEditor, fetchNotes } = useAppStore()
+  const { openEditor, refreshLoadedNotes, fetchLibraryTotal } = useAppStore()
   const { locale, t } = useTranslation()
   const {
     workspace,
@@ -339,7 +339,7 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     try {
       const result = await api.togglePin(localNote.id)
       setLocalNote({ ...localNote, is_pinned: result.is_pinned })
-      fetchNotes(true)
+      void refreshLoadedNotes()
       toast.success(result.is_pinned ? t('noteCard.pinned') : t('noteCard.unpinned'))
     } catch {
       toast.error(t('noteCard.togglePinFailed'))
@@ -350,7 +350,8 @@ export function ReadingView({ note, onClose }: ReadingViewProps) {
     try {
       const result = await api.toggleArchive(localNote.id)
       setLocalNote({ ...localNote, is_archived: result.is_archived })
-      fetchNotes(true)
+      void refreshLoadedNotes()
+      void fetchLibraryTotal()
       toast.success(result.is_archived ? t('noteCard.archived') : t('noteCard.unarchived'))
     } catch {
       toast.error(t('noteCard.toggleArchiveFailed'))

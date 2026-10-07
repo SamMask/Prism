@@ -336,10 +336,11 @@ export function HomePage() {
     toast.success(t('home.savedSearch.removed'))
   }
 
-  // Render notes grid/list content
+  // Render notes grid/list content. `overflow-anchor: none`: when an in-place refresh moves the
+  // edited / pinned note to the top, the browser must not scroll after it (PRISM-OPT-32).
   const notesContent = (
     <div
-      className={`
+      className={`[overflow-anchor:none]
         ${viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-[var(--prism-card-gap)]' : ''}
         ${viewMode === 'list' ? 'flex flex-col gap-3' : ''}
         ${viewMode === 'compact' ? 'flex flex-col gap-1.5' : ''}

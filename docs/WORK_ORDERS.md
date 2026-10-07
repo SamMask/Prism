@@ -111,6 +111,8 @@ git diff --check
 | PRISM-OPT-65 | F | S | prism-builder | prism-verifier |
 | PRISM-OPT-66 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-67 | B | S | prism-builder | prism-verifier |
+| PRISM-OPT-68 | X | S | prism-engineer | prism-verifier |
+| PRISM-OPT-69 | F | S | prism-builder | prism-verifier |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -578,6 +580,31 @@ git diff --check
 - **不要修改**：附件 API 形狀；既有附件；路徑安全檢查。
 - **驗收**（Go test）：`說明.md`、`メモ.txt`、`메모.md` 都保留可讀的名稱；`../x.md`、`a/b.md`、`CON.md`、超長名稱都被安全處理。
 - **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+
+### PRISM-OPT-68 — 刪除有 variant 子筆記的父筆記回 500
+
+- **Finding**：PRISM-OPT-32 驗收時發現（2026-10-07；HEAD 原本就有）｜ **優先級**：P2（刪除失敗，資料沒有遺失）
+- **目標**：刪除父筆記成功，variant 子筆記保留下來，譜系不斷。
+- **重現**：fresh DB 建一筆 → `POST /api/notes/{id}/duplicate {"as_variant":true}` → `DELETE /api/notes/{id}` 回 500 `FOREIGN KEY constraint failed (787)`。`POST /api/notes/batch/delete` 也一樣。UI 上按了 Confirm 卡片還在，只在 console 留錯誤。
+- **原因**：`Notes.parent_id` 是自參照 FK，沒有 `ON DELETE` 動作。
+- **修改範圍**：Go 的單筆刪除與批次刪除。在同一個 transaction 內，先把子筆記的 `parent_id` 改成被刪筆記自己的 `parent_id`（根筆記則為 `NULL`），再刪除。批次刪除同時刪父與子時要正確處理；不管刪除順序，最後都不能留下指向已刪筆記的 `parent_id`。
+- **不要修改**：schema（不加 `ON DELETE`、不 bump）；API 形狀；其他 FK 的 cascade 行為。
+- **驗收**（Go test，修正前失敗）：
+  - 刪除有子筆記的根筆記 → 200，子筆記的 `parent_id` 變成 `NULL`。
+  - 刪除中間一代 → 孫筆記改掛到祖父筆記。
+  - 批次同時刪除父與子 → 200，沒有懸空的 `parent_id`。
+  - `PRAGMA foreign_key_check` 為空。
+- **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+
+### PRISM-OPT-69 — 刪除後 load-more 用舊的頁面位移
+
+- **Finding**：PRISM-OPT-32 驗收時發現（2026-10-07；HEAD 原本就有）｜ **優先級**：P2（低）
+- **目標**：刪除或批次刪除後，load-more 不漏筆記、不重複。
+- **原因**：`deleteNote`／`deleteSelectedNotes` 只在本地濾掉筆記，`currentPage` 不變。之後 load-more 請求下一頁時，伺服器端的位移已經往前移，跨過頁界的那一筆不會出現。
+- **修改範圍**：`frontend/src/stores/appStore.ts`。刪除成功後改用 PRISM-OPT-32 的 `refreshLoadedNotes()`（或等效、最小的修正），保持列表與捲動位置不變。
+- **不要修改**：API；分頁大小；`refreshLoadedNotes` 的序號機制。
+- **驗收**：e2e 或 store 層測試，修正前失敗。載入 2 頁（40 筆）後刪除第 5 筆，再按 load-more，第 41 筆會出現，且沒有重複 id。
+- **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

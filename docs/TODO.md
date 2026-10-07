@@ -484,6 +484,23 @@
     - 每次列表 reset 都會多打一次 `/api/test`（4 個 COUNT），可以在 PRISM-OPT-32 收斂。
     - server-system 停用時，Maintenance 四張卡都顯示「–」。
     - 分類計數仍包含封存筆記，規格要求不改這個語意。
+- `PRISM-OPT-32`（本機驗證；未發版、未部署 Pi）：
+  - 前端：store 新增 `refreshLoadedNotes()`。mutation 後並行重抓已載入的第 1～k 頁（沿用 `notesRequestSequence`，依 id 去重），不再 `fetchNotes(true)` 回到第 1 頁。
+    - 套用處：編輯器存檔與 `Ctrl+S`、卡片選單的 pin／archive／variant、history restore、ReadingView 的 pin／archive。
+    - 分頁大小仍是 20（`NOTES_PAGE_SIZE`），API 與 Go 都沒改。
+    - `fetchNotes(reset)` 不再順帶打 `/api/test`，Library total 只在會改變總數的操作後刷新（收斂 OPT-31 的已知低風險）。新增 `libraryTotalRequestSequence`；Prompt Builder 存成筆記後也會刷新總數。
+    - 列表 grid 加上 `[overflow-anchor:none]`，避免重抓時瀏覽器拿卡片當捲動錨點而跳動。
+  - 驗證：
+    - 新增 `tests/test_list_in_place_updates_opt32.py` 與 `e2e/test_list_in_place_updates.py`（72 筆、載入 3 頁後改第 45 筆）。用 HEAD（`22dc2a1`）的 tree 跑：source lock 4 failed，e2e 失敗並顯示 `list was reset: 20 cards left`。
+    - prism-verifier 在隔離 runtime（70 筆中文筆記）實測 1280 grid、390 list、390 grid：
+      - 七種操作後卡片都還是 60 張，scrollTop 不變；只有 variant 位移 40–48px（容忍 60px 內）。
+      - pin 後該筆在置頂區第一位；每次操作剛好打 page 1～3 三個請求。
+      - Sidebar、Footer 與 `/api/test` 在 archive、variant、delete、批次刪除、取消封存後都一致；純搜尋、篩選、排序不打 `/api/test`。
+    - `-Release` gate 通過（pytest 426、go test ok、e2e 21）；另跑一次 `pytest e2e` 也是 21 passed。
+  - 已知：
+    - 刪除有 variant 子筆記的父筆記會回 500（HEAD 既有的後端 bug）→ 已開 `PRISM-OPT-68`。
+    - 刪除與批次刪除只在本地濾掉筆記，之後 load-more 用舊的位移，可能漏掉跨頁的那一筆（HEAD 既有）→ 已開 `PRISM-OPT-69`。
+    - 低：刷新失敗後按 Retry 會回到第 1 頁；SettingsPage 寫回 `libraryTotal` 時沒經過序號，理論上可能被較舊的回應蓋掉。
 
 ### P1 — 下一輪
 
@@ -528,7 +545,8 @@
 |---|---|---|---|---|
 | PRISM-OPT-30 | Mobile 排序控制與首屏密度 | Done | — | UX-04 |
 | PRISM-OPT-31 | 筆記計數改用單一來源；Maintenance 改讀 `/api/system/stats` | Done | — | UX-05 |
-| PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Todo | 21 | PERF-02 |
+| PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Done | 21 | PERF-02 |
+| PRISM-OPT-68 | 刪除有 variant 子筆記的父筆記回 500（FOREIGN KEY constraint failed） | Todo | — | OPT-32 追蹤 |
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Todo | — | IA-01 |
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Todo | — | IA-02 |
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Todo | — | OPS-03 |
@@ -543,6 +561,7 @@
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件的 CJK 檔名被濾掉（`說明.md` 變成 `_<時間戳>.md`） | Todo | — | OPT-66 追蹤 |
+| PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
 
 ### P3 / Future — 需要證據或明確 promote
 

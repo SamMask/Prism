@@ -199,7 +199,8 @@ def test_ctrl_s_saves_without_closing_and_save_button_still_closes():
     assert "if (close) onClose()" in save
     # A successful save becomes the new baseline, so the editor no longer reports unsaved changes.
     assert save.index("await api.updateNote(note.id, payload)") < save.index("originalSnapshot.current = {")
-    assert "fetchNotes(true)" in save
+    # PRISM-OPT-32: the list refreshes its loaded pages in place instead of resetting to page 1.
+    assert "refreshLoadedNotes()" in save and "fetchNotes(true)" not in save
 
 
 def test_new_note_first_ctrl_s_switches_editor_to_the_created_note():

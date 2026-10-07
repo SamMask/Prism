@@ -12,7 +12,20 @@ export type SearchWorkspaceFilters = {
 }
 
 const VIEW_MODE_STORAGE_KEY = 'prism.viewMode'
+const NOTES_PAGE_SIZE = 20
 let notesRequestSequence = 0
+let libraryTotalRequestSequence = 0
+
+function notesParams(state: SearchWorkspaceFilters, page: number) {
+  const params: Record<string, any> = { page, per_page: NOTES_PAGE_SIZE, sort: state.sortBy }
+  if (state.searchQuery) params.search = state.searchQuery
+  if (state.selectedCategoryId) params.category_id = state.selectedCategoryId
+  // Include archived if viewing archive
+  if (state.showArchived) params.archived = true
+  // Tag filtering - use tag ID
+  if (state.selectedTagId) params.tags = String(state.selectedTagId)
+  return params
+}
 
 function readSavedViewMode(): ViewMode {
   const savedMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
@@ -59,6 +72,7 @@ interface AppState {
 
   // Actions
   fetchNotes: (reset?: boolean) => Promise<void>
+  refreshLoadedNotes: () => Promise<void>
   retryFetchNotes: () => Promise<void>
   fetchCategories: () => Promise<void>
   fetchTags: () => Promise<void>
@@ -127,33 +141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
     try {
       const page = reset ? 1 : state.currentPage
-      
-      // Build params
-      const params: Record<string, any> = {
-        page,
-        per_page: 20,
-        sort: state.sortBy,
-      }
-      
-      if (state.searchQuery) {
-        params.search = state.searchQuery
-      }
-      
-      if (state.selectedCategoryId) {
-        params.category_id = state.selectedCategoryId
-      }
-      
-      // Include archived if viewing archive
-      if (state.showArchived) {
-        params.archived = true
-      }
-      
-      // Tag filtering - use tag ID
-      if (state.selectedTagId) {
-        params.tags = String(state.selectedTagId)
-      }
-      
-      const response = await api.getNotes(params)
+      const response = await api.getNotes(notesParams(state, page))
 
       if (requestId !== notesRequestSequence) return
 
@@ -161,13 +149,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         notes: reset ? response.notes : [...get().notes, ...response.notes],
         totalNotes: response.total,
         currentPage: page + 1,
-        hasMore: response.notes.length === 20,
+        hasMore: response.notes.length === NOTES_PAGE_SIZE,
         searchDiagnostics: response.searchDiagnostics ?? null,
         isLoading: false,
         notesRetryReset: false,
       })
-      // Mutations (create / archive / delete / import) all re-run fetchNotes(true); keep the Library total in step.
-      if (reset) void get().fetchLibraryTotal()
     } catch (error) {
       if (requestId !== notesRequestSequence) return
       console.error('Failed to fetch notes:', error)
@@ -182,6 +168,44 @@ export const useAppStore = create<AppState>((set, get) => ({
           searchDiagnostics: null,
         } : {}),
       })
+    }
+  },
+
+  // After a mutation: re-fetch the pages already loaded and swap them in at once, so the list keeps
+  // its depth and scroll position while the server still decides order (pinned first, sort) and
+  // which notes match the current filters (PRISM-OPT-32).
+  refreshLoadedNotes: async () => {
+    const requestId = ++notesRequestSequence
+    const state = get()
+    const loadedPages = Math.max(1, state.currentPage - 1)
+    set({ isLoading: true, notesError: null })
+
+    try {
+      const responses = await Promise.all(
+        Array.from({ length: loadedPages }, (_, index) => api.getNotes(notesParams(state, index + 1))),
+      )
+
+      if (requestId !== notesRequestSequence) return
+
+      // Pages are separate reads; a note that shifted across a page boundary is kept once.
+      const seen = new Set<number>()
+      const notes = responses.flatMap((response) => response.notes)
+        .filter((note) => !seen.has(note.id) && !!seen.add(note.id))
+      const last = responses[responses.length - 1]
+      set({
+        notes,
+        totalNotes: last.total,
+        currentPage: loadedPages + 1,
+        hasMore: last.notes.length === NOTES_PAGE_SIZE,
+        searchDiagnostics: last.searchDiagnostics ?? null,
+        isLoading: false,
+        notesRetryReset: false,
+      })
+    } catch (error) {
+      if (requestId !== notesRequestSequence) return
+      console.error('Failed to refresh notes:', error)
+      // Keep the list on screen; Retry falls back to a fresh first page.
+      set({ isLoading: false, notesError: 'fetch_failed', notesRetryReset: true })
     }
   },
 
@@ -207,22 +231,26 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   // The runtime version (Go prismVersion()) is the single source; UI never hardcodes it.
   fetchAppVersion: async () => {
+    const requestId = ++libraryTotalRequestSequence
     try {
       const response = await fetch('/api/test')
       const data = await response.json()
       if (typeof data.version === 'string' && data.version) set({ appVersion: data.version })
-      if (typeof data.stats?.library_count === 'number') set({ libraryTotal: data.stats.library_count })
+      if (requestId === libraryTotalRequestSequence && typeof data.stats?.library_count === 'number') set({ libraryTotal: data.stats.library_count })
     } catch (error) {
       console.error('Failed to fetch app version:', error)
     }
   },
 
   // Library total = notes that are not archived (uncategorized included), independent of search / filters.
+  // Only mutations that change it call this (create, variant, archive toggle, delete, import); the
+  // newest request wins so an older response can't overwrite a newer total.
   fetchLibraryTotal: async () => {
+    const requestId = ++libraryTotalRequestSequence
     try {
       const response = await fetch('/api/test')
       const data = await response.json()
-      if (typeof data.stats?.library_count === 'number') set({ libraryTotal: data.stats.library_count })
+      if (requestId === libraryTotalRequestSequence && typeof data.stats?.library_count === 'number') set({ libraryTotal: data.stats.library_count })
     } catch (error) {
       console.error('Failed to fetch library total:', error)
     }
