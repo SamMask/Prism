@@ -640,6 +640,7 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <strong className="text-text-primary">{t('settings.backup.fullSnapshotContents')}</strong>
         </p>
         <p className="mt-2 text-sm text-warning">{t('settings.backup.fullSnapshotManualRestore')}</p>
+        <p className="mt-1 text-sm text-text-muted">{t('settings.backup.fullSnapshotRestoreDoc')}</p>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <Button variant="primary" onClick={handleFullSnapshot} disabled={isExportingFullSnapshot}>
             {isExportingFullSnapshot ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}

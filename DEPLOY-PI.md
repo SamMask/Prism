@@ -176,6 +176,145 @@ ssh PI5Mask24 "sudo systemctl start prism-go-primary.service"
 
 ---
 
+## 從 Full snapshot 還原
+
+手上有 `prism_full_data_snapshot_YYYYMMDD_HHMMSS.zip`（Settings 的「資料與復原」分頁 > 「完整資料快照」卡片）、要還原到 Pi 時使用。Prism 不會自動還原 snapshot，這是手動程序，且會**取代** Pi 上的資料庫、uploads、attachments、notes 與 config。與 `docs/desktop/README-PORTABLE.md` 的同名段落步驟相同，差別只在路徑、指令與服務管理。
+
+Pi 上的 data-dir 與 DB 來自 `prism-go-primary.service` 的 `ExecStart`（`--db /home/mask0709/prism/knowledge.db --data-dir /home/mask0709/prism`），服務使用者是 `mask0709`，服務固定監聽 `127.0.0.1:5004`。以下假設 snapshot 已放在 Pi 的 `/home/mask0709/restore/prism_full_data_snapshot.zip`（例如 `scp prism_full_data_snapshot_*.zip PI5Mask24:/home/mask0709/restore/prism_full_data_snapshot.zip`）。以下指令都在 Pi 上、同一個 shell 內執行（`ssh PI5Mask24` 後），因為後面的步驟會沿用這些變數：
+
+```bash
+DATA=/home/mask0709/prism
+ZIP=/home/mask0709/restore/prism_full_data_snapshot.zip
+SNAP=/home/mask0709/restore/snap        # 解壓目錄，必須是還不存在的新目錄
+```
+
+### 1. 關閉程式
+
+```bash
+sudo systemctl stop prism-go-primary.service
+systemctl is-active prism-go-primary.service     # 必須印出 inactive
+```
+
+### 2. 備份目前的 data-dir
+
+把會被取代的內容整份複製到備份目錄（含 `-wal` / `-shm`，`-a` 保留權限與擁有者）。複製失敗就不要繼續。磁碟空間要夠放 uploads 的一份副本（`du -sh $DATA/static/uploads`）。
+
+```bash
+BACKUP=$DATA/backups/pre-restore-$(date +%Y%m%d_%H%M%S)
+mkdir -p "$BACKUP/docs" "$BACKUP/static"
+cp -a $DATA/knowledge.db* "$BACKUP/"
+cp -a $DATA/static/uploads "$BACKUP/static/"
+cp -a $DATA/docs/attachments $DATA/docs/notes "$BACKUP/docs/"
+cp -a $DATA/config "$BACKUP/"
+echo "Backup folder: $BACKUP"        # 把這個路徑記下來，下面的「回復」要用
+```
+
+### 3. 解壓 snapshot
+
+```bash
+python3 -m zipfile -e "$ZIP" "$SNAP"
+ls "$SNAP"
+```
+
+首選 `python3 -m zipfile -e`。`unzip "$ZIP" -d "$SNAP"` 也可用，但若 CJK 檔名異常，步驟 5 會報 MISSING，請改用 python3。
+
+應看到 `database/`、`static/`、`docs/`、`config/`（選配資料夾可為空或不存在）與 `snapshot-manifest.json`。snapshot 內的資料庫是 `database/knowledge.db`。
+
+### 4. 依路徑對應放回檔案（DB 檔名）
+
+| snapshot 內 | Pi 上 |
+|---|---|
+| `database/knowledge.db` | `/home/mask0709/prism/knowledge.db`（Pi 的 DB 檔名就是 `knowledge.db`，不需改名；桌面版才需改成 `prism_desktop_dev.db`） |
+| `static/uploads/**` | `/home/mask0709/prism/static/uploads/` |
+| `docs/attachments/**` | `/home/mask0709/prism/docs/attachments/` |
+| `docs/notes/**` | `/home/mask0709/prism/docs/notes/` |
+| `config/**` | `/home/mask0709/prism/config/` |
+
+**執行下面的指令前，先跑步驟 5 的驗證（對解壓出來的資料夾，也就是 `test_manifest "$SNAP" database/knowledge.db` 那行）；必須看到 `problems: 0` 才能繼續。** 下面的指令會刪掉 data-dir 內舊檔，只有在步驟 2 已有完整備份、且 snapshot 已驗證完整時才安全。
+
+舊的 `knowledge.db-wal` 與 `knowledge.db-shm` **必須移除**。演練證實：舊的 `-wal` 只要留著，服務啟動後就會讀到舊資料。snapshot 的 DB 是一個一致的單檔，沒有 `-wal` / `-shm`。
+
+```bash
+rm -f "${DATA:?}"/knowledge.db "${DATA:?}"/knowledge.db-wal "${DATA:?}"/knowledge.db-shm
+# rm -f 不會回報失敗，所以明確檢查（出現 STOP 就先排除原因，不要繼續）：
+[ -e "$DATA/knowledge.db-wal" ] && echo "STOP: stale wal"
+[ -e "$DATA/knowledge.db-shm" ] && echo "STOP: stale shm"
+cp "$SNAP/database/knowledge.db" $DATA/knowledge.db
+
+# 取代四個檔案資料夾（snapshot 內沒有的資料夾會被略過）
+for rel in static/uploads docs/attachments docs/notes config; do
+  if [ -d "$SNAP/$rel" ]; then
+    rm -rf "${DATA:?}/${rel:?}"
+    mkdir -p "$(dirname "$DATA/$rel")"
+    cp -r "$SNAP/$rel" "$DATA/$rel"
+  fi
+done
+
+# 權限與擁有者：服務以 mask0709 執行；若你用 sudo 或其他帳號操作，這一步不可省
+sudo chown -R mask0709:mask0709 $DATA/knowledge.db $DATA/static/uploads $DATA/docs/attachments $DATA/docs/notes $DATA/config
+ls -l $DATA/knowledge.db*
+```
+
+`$DATA/backups/`（備份與還原點）與 `.csrf_disabled` 標記不在 snapshot 裡，還原後仍是 Pi 原本的。`backups/` 內的還原點是還原前的資料，不要在還原後再套用。
+
+### 5. 驗證 manifest 的 SHA-256
+
+`snapshot-manifest.json` 對每個 payload 檔列出 `path`（正斜線）、`size_bytes` 與 `sha256`（小寫十六進位）。下面的函式在指定根目錄下逐檔重算（Pi OS 內建 `python3`）。先定義一次，再跑兩次：步驟 4 的指令之前對**解壓目錄**跑，之後對 **data-dir** 跑。第二個參數是資料庫在該根目錄下的相對位置：解壓目錄是 `database/knowledge.db`，data-dir 是 `knowledge.db`。
+
+```bash
+test_manifest() {
+python3 - "$SNAP" "$1" "$2" <<'PY'
+import hashlib, json, os, sys
+snap, root, db_rel = sys.argv[1:4]
+m = json.load(open(os.path.join(snap, "snapshot-manifest.json"), encoding="utf-8"))
+bad = 0
+for f in m["files"]:
+    rel = db_rel if f["path"] == "database/knowledge.db" else f["path"]
+    p = os.path.join(root, rel)
+    if not os.path.isfile(p):
+        print("MISSING ", f["path"]); bad += 1; continue
+    if os.path.getsize(p) != f["size_bytes"] or hashlib.sha256(open(p, "rb").read()).hexdigest() != f["sha256"]:
+        print("MISMATCH", f["path"]); bad += 1
+print("checked", len(m["files"]), "files, problems:", bad)
+PY
+}
+test_manifest "$SNAP" database/knowledge.db     # 步驟 4 之前：解壓目錄
+# ... 執行步驟 4 的指令 ...
+test_manifest "$DATA" knowledge.db              # 步驟 4 之後：還原後的 data-dir
+```
+
+兩次都是 `problems: 0` 代表 snapshot 完整、檔案也放回正確。有 `MISSING` 或 `MISMATCH` 就是 zip 損毀或解壓錯誤：停止；若已執行步驟 4，先照下面「回復」處理，再重新解壓。單檔手動比對可用 `sha256sum "$SNAP/database/knowledge.db"` 對照 manifest 內 `database/knowledge.db` 那筆。
+
+### 6. 啟動並檢查 `migration-status`
+
+```bash
+sudo systemctl start prism-go-primary.service
+sleep 3
+systemctl is-active prism-go-primary.service
+curl -s http://127.0.0.1:5004/api/system/migration-status
+sudo journalctl -u prism-go-primary.service -n 40 --no-pager
+```
+
+預期：服務 `active`，回應 `status` 為 `success`、`data.current_version` 等於 `data.latest_version`、`data.pending` 為空陣列。若 snapshot 來自較舊版本，啟動時 runtime 可能已套用 migration，只要最後 `pending` 為空即可。從瀏覽器（`https://prism.local`）抽查：筆記數量、一篇長文、一個附件下載、筆記內的圖片。
+
+### 回復（還原失敗時）
+
+`$BACKUP` 就是步驟 2 印出的路徑。此備份放在 `$DATA/backups/` 內，只含被取代的那幾項，所以不能整個資料夾對調，要把內容 cp 回去（若是新的 shell，先重新設定 `DATA` 與 `BACKUP`）：
+
+```bash
+sudo systemctl stop prism-go-primary.service
+rm -f "${DATA:?}"/knowledge.db "${DATA:?}"/knowledge.db-wal "${DATA:?}"/knowledge.db-shm
+cp -a $BACKUP/knowledge.db* $DATA/
+for rel in static/uploads docs/attachments docs/notes config; do
+  rm -rf "${DATA:?}/${rel:?}"
+  cp -a "$BACKUP/$rel" "$DATA/$rel"
+done
+sudo chown -R mask0709:mask0709 $DATA/knowledge.db* $DATA/static/uploads $DATA/docs/attachments $DATA/docs/notes $DATA/config
+sudo systemctl start prism-go-primary.service
+```
+
+---
+
 ## 已排除的檔案（不會覆蓋 Pi 上的版本）
 
 | 路徑 | 原因 |

@@ -579,7 +579,11 @@ git diff --check
 - **原因**：`go-shadow/attachments.go` 的 `sanitizeAttachmentFilename` 用的 regexp `\w` 只認 ASCII，所以 `說明.md` 存成 `_<時間戳>.md`。標題雖然保留，但檔案路徑與 Markdown／匯出中看到的名字都不可讀。
 - **修改範圍**：`sanitizeAttachmentFilename`。允許 Unicode 字母與數字（`\p{L}\p{N}`），仍要過濾路徑分隔字元、控制字元、保留名稱（Windows 的 `CON`、`NUL` 等）與長度上限；既有檔案不改名。
 - **不要修改**：附件 API 形狀；既有附件；路徑安全檢查。
-- **驗收**（Go test）：`說明.md`、`メモ.txt`、`메모.md` 都保留可讀的名稱；`../x.md`、`a/b.md`、`CON.md`、超長名稱都被安全處理。
+- **追加（PRISM-OPT-35 演練發現，2026-10-07）**：
+  - 上傳圖片時，純 CJK 檔名（例如 `圖片測試.png`）會被拒絕，回應「Invalid file type」。請一併找出原因：多半是檔名 sanitize 之後只剩副檔名或空字串，再拿去判斷型別。
+  - 修正後，圖片與附件要套用相同的 Unicode 檔名規則。
+  - 附件標題也要一起修：`會議紀錄_附件.md` 上傳後，標題目前變成 `_`。
+- **驗收**（Go test）：`說明.md`、`メモ.txt`、`메모.md` 都保留可讀的名稱；`../x.md`、`a/b.md`、`CON.md`、超長名稱都被安全處理；`圖片測試.png` 可以上傳，檔名可讀。
 - **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
 
 ### PRISM-OPT-68 — 刪除有 variant 子筆記的父筆記回 500

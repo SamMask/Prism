@@ -66,7 +66,7 @@ snapshot-manifest.json
 
 ## Restore boundary
 
-v1 **不提供自動 restore API**。產品 UI 必須明示 `manual_restore_required` 的意思；下載完成不代表已驗證異機復原。任何未來自動還原都必須另開任務、威脅/資料安全審查、rollback contract 與 isolated destructive test。
+v1 **不提供自動 restore API**。產品 UI 必須明示 `manual_restore_required` 的意思；下載完成不代表已驗證異機復原。手動還原步驟見 `docs/desktop/README-PORTABLE.md`（桌面版）與 `DEPLOY-PI.md`（Pi）的「從 Full snapshot 還原」。任何未來自動還原都必須另開任務、威脅/資料安全審查、rollback contract 與 isolated destructive test。
 
 ## Verification
 

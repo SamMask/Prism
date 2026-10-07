@@ -538,6 +538,27 @@
       - 三種圖片清理都實際執行到確認對話並完成，結果正確，文案與流程和 HEAD 相同（修復壞路徑原本就不跳確認）。
     - `-Release` gate：verifier 那次 e2e 失敗 1 條，是不相關的 `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note`；單獨重跑 3/3 通過，完整重跑 31 passed → 已開 `PRISM-OPT-70`。
   - 已知（低）：Danger Zone 卡片嵌在 SectionPanel 裡，390 時兩層 padding 疊加，內容變窄但可讀；heading 是 `h2` 包 `h2`。
+- `PRISM-OPT-35`（本機演練；未在真實 Pi 上演練，未發版）：
+  - 文件：`docs/desktop/README-PORTABLE.md`（PowerShell）與 `DEPLOY-PI.md`（bash）各新增「從 Full snapshot 還原」，兩份都是同樣的六步：
+    1. 關閉程式。
+    2. 備份目前的 data-dir，並印出備份路徑。
+    3. 解壓 snapshot。
+    4. 放回檔案並改 DB 檔名。刪除之前必須先驗證解壓出來的資料夾；移除舊的 `-wal`／`-shm` 後要明確檢查已經刪掉。
+    5. 用 manifest 的 SHA-256 函式驗證，還原前後各跑一次。
+    6. 啟動後檢查 `migration-status`。
+
+    另外附上回復指令，並說明 `backups`／`.csrf_disabled` 不在 snapshot 裡。
+  - `docs/contracts/full-data-snapshot-v1.md:69` 改為指向這兩份文件。Settings 的 Full snapshot 卡片加上一行四語說明，是純文字，不是連結。
+  - 驗證（prism-verifier 照文件逐字演練，路徑全部在 scratch）：
+    - 來源資料：中文筆記、11622 字的長文（拆分到 `docs/notes`）、附件、CJK 檔名的圖片與附件、config。
+    - 桌面版：目標 data-dir 先放舊資料與過期的 WAL，照步驟還原。還原後的基準資料與來源完全相同，`migration-status` 是 17/17，`pending` 為空。
+    - 故意改壞或移走檔案，驗證會報 `MISMATCH`／`MISSING`。
+    - 反向對照：沒刪舊的 `-wal` 時，讀到的是舊資料，證實這一步必要。
+    - PowerShell 5.1／7 的 `Expand-Archive`、Windows tar、python zipfile 解出的 CJK 檔名都正確；Git Bash 的 `unzip` 會亂碼，但驗證能攔下。
+    - Pi 步驟在 Git Bash 實際跑過（`systemctl`、`chown` 只審閱沒執行），結果與來源相同。
+    - 演練回報 8 個 Low：驗證改成刪除前的強制步驟、STOP 檢查、port 變數、亂碼原因寫錯、回復指令、還原點提醒、UI 名稱。全部由 prism-docs 修正，修正後的片段在 scratch 假目錄中實際跑過。
+    - fast gate 通過；`pytest tests/` 426 passed。
+  - 演練順帶發現：純 CJK 檔名的圖片會被拒絕、附件標題變成 `_`。已併入 `PRISM-OPT-67`。
 
 ### P1 — 下一輪
 
@@ -586,7 +607,7 @@
 | PRISM-OPT-68 | 刪除有 variant 子筆記的父筆記回 500（FOREIGN KEY constraint failed） | Done | — | OPT-32 追蹤 |
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Done | — | IA-01 |
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Done | — | IA-02 |
-| PRISM-OPT-35 | Full snapshot 手動還原說明 | Todo | — | OPS-03 |
+| PRISM-OPT-35 | Full snapshot 手動還原說明 | Done | — | OPS-03 |
 | PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Todo | — | OPS-05 |
 | PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Todo | — | TECH-05 |
 | PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Todo | — | R0812:PERF-03 |
@@ -597,7 +618,7 @@
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Todo | 58 | OPT-58 追蹤 |
-| PRISM-OPT-67 | 上傳附件的 CJK 檔名被濾掉（`說明.md` 變成 `_<時間戳>.md`） | Todo | — | OPT-66 追蹤 |
+| PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Todo | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
 

@@ -65,6 +65,136 @@ The data directory contains the desktop database (`prism_desktop_dev.db`), uploa
 
 The portable package includes `static\config\prompt_options.json` and `static\config\wizard_options.json`. On a fresh data directory, the Go runtime seeds Prompt Builder config from those files.
 
+## 從 Full snapshot 還原 (Restore from a Full snapshot)
+
+Use this when you have a `prism_full_data_snapshot_YYYYMMDD_HHMMSS.zip` (Settings > Data & Recovery > Full data snapshot) and want to put its contents into a desktop portable data folder. Prism never restores a snapshot automatically; this is the manual procedure. It **replaces** the database, uploads, attachments, notes and config in the target data folder with the snapshot's copies.
+
+The examples assume the data folder is `<Prism.exe folder>\PrismData` (see **Data** above) and the snapshot is `C:\restore\prism_full_data_snapshot.zip`. Replace the paths with yours. Run everything in PowerShell, in the same window, because later steps reuse these variables.
+
+```powershell
+$Data = "D:\Prism\PrismData"                 # your <Prism.exe folder>\PrismData
+$Zip  = "C:\restore\prism_full_data_snapshot.zip"
+$Snap = "C:\restore\snap"                    # extraction folder (must not exist yet)
+$Port = 5001                                 # Prism.exe default; use 5015 if you start PrismDesktop-debug.exe as shown in step 6
+```
+
+### 1. Close Prism
+
+Quit Prism from the tray icon menu (right-click the Prism tray icon, then Quit), then confirm that no Prism process is left:
+
+```powershell
+Get-Process Prism, PrismDesktop-debug -ErrorAction SilentlyContinue   # must print nothing
+```
+
+### 2. Back up the current data folder
+
+Copy the whole data folder aside (this includes the database and any `-wal` / `-shm` files). The backup is a sibling of the data folder, which the rollback below relies on. Do not continue if the copy fails.
+
+```powershell
+$Backup = "$Data.before-restore-" + (Get-Date -Format yyyyMMdd_HHmmss)
+Copy-Item $Data $Backup -Recurse
+Write-Host "Backup folder: $Backup"        # write this path down; the rollback below needs it
+```
+
+### 3. Extract the snapshot
+
+Extract into a separate folder, not directly into the data folder:
+
+```powershell
+Expand-Archive -LiteralPath $Zip -DestinationPath $Snap
+Get-ChildItem $Snap
+```
+
+You should see `database\`, `static\`, `docs\`, `config\` (the optional folders may be empty or missing) and `snapshot-manifest.json`. The snapshot database is `database\knowledge.db`.
+
+### 4. Put the files back (path mapping and DB rename)
+
+| In the snapshot | In the data folder |
+|---|---|
+| `database\knowledge.db` | `PrismData\prism_desktop_dev.db` (**renamed**; the desktop database file name is `prism_desktop_dev.db`) |
+| `static\uploads\**` | `PrismData\static\uploads\` |
+| `docs\attachments\**` | `PrismData\docs\attachments\` |
+| `docs\notes\**` | `PrismData\docs\notes\` |
+| `config\**` | `PrismData\config\` |
+
+**Before you run the commands below, run the step 5 verification on the extracted folder (the `Test-Manifest $Snap "database/knowledge.db"` line) and continue only if it prints `problems: 0`.** The commands below delete the old files in the data folder; that is safe only because step 2 kept a full copy and the snapshot has been verified.
+
+The old `prism_desktop_dev.db-wal` and `prism_desktop_dev.db-shm` files **must be removed**. A restore drill confirmed it: if a stale `-wal` stays next to the restored database, Prism reads the old data after it starts. The snapshot database is a single consistent file and has no `-wal` / `-shm`.
+
+```powershell
+# remove the old database and its WAL/SHM files
+Remove-Item "$Data\prism_desktop_dev.db", "$Data\prism_desktop_dev.db-wal", "$Data\prism_desktop_dev.db-shm" -ErrorAction SilentlyContinue
+# SilentlyContinue hides errors (for example a file still locked by a running program), so check explicitly:
+Test-Path "$Data\prism_desktop_dev.db-wal"   # must print False
+Test-Path "$Data\prism_desktop_dev.db-shm"   # must print False
+# If either prints True, STOP: find and close the program that holds the file, then remove it again.
+Copy-Item "$Snap\database\knowledge.db" "$Data\prism_desktop_dev.db"
+
+# replace the four file folders (skip a line if that folder is not in the snapshot)
+foreach ($rel in "static\uploads", "docs\attachments", "docs\notes", "config") {
+  if (Test-Path "$Snap\$rel") {
+    if (Test-Path "$Data\$rel") { Remove-Item "$Data\$rel" -Recurse -Force }
+    New-Item -ItemType Directory -Force (Split-Path "$Data\$rel") | Out-Null
+    Copy-Item "$Snap\$rel" "$Data\$rel" -Recurse
+  }
+}
+```
+
+The `backups\` folder (the daily restore points) and the `.csrf_disabled` marker are not part of a snapshot, so after the restore they stay as they were on this machine. The restore points in `backups\` hold data from before the restore; do not apply them after restoring.
+
+### 5. Verify the manifest SHA-256
+
+`snapshot-manifest.json` lists every payload file with `path` (forward slashes), `size_bytes` and `sha256` (lowercase hex). The function below recomputes each hash under a root folder. Define it once, then run it twice: on the **extracted folder** before the commands in step 4, and on the **data folder** after them. The second argument is where the database lives under that root: `database/knowledge.db` in the extracted folder, `prism_desktop_dev.db` in the data folder.
+
+```powershell
+function Test-Manifest($Root, $DbRel) {
+  $m = Get-Content "$Snap\snapshot-manifest.json" -Raw -Encoding UTF8 | ConvertFrom-Json
+  $bad = 0
+  foreach ($f in $m.files) {
+    $rel = if ($f.path -eq "database/knowledge.db") { $DbRel } else { $f.path }
+    $p = Join-Path $Root $rel
+    if (-not (Test-Path -LiteralPath $p)) { "MISSING  $($f.path)"; $bad++; continue }
+    $h = (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLower()
+    if ($h -ne $f.sha256 -or (Get-Item -LiteralPath $p).Length -ne $f.size_bytes) { "MISMATCH $($f.path)"; $bad++ }
+  }
+  "checked $($m.files.Count) files, problems: $bad"
+}
+Test-Manifest $Snap "database/knowledge.db"         # before step 4: the extracted folder
+# ... run the step 4 commands ...
+Test-Manifest $Data "prism_desktop_dev.db"          # after step 4: the restored data folder
+```
+
+`problems: 0` both times means the snapshot was intact and the files were put back correctly. Any `MISSING` or `MISMATCH` line means the zip is damaged or was extracted wrongly (for example a zip tool that ignores the UTF-8 flag and garbles non-ASCII file names): stop, and if you already ran step 4, roll back (below); then extract again with PowerShell 7 or `tar -xf`.
+
+### 6. Start Prism and check `migration-status`
+
+Start `Prism.exe`. The desktop runtime listens on `127.0.0.1:5001` by default (`PRISM_GO_ADDR` overrides it). For a diagnosable start, use `PrismDesktop-debug.exe` with an explicit address instead, and set `$Port = 5015` (the port you pass to `--addr`):
+
+```powershell
+.\PrismDesktop-debug.exe --data-dir $Data --addr 127.0.0.1:5015
+```
+
+Then, from another PowerShell window (define `$Port` there too):
+
+```powershell
+Invoke-RestMethod "http://127.0.0.1:$Port/api/system/migration-status" | ConvertTo-Json -Depth 5
+```
+
+Expected: `status` is `success`, `data.current_version` equals `data.latest_version`, and `data.pending` is empty. If the snapshot came from an older Prism version, the runtime may have applied migrations on startup; that is fine as long as `pending` ends up empty.
+
+Finally open Prism and spot-check: the note count, a note with a long body, an attachment download, and an image in a note.
+
+### Rollback (if the restore failed)
+
+`$Backup` is the path printed in step 2. Close Prism, then swap the folders back (both are in the same parent folder, so `Rename-Item` works):
+
+```powershell
+Rename-Item $Data "$Data.failed"
+Rename-Item $Backup (Split-Path $Data -Leaf)
+```
+
+Keep `$Data.failed` until you have confirmed the old data is back.
+
 ## Requirement
 
 Microsoft Edge WebView2 Runtime must be installed on the machine. If WebView2 is missing, download and install it from Microsoft's official [Download Microsoft Edge WebView2](https://developer.microsoft.com/microsoft-edge/webview2/consumer/) page. Without it, the desktop shell exits with a diagnostic error in the debug console or desktop log. This portable package does not install WebView2 Runtime and is not an MSI/NSIS/WiX installer.
