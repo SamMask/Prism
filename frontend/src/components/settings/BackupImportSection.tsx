@@ -388,12 +388,15 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
           <Download size={20} className="text-success" />
           {t('settings.backup.exportTitle')}
         </h2>
-        <p className="text-text-muted text-sm mb-4">
+        <p className="text-text-muted text-sm mb-2">
           {t('settings.backup.exportDescription')}
         </p>
+        <p className="text-warning text-sm mb-4">
+          {t('settings.backup.exportSplitNotesNote')}
+        </p>
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
               <p className="text-text-primary">{t('settings.backup.jsonCopyTitle')}</p>
               <p className="text-text-muted text-sm">
                 {t('settings.backup.jsonCopyDescription')}
@@ -410,8 +413,8 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
             </Button>
           </div>
           <div className="border-t border-border-subtle pt-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-text-primary">{t('settings.backup.dbCopyTitle')}</p>
                 <p className="text-text-muted text-sm">
                   {t('settings.backup.dbCopyDescription')}
@@ -429,8 +432,8 @@ export function BackupImportSection({ onStatsUpdate }: BackupImportSectionProps)
             </div>
           </div>
           <div className="border-t border-border-subtle pt-4">
-            <div className="flex items-center justify-between">
-              <div>
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-text-primary">{t('settings.backup.markdownTitle')}</p>
                 <p className="text-text-muted text-sm">
                   {t('settings.backup.markdownDescription')}

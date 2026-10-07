@@ -409,6 +409,16 @@
     - fast 與 `-Release` 都通過；pytest 的 test ID 集合與 HEAD 逐行相同，沒有刪除任何測試。
     - 第一輪因為計時沒有寫進文件、`TEST_PORTFOLIO.md` 還留著過時的段落而退回，主代理已補上。
   - 已知（低）：放寬後的 Header 鎖仍綁 `data-testid` 與 `onClick` 的屬性順序（行為已由 e2e 守住）；CI 首次加上 e2e，可能偶爾不穩。
+- `PRISM-OPT-23`（本機驗證；未發版、未部署 Pi）：
+  - Settings「資料與還原」的匯出文案改為照實描述，四語都更新：
+    - JSON：可攜的文字副本（筆記、分類、標籤），不含置頂、封存、版本歷史、附件檔與圖片。
+    - Markdown：每則筆記一個 .md，含置頂／封存標記與本機圖片，不含文字附件。這點已讀 `buildMarkdownExportZip` 確認。
+    - .db：只有資料庫，不含上傳圖片、附件檔、docs/notes 檔與 config。
+    - 三者都指向「完整資料快照」。
+  - 新增 `exportSplitNotesNote`：已拆分的長文在三種匯出中只有 500 字預覽，請先到「維護與健康」執行「合併長文回筆記」。主代理核對過四語的分頁名稱與按鈕名稱，都和實際 UI 一致。
+  - 修改鎖定舊文案的 source test，斷言方式不變。
+  - 驗證：`npm run build` 通過；`git diff --check` 通過；隔離 runtime 的 headless 瀏覽器在 4 種語言 × 390／1280 都沒有水平捲動，文字正常換行。
+  - 已知：OPT-20 在正式資料上執行後，可以拿掉預覽提示；PRISM-OPT-39 補上欄位後，JSON 文案要同步修改。
 
 ### P1 — 下一輪
 
@@ -417,7 +427,7 @@
 | PRISM-OPT-20 | 「合併長文回筆記」維護動作（dry-run、先建還原點、檔案移入隔離資料夾） | Done | 19、60 | FEAT-02、PERF-01 |
 | PRISM-OPT-21 | `Ctrl+S` 存檔後留在編輯器；未存變更時以 `beforeunload` 保護 | Done | — | UX-02 |
 | PRISM-OPT-22 | 預覽狀態的最小語意修正（標題不 autofocus） | Done | 建議在 21 之後 | UX-03 |
-| PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Todo | — | FEAT-03 |
+| PRISM-OPT-23 | 匯出範圍文案誠實化（JSON、Markdown、.db） | Done | — | FEAT-03 |
 | PRISM-OPT-24 | 版本單一來源（由 runtime 提供，移除寫死的版本號） | Todo | — | TECH-01 |
 | PRISM-OPT-25 | `frontend/node_modules` 移出版控；清除死資產與死 script | Done | — | TECH-04 |
 | PRISM-OPT-26 | 補強 behavior test；fast／release gate 分流；historical marker | Done | 建議在 15、18、19 之後 | TECH-02 |

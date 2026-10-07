@@ -120,7 +120,7 @@ def test_core_ux_settings_tabs_and_backup_restore_copy_are_locked():
         assert f"label: '{label}'" in settings
 
     assert "Flask + SQLite" not in settings
-    assert "下載一份可自行保存或帶到其他工具使用的資料副本；這不會建立 Prism 內建還原點" in i18n
+    assert "下載資料副本供自行保存或帶到其他工具；這不會建立 Prism 還原點。完整備份請用下方「完整資料快照」" in i18n
     assert "匯入先前下載的 JSON 副本；這會新增或建立副本，不會覆蓋整個資料庫" in i18n
     assert "選一個 Prism 內建還原點" in i18n
     assert "還原前會先把目前資料庫另存一份" in i18n
