@@ -18,7 +18,7 @@ function readSavedViewMode(): ViewMode {
   const savedMode = localStorage.getItem(VIEW_MODE_STORAGE_KEY)
   return savedMode === 'grid' || savedMode === 'list' || savedMode === 'compact'
     ? savedMode
-    : 'grid'
+    : window.matchMedia('(max-width: 639px)').matches ? 'list' : 'grid'
 }
 
 interface AppState {

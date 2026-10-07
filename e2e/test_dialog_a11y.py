@@ -12,10 +12,18 @@ INSIDE_TOPMOST = """() => {
 }"""
 
 
+def _open_anchor(page: Page):
+    # Search first: the anchor must not depend on Home's first page, which other e2e files fill up.
+    search = page.locator('[data-testid="search-input"]')
+    search.fill("E2E Search Anchor")
+    search.press("Enter")
+    page.get_by_role("heading", name="E2E Search Anchor").click()
+
+
 def _open_dirty_editor(page: Page):
     page.evaluate("localStorage.setItem('cardOpenMode', 'edit')")
     page.reload()
-    page.get_by_role("heading", name="E2E Search Anchor").click()
+    _open_anchor(page)
     editor = page.locator('[data-testid="note-editor"]')
     expect(editor).to_be_visible()
     textarea = editor.locator("textarea").first
@@ -25,7 +33,7 @@ def _open_dirty_editor(page: Page):
 
 
 def test_editor_is_modal_and_tab_never_reaches_background(app_page: Page):
-    app_page.get_by_role("heading", name="E2E Search Anchor").click()
+    _open_anchor(app_page)
     dialog = app_page.get_by_role("dialog")
     expect(dialog).to_have_attribute("aria-modal", "true")
     expect(dialog).to_have_attribute("aria-labelledby", re.compile(r".+"))
@@ -115,7 +123,7 @@ def test_image_lightbox_over_reading_view_is_its_own_layer(app_page: Page, runti
 
 
 def test_history_modal_close_keeps_focus_in_editor(app_page: Page, runtime_url: str):
-    app_page.get_by_role("heading", name="E2E Search Anchor").click()
+    _open_anchor(app_page)
     editor = app_page.locator('[data-testid="note-editor"]')
     expect(editor).to_be_visible()
     app_page.get_by_role("button", name=re.compile("History")).click()

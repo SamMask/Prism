@@ -18,7 +18,7 @@ def test_home_search_and_open_note(app_page: Page, runtime_url: str):
     expect(app_page.locator('[data-testid="note-editor"]')).to_be_visible()
     app_page.goto(runtime_url)
     app_page.get_by_role("button", name="Sort notes").click()
-    app_page.get_by_role("button", name="Custom order").click()
+    app_page.get_by_role("menuitemradio", name="Custom order").click()
     expect(app_page.locator('[data-testid="custom-reorder-disabled-reason"]')).to_be_visible()
 
 

@@ -363,7 +363,7 @@ export function HomePage() {
     <>
       <form
         onSubmit={submitMobileSearch}
-        className="mb-4 md:hidden"
+        className="mb-2 sm:mb-4 md:hidden"
         data-testid="mobile-search-form"
       >
         <label className="sr-only" htmlFor="mobile-search-input">{t('common.search')}</label>
@@ -394,10 +394,10 @@ export function HomePage() {
         </div>
       </form>
 
-      <div className="mb-5 flex items-end justify-between gap-4 px-1">
+      <div className="mb-2 flex items-end justify-between gap-4 px-1 sm:mb-5">
         <div className="min-w-0">
           <div className="flex min-w-0 flex-wrap items-baseline gap-x-3 gap-y-1">
-            <h1 className="truncate text-3xl font-semibold leading-tight tracking-tight text-text-primary">
+            <h1 className="truncate text-xl font-semibold sm:text-3xl sm:leading-tight leading-tight tracking-tight text-text-primary">
               {sectionTitle}
             </h1>
             <p className="text-sm text-text-muted">
@@ -409,7 +409,7 @@ export function HomePage() {
 
       {savedSearchWorkspaces.length > 0 ? (
         <div
-          className="mb-4 rounded-md border border-border-subtle bg-bg-elevated/55 px-3 py-3"
+          className="mb-2 rounded-md border border-border-subtle bg-bg-elevated/55 px-3 py-2 sm:mb-4 sm:py-3"
           data-testid="saved-search-workspace-bar"
         >
           <div className="flex flex-wrap items-center gap-2 text-xs text-text-secondary">
@@ -425,7 +425,7 @@ export function HomePage() {
               {hasSavedCurrentSearchWorkspace ? t('home.savedSearch.alreadySaved') : t('home.savedSearch.save')}
             </button>
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2 sm:mt-3">
             {savedSearchWorkspaces.map((workspace) => (
               <span key={workspace.id} className="inline-flex h-8 items-center gap-1 rounded-md border border-border-subtle bg-bg-base text-xs text-text-secondary">
                 <button
@@ -452,11 +452,11 @@ export function HomePage() {
           </div>
         </div>
       ) : (
-        <div className="mb-4 flex justify-end" data-testid="saved-search-empty-cta">
+        <div className="mb-1 flex justify-end sm:mb-4" data-testid="saved-search-empty-cta">
           <button
             type="button"
             onClick={saveCurrentSearchWorkspace}
-            className="inline-flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs text-text-muted hover:bg-bg-elevated hover:text-text-primary"
+            className="inline-flex items-center gap-2 rounded-md px-2.5 py-1 text-xs text-text-muted hover:bg-bg-elevated sm:py-1.5 hover:text-text-primary"
             data-testid="save-search-workspace"
           >
             <Bookmark size={14} />

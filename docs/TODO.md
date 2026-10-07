@@ -451,6 +451,22 @@
     - 額外驗證：同一筆記兩列指向同一檔時不會留下孤兒檔；dry-run 計數正確；刪檔失敗回 500 並保留附件列；併發刪除與讀取各 20 次都正常。
     - 兩個隔離 runtime 的真實重現：A、B 同秒上傳造成真正撞名，B 匯出後匯入 A。刪匯入的列、或刪除筆記 A 時，A 的檔案都保留；刪掉最後一個引用才刪檔。
   - 已知：每次刪除都會掃一遍附件表；刪檔成功但 commit 失敗時，會留下指向不存在檔案的附件列，與 HEAD 原本的失敗型態相同。
+- `PRISM-OPT-30`（本機驗證；未發版、未部署 Pi）：
+  - `Header.tsx`：
+    - 排序按鈕在 <640px 也顯示（只有圖示），mobile 選單改為 `fixed`，靠右且不溢出。
+    - a11y：`aria-haspopup`／`aria-expanded`、`role=menu`、`menuitemradio` 加 `aria-checked`；Escape 可關閉。
+    - 關閉後 focus 回到排序按鈕，但只在 focus 原本就在選單內時才搶回，避免把 focus 拉出上層對話框（OPT-62）。
+  - `HomePage.tsx` 在 mobile 壓縮間距，≥640px 不變。`appStore`：沒有存過 `prism.viewMode` 時，<640px 預設 list；已存的偏好照舊。
+  - 實測（375／390）：
+    - 第一張卡片 top 從 287 降到 238px；預設 list 完整可見 5～6 張（原本 2～3 張）。
+    - 三種排序的 DOM 順序都和 API 一致。
+    - 640、700、768、1024、1280 的全頁截圖與 HEAD 逐像素相同。
+  - prism-verifier 退回兩次：
+    - 第一次：既有 e2e 的 locator 因 role 改變而失效。另外發現 `test_dialog_a11y` 在 HEAD 上就不穩定，已改成用搜尋開啟 anchor，只動測試、斷言不變；`pytest e2e` 連續 3 次全綠。
+    - 第二次：focus 歸還會在 Escape 時把 focus 拉出上層的確認框。主代理加上 `sortMenuRef.contains` 判斷，並新增 e2e `test_escape_with_sort_menu_open_keeps_focus_in_the_top_dialog`；拿掉判斷時這個 e2e 會失敗。
+  - e2e：新增 `e2e/test_mobile_sort_density.py` 3 項，在 HEAD 上失敗；`-Release` gate 通過（pytest 422、e2e 20）。
+  - 同時期另一個修正（獨立 commit `f342139`）：`test_desktop_shell_go_build_and_runtime_smoke` 不再重跑 `go test ./...`。它原本設 120s timeout，隨著 Go 測試變多，在 CI 上逾時，造成 OPT-66 那次 push 的 CI 失敗；修正後 CI 恢復綠燈。
+  - 已知（低）：排序選單沒有方向鍵導覽；mobile 預設 list 只在第一次載入時判斷。
 
 ### P1 — 下一輪
 
@@ -493,7 +509,7 @@
 
 | 工單 | 摘要 | 狀態 | 依賴 | Finding |
 |---|---|---|---|---|
-| PRISM-OPT-30 | Mobile 排序控制與首屏密度 | Todo | — | UX-04 |
+| PRISM-OPT-30 | Mobile 排序控制與首屏密度 | Done | — | UX-04 |
 | PRISM-OPT-31 | 筆記計數改用單一來源；Maintenance 改讀 `/api/system/stats` | Todo | — | UX-05 |
 | PRISM-OPT-32 | mutation 後就地更新，不再重置列表 | Todo | 21 | PERF-02 |
 | PRISM-OPT-33 | Library 導覽去重（desktop 的 FilterStrip、重複三次的標題與計數） | Todo | — | IA-01 |

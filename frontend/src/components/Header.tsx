@@ -1,5 +1,5 @@
 import { Search, Plus, LayoutGrid, List, AlignJustify, X, ArrowUpDown, Trash2, CheckSquare, Square, Command, BookOpen, Menu } from 'lucide-react'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAppStore } from '../stores/appStore'
 import { Button, IconButton } from './ui'
@@ -45,6 +45,13 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
   const [inputValue, setInputValue] = useState(searchQuery)
   const [showSortMenu, setShowSortMenu] = useState(false)
+  const sortButtonRef = useRef<HTMLButtonElement>(null)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+  const closeSortMenu = () => {
+    setShowSortMenu(false)
+    // Reclaim focus only from inside the menu; a dialog opened on top owns it (PRISM-OPT-62).
+    if (sortMenuRef.current?.contains(document.activeElement)) sortButtonRef.current?.focus()
+  }
   const [isOpeningReadingWorkspace, setIsOpeningReadingWorkspace] = useState(false)
 
   // Sync input with store when searchQuery changes externally
@@ -127,6 +134,15 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
       setIsOpeningReadingWorkspace(false)
     }
   }
+
+  useEffect(() => {
+    if (!showSortMenu) return
+    const closeOnEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeSortMenu()
+    }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [showSortMenu])
 
   // Sort options matching backend
   const sortOptions = [
@@ -277,10 +293,14 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
 
           {/* Sort Dropdown */}
           {isHomeRoute && (
-          <div className="relative hidden sm:block">
+          <div className="relative" ref={sortMenuRef}>
             <button
+              ref={sortButtonRef}
               onClick={() => setShowSortMenu(!showSortMenu)}
               aria-label={t('header.sortNotes')}
+              aria-haspopup="true"
+              aria-expanded={showSortMenu}
+              data-testid="sort-menu-button"
               className="flex items-center gap-2 px-3 py-2 rounded-md bg-bg-elevated
                          text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors text-sm"
             >
@@ -296,13 +316,15 @@ export function Header({ onOpenMobileNav }: HeaderProps) {
                   className="fixed inset-0 z-10"
                   onClick={() => setShowSortMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-2 w-56 bg-bg-surface border border-border-default rounded-lg shadow-xl z-20 py-1">
+                <div role="menu" aria-label={t('header.sortNotes')} className="fixed right-3 top-[68px] w-56 max-w-[calc(100vw-1.5rem)] sm:absolute sm:right-0 sm:top-full sm:mt-2 bg-bg-surface border border-border-default rounded-lg shadow-xl z-20 py-1">
                   {sortOptions.map(option => (
                     <button
                       key={option.value}
+                      role="menuitemradio"
+                      aria-checked={sortBy === option.value}
                       onClick={() => {
                         setSortBy(option.value)
-                        setShowSortMenu(false)
+                        closeSortMenu()
                       }}
                       className={`w-full flex items-center justify-between px-4 py-2.5 text-sm
                                  ${sortBy === option.value ? 'text-primary bg-primary/5' : 'text-text-secondary'}
