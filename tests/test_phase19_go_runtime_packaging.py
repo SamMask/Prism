@@ -66,7 +66,7 @@ def test_phase19_go_runtime_build_paths_and_windows_smoke(temp_db, tmp_path):
     try:
         status, body = _wait_for(f"http://127.0.0.1:{port}/healthz")
         assert status == 200
-        assert '"go-runtime-proof"' in body
+        assert '"go-runtime"' in body
 
         status, html = _wait_for(f"http://127.0.0.1:{port}/")
         assert status == 200

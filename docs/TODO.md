@@ -576,6 +576,17 @@
     - Pi 經 Caddy 進來時，localhost gate 擋不住區網使用者，只剩 CSRF 防護；還原點端點也一樣。
     - 桌面版重啟後會殘留一個幽靈 tray icon；剛啟動時按 Restart，可能撞上正在寫入的每日還原點 → 已開 `PRISM-OPT-71`。
     - 桌面 GUI 版的 log 檔一直是 0 bytes → 已開 `PRISM-OPT-72`。
+- `PRISM-OPT-37`（本機驗證；未發版、未部署 Pi）：
+  - Go 只改字串：
+    - 13 條 `--enable-*` flag 的說明拿掉「local/copied-DB … parity candidate」。
+    - 啟動 log 改成 `Prism runtime listening on …`。
+    - 附件 raw 被停用時的錯誤，從「remain Python-owned」改成 `Attachment raw read route is disabled`。
+    - `/healthz` 的 `runtime.mode` 值從 `go-runtime-proof` 改成 `go-runtime`（key 不變）。主代理 grep 過 repo 的 scripts、tests、frontend、deploy，沒有其他地方依賴這個值或舊的 log 字串。
+  - 不改：flag 名稱與行為、DB 檔名、API 結構、內部識別字、module 與目錄名、歷史文件。
+  - 驗證：
+    - 新增 `go-shadow/neutral_strings_test.go` 的 `TestRuntimeOutputHasNoMigrationEraWording`。它實際 build 並啟動 runtime，收集 `-h`、`/healthz`、附件 405 回應與啟動 log，斷言其中都沒有 candidate、proof、parity、python。
+    - 在 HEAD 上，這個測試會因 4 處字樣而失敗。
+    - fast gate 通過（pytest 258、go test ok）。
 
 ### P1 — 下一輪
 
@@ -626,7 +637,7 @@
 | PRISM-OPT-34 | Settings 重新分組（Library & Editor、Images & storage、tab 深連結） | Done | — | IA-02 |
 | PRISM-OPT-35 | Full snapshot 手動還原說明 | Done | — | OPS-03 |
 | PRISM-OPT-36 | Server dashboard 的 Restart：接上真正的重啟，或移除 | Done | — | OPS-05 |
-| PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Todo | — | TECH-05 |
+| PRISM-OPT-37 | 使用者看得到的遷移期字串改為中性文案 | Done | — | TECH-05 |
 | PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Todo | — | R0812:PERF-03 |
 | PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Todo | 23 | FEAT-03 |
 | PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Todo | — | OPT-17 追蹤 |

@@ -28,7 +28,7 @@ func (s *server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response{
 		"status": "ok",
 		"runtime": response{
-			"mode":                    "go-runtime-proof",
+			"mode":                    "go-runtime",
 			"addr":                    s.runtime.addr,
 			"data_dir":                s.runtime.dataDir,
 			"db_path":                 s.runtime.dbPath,

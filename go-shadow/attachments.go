@@ -39,7 +39,7 @@ func (s *server) handleAttachmentDetail(w http.ResponseWriter, r *http.Request) 
 	if boolString(r, "raw") {
 		if !s.runtime.enableAttachmentRawRead {
 			if s.runtime.enableAttachmentTextRead {
-				writeError(w, http.StatusMethodNotAllowed, "Raw attachment responses remain Python-owned")
+				writeError(w, http.StatusMethodNotAllowed, "Attachment raw read route is disabled")
 				return
 			}
 			writeError(w, http.StatusMethodNotAllowed, "Attachment raw read route is disabled")
