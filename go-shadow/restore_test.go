@@ -547,3 +547,158 @@ func TestPlainRuntimeServerDoesNotCreateRestorePoint(t *testing.T) {
 		t.Fatal("plain runtime must not run the daily restore point check")
 	}
 }
+
+// TestDailyRestorePointClearsTempLeftByInterruptedWrite locks PRISM-OPT-71: a restart
+// (os.Exit) or crash between VACUUM INTO and the rename leaves a half-written
+// "<name>.db.tmp". It is never listed as a backup, and the next startup check removes it.
+func TestDailyRestorePointClearsTempLeftByInterruptedWrite(t *testing.T) {
+	srv := openRestorePointTestServer(t, "中斷的還原點")
+	dir := srv.runtime.backupsDir
+	stale := filepath.Join(dir, "prism_backup_20260101_000000_000000000.db.tmp")
+	if err := os.WriteFile(stale, []byte("SQLite format 3\x00 半截"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	other := filepath.Join(dir, "notes.tmp") // not ours: must stay
+	if err := os.WriteFile(other, []byte("keep"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if got := countManagedBackups(t, dir); got != 0 {
+		t.Fatalf("a half-written temp file must never be listed as a backup, got %d", got)
+	}
+
+	result := srv.ensureDailyRestorePoint(time.Now())
+	if result.Status != "created" {
+		t.Fatalf("check = %+v, want created", result)
+	}
+	if fileExists(stale) {
+		t.Fatal("startup check must remove the temp file left by an interrupted restore point")
+	}
+	if !fileExists(other) {
+		t.Fatal("startup check must only remove prism_backup_*.db.tmp")
+	}
+	if got := readProbe(t, filepath.Join(dir, result.Backup)); got != "中斷的還原點" {
+		t.Fatalf("restore point probe = %q", got)
+	}
+}
+
+// stubRestartExit makes triggerRestart take the supervised path and records exit codes
+// instead of ending the test process. Supervised mode never re-execs, so no child starts.
+func stubRestartExit(t *testing.T) <-chan int {
+	t.Helper()
+	t.Setenv("PRISM_GO_SUPERVISED", "1")
+	codes := make(chan int, 4)
+	previous := exitProcess
+	exitProcess = func(code int) { codes <- code }
+	t.Cleanup(func() { exitProcess = previous })
+	return codes
+}
+
+func waitRestartExit(t *testing.T, codes <-chan int) int {
+	t.Helper()
+	select {
+	case code := <-codes:
+		return code
+	case <-time.After(5 * time.Second):
+		t.Fatal("triggerRestart never reached exit")
+		return -1
+	}
+}
+
+// TestTriggerRestartCallsBeforeExitOnce locks PRISM-OPT-71: the desktop shell's tray icon
+// removal hook runs exactly once, after the DB is closed and before the process exits.
+func TestTriggerRestartCallsBeforeExitOnce(t *testing.T) {
+	codes := stubRestartExit(t)
+	srv := openRestorePointTestServer(t, "LIVE")
+	var calls []string
+	srv.beforeExit = func() {
+		if err := srv.db.Ping(); err == nil {
+			t.Error("beforeExit must run after the DB is closed")
+		}
+		select {
+		case <-codes:
+			t.Error("beforeExit must run before exit")
+		default:
+		}
+		calls = append(calls, "beforeExit")
+	}
+
+	srv.triggerRestart()
+	if code := waitRestartExit(t, codes); code != restartExitCode {
+		t.Fatalf("supervised exit code = %d, want %d", code, restartExitCode)
+	}
+	time.Sleep(50 * time.Millisecond) // nothing may run after exit
+	if len(calls) != 1 {
+		t.Fatalf("beforeExit calls = %d, want 1", len(calls))
+	}
+	select {
+	case code := <-codes:
+		t.Fatalf("exit called twice (second code %d)", code)
+	default:
+	}
+}
+
+func TestTriggerRestartWithoutBeforeExitStillExits(t *testing.T) {
+	codes := stubRestartExit(t)
+	srv := openRestorePointTestServer(t, "LIVE")
+	srv.triggerRestart()
+	if code := waitRestartExit(t, codes); code != restartExitCode {
+		t.Fatalf("supervised exit code = %d, want %d", code, restartExitCode)
+	}
+}
+
+// TestRestartDuringDailyRestorePointLeavesNoBrokenBackup locks PRISM-OPT-71: whether the
+// restart closes the DB before or during the restore point's VACUUM INTO, the backups dir
+// ends with either a valid restore point or none, never a broken or half-written one.
+// database/sql Close waits for the running VACUUM INTO, and the write goes to a temp file
+// that is renamed only after validation.
+func TestRestartDuringDailyRestorePointLeavesNoBrokenBackup(t *testing.T) {
+	codes := stubRestartExit(t)
+	statuses := map[string]int{}
+	// triggerRestart sleeps 250ms before closing the DB; start the restore point around it.
+	for _, startAfter := range []time.Duration{300 * time.Millisecond, 230 * time.Millisecond, 180 * time.Millisecond, 100 * time.Millisecond} {
+		srv := openRestorePointTestServer(t, "重啟與還原點")
+		// ~40MB so VACUUM INTO is still running when the DB is closed.
+		if _, err := srv.db.Exec("WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i+1 FROM n WHERE i < 40) INSERT INTO Probe(tag) SELECT randomblob(1048576) FROM n"); err != nil {
+			t.Fatal(err)
+		}
+		done := make(chan autoRestorePointResult, 1)
+		srv.triggerRestart()
+		time.Sleep(startAfter)
+		go func() { done <- srv.ensureDailyRestorePoint(time.Now()) }()
+		if code := waitRestartExit(t, codes); code != restartExitCode {
+			t.Fatalf("exit code = %d", code)
+		}
+		result := <-done
+		statuses[result.Status]++
+
+		dir := srv.runtime.backupsDir
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, entry := range entries {
+			name := entry.Name()
+			if strings.HasSuffix(name, ".tmp") {
+				t.Errorf("start %v: half-written temp file left: %s", startAfter, name)
+			}
+			if isManagedBackupFilename(name) {
+				if err := validateSQLiteBackup(filepath.Join(dir, name)); err != nil {
+					t.Errorf("start %v: broken restore point %s: %v", startAfter, name, err)
+				}
+			}
+		}
+		switch result.Status {
+		case "created":
+			if got := readProbe(t, filepath.Join(dir, result.Backup)); got != "重啟與還原點" {
+				t.Errorf("start %v: restore point probe = %q", startAfter, got)
+			}
+		case "failed":
+			if got := countManagedBackups(t, dir); got != 0 {
+				t.Errorf("start %v: failed restore point left %d backups", startAfter, got)
+			}
+		default:
+			t.Errorf("start %v: status = %+v", startAfter, result)
+		}
+	}
+	t.Logf("restore point outcomes across interleavings: %v", statuses)
+}

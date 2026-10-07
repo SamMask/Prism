@@ -89,6 +89,10 @@ type server struct {
 	// restart, when set, performs the process restart for a staged DB restore.
 	// main wires it to triggerRestart; tests override it to avoid os.Exit.
 	restart func()
+	// beforeExit, when set, runs once in triggerRestart just before the process exits or
+	// re-execs, since os.Exit skips deferred cleanup. The desktop shell uses it to remove its
+	// tray icon (PRISM-OPT-71); nil elsewhere.
+	beforeExit func()
 	// noteFilesMu serializes everything that writes or deletes docs/notes files, attachment
 	// files or auto-extracted attachment rows, so the separated-notes maintenance action
 	// (PRISM-OPT-20) sees a stable set of rows and files. Take it before any DB transaction

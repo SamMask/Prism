@@ -760,6 +760,27 @@
     - `-Release` gate 通過。
     - 由 prism-engineer 診斷與實作，主代理讀 diff 驗收。
   - 已知（低）：第一次存檔失敗時，排隊的 Ctrl+S 會再試一次，可能出現兩次錯誤 toast。
+- `PRISM-OPT-71`（本機驗證；桌面版）：
+  - 讀 code 確認：
+    - 每日還原點原本就是原子寫入（`VACUUM INTO .db.tmp` → 驗證 → rename），而 `db.Close()` 會等 VACUUM 跑完，所以不會出現壞掉的 `.db` 還原點。
+    - 唯一的缺口：在 VACUUM 與 rename 之間結束程序，會留下 `.db.tmp`，而且之後一直沒人清。
+  - Go：
+    - `server` 新增可選欄位 `beforeExit`，`triggerRestart` 在 DB 關閉之後、結束程序之前呼叫一次。
+    - `os.Exit` 抽成 `exitProcess`，方便測試替換。
+    - desktop shell 把 `beforeExit` 設成「移除 tray icon」：`deleteTrayIcon` 改用 `atomic.Bool` CAS，最多只移除一次。
+    - `ensureDailyRestorePoint` 在 `managedBackupMu` 鎖內，先清掉殘留的 `prism_backup_*.db.tmp`。
+  - 驗證：
+    - `restore_test.go` 新增 4 個測試：
+      - 殘留 tmp 會被清除（修正前失敗）。
+      - `beforeExit` 只呼叫一次，且在 DB 關閉之後、exit 之前。
+      - 沒有 `beforeExit` 時，照常 exit。
+      - 守門測試：約 40MB DB、4 種時序，重啟與還原點交錯，不會留下壞掉的備份。
+    - desktop smoke：隔離的 mutex、title、data-dir、WebView2 profile，3 組各重啟 3 次。每輪都是 1 個程序、1 個視窗；log 每次都有 `tray icon removed before restart: ok=true`；正常關閉後沒有殘留。
+    - `-Release` gate 通過（pytest 427、e2e 52）。
+  - 未能觀察：這台 Windows 11 連 HEAD 對照組都看不到幽靈 icon，所以 tray 的證據只有 `NIM_DELETE` 的回傳值與 code。
+  - 已知（低）：
+    - smoke 的頭兩組第 1 輪，WebView2 新視窗分別延遲了 46s 與 14.8s 才出現（Go 在 0.8s 內就 healthy）。其中一次有 WebView2 子程序殘留，已手動清除。之後 7 次都正常，原因沒有查明。
+    - Pi 上 rotate 若被中斷，留下的 tmp 不會被清。
 
 ### P1 — 下一輪
 
@@ -822,7 +843,7 @@
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Done | — | OPT-66 追蹤 |
 | PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Done | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Done | — | OPT-34 驗收 |
-| PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Todo | 36 | OPT-36 追蹤 |
+| PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Done | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Todo | 38 | OPT-38 追蹤 |
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Todo | — | OPT-67 追蹤 |

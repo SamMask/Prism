@@ -151,7 +151,7 @@ type desktopShellApp struct {
 	trayHWND   windows.Handle
 	icon       windows.Handle
 	iconOwned  bool
-	trayAdded  bool
+	trayAdded  atomic.Bool // CompareAndSwap: the restart hook and cleanup may both try to remove it
 	mutex      windows.Handle
 	releaseLog func()
 
@@ -183,6 +183,13 @@ func runDesktopShellRuntime(cfg runtimeConfig, opts desktopShellOptions) error {
 		return err
 	}
 	defer cleanup()
+	// Restart ends the process with os.Exit, which skips app.cleanup: remove the tray icon
+	// first so no ghost icon is left behind (PRISM-OPT-71).
+	srv.beforeExit = func() {
+		if app := activeDesktopShell; app != nil {
+			log.Printf("desktop tray icon removed before restart: ok=%v", app.deleteTrayIcon())
+		}
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -526,20 +533,22 @@ func (a *desktopShellApp) addTrayIcon() error {
 	if r, _, err := desktopShellNotifyIcon.Call(desktopNIMAdd, uintptr(unsafe.Pointer(&data))); r == 0 {
 		return fmt.Errorf("Shell_NotifyIconW add failed: %w", err)
 	}
-	a.trayAdded = true
+	a.trayAdded.Store(true)
 	return nil
 }
 
-func (a *desktopShellApp) deleteTrayIcon() {
-	if !a.trayAdded {
-		return
+// deleteTrayIcon removes the tray icon at most once and reports whether Shell_NotifyIconW
+// NIM_DELETE succeeded.
+func (a *desktopShellApp) deleteTrayIcon() bool {
+	if !a.trayAdded.CompareAndSwap(true, false) {
+		return false
 	}
 	var data desktopNotifyIconData
 	data.cbSize = uint32(unsafe.Sizeof(data))
 	data.hwnd = a.trayHWND
 	data.uID = desktopTrayID
-	desktopShellNotifyIcon.Call(desktopNIMDelete, uintptr(unsafe.Pointer(&data)))
-	a.trayAdded = false
+	r, _, _ := desktopShellNotifyIcon.Call(desktopNIMDelete, uintptr(unsafe.Pointer(&data)))
+	return r != 0
 }
 
 func (a *desktopShellApp) showMainWindow() {

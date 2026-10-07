@@ -107,6 +107,12 @@ func shouldCreateAutoRestorePoint(backupDir string, now time.Time) (bool, error)
 func (s *server) ensureDailyRestorePoint(now time.Time) autoRestorePointResult {
 	s.managedBackupMu.Lock()
 	defer s.managedBackupMu.Unlock()
+	// A restart (os.Exit) or crash between VACUUM INTO and the rename leaves a half-written
+	// temp file that is never listed as a backup; clear it here, under the lock (PRISM-OPT-71).
+	stale, _ := filepath.Glob(filepath.Join(s.runtime.backupsDir, "prism_backup_*.db.tmp"))
+	for _, path := range stale {
+		_ = os.Remove(path)
+	}
 	result := autoRestorePointResult{Status: "skipped", CheckedAt: now.Format(time.RFC3339)}
 	create, err := shouldCreateAutoRestorePoint(s.runtime.backupsDir, now)
 	if err == nil && create {
@@ -333,16 +339,24 @@ func (s *server) triggerRestart() {
 			_, _ = s.db.Exec("PRAGMA wal_checkpoint(TRUNCATE)")
 			_ = s.db.Close()
 		}
+		if s.beforeExit != nil {
+			s.beforeExit()
+		}
 		if isSupervised() {
-			os.Exit(restartExitCode)
+			exitProcess(restartExitCode)
+			return
 		}
 		if err := reexecSelf(); err != nil {
 			log.Printf("self re-exec failed (%v); exiting with restart code", err)
-			os.Exit(restartExitCode)
+			exitProcess(restartExitCode)
+			return
 		}
-		os.Exit(0)
+		exitProcess(0)
 	}()
 }
+
+// exitProcess is os.Exit; tests replace it so triggerRestart can run without ending the process.
+var exitProcess = os.Exit
 
 func reexecSelf() error {
 	exe, err := os.Executable()
