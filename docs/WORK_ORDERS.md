@@ -121,6 +121,7 @@ git diff --check
 | PRISM-OPT-75 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-76 | T | S | prism-builder | 主代理 |
 | PRISM-OPT-77 | X | M | prism-engineer | prism-verifier |
+| PRISM-OPT-78 | T | S | prism-builder | 主代理 |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -711,6 +712,15 @@ git diff --check
   - 孤兒檔的內容是否其實屬於某一篇缺檔的筆記，可用標題或開頭比對。
 - **產出**：逐筆列出「找得到的來源 → 建議的還原方式」，以及確定找不回的筆記清單。實際還原前，必須先取得使用者同意，並且先備份。
 - **不要做**：未經同意就改動線上資料；刪除孤兒檔或懸空的附件列。
+
+### PRISM-OPT-78 — 部署 smoke 留下空標籤
+
+- **Finding**：2026-10-07 V2.7.0 部署時發現｜ **優先級**：P2（低）
+- **現象**：`scripts/go_primary_full_workflow_smoke.py` 會在線上建立 `<label>-go-primary`、`-go-primary-updated`、`-imported` 三個標籤。之後只刪掉筆記，沒有刪標籤，所以每次 cutover 都會在使用者的資料庫留下 3 個空標籤。
+- **修改範圍**：smoke 在結尾刪掉自己建立的標籤，只刪名稱以本次 label 開頭、而且沒有掛在任何筆記上的標籤。刪除失敗時要明確報錯，不能默默略過。
+- **不要修改**：smoke 的其他驗證步驟；部署腳本的流程。
+- **驗收**：用本機的 package smoke（`scripts/smoke_go_primary_package.ps1`）或隔離 runtime 跑完 smoke 後，`Tags` 裡沒有本次 label 的標籤；既有的標籤都還在。
+- **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1`；package smoke。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

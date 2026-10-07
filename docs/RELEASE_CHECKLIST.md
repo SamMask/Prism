@@ -145,6 +145,6 @@ release flow:
 | Label browser smoke | Passed | Same isolated runtime: Playwright page title `Prism V2.7.0`; sidebar `V2.7.0`; Settings About `Version: 2.7.0`; console 0 errors / 0 warnings. |
 | Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries (6 files) and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
 | V2.7.0 asset hash | Passed | `PrismDesktopPortable-v2.7.0.zip`, 22,083,830 bytes, SHA256 `3A743A9FDDEEC6D83A8248E511452A078BB87700FCB3945CB13A606A1D66D60F`. |
-| GitHub Actions | Pending（主代理發版後補） | |
-| GitHub Release / asset read-back | Pending（主代理發版後補） | |
-| Pi live deploy | Pending（主代理發版後補） | |
+| GitHub Actions | Passed | Run `37613790399` success on release commit `a478a8b`. |
+| GitHub Release / asset read-back | Passed | Annotated tag `V2.7.0` peels to `a478a8be5c1b7df9a0a5a69bf04e54df32515e52`; release is latest, not draft/prerelease; GitHub asset digest and a fresh `gh release download` SHA256 both `3a743a9fddeec6d83a8248e511452a078bb87700fcb3945cb13a606a1d66d60f` (22,083,830 bytes). |
+| Pi live deploy | Passed | Cutover artifact SHA256 `7e59c9d212d3f8cbb6b5eb61024d1baf542463a36581af9f4ee3d960ed729612`; snapshot `/home/mask0709/prism/backups/go-primary-t042-20261007_193514`; live full workflow smoke passed; `/api/test` version `2.7.0`, schema 17/17 pending empty, notes 299, uploads 2478, journal clean. Earlier the same day: pre-deploy backup `/home/mask0709/prism-predeploy-20261007-190419/`, OPT-36 restart smoke (5.8s), OPT-20 merge (77 merged, 1 historied). Smoke-created tags removed. |

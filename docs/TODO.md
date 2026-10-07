@@ -16,7 +16,7 @@
 ## Current Truth（2026-10-06）
 
 - Go primary 是唯一 runtime owner；Python Flask backend source 已於 T053 移除（完整紀錄：`docs/development-history/go-primary-runtime-completion-20260617.md`）。Schema 為 migration v17。
-- 最新 release 為 V2.6.1（tag 對齊 `7f5469c`）。2026-08-23 的 commit `70f04e7` 已部署到 Pi；之後的 commits 未發版、未部署。
+- 最新 release 為 V2.7.0（2026-10-07，tag 對齊 `a478a8b`），同一版已部署到 Pi。
 - Windows portable：`Prism.exe` GUI app + WebView2 + same-process Go runtime，資料在 exe 同層 `PrismData\`；installer/updater 仍 deferred。
 - Pi：live root `/home/mask0709/prism`，`prism-go-primary.service` 只監聽 5004，經 Caddy 對外。Pi delivery 與 GitHub release 是兩條流程，Pi 上線依 `DEPLOY-PI.md` 另開 gate。
 - Prism 沒有內建 auth/token layer；安全邊界是 localhost、trusted LAN、VPN、SSH tunnel，或外部 auth 保護的 reverse proxy。
@@ -879,7 +879,7 @@
     - 搜尋 note 100 尾段的詞「與黑市地緣」會命中 100（合併前尾段詞搜不到）；
     - uploads 仍是 2478。
   - 仍待處理：23 篇筆記的全文檔案早已不存在，1 篇（海酒食堂）預覽不一致，另有 5 個孤兒檔 → 已開 `PRISM-OPT-77`。
-- **4. 發版**：尚未進行，等使用者決定版本號。
+- **4. 發版 V2.7.0**：tag `V2.7.0` → `a478a8b`，GitHub Actions `37613790399` success。GitHub Release 附 `PrismDesktopPortable-v2.7.0.zip`，SHA256 `3a743a9f…d66d60f`，重新下載後比對一致。之後再 cutover Pi 一次，`/api/test` version 為 2.7.0，schema 17/17，筆記 299。每次 cutover，線上 smoke 都會留下 3 個空標籤，兩次都已刪除 → 已開 `PRISM-OPT-78`。
 
 ### P1 — 下一輪
 
@@ -949,6 +949,7 @@
 | PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Done | — | OPT-74 追蹤 |
 | PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Done | — | OPT-75 驗收 |
 | PRISM-OPT-77 | Pi 上 23 篇拆分筆記的全文檔案遺失：調查能否從舊備份找回；1 篇預覽不符、5 個孤兒檔 | Todo | — | Pi 部署 OPT-20 |
+| PRISM-OPT-78 | Pi 部署的線上 smoke 每次都留下 3 個空的 `t042-live-go-primary-*` 標籤 | Todo | — | V2.7.0 部署 |
 
 ### P3 / Future — 需要證據或明確 promote
 
