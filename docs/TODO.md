@@ -730,6 +730,20 @@
     - 刪除原圖時，不會改寫編碼寫法的引用（HEAD 原本就是這樣；現在可以用「修復壞路徑」修好）。
     - export JSON 會多列出解碼後的檔名。極端情況是手寫的 `%3A` 會讓 Windows 上的匯入失敗。
     - 同一秒內上傳同名附件會互相覆寫（HEAD 原本就是這樣）→ 已開 `PRISM-OPT-74`。
+- `PRISM-OPT-69`（本機驗證；未發版、未部署 Pi）：
+  - 前端：`deleteNote` 與 `deleteSelectedNotes` 成功後，多呼叫一次 OPT-32 的 `refreshLoadedNotes()`。本地先濾掉被刪筆記的即時回饋保留；Library total 一樣只刷新 1 次。
+  - 刪除後的請求：列表請求數等於已載入的頁數，`/api/test` 打 1 次。
+  - 驗證：
+    - 新增 `e2e/test_delete_refreshes_list.py`，共 3 條：
+      - 載入 2 頁後刪掉第 5 筆，再 load-more：原本的第 41 筆有出現，沒有重複，順序正確。
+      - 批次刪除 2 筆後再 load-more：不漏、不重複，捲動位移小於 60px。
+      - 根→子→孫 刪掉子之後，孫卡片的 parent 顯示根、根卡片顯示「1 variants」；再刪掉根，孫卡片上就沒有根的標題。
+    - 在 HEAD 上 3 條都失敗，原因是沒有刪除後的列表重抓。
+    - `-Release` gate 通過（e2e 50）。
+    - 改動只有兩行，由主代理讀 diff 驗收。
+  - 已知（低）：
+    - 刪除視窗上方的卡片後，捲動位置沒有測。grid 有 `overflow-anchor:none`，可能會有位移。
+    - refresh 回來之前，列表會短暫少一筆。
 
 ### P1 — 下一輪
 
@@ -790,7 +804,7 @@
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Done | — | OPT-16 追蹤 |
 | PRISM-OPT-65 | JSON 匯入後提示「拆分筆記只匯入了預覽」 | Done | 58 | OPT-58 追蹤 |
 | PRISM-OPT-67 | 上傳附件與圖片的 CJK 檔名被濾掉或拒絕（`說明.md` 變成 `_<時間戳>.md`；`圖片測試.png` 回 Invalid file type） | Done | — | OPT-66 追蹤 |
-| PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Todo | 32 | OPT-32 追蹤 |
+| PRISM-OPT-69 | 刪除後 load-more 用舊的頁面位移，可能漏掉一筆 | Done | 32 | OPT-32 追蹤 |
 | PRISM-OPT-70 | e2e `test_ctrl_s_saves_new_note_keeps_editor_open_and_updates_same_note` 在完整 gate 下偶爾失敗 | Todo | — | OPT-34 驗收 |
 | PRISM-OPT-71 | 桌面版重啟：殘留幽靈 tray icon；重啟可能撞上每日還原點寫入 | Todo | 36 | OPT-36 追蹤 |
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Todo | — | OPT-36 追蹤 |

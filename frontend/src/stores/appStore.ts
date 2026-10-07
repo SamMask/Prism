@@ -368,6 +368,9 @@ export const useAppStore = create<AppState>((set, get) => ({
         libraryTotal: state.libraryTotal === null ? null : Math.max(0, state.libraryTotal - 1),
         isDeleting: false,
       }))
+      // The local filter is only instant feedback; re-read the loaded pages so the next load-more
+      // uses the shifted offset and variant cards pick up their re-parented parent_title (PRISM-OPT-69).
+      void get().refreshLoadedNotes()
       void get().fetchLibraryTotal()
     } catch (error) {
       console.error('Failed to delete note:', error)
@@ -392,6 +395,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         selectedNoteIds: [],
         isDeleting: false,
       }))
+      void get().refreshLoadedNotes()
       void get().fetchLibraryTotal()
       return preview
     } catch (error) {
