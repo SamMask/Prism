@@ -89,6 +89,7 @@ export function AttachmentPanel({
                   {(att.size_bytes / 1024).toFixed(0)}KB
                 </span>
               </button>
+              {/* Touch screens and narrow widths get a >= 44px target (PRISM-OPT-54); desktop keeps p-1. */}
               <button
                 type="button"
                 onClick={() => onDeleteAttachment(att.id)}
@@ -96,6 +97,8 @@ export function AttachmentPanel({
                 className="mr-1 p-1 rounded text-text-muted hover:text-danger transition-opacity
                            opacity-0 group-hover:opacity-100 group-focus-within:opacity-100
                            [@media(hover:none)]:opacity-100
+                           inline-flex shrink-0 items-center justify-center
+                           max-md:min-h-11 max-md:min-w-11 [@media(hover:none)]:min-h-11 [@media(hover:none)]:min-w-11
                            focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                 title={t('editor.attachment.delete')}
               >

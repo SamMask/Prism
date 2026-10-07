@@ -654,6 +654,12 @@
     - verifier 也實測補上 e2e 沒涵蓋的入口：Sidebar 標籤、Command Palette 的 Archive／All、Reading view 開關、從 Prompt Builder 返回、在 `/` 快速連點、清空搜尋，全部都是每個動作 1 次，結果正確。
     - `-Release` gate 通過（pytest 427、e2e 41）。
   - 已知（低，既有）：在 `/` 已有篩選時，點 Sidebar 的 Prompt Builder 或 Settings，`clearLibraryFilters` 仍會送出 2 個沒有人使用的請求。
+- `PRISM-OPT-54`（本機驗證；未發版、未部署 Pi）：
+  - 前端（主代理實作）：`AttachmentPanel` 的刪除按鈕加上 `inline-flex shrink-0`，並在 `max-md` 與 `[@media(hover:none)]` 下設 `min-h-11 min-w-11`（44px）。桌面仍是 `p-1`，約 20px；OPT-16 的按鈕語意與 API 都沒動。
+  - 驗證：
+    - 新增 `e2e/test_attachment_touch_target.py`。附件是 CJK 檔案。1280 時刪除按鈕 ≤24px；390 時 ≥32px，附件列與頁面都沒有水平溢位。
+    - 在 HEAD 上，390 那條斷言失敗（按鈕尺寸不足）。
+    - `-Release` gate 通過。
 
 ### P1 — 下一輪
 
@@ -708,7 +714,7 @@
 | PRISM-OPT-38 | Reading list 預取加上限或改為 lazy detail | Done | — | R0812:PERF-03 |
 | PRISM-OPT-39 | JSON 匯出與匯入補齊欄位（置頂、封存、譜系、版面） | Done | 23 | FEAT-03 |
 | PRISM-OPT-53 | Mobile 在非 Library 頁面也有搜尋入口 | Done | — | OPT-17 追蹤 |
-| PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Todo | — | OPT-16 追蹤 |
+| PRISM-OPT-54 | 附件刪除按鈕在觸控裝置上的點擊範圍 | Done | — | OPT-16 追蹤 |
 | PRISM-OPT-55 | 從非 Library 頁面搜尋只送出一次請求 | Done | — | OPT-17 追蹤 |
 | PRISM-OPT-56 | 搜尋正規化：韓文子字串、全形英數、混合查詢語意 | Todo | — | OPT-18 追蹤 |
 | PRISM-OPT-57 | 附件 popup 跨瀏覽器與 desktop shell 驗證 | Todo | — | OPT-16 追蹤 |
