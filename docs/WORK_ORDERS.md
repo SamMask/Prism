@@ -119,6 +119,7 @@ git diff --check
 | PRISM-OPT-73 | F | S | prism-builder | prism-verifier |
 | PRISM-OPT-74 | X | S | prism-engineer | prism-verifier |
 | PRISM-OPT-75 | X | S | prism-engineer | prism-verifier |
+| PRISM-OPT-76 | T | S | prism-builder | 主代理 |
 
 開工前若發現工單的實際範圍與上表的難度不符，以 `docs/AGENT_DISPATCH.md` 的矩陣重新判定，並在 `docs/TODO.md` 的證據中記錄調整。
 
@@ -684,6 +685,14 @@ git diff --check
 - **不要修改**：upload API 形狀；OPT-67 的 sanitize 規則；OPT-64 匯入既有的 skip 規則（同名已存在時沿用目標端）。
 - **驗收**（Go test，修正前要失敗）：用固定時鐘，在同一秒上傳兩張同名但內容不同的圖片。兩組原圖與縮圖都存在，各自的 URL 讀回各自的內容；預先放好的同名無關檔案不會被改動。
 - **驗證**：`cd go-shadow && go test ./...`；`pwsh -NoProfile -File .loop/verify-gate.ps1`。
+
+### PRISM-OPT-76 — 閱讀預取 e2e 偶發失敗
+
+- **Finding**：PRISM-OPT-75 驗收時發現（2026-10-07）｜ **優先級**：P2（只是測試不穩；CI 跑 release gate，可能出現假的紅燈）
+- **現象**：`e2e/test_reading_lazy_detail.py::test_reading_workspace_prefetches_only_neighbours` 在完整 gate 中，3 次失敗 1 次。PRISM-OPT-38 已經處理過一次背景 load-more 的干擾。
+- **修改範圍**：先找出失敗點與時序原因，再改成等待明確的訊號，不要只拉長 timeout。若找到的是產品問題，就修產品，並補一條能重現的測試。
+- **驗收**：單獨連跑 20 次都通過；完整 `pytest e2e` 連跑 3 次都通過。
+- **驗證**：`pwsh -NoProfile -File .loop/verify-gate.ps1 -Release`。
 
 ### PRISM-OPT-52 — 子代理派工：依類別與難度指定模型與 effort（已完成）
 

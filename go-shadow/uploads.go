@@ -84,39 +84,23 @@ func (s *server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	newFilename := timestampedUploadFilename(filename)
-	nameWithoutExt := strings.TrimSuffix(newFilename, filepath.Ext(newFilename))
-	thumbFilename := nameWithoutExt + "_thumb.webp"
-	uploadsDir := s.runtime.uploadsDir
-	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
+	thumbnailOnly := strings.EqualFold(r.FormValue("thumbnail_only"), "true")
+	originalContent := content
+	if thumbnailOnly {
+		originalContent = nil
+	}
+	newFilename, thumbFilename, err := createUploadFiles(s.runtime.uploadsDir, timestampedUploadFilename(filename), originalContent, thumbContent)
+	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-
-	thumbnailOnly := strings.EqualFold(r.FormValue("thumbnail_only"), "true")
-	thumbPath := filepath.Join(uploadsDir, thumbFilename)
 	if thumbnailOnly {
-		if err := os.WriteFile(thumbPath, thumbContent, 0644); err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
-			return
-		}
 		writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
 			"url":            "/static/uploads/" + thumbFilename,
 			"filename":       thumbFilename,
 			"size":           len(content),
 			"thumbnail_only": true,
 		}})
-		return
-	}
-
-	originalPath := filepath.Join(uploadsDir, newFilename)
-	if err := os.WriteFile(originalPath, content, 0644); err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-	if err := os.WriteFile(thumbPath, thumbContent, 0644); err != nil {
-		_ = os.Remove(originalPath)
-		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusOK, response{"status": "success", "data": response{
@@ -449,26 +433,79 @@ func timestampedUploadFilename(filename string) string {
 	return uploadNow().Format("20060102_150405") + "_" + filename
 }
 
-func (s *server) saveDownloadedUpload(content []byte, newFilename, originalURL string, thumbnailOnly bool) (response, error) {
-	uploadsDir := s.runtime.uploadsDir
-	if err := os.MkdirAll(uploadsDir, 0755); err != nil {
-		return nil, err
+// createUploadFiles writes an image's original and thumbnail as <stem><ext> and
+// <stem>_thumb.webp. stem is filename's stem, plus _2, _3, ... (up to _1000) while either name
+// is taken: the two always share a stem because delete and cleanup find a thumbnail from its
+// original's name. A nil content is not written, but its name must still be free, so a lone
+// thumbnail never pairs with an unrelated original. No existing file is opened for writing, and
+// a failure removes only what this call created (PRISM-OPT-75). It returns both names.
+func createUploadFiles(dir, filename string, original, thumb []byte) (string, string, error) {
+	ext := filepath.Ext(filename)
+	stem := strings.TrimSuffix(filename, ext)
+	for n := 1; n <= 1000; n++ {
+		base := stem
+		if n > 1 {
+			base = fmt.Sprintf("%s_%d", stem, n)
+		}
+		name, thumbName := base+ext, base+"_thumb.webp"
+		claimed, err := claimUploadName(dir, name, original)
+		if err != nil {
+			return "", "", err
+		}
+		if !claimed {
+			continue
+		}
+		claimed, err = claimUploadName(dir, thumbName, thumb)
+		if claimed {
+			return name, thumbName, nil
+		}
+		if original != nil {
+			_ = os.Remove(filepath.Join(dir, name))
+		}
+		if err != nil {
+			return "", "", err
+		}
 	}
+	return "", "", fmt.Errorf("no free upload filename for %s", filename)
+}
 
-	var thumbFilename string
+// claimUploadName creates dir/name with content without replacing an existing file, or, for nil
+// content, only checks that the name is free. It reports false with no error when name is taken.
+func claimUploadName(dir, name string, content []byte) (bool, error) {
+	target := filepath.Join(dir, name)
+	if content == nil {
+		_, err := os.Lstat(target)
+		if errors.Is(err, os.ErrNotExist) {
+			return true, nil
+		}
+		return false, err
+	}
+	err := createImportFile(target, content)
+	if errors.Is(err, os.ErrExist) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+func (s *server) saveDownloadedUpload(content []byte, newFilename, originalURL string, thumbnailOnly bool) (response, error) {
 	var thumbContent []byte
 	if img, _, err := image.Decode(bytes.NewReader(content)); err == nil {
 		if encoded, err := encodeUploadThumbnail(img); err == nil {
-			nameWithoutExt := strings.TrimSuffix(newFilename, filepath.Ext(newFilename))
-			thumbFilename = nameWithoutExt + "_thumb.webp"
 			thumbContent = encoded
 		}
 	}
 
-	if thumbnailOnly && thumbFilename != "" {
-		if err := os.WriteFile(filepath.Join(uploadsDir, thumbFilename), thumbContent, 0644); err != nil {
-			return nil, err
-		}
+	writeThumbOnly := thumbnailOnly && thumbContent != nil
+	originalContent := content
+	if writeThumbOnly {
+		originalContent = nil
+	}
+	newFilename, thumbFilename, err := createUploadFiles(s.runtime.uploadsDir, newFilename, originalContent, thumbContent)
+	if err != nil {
+		return nil, err
+	}
+
+	if writeThumbOnly {
 		return response{
 			"url":            "/static/uploads/" + thumbFilename,
 			"filename":       thumbFilename,
@@ -476,17 +513,6 @@ func (s *server) saveDownloadedUpload(content []byte, newFilename, originalURL s
 			"original_url":   originalURL,
 			"thumbnail_only": true,
 		}, nil
-	}
-
-	originalPath := filepath.Join(uploadsDir, newFilename)
-	if err := os.WriteFile(originalPath, content, 0644); err != nil {
-		return nil, err
-	}
-	if thumbFilename != "" {
-		if err := os.WriteFile(filepath.Join(uploadsDir, thumbFilename), thumbContent, 0644); err != nil {
-			_ = os.Remove(originalPath)
-			return nil, err
-		}
 	}
 	var returnedFilename any = newFilename
 	if thumbnailOnly {

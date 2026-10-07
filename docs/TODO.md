@@ -823,6 +823,22 @@
   - 已知：
     - 圖片上傳（`uploads.go`，`<時間戳>_<檔名>` 加 `os.WriteFile`）也有同秒同名覆寫的問題，原圖與縮圖都會被蓋掉 → 已開 `PRISM-OPT-75`。
     - `note_<id>.md` 在還原舊 DB、序號回捲後，可能蓋掉孤兒檔；屬筆記檔範圍，不在本單。
+- `PRISM-OPT-75`（本機驗證；未發版、未部署 Pi）：
+  - Go `uploads.go`：新增 `createUploadFiles`／`claimUploadName`，原圖與縮圖成對建檔。
+    - 命名：原圖 `<主體><ext>`，縮圖 `<主體>_thumb.webp`。只要任一名稱已被佔用，主體就改成 `_2`、`_3`… 再試。
+    - 建檔方式：兩個檔都用 `O_EXCL`（共用既有的 `createImportFile`）。縮圖建檔失敗時，只刪掉剛建立的原圖。
+    - 只寫其中一邊時（thumbnail_only，或沒有縮圖），用 `Lstat` 確認另一個名稱是空的。
+    - `/api/upload`、`/api/upload/url`、Markdown 匯入都走這條路徑。JSON 匯入維持 OPT-64 的 skip 規則，`import.go` 沒有改動。
+  - 驗證：
+    - 新增 `go-shadow/upload_no_overwrite_test.go`，使用固定時鐘與 CJK 檔名。修正前 4 個 HTTP 測試都失敗，修正後都通過：
+      - 同秒上傳兩張同名圖片：兩組原圖加縮圖都在，URL 不同，GET 讀回各自的 bytes，縮圖寬度分別是 64 與 80。
+      - thumbnail_only 同秒上傳兩次。
+      - 預先放好與原圖名或縮圖名相同的無關檔案：該檔不變，新上傳的那對變成 `_2` 且成對，不會留下孤立的原圖。
+      - `/api/upload/url` 同秒同名，用 fake transport 模擬。
+    - 既有的 OPT-67 測試 `TestImageUploadAcceptsUnicodeFilename` 原本隱含「第二張覆寫第一張」的行為。現在改成每一輪檢查完就刪掉該檔，檔名斷言保持不變。
+    - `-Release` gate 跑了 3 次：2 次全綠；1 次是無關的 `test_reading_lazy_detail` 失敗 → 已開 `PRISM-OPT-76`。
+    - 主代理讀 diff 驗收。
+  - 已知（低）：只寫其中一邊時，另一邊的名稱只用 `Lstat` 檢查，沒有實際預留，極少數情況下配對可能錯開，但不會覆寫任何檔案。
 
 ### P1 — 下一輪
 
@@ -889,7 +905,8 @@
 | PRISM-OPT-72 | 桌面 GUI 版 `logs/desktop-shell.log` 一直是 0 bytes | Done | — | OPT-36 追蹤 |
 | PRISM-OPT-73 | 目前閱讀的筆記被刪除後，Header 的閱讀清單一直打不開 | Done | 38 | OPT-38 追蹤 |
 | PRISM-OPT-74 | 同一秒上傳同名附件會覆寫前一個檔案（`O_TRUNC`） | Done | — | OPT-67 追蹤 |
-| PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Todo | — | OPT-74 追蹤 |
+| PRISM-OPT-75 | 同一秒上傳同名圖片會覆寫前一張（原圖與縮圖） | Done | — | OPT-74 追蹤 |
+| PRISM-OPT-76 | e2e `test_reading_lazy_detail` 在完整 gate 下偶爾失敗 | Todo | — | OPT-75 驗收 |
 
 ### P3 / Future — 需要證據或明確 promote
 

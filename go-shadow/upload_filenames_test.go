@@ -179,6 +179,11 @@ func TestImageUploadAcceptsUnicodeFilename(t *testing.T) {
 			if _, err := os.Stat(filepath.Join(uploadsDir, name)); err != nil {
 				t.Fatalf("%q: expected %s in uploads dir: %v", upload, name, err)
 			}
+			// Free the name again: a same-second upload of the same name gets a _2 suffix
+			// (PRISM-OPT-75), and this test checks the plain sanitized name.
+			if err := os.Remove(filepath.Join(uploadsDir, name)); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 	if !strings.Contains(safeUploadFilename("圖片測試.png"), "圖片測試") {
