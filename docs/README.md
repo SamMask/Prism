@@ -1,7 +1,7 @@
 # Prism 文檔中心
 
-> **版本**: v2.6.1 / Go primary runtime
-> **更新日期**: 2026-10-06
+> **版本**: v2.7.0 / Go primary runtime
+> **更新日期**: 2026-10-07
 > **狀態**: Go primary 為唯一 runtime owner；Python Flask backend source 已於 T053 移除
 
 主文檔索引請見 [INDEX.md](./INDEX.md)。

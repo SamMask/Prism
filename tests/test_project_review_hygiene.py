@@ -26,9 +26,9 @@ REQ_PATH = ROOT / "requirements.txt"
 REQ_PI_PATH = ROOT / "requirements-pi.txt"
 
 
-def test_v261_release_version_is_aligned_across_current_surfaces():
-    expected_version = "2.6.1"
-    expected_package = "PrismDesktopPortable-v2.6.1.zip"
+def test_v270_release_version_is_aligned_across_current_surfaces():
+    expected_version = "2.7.0"
+    expected_package = "PrismDesktopPortable-v2.7.0.zip"
 
     assert f'return "{expected_version}"' in _text(ROOT / "go-shadow" / "system.go")
     assert f"version-{expected_version}-blue" in _text(README_PATH)

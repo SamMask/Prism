@@ -1,20 +1,20 @@
-# Prism — V1.4.1 → v2.6.1 重大演進
+# Prism — V1.4.1 → v2.7.0 重大演進
 
-> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-07-14（v2.6.1）
+> **時間範圍**：2026-01-27（V1.4.1 公開版）→ 2026-10-07（v2.7.0）
 > **目的**：給「只記得 GitHub 上 V1.4.1」的人一份可讀的重點追溯。
-> **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（current release v2.6.1）
+> **公開版**：[github.com/SamMask/Prism](https://github.com/SamMask/Prism)（current release v2.7.0）
 
 ---
 
 ## 🎯 一句話總結
 
-V1.4.1 是「**個人 Prompt 管理工具**」，v2.6.1 是「**Go primary 單一 runtime 的個人 Headless 知識中樞 + Windows portable + 樹莓派常駐服務**」。中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線；v2.5 完成 Go primary、desktop portable 與 schema v17，v2.6 補齊 local-first knowledge workflows並收斂 Go source，v2.6.1 修正 browser title / sidebar release label。
+V1.4.1 是「**個人 Prompt 管理工具**」，v2.7.0 是「**Go primary 單一 runtime 的個人 Headless 知識中樞 + Windows portable + 樹莓派常駐服務**」。中間繞了一圈 AI（v2.3.0 全部拔除），最後回歸「純關鍵字 FTS + 乾淨 REST API」路線；v2.5 完成 Go primary、desktop portable 與 schema v17，v2.6 補齊 local-first knowledge workflows並收斂 Go source，v2.6.1 修正 browser title / sidebar release label，v2.7.0 收斂編輯器與資料安全（長文不再拆分、未存變更保護、匯入／上傳不覆寫既有檔案）並補上 CJK 搜尋。
 
 ---
 
 ## 📊 兩個版本快速對照
 
-| 維度 | V1.4.1 | v2.6.1 |
+| 維度 | V1.4.1 | v2.7.0 |
 |---|---|---|
 | 前端 | Vanilla JS + Tailwind（無 build） | React 18 + TS + Vite + Zustand + Tailwind |
 | 後端 | Flask 單體 + SQLite FTS5 | Go primary REST API + SQLite WAL / FTS5；Python Flask backend source 已移除 |
@@ -75,12 +75,17 @@ Go primary 已是唯一 product runtime；Python Flask backend source 已於 T05
 
 修正 browser page title 與 sidebar brand仍顯示 V2.5 的版本漂移，並把 Go runtime fallback、current docs、Windows portable package與 Pi live artifact對齊 2.6.1。沒有 API/schema/search/runtime功能變更。
 
+### 12. 編輯器與資料安全、CJK 搜尋（v2.7.0, 2026-10-07）
+
+2026-08-12 與 2026-10-06 兩輪審查的工單（PRISM-OPT-01～76）收斂成這一版。長文不再自動拆到 `docs/notes`，編輯已拆分的筆記會先把全文收回 DB，另有手動「合併長文回筆記」維護動作（預設 dry-run、先建還原點）。`Ctrl+S` 存檔後留在編輯器；瀏覽器關頁、桌面版關窗與 app 內導覽都會保護未存變更；對話框補上鍵盤無障礙。搜尋支援 CJK 詞中段與韓文子字串、全形英數折疊。JSON 匯入不再刪除或覆寫既有檔案、補齊置頂／封存／譜系／版面欄位、有損失時提示；附件與圖片保留 CJK 檔名，同名上傳不覆寫。列表就地更新、計數單一來源、Settings 重新分組、Restart 真的重啟；桌面版每日還原點與關閉保護。版本號改由 runtime 單一來源提供。Schema 仍是 v17，沒有 migration；API 只有 additive 變更。
+
 ---
 
 ## 📅 版本歷程（精簡）
 
 | 版本 | 日期 | 主軸 |
 |---|---|---|
+| **v2.7.0** | 2026-10-07 | 編輯器與資料安全（長文不再拆分、未存變更保護、匯入／上傳不覆寫）、CJK 搜尋、列表就地更新、Settings 重組、桌面每日還原點；schema v17 不變 |
 | **v2.6.1** | 2026-07-14 | Browser title / sidebar brand release-label hotfix；runtime/docs/package/Pi version alignment |
 | **v2.6** | 2026-07-14 | Local-first knowledge workflows、agent-safe previews、source URL、Go bounded-context source layout |
 | **v2.5** | 2026-06-19 | Go primary sole runtime、Windows desktop portable baseline、recent UX gates、schema v17 default category identity split |

@@ -132,3 +132,19 @@ release flow:
 | Corrected V2.6.1 asset | Passed | `PrismDesktopPortable-v2.6.1.zip`, 21,671,554 bytes, SHA256 `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`. |
 | GitHub Actions / replacement tag / Release read-back | Passed | Actions run `29276993209` success; V2.6.1 tag peels to `7f5469c16cac2a8412bb5f2524cc4e9884256db3`; GitHub digest, local hash, and fresh download SHA256 match `8705C5F5CBCC24A3EEFBBC02E02695B0103CB04E879770A488D2A4429D229F17`. Existing V2.6 is unchanged. |
 | Pi live cutover / soak / About browser smoke | Passed | Artifact SHA256 `1c1ff025f8653a48e97d87cbb29afa09d09e9ca8e020fef329d1e395e2fce01d`; latest snapshot `/home/mask070924/prism/backups/go-primary-t044-20260714_031146`; runtime 2.6.1/schema v17 clean; full workflow and 5-sample soak passed; live Playwright verified title/sidebar/About and console 0/0. |
+
+## Fresh Validation Record - 2026-10-07 (V2.7.0)
+
+| Check | Result | Evidence / Notes |
+|---|---|---|
+| `pwsh -NoProfile -File .loop/verify-gate.ps1 -Release` | Passed | `git diff --check` and AGENTS/CLAUDE mirror passed; pytest 427 passed; Go tests passed; `pytest e2e` 56 Chromium tests passed against an isolated Go runtime. |
+| `cd frontend && npm run build` (inside the portable build) | Passed with warnings | 1,523 modules transformed; existing Browserslist-age and 666.31 kB chunk-size warnings only. |
+| V2.7.0 desktop portable build | Passed | `pwsh ... scripts/build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.7.0`. |
+| Windows desktop portable smoke | Passed | Clean-unzip smoke evidence: `build/desktop-portable-smoke/run-9f6428faa3de4fc0bcbbd0d9c7df92ff/evidence.json`. The script builds its own `PrismPortableSmoke` package from the same tree. |
+| Package version/read-back | Passed | `PrismDesktop-debug.exe` from a clean unzip of `PrismDesktopPortable-v2.7.0.zip`, `--desktop-shell=false`, isolated temp data dir, random port: `/api/server/version` = `2.7.0`, `/api/test` `version` = `2.7.0`. |
+| Label browser smoke | Passed | Same isolated runtime: Playwright page title `Prism V2.7.0`; sidebar `V2.7.0`; Settings About `Version: 2.7.0`; console 0 errors / 0 warnings. |
+| Release package privacy sweep | Passed | Tracked privacy paths empty; zip has 7 allowed entries (6 files) and no DB/WAL/SHM, PrismData, uploads, attachments, notes, env/key/pem, or log files. |
+| V2.7.0 asset hash | Passed | `PrismDesktopPortable-v2.7.0.zip`, 22,083,830 bytes, SHA256 `3A743A9FDDEEC6D83A8248E511452A078BB87700FCB3945CB13A606A1D66D60F`. |
+| GitHub Actions | Pending（主代理發版後補） | |
+| GitHub Release / asset read-back | Pending（主代理發版後補） | |
+| Pi live deploy | Pending（主代理發版後補） | |

@@ -889,10 +889,10 @@ Response：
 
 ```json
 {
-  "current_version": "2.6.1",
-  "latest_version": "v2.7.0",
+  "current_version": "2.7.0",
+  "latest_version": "v2.8.0",
   "has_update": true,
-  "release_url": "https://github.com/.../releases/tag/V2.7",
+  "release_url": "https://github.com/.../releases/tag/V2.8.0",
   "release_notes": "...",
   "message": "發現新版本"
 }

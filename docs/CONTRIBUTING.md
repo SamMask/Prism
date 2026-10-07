@@ -126,18 +126,18 @@ npm run build
 
 ## 打包發布 (Packaging)
 
-> **狀態說明**: v2.6.1 的穩定主線是 Go primary runtime artifact、Raspberry Pi `prism-go-primary.service` 部署，以及 Windows desktop portable zip。PyInstaller / embedded Python portable path 已由 T045 移除。
+> **狀態說明**: v2.7.0 的穩定主線是 Go primary runtime artifact、Raspberry Pi `prism-go-primary.service` 部署，以及 Windows desktop portable zip。PyInstaller / embedded Python portable path 已由 T045 移除。
 > T052 後，repo 不再追蹤 embedded Python zip、Pillow wheel 或 root empty `package-lock.json`；前端 lockfile 只在 `frontend/package-lock.json`。
 
 ### 版本號 (Single Source of Truth)
 
 ```go
 // go-shadow/system.go
-return "2.6.1"
+return "2.7.0"
 ```
 
 > ⚠️ **發版前必檢**：Go runtime fallback version、root `README.md` / `README.zh-TW.md` badge、release tag 與 release asset 命名必須同步。
-> 目前前端仍有寫死的版本字串（`frontend/index.html`、`Sidebar.tsx`、`SettingsPage.tsx` 的 About fallback），曾造成 V2.6.1 兩次修正型發版；收斂工單見 `docs/WORK_ORDERS.md` 的 PRISM-OPT-24。更早也發生過 `config.py` 卡在 `2.0.0-alpha.1` 的長期 desync（原報告已不在 repo）。
+> 自 PRISM-OPT-24 起，前端在 runtime 從 `/api/test` 讀版本號（browser title、sidebar、Settings → About），不要在 `frontend/index.html`、`Sidebar.tsx`、`SettingsPage.tsx` 寫死版本字串，有測試禁止。過去的寫死字串曾造成 V2.6.1 兩次修正型發版。更早也發生過 `config.py` 卡在 `2.0.0-alpha.1` 的長期 desync（原報告已不在 repo）。
 
 ### 建置流程
 
@@ -147,12 +147,12 @@ cd frontend
 npm run build
 
 # 2. 建置 Windows desktop portable package
-.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.6.1
+.\scripts\build_desktop_portable.ps1 -OutputDir build/release -PackageName PrismDesktopPortable-v2.7.0
 ```
 
 | 產出 | 說明 |
 |------|------|
-| `PrismDesktopPortable-v2.6.1.zip` | Windows desktop portable package；不包含 DB、uploads、attachments 或 embedded Python runtime |
+| `PrismDesktopPortable-v2.7.0.zip` | Windows desktop portable package；不包含 DB、uploads、attachments 或 embedded Python runtime |
 
 ### Release Checklist（每次發版前必確認）
 
